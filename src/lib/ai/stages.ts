@@ -1,5 +1,6 @@
 export function detectStage(acc: string): string | null {
   if (/<\/html>/i.test(acc)) return "Apro l'anteprima";
+  if (/rel=["']icon["']|apple-touch-icon/i.test(acc)) return "Disegno l'icona";
   if (/<script/i.test(acc)) return "Collego stato e azioni";
   if (/<!DOCTYPE html/i.test(acc) || /<<<HTML>>>/.test(acc)) return "Scrivo l'interfaccia";
   if (/<<<META>>>/.test(acc) || /"name"\s*:/.test(acc)) return "Fisso nome e sistema visivo";

@@ -82,7 +82,7 @@ export const generateBuild = createServerFn({ method: "POST" })
         choices?: { message?: { content?: string } }[];
       };
       const text = payload.choices?.[0]?.message?.content ?? "";
-      const parsed = parseBuildOutput(text);
+      const parsed = parseBuildOutput(text, data.prompt);
       if (!parsed) {
         return {
           ok: false,

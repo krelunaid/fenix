@@ -1,4 +1,5 @@
 import { DEFAULT_PALETTE, type Palette, type ProjectKind } from "@/lib/projects/types";
+import { ensureProductIcon } from "@/lib/projects/product-icon";
 
 export type BuildResult = {
   name: string;
@@ -70,7 +71,7 @@ function extractHtml(text: string) {
   return "";
 }
 
-export function parseBuildOutput(text: string): BuildResult | null {
+export function parseBuildOutput(text: string, seed = ""): BuildResult | null {
   const trimmed = text.trim();
   const metaBlock = trimmed.match(/<<<META>>>\s*([\s\S]*?)(?:<<<HTML>>>|$)/);
   const htmlBlock = trimmed.match(/<<<HTML>>>\s*([\s\S]*?)(?:<<<END>>>|$)/);
@@ -87,5 +88,11 @@ export function parseBuildOutput(text: string): BuildResult | null {
     const title = html.match(/<title>([^<]+)<\/title>/i)?.[1]?.trim();
     if (title) meta.name = title.slice(0, 80);
   }
+  html = ensureProductIcon(html, {
+    name: meta.name,
+    kind: meta.kind,
+    palette: meta.palette,
+    prompt: seed,
+  });
   return { ...meta, html };
 }

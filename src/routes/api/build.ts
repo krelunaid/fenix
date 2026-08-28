@@ -124,7 +124,7 @@ export const Route = createFileRoute("/api/build")({
                 }
               }
 
-              const parsed = parseBuildOutput(acc);
+              const parsed = parseBuildOutput(acc, prompt);
               if (!parsed) {
                 send({
                   t: "err",
