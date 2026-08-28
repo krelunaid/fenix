@@ -129,6 +129,87 @@
   }
 }
 
+.fenix-shell {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  background:
+    radial-gradient(circle at 62% 8%, rgb(79 36 153 / 0.18), transparent 34rem),
+    #050814;
+}
+
+.fenix-sidebar,
+.fenix-rail {
+  position: sticky;
+  top: 0;
+  height: 100dvh;
+  flex-direction: column;
+  border-color: rgb(255 255 255 / 0.08);
+  background: rgb(4 7 17 / 0.94);
+  backdrop-filter: blur(20px);
+}
+
+.fenix-sidebar {
+  padding: 2rem 1.25rem 1.25rem;
+  border-right-width: 1px;
+}
+
+.fenix-rail {
+  gap: 1rem;
+  padding: 1.5rem 1rem;
+  border-left-width: 1px;
+}
+
+.fenix-main {
+  position: relative;
+}
+
+.fenix-grid-bg {
+  background-image:
+    linear-gradient(rgb(126 87 199 / 0.065) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(126 87 199 / 0.065) 1px, transparent 1px),
+    radial-gradient(circle at 72% 15%, rgb(96 43 184 / 0.22), transparent 28rem);
+  background-size: 70px 70px, 70px 70px, auto;
+}
+
+.fenix-gradient-text {
+  background: linear-gradient(100deg, #ddc5ff 4%, #9467ff 50%, #56caf2 96%);
+  background-clip: text;
+  color: transparent;
+}
+
+.fenix-prompt-card {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid transparent;
+  border-radius: 1.7rem;
+  background:
+    linear-gradient(#0a0e1c, #0a0e1c) padding-box,
+    linear-gradient(110deg, #6f3ec7, #40345f 58%, #59cce5) border-box;
+  box-shadow: 0 30px 80px -45px rgb(95 51 203 / 0.75);
+}
+
+.fenix-prompt-card::before {
+  content: "";
+  position: absolute;
+  inset: -80% 50% auto -20%;
+  height: 260px;
+  background: rgb(113 56 219 / 0.12);
+  filter: blur(60px);
+  pointer-events: none;
+}
+
+@media (min-width: 1024px) {
+  .fenix-shell {
+    grid-template-columns: 250px minmax(0, 1fr);
+  }
+}
+
+@media (min-width: 1536px) {
+  .fenix-shell {
+    grid-template-columns: 250px minmax(0, 1fr) 290px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .rise-in,
   .rise-in-2,
