@@ -270,7 +270,7 @@ function ChatColumn({
   return (
     <div className="flex h-full min-h-0 flex-col">
       <div className="border-b border-border px-4 py-3">
-        <p className="text-xs tracking-[0.14em] text-muted-foreground uppercase">Grok · Build</p>
+        <p className="text-xs tracking-[0.14em] text-muted-foreground uppercase">Fenix · Studio</p>
         <p className="mt-1 truncate font-display text-lg tracking-tight">{projectName}</p>
         {palette.length ? (
           <div className="mt-3 flex h-2 overflow-hidden rounded-full">
@@ -342,7 +342,7 @@ function ChatColumn({
             rows={3}
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
-            placeholder="Parla con Grok: una modifica, una schermata, un comportamento…"
+            placeholder="Una modifica, una schermata, un comportamento…"
             disabled={building}
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {

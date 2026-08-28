@@ -82,7 +82,7 @@ export const generateBuild = createServerFn({ method: "POST" })
         choices?: { message?: { content?: string } }[];
       };
       const text = payload.choices?.[0]?.message?.content ?? "";
-      const parsed = parseBuildOutput(text, data.prompt);
+      const parsed = parseBuildOutput(text);
       if (!parsed) {
         return {
           ok: false,
@@ -93,7 +93,7 @@ export const generateBuild = createServerFn({ method: "POST" })
     } catch (err) {
       const aborted = err instanceof Error && err.name === "AbortError";
       const detail = err instanceof Error ? err.message : "errore sconosciuto";
-      console.error("[officina] generateBuild failed", err);
+      console.error("[fenix] generateBuild failed", err);
       return {
         ok: false,
         error: aborted

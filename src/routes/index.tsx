@@ -50,26 +50,32 @@ function Home() {
     <div className="min-h-dvh bg-background text-foreground">
       <header className="flex items-center justify-between gap-3 px-6 py-5 sm:px-10">
         <Wordmark />
-        <a
-          href="https://github.com/krelunaid/fenix"
-          target="_blank"
-          rel="noreferrer"
-          className="inline-flex h-10 min-h-11 items-center rounded-full border border-border bg-card px-4 text-sm font-medium text-foreground no-underline transition-colors duration-200 hover:bg-raised"
-        >
-          Codice su GitHub
-        </a>
+        <nav className="flex items-center gap-1 text-sm">
+          <a
+            href="https://www.kreluna.it"
+            className="inline-flex h-10 min-h-11 items-center rounded-full px-3 text-muted-foreground no-underline transition-colors duration-200 hover:text-foreground"
+          >
+            Kreluna
+          </a>
+          <a
+            href="https://helix.kreluna.it"
+            className="inline-flex h-10 min-h-11 items-center rounded-full px-3 text-muted-foreground no-underline transition-colors duration-200 hover:text-foreground"
+          >
+            Helix
+          </a>
+        </nav>
       </header>
 
       <main className="mx-auto w-full max-w-3xl px-6 pb-28 sm:px-8">
         <section className="pt-10 text-center sm:pt-20">
-          <p className="rise-in text-sm font-medium tracking-tight text-muted-foreground">
-            Fenix
+          <p className="rise-in text-[11px] font-medium tracking-[0.22em] text-muted-foreground uppercase">
+            Fenix by Kreluna
           </p>
-          <h1 className="rise-in-2 mt-4 text-[clamp(2.6rem,8vw,4.75rem)] leading-[1.04] font-semibold tracking-[-0.045em]">
+          <h1 className="rise-in-2 mt-5 font-display text-[clamp(2.8rem,9vw,5.2rem)] leading-[1.02] font-normal tracking-[-0.04em] italic">
             Dimmi cosa costruire.
           </h1>
-          <p className="rise-in-3 mx-auto mt-5 max-w-lg text-lg leading-relaxed text-muted-foreground sm:text-xl">
-            La tua idea. Fenix la scrive, la fa girare, poi le parli e la cambi.
+          <p className="rise-in-3 mx-auto mt-6 max-w-lg text-lg leading-relaxed text-muted-foreground sm:text-xl">
+            Descrivi l'idea. Fenix crea il sito, l'app o il programma — poi lo cambi parlando.
           </p>
         </section>
 
@@ -101,8 +107,8 @@ function Home() {
             <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-[13px] text-muted-foreground">
                 {ai === false
-                  ? "Grok non risponde. Riprova tra un attimo."
-                  : "Scrivi la tua idea. Invio o Build."}
+                  ? "Studio non disponibile. Riprova tra un attimo."
+                  : "Scrivi la tua idea. Invio o Crea."}
               </p>
               <Button
                 type="submit"
@@ -111,7 +117,7 @@ function Home() {
                 disabled={brief.trim().length < 3}
                 className="min-h-12 w-full sm:w-auto"
               >
-                Build
+                Crea
                 <ArrowRight />
               </Button>
             </div>
@@ -198,6 +204,12 @@ function Home() {
           </section>
         ) : null}
       </main>
+
+      <footer className="border-t border-border px-6 py-8 text-center sm:px-10">
+        <p className="text-xs tracking-[0.18em] text-muted-foreground uppercase">
+          Kreluna · tecnologia che prende forma
+        </p>
+      </footer>
     </div>
   );
 }

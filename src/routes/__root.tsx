@@ -4,7 +4,7 @@ import { PreviewHostBridge } from "@/components/preview-host-bridge";
 import { Toaster } from "sonner";
 import appCss from "../styles.css?url";
 
-const APP_NAME = "Fenix";
+const APP_NAME = "Fenix by Kreluna";
 
 export const Route = createRootRoute({
   head: () => ({
@@ -15,9 +15,9 @@ export const Route = createRootRoute({
       {
         name: "description",
         content:
-          "Studio visivo per app, siti e programmi. Descrivi un'idea, Fenix la progetta e te la mostra in anteprima live.",
+          "Fenix by Kreluna. Descrivi un'idea: sito, app o programma. Lo costruisce e te lo mostra in anteprima.",
       },
-      { name: "theme-color", content: "#f5f5f7" },
+      { name: "theme-color", content: "#07111f" },
     ],
     links: [
       { rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },
@@ -28,7 +28,7 @@ export const Route = createRootRoute({
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       {
         rel: "stylesheet",
-        href: "https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Manrope:wght@400;500;600;700&display=swap",
+        href: "https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&family=Manrope:wght@400;500;600;700&display=swap",
       },
     ],
   }),
@@ -42,7 +42,7 @@ export const Route = createRootRoute({
         <AuthProvider>
           <Outlet />
           <Toaster
-            theme="light"
+            theme="dark"
             position="bottom-center"
             toastOptions={{
               className:

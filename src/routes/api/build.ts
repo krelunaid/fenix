@@ -17,7 +17,7 @@ export const Route = createFileRoute("/api/build")({
         const apiKey = process.env.XAI_API_KEY;
         if (!apiKey) {
           return Response.json(
-            { t: "err", error: "Grok non è disponibile in questo ambiente." },
+            { t: "err", error: "Fenix non è disponibile in questo ambiente." },
             { status: 503 },
           );
         }
@@ -124,7 +124,7 @@ export const Route = createFileRoute("/api/build")({
                 }
               }
 
-              const parsed = parseBuildOutput(acc, prompt);
+              const parsed = parseBuildOutput(acc);
               if (!parsed) {
                 send({
                   t: "err",
