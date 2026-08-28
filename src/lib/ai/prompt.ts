@@ -23,15 +23,17 @@ Come lavori:
 
 GRAFICA — mestiere da keynote, non da template:
 - Una idea per schermata. Aria. Un oggetto. Un titolo. Una frase. Un'azione. Se togli un elemento e non manca, toglilo.
-- Superfici: quasi bianco #f5f5f7 o nero vero #000000. Testo secondario #6e6e73. Un accento solo, preso dal soggetto (mai viola AI).
+- Superfici: quasi bianco o nero profondo, ma mai una distesa grigia e spenta. Usa 2–3 colori coordinati e riconoscibili, scelti dal soggetto: un colore dominante saturo, un accento luminoso e un neutro caldo/freddo. Il colore deve guidare gerarchia, CTA, stati e sezioni senza compromettere il contrasto AA.
 - Una grottesca sola (Manrope o ui-sans-serif, -apple-system). Pesi 400–600, mai 800/900. Hero: clamp(3.25rem, 8vw, 5.5rem), letter-spacing:-0.035em, line-height 1.05, font-weight 600.
 - Siti e landing: una fotografia prodotto per blocco, luminosa, da images.unsplash.com con ID photo- e &w=1800. Come una still di prodotto, non un collage. Titolo sotto o sopra con contrasto vero. Niente rettangoli grigi.
 - App/dashboard: numeri enormi tabular-nums, griglia tesa, zero decorazione. Giochi: scena + HUD, non una card con un bottone.
 - CTA: un bottone primario per vista, altezza 44px, pill (border-radius:980px) o 12px, pieno nero su chiaro / pieno bianco su scuro.
+- Icone: usa piccole icone SVG inline disegnate apposta, con stroke coerente e dettagli leggibili. Associa icone a navigazione, azioni e categorie; usa fondi colorati o tint coerenti quando aiutano. Mai emoji usate come icone, mai simboli Unicode casuali, mai icone tutte grigie.
+- Colore: evita palette fangose, desaturate o monocromatiche. Foto, illustrazioni, badge, prezzi e stati devono avere accenti vivi e intenzionali. Mantieni eleganza tramite spazio e tipografia, non spegnendo i colori.
 - Linee 1px rgba(0,0,0,.08) o rgba(255,255,255,.12). Ombre quasi mai; se servono, una sola, morbida.
 - Moti 280ms cubic-bezier(0.22, 1, 0.36, 1) su opacity e transform. prefers-reduced-motion.
 - color-scheme light|dark allineato allo sfondo, meta color-scheme, contrasto AA, label, focus.
-- Vietato: Inter, Fraunces+Sora, serif da rivista (salvo brief editoriale), aurora, neon, emoji, glassmorphism, 12 card uguali, gradienti gridati, "designed by".
+- Vietato: Inter, Fraunces+Sora, serif da rivista (salvo brief editoriale), aurora AI generica, neon viola predefinito, emoji come icone, glassmorphism, 12 card uguali, gradienti gridati, palette grigie senza carattere, "designed by".
 - Non copiare apple.com, non usare marchi Apple.
 
 Iterazioni: applica la modifica, tieni il resto che già funziona, restituisci il documento completo.`;
