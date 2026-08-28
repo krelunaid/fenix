@@ -61,7 +61,7 @@ export const Route = createFileRoute("/api/build")({
                 body: JSON.stringify({
                   model: "grok-build-0.1",
                   temperature: 0.65,
-                  max_tokens: 6500,
+                  max_tokens: 3200,
                   stream: true,
                   messages: [
                     { role: "system", content: SYSTEM_PROMPT },
@@ -114,6 +114,7 @@ export const Route = createFileRoute("/api/build")({
                       send({ t: "s", s: stage });
                     }
                     if (acc.length - lastProgress >= 400) {
+                      send({ t: "d", v: acc.slice(lastProgress) });
                       lastProgress = acc.length;
                       send({ t: "p", n: acc.length });
                     }
@@ -121,6 +122,10 @@ export const Route = createFileRoute("/api/build")({
                     /* ignore malformed sse lines */
                   }
                 }
+              }
+
+              if (acc.length > lastProgress) {
+                send({ t: "d", v: acc.slice(lastProgress) });
               }
 
               const parsed = parseBuildOutput(acc);

@@ -58,7 +58,7 @@ export const generateBuild = createServerFn({ method: "POST" })
         body: JSON.stringify({
           model: "grok-build-0.1",
           temperature: 0.65,
-          max_tokens: 6500,
+          max_tokens: 3200,
           messages: [
             { role: "system", content: SYSTEM_PROMPT },
             { role: "user", content: userParts.join("\n\n") },

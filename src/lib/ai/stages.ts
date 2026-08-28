@@ -11,6 +11,7 @@ export function detectStage(acc: string): string | null {
 export type StreamEvent =
   | { t: "s"; s: string }
   | { t: "p"; n: number }
+  | { t: "d"; v: string }
   | { t: "ok"; result: unknown }
   | { t: "err"; error: string };
 

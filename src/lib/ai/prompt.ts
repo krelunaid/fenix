@@ -14,7 +14,7 @@ Come lavori:
 - App, tool, gioco, programma: deve FUNZIONARE. Stato in JS, render(), azioni che cambiano i dati, più viste (data-view), localStorage se i dati restano.
 - Calcoli corretti. Liste che si aggiungono/tolgono. Filtri che filtrano. Timer che conta. Giochi giocabili fino alla vittoria.
 - Sito: navigazione tra sezioni, form che confermano in pagina, testi veri (niente lorem, niente "immagine qui").
-- Una pagina sola, autosufficiente: CSS in <style>, JS in <script>. Google Fonts ammessi. Nessun JS esterno oltre i font. Compatto: niente commenti, CSS con variabili, HTML sotto 280 righe.
+- Una pagina sola, autosufficiente: CSS in <style>, JS in <script>. Google Fonts ammessi. Nessun JS esterno oltre i font. Compatto: niente commenti, CSS con variabili, HTML sotto 160 righe. Arriva sempre a </html> entro il limite: meglio meno sezioni ma complete e funzionanti.
 - Pattern app:
   const state = { view: "home", ... };
   function render(){ ... }
