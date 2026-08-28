@@ -62,7 +62,6 @@ export const Route = createFileRoute("/api/build")({
                   model: "grok-4.6",
                   temperature: 0.65,
                   max_tokens: 6500,
-                  reasoning_effort: "none",
                   stream: true,
                   messages: [
                     { role: "system", content: SYSTEM_PROMPT },
