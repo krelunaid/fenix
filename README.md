@@ -1,8 +1,6 @@
 # Fenix
 
-Studio visivo indipendente. Descrivi un’app, un sito o un programma: Grok 4.5 lo costruisce, gira in anteprima, si itera in chat.
-
-Non è collegato a Helix. Prodotto a sé.
+Studio visivo. Descrivi un’app, un sito o un programma: Grok 4.5 lo costruisce, gira in anteprima, si itera in chat.
 
 ## Repo
 
