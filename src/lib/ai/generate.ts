@@ -56,7 +56,7 @@ export const generateBuild = createServerFn({ method: "POST" })
         },
         signal: controller.signal,
         body: JSON.stringify({
-          model: "grok-4.6",
+          model: "grok-build-0.1",
           temperature: 0.65,
           max_tokens: 6500,
           messages: [
