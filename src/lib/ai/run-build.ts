@@ -28,7 +28,16 @@ async function consumeStream(
   });
 
   if (!res.ok || !res.body) {
-    return false;
+    let message = `La generazione non è partita (${res.status}).`;
+    try {
+      const payload = (await res.json()) as { error?: string };
+      if (payload.error) message = payload.error;
+    } catch {
+      /* keep the useful HTTP fallback */
+    }
+    store.updateProject(projectId, { status: "error", error: message });
+    store.addMessage(projectId, { id: uid(), role: "assistant", content: message });
+    return true;
   }
 
   const reader = res.body.getReader();
@@ -75,6 +84,25 @@ async function consumeStream(
         });
         finished = true;
       }
+    }
+  }
+
+  const trailing = buffer.trim();
+  if (trailing.startsWith("data:")) {
+    try {
+      const event = JSON.parse(trailing.slice(5).trim()) as StreamEvent;
+      if (event.t === "ok") {
+        const result = event.result as BuildResult;
+        applyBuildResult(projectId, result);
+        store.addMessage(projectId, { id: uid(), role: "assistant", content: readyCopy(result) });
+        finished = true;
+      } else if (event.t === "err") {
+        store.updateProject(projectId, { status: "error", error: event.error });
+        store.addMessage(projectId, { id: uid(), role: "assistant", content: event.error });
+        finished = true;
+      }
+    } catch {
+      /* incomplete trailing event */
     }
   }
 

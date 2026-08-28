@@ -59,10 +59,10 @@ export const Route = createFileRoute("/api/build")({
                 },
                 signal: abort.signal,
                 body: JSON.stringify({
-                  model: "grok-4.5",
-                  temperature: 0.75,
-                  max_tokens: 12000,
-                  reasoning_effort: "low",
+                  model: "grok-4.6",
+                  temperature: 0.65,
+                  max_tokens: 6500,
+                  reasoning_effort: "none",
                   stream: true,
                   messages: [
                     { role: "system", content: SYSTEM_PROMPT },
