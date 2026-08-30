@@ -96,9 +96,9 @@ function Home() {
           <span className="fenix-grad">creare oggi?</span>
         </h1>
         <img
-          src="/fenix-orb.jpg"
+          src="/fenix-orb.png"
           alt="Fenix"
-          className="pointer-events-none absolute top-[-36px] right-[-8px] w-[240px] drop-shadow-[0_0_50px_rgba(124,107,255,0.55)]"
+          className="pointer-events-none absolute top-[-48px] right-[-12px] w-[260px] bg-transparent"
         />
       </div>
 

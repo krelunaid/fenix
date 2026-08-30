@@ -31,7 +31,7 @@ export function AppShell({
       <div className="flex min-h-dvh w-full min-w-[1100px]">
         <aside className="flex w-[220px] shrink-0 flex-col border-r border-white/5 px-3 py-5">
           <Link to="/" className="flex items-center gap-2.5 px-2 no-underline">
-            <img src="/fenix-orb.jpg" alt="" className="size-8 rounded-full object-cover" />
+            <img src="/fenix-mark.svg" alt="" className="size-8" />
             <span className="flex flex-col leading-none">
               <span className="text-[13px] font-semibold tracking-[0.14em]">FENIX</span>
               <span className="mt-1 text-[9px] font-medium tracking-[0.2em] text-muted-foreground">
