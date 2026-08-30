@@ -7,7 +7,7 @@ import {
   getXaiApiKey,
   XAI_CHAT_COMPLETIONS_URL,
   XAI_MISSING_KEY_ERROR,
-  XAI_MODEL,
+  FENIX_MODEL,
 } from "@/lib/ai/model";
 
 type Body = {
@@ -154,7 +154,7 @@ export const Route = createFileRoute("/api/build")({
                 },
                 signal: abort.signal,
                 body: JSON.stringify({
-                  model: XAI_MODEL,
+                  model: FENIX_MODEL,
                   temperature: instruction ? 0.5 : 0.85,
                   max_tokens: 16000,
                   stream: true,
