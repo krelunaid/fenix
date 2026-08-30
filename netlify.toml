@@ -3,4 +3,4 @@
   publish = "dist"
 
 [build.environment]
-  VITE_AUTH_ENABLED = "false"
+  VITE_AUTH_ENABLED = "true"

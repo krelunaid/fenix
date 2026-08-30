@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { GROK_PROVIDERS, authClient, authEnabled, signIn } from "@/lib/auth/client";
 import { Wordmark } from "@/components/wordmark";
 
@@ -45,7 +45,7 @@ function Login() {
         <Wordmark />
         <h1 className="mt-8 text-2xl font-semibold tracking-tight">Accedi</h1>
         <p className="mt-2 text-sm text-[#9b93c2]">
-          Gmail, X o iscrizione. Puoi anche continuare senza account.
+          Gmail, X o iscrizione. Senza account non si entra.
         </p>
 
         {authEnabled ? (
@@ -123,13 +123,6 @@ function Login() {
             {busy ? "Attendi…" : mode === "up" ? "Crea account" : "Entra"}
           </button>
         </form>
-
-        <Link
-          to="/"
-          className="mt-6 flex h-11 w-full items-center justify-center rounded-full text-sm text-[#9b93c2] no-underline hover:text-white"
-        >
-          Continua senza account
-        </Link>
       </div>
     </main>
   );
