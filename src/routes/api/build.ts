@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { parseBuildOutput } from "@/lib/ai/parse";
-import { generateHeroUrl, injectHero } from "@/lib/ai/hero-image";
+import { generateHeroUrl, injectHero, heroAspect } from "@/lib/ai/hero-image";
 import { SYSTEM_PROMPT } from "@/lib/ai/prompt";
 import { looksCheap, reviewBuild } from "@/lib/ai/qa";
 import { detectStage, sseLine } from "@/lib/ai/stages";
@@ -316,7 +316,12 @@ export const Route = createFileRoute("/api/build")({
                 try {
                   const imgCtl = new AbortController();
                   const imgTimer = setTimeout(() => imgCtl.abort(), 25_000);
-                  const hero = await generateHeroUrl(apiKey, prompt, imgCtl.signal);
+                  const hero = await generateHeroUrl(
+                    apiKey,
+                    prompt,
+                    imgCtl.signal,
+                    heroAspect(result.html),
+                  );
                   clearTimeout(imgTimer);
                   if (hero) {
                     result = { ...result, html: injectHero(result.html, hero) };

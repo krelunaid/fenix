@@ -141,7 +141,7 @@ Rispondi SOLO:
 <!DOCTYPE html>...completo...
 <<<END>>>`;
 
-async function generateHero(apiKey, prompt) {
+async function generateHero(apiKey, prompt, aspect) {
   try {
     const res = await fetch("https://api.x.ai/v1/images/generations", {
       method: "POST",
@@ -152,7 +152,7 @@ async function generateHero(apiKey, prompt) {
       body: JSON.stringify({
         model: "grok-imagine-image-2.0",
         prompt: `Photorealistic photo, no text, no logo, no watermark. Subject: ${String(prompt).slice(0, 280)}`,
-        aspect_ratio: "16:9",
+        aspect_ratio: aspect || "16:9",
         quality: "low",
         n: 1,
       }),
@@ -167,7 +167,10 @@ async function generateHero(apiKey, prompt) {
 
 function injectHero(html, url) {
   if (!html || !url) return html;
-  const img = `<img class="fk-hero" src="${url}" alt="" width="1200" height="675" style="width:100%;height:200px;object-fit:cover;border-radius:18px;display:block;margin:0 0 16px"/>`;
+  const phone = /fk-tab|data-view=["']home["']/i.test(html);
+  const img = phone
+    ? `<img class="fk-hero" src="${url}" alt="" width="400" height="400" style="width:100%;height:140px;object-fit:cover;border-radius:20px;display:block;margin:8px 0 12px"/>`
+    : `<img class="fk-hero" src="${url}" alt="" width="1200" height="675" style="width:100%;height:220px;object-fit:cover;border-radius:18px;display:block;margin:0 0 16px"/>`;
   let next = html.replace(/^\s*"\s*\/>/m, "").replace(/>\s*"\s*\/>/g, ">");
   if (/<img\b/i.test(next)) return next.replace(/<img\b[^>]*>/i, img);
   if (/<main\b[^>]*>/i.test(next)) return next.replace(/<main\b[^>]*>/i, (open) => `${open}${img}`);
@@ -209,7 +212,7 @@ async function generate(prompt, html, instruction) {
   const parsed = parseHtml(text);
   if (!parsed?.html) throw new Error("HTML non valido");
   let out = parsed.html;
-  const hero = await generateHero(apiKey, prompt);
+  const hero = await generateHero(apiKey, prompt, /fk-tab/i.test(out) ? "1:1" : "16:9");
   if (hero) {
     out = injectHero(out, hero);
     return { html: out, meta: parsed.meta, log: ["Bozza pronta", "Foto hero"], files: [] };
@@ -501,7 +504,9 @@ async function polish(prompt, html, instruction) {
   current = restoreHome(current);
   try {
     const apiKey = (process.env.XAI_API_KEY || "").trim();
-    const hero = apiKey ? await generateHero(apiKey, prompt) : null;
+    const hero = apiKey
+      ? await generateHero(apiKey, prompt, /fk-tab/i.test(current) ? "1:1" : "16:9")
+      : null;
     if (hero) {
       current = injectHero(current, hero);
       log.push("Foto hero");
