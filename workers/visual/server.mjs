@@ -250,6 +250,29 @@ async function shotTab(page, index) {
   return Buffer.from(buf).toString("base64");
 }
 
+async function auditTab(page, index) {
+  try {
+    const buttons = page.locator("nav button, .fk-tab button, .tabbar button");
+    const n = await buttons.count();
+    if (n > index) {
+      await buttons.nth(index).click({ timeout: 2500 });
+      await new Promise((r) => setTimeout(r, 280));
+    }
+  } catch {
+    /* ignore */
+  }
+  return page.evaluate(() => {
+    const main = document.querySelector("main");
+    const text = ((main && main.innerText) || "").replace(/\s+/g, " ").trim();
+    return {
+      chars: text.length,
+      forms: document.querySelectorAll("form").length,
+      tiles: document.querySelectorAll(".fk-tile, .fk-stat, .fk-panel, li, .fk-btn").length,
+      empty: text.length < 48,
+    };
+  });
+}
+
 async function polish(prompt, html, instruction) {
   const apiKey = (process.env.XAI_API_KEY || "").trim();
   if (!apiKey) throw new Error("Manca XAI_API_KEY");
@@ -315,6 +338,40 @@ async function polish(prompt, html, instruction) {
       }
     } catch (err) {
       log.push(`Giro ${tabId} saltato: ${err instanceof Error ? err.message : "xAI"}`);
+    }
+  }
+  if (!instruction && session?.page) {
+    const started = Date.now();
+    for (let extra = 0; extra < 5 && Date.now() - started < 7 * 60 * 1000; extra++) {
+      try {
+        await session.page.setContent(current, { waitUntil: "domcontentloaded", timeout: 12000 });
+        await new Promise((r) => setTimeout(r, 200));
+        let weak = -1;
+        for (let t = 0; t < TAB_IDS.length; t++) {
+          const a = await auditTab(session.page, t);
+          if (a.empty) {
+            weak = t;
+            break;
+          }
+        }
+        if (weak < 0) {
+          log.push("Checklist: 5 tab piene. Stop.");
+          break;
+        }
+        const tabId = TAB_IDS[weak];
+        log.push(`Riprovo tab vuota ${tabId} (extra ${extra + 1})`);
+        const shot = await shotTab(session.page, weak);
+        const text = await grok(apiKey, prompt, current, shot, weak + 1, instruction, tabId);
+        const screen = parseScreen(text);
+        if (screen?.inner) {
+          current = spliceScreen(current, screen.id || tabId, screen.inner);
+          log.push(`Patch extra ${tabId}`);
+        } else {
+          log.push(`Extra ${tabId} senza patch`);
+        }
+      } catch (err) {
+        log.push(`Extra saltato: ${err instanceof Error ? err.message : "errore"}`);
+      }
     }
   }
   if (session?.browser) {

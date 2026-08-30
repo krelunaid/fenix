@@ -39,8 +39,8 @@ function Home() {
   function handleBuild() {
     const text = brief.trim();
     if (text.length < 3) return;
-    if (creditsRemaining < 3) {
-      toast("Crediti esauriti. Ogni creazione usa 3 crediti.");
+    if (creditsRemaining < 4) {
+      toast("Crediti esauriti. Ogni creazione usa 4 crediti.");
       return;
     }
     const kind = choice === "auto" ? inferKind(text) : choice;
@@ -173,7 +173,7 @@ function Home() {
               ? "Studio non disponibile."
               : emptyCredits
                 ? "Crediti esauriti."
-                : "Invio per creare · 3 crediti"}
+                : "Invio per creare · 4 crediti"}
           </p>
           <button
             type="submit"
