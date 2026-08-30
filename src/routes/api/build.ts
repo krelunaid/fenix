@@ -193,7 +193,7 @@ export const Route = createFileRoute("/api/build")({
                   model: FENIX_MODEL,
                   reasoning_effort: "low",
                   temperature: instruction ? 0.5 : 0.85,
-                  max_tokens: 16000,
+                  max_tokens: 20000,
                   stream: true,
                   messages: [
                     { role: "system", content: SYSTEM_PROMPT },
