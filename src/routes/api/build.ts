@@ -1,9 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { FENIX_MODEL } from "@/lib/ai/model";
 import { parseBuildOutput } from "@/lib/ai/parse";
 import { SYSTEM_PROMPT } from "@/lib/ai/prompt";
 import { detectStage, sseLine } from "@/lib/ai/stages";
 import { designVisual } from "@/lib/ai/visual";
+import {
+  getXaiApiKey,
+  XAI_CHAT_COMPLETIONS_URL,
+  XAI_MISSING_KEY_ERROR,
+  XAI_MODEL,
+} from "@/lib/ai/model";
 
 type Body = {
   prompt?: string;
@@ -48,17 +53,14 @@ function grokDelta(json: GrokChunk) {
   if (json.error) {
     const err = json.error;
     const message =
-      typeof err === "string"
-        ? err
-        : err.message || err.error || "Errore dal modello.";
-    return { content: "", reasoning: "", finish: null as string | null, error: message };
+      typeof err === "string" ? err : err.message || err.error || "Errore dal modello.";
+    return { content: "", reasoning: "", error: message };
   }
   const choice = json.choices?.[0];
   const part = choice?.delta ?? choice?.message ?? {};
   return {
     content: asText(part.content),
     reasoning: asText(part.reasoning_content),
-    finish: choice?.finish_reason ?? null,
     error: null as string | null,
   };
 }
@@ -68,12 +70,9 @@ export const Route = createFileRoute("/api/build")({
     handlers: {
       POST: async ({ request }) => {
         // Server-only. Never VITE_XAI_API_KEY — that would leak to the browser.
-        const apiKey = process.env.XAI_API_KEY;
+        const apiKey = getXaiApiKey();
         if (!apiKey) {
-          return Response.json(
-            { t: "err", error: "Fenix non è disponibile in questo ambiente." },
-            { status: 503 },
-          );
+          return Response.json({ t: "err", error: XAI_MISSING_KEY_ERROR }, { status: 503 });
         }
 
         let body: Body = {};
@@ -98,11 +97,7 @@ export const Route = createFileRoute("/api/build")({
           `COMPLETO: app/tool/gioco = 3+ viste funzionanti. Sito = 4+ sezioni, nav, form, testi veri.`,
         ];
         if (html && instruction) userParts.push(`APP ATTUALE (HTML):\n${html}`);
-        if (instruction) {
-          userParts.push(
-            `MODIFICA:\n${instruction}\nApplica questa modifica, tieni identità e funzioni già ok, restituisci l'app completa.`,
-          );
-        }
+        if (instruction) userParts.push(`MODIFICA:\n${instruction}\nApplica questa modifica, tieni identità e funzioni già ok, restituisci l'app completa.`);
         userParts.push("Costruisci ora. Formato META + HTML, nient'altro. Niente ragionamento nel documento.");
 
         const encoder = new TextEncoder();
@@ -114,8 +109,7 @@ export const Route = createFileRoute("/api/build")({
               controller.enqueue(encoder.encode(sseLine(event)));
             };
             const ping = () => {
-              if (closed) return;
-              controller.enqueue(encoder.encode(": ping\n\n"));
+              if (!closed) controller.enqueue(encoder.encode(": ping\n\n"));
             };
             const abort = new AbortController();
             const timer = setTimeout(() => abort.abort(), 140_000);
@@ -127,7 +121,6 @@ export const Route = createFileRoute("/api/build")({
               emitted = true;
               send(event);
             };
-
             try {
               send({ t: "s", s: "Direzione visiva" });
               if (!instruction) {
@@ -152,11 +145,8 @@ export const Route = createFileRoute("/api/build")({
                   clearTimeout(visTimer);
                 }
               }
-
               send({ t: "s", s: "Compongo colori, icone, interfaccia" });
-              // Chat Completions: grok-build-0.1 streams reasoning_content first, then content.
-              // temperature e max_tokens sono supportati. Non usare reasoning_effort.
-              const res = await fetch("https://api.x.ai/v1/chat/completions", {
+              const res = await fetch(XAI_CHAT_COMPLETIONS_URL, {
                 method: "POST",
                 headers: {
                   "Content-Type": "application/json",
@@ -164,7 +154,7 @@ export const Route = createFileRoute("/api/build")({
                 },
                 signal: abort.signal,
                 body: JSON.stringify({
-                  model: FENIX_MODEL,
+                  model: XAI_MODEL,
                   temperature: instruction ? 0.5 : 0.85,
                   max_tokens: 16000,
                   stream: true,
@@ -184,6 +174,8 @@ export const Route = createFileRoute("/api/build")({
                 finish({ t: "err", error: msg });
                 return;
               }
+
+              send({ t: "s", s: "Compongo colori, icone, interfaccia" });
 
               const reader = res.body.getReader();
               const decoder = new TextDecoder();
@@ -207,10 +199,8 @@ export const Route = createFileRoute("/api/build")({
                 }
                 if (piece.reasoning && !sawReasoning) {
                   sawReasoning = true;
-                  if (lastStage !== "Penso il prodotto") {
-                    lastStage = "Penso il prodotto";
-                    send({ t: "s", s: lastStage });
-                  }
+                  lastStage = "Penso il prodotto";
+                  send({ t: "s", s: lastStage });
                 }
                 if (!piece.content) return;
                 acc += piece.content;
@@ -278,12 +268,7 @@ export const Route = createFileRoute("/api/build")({
               if (!emitted) {
                 const salvage = parseBuildOutput(acc);
                 if (salvage) finish({ t: "ok", result: salvage });
-                else {
-                  finish({
-                    t: "err",
-                    error: "Non è arrivata una risposta dal modello. Riprova.",
-                  });
-                }
+                else finish({ t: "err", error: "Non è arrivata una risposta dal modello. Riprova." });
               }
               closed = true;
               try {
