@@ -169,6 +169,21 @@ export const useProjectStore = create<ProjectStore>()(
     }),
     {
       name: "officina-projects",
+      version: 1,
+      migrate: (persistedState, version) => {
+        const state = persistedState as Pick<
+          ProjectStore,
+          "projects" | "creditsRemaining" | "appDb"
+        >;
+
+        // One-time refill for browsers that exhausted the original demo grant.
+        // The persist version prevents the refill from repeating after another 12 uses.
+        if (version < 1 && state.creditsRemaining < CREDIT_COST) {
+          return { ...state, creditsRemaining: CREDITS_GRANT };
+        }
+
+        return state;
+      },
       partialize: (s) => ({
         projects: s.projects,
         creditsRemaining: s.creditsRemaining,
