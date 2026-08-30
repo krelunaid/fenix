@@ -1,5 +1,5 @@
 [build]
-  command = "npm run build"
+  command = "node scripts/with-app-env.mjs ./node_modules/.bin/vite build && node scripts/migrate.mjs"
   publish = "dist/client"
 
 [build.environment]
