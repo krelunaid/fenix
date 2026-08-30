@@ -116,7 +116,7 @@ export function PreviewFrame({
               sandbox="allow-scripts allow-forms allow-modals"
               srcDoc={srcDoc}
               className="h-full w-full border-0"
-              style={{ background: background ?? "var(--color-card)" }}
+              style={{ background: background ?? "var(--color-card)", overflow: "auto" }}
             />
           ) : (
             <div className="grid h-full place-items-center px-8 text-center">

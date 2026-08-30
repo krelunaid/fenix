@@ -27,16 +27,16 @@ document.addEventListener("click", function (e) {
 </script>`;
 
 const PHONE_KIT = `<style data-fenix-phone>
-html,body{height:100%;margin:0}
-body{min-height:100dvh;max-width:100%;overflow-x:hidden;color:var(--fg,#111);background:var(--bg,#f4f6fa)}
-body:has(.fk-tab),body:has(.tabbar),body:has(nav[aria-label]){
-  display:flex;flex-direction:column;overflow:hidden;font-size:16px;-webkit-font-smoothing:antialiased;
-}
+html,body{height:100%!important;margin:0;max-width:100%;overflow:hidden!important;color:var(--fg,#111);background:var(--bg,#f4f6fa)}
+body{display:flex!important;flex-direction:column!important;min-height:100dvh;font-size:16px;-webkit-font-smoothing:antialiased}
 .fk-top,body>header{flex-shrink:0;padding:14px 16px 10px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
 .fk-hello{margin:0;font-size:22px;font-weight:700;letter-spacing:-.03em;line-height:1.15}
 .fk-role{margin:4px 0 0;font-size:12px;color:var(--muted,#3a3a3c);opacity:1}
 .fk-date{margin:0 16px 10px;font-size:12px;color:var(--muted,#3a3a3c)}
-.fk-main,body>main{flex:1;min-height:0;overflow:auto;padding:0 16px 20px;-webkit-overflow-scrolling:touch}
+.fk-main,body>main,main{
+  flex:1 1 0%!important;min-height:0!important;overflow-y:scroll!important;
+  padding:0 16px 28px;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;
+}
 .fk-panel{background:var(--fg,#1d1d1f);color:#f5f5f7;border-radius:22px;padding:18px 16px;margin:0 0 14px}
 .fk-panel h2,.fk-panel h3{margin:0 0 12px;font-size:15px;color:#f5f5f7}
 .fk-grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
@@ -75,6 +75,13 @@ export function fenixRuntimeScript(projectId: string) {
   return `<script data-fenix-runtime>
 (function(){
   var pid = ${JSON.stringify(projectId)};
+  try {
+    var sc = document.querySelector("main") || document.getElementById("main") || document.body;
+    sc.style.overflowY = "scroll";
+    sc.style.webkitOverflowScrolling = "touch";
+    sc.style.minHeight = "0";
+    sc.style.flex = "1 1 0%";
+  } catch (e) {}
   try {
     void window.localStorage;
   } catch (e) {
