@@ -28,7 +28,6 @@ export async function reviewBuild(input: {
       model: FENIX_MODEL,
       temperature: 0.35,
       max_tokens: 12000,
-      reasoning_effort: "low",
       stream: false,
       messages: [
         { role: "system", content: QA_PROMPT },
