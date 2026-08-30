@@ -1,5 +1,5 @@
 import { DEFAULT_PALETTE, type Palette, type ProjectKind } from "@/lib/projects/types";
-import { assembleHtml, ensureScreenFiles, parseProjectFiles, seedFiveScreens } from "@/lib/projects/files";
+import { assembleHtml, ensureScreenFiles, parseProjectFiles, seedFiveScreens, type ProjectFile } from "@/lib/projects/files";
 import { fenix2Files } from "@/lib/projects/fenix2";
 
 export type BuildResult = {
