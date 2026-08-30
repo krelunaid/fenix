@@ -61,7 +61,6 @@ export const generateBuild = createServerFn({ method: "POST" })
         signal: controller.signal,
         body: JSON.stringify({
           model: FENIX_MODEL,
-          reasoning_effort: "low",
           temperature: data.instruction ? 0.55 : 0.92,
           max_tokens: 14000,
           messages: [

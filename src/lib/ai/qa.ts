@@ -30,7 +30,6 @@ export async function reviewBuild(input: {
     signal: input.signal,
     body: JSON.stringify({
       model: FENIX_MODEL,
-      reasoning_effort: "low",
       temperature: 0.35,
       max_tokens: 12000,
       stream: false,

@@ -331,8 +331,7 @@ export function sanitizePreviewHtml(html: string) {
     .replace(/(<body[^>]*>)\s*"\s*\/>/i, "$1")
     .replace(/^\s*"\s*\/>/gm, "")
     .replace(/>\s*"\s*\/>/g, ">")
-    .replace(/"\s*\/>/g, "")
-    .replace(/\$\{[^}]+\}/g, "");
+    .replace(/"\s*\/>/g, "");
 }
 
 export function prepareSrcDoc(html: string, bg: string, projectId = "preview", kind?: string) {

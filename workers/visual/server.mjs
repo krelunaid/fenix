@@ -203,7 +203,6 @@ async function generate(prompt, html, instruction) {
     },
     body: JSON.stringify({
       model: MODEL,
-      reasoning_effort: "low",
       temperature: 0.7,
       max_tokens: 8000,
       stream: false,
@@ -269,7 +268,6 @@ async function grok(apiKey, prompt, html, shotB64, pass, instruction, tabId) {
     },
     body: JSON.stringify({
       model: MODEL,
-      reasoning_effort: "low",
       temperature: 0.35,
       max_tokens: 4000,
       stream: false,
@@ -293,7 +291,6 @@ async function designIcons(apiKey, prompt) {
     },
     body: JSON.stringify({
       model: MODEL,
-      reasoning_effort: "low",
       temperature: 0.4,
       max_tokens: 2500,
       stream: false,
@@ -545,6 +542,27 @@ async function polish(prompt, html, instruction) {
   return { html: current, meta, log, files };
 }
 
+function scriptsSyntax(html) {
+  const re = /<script\b([^>]*)>([\s\S]*?)<\/script>/gi;
+  let match;
+  while ((match = re.exec(html || ""))) {
+    const attrs = match[1] || "";
+    if (/\bsrc\s*=/i.test(attrs)) continue;
+    if (/type\s*=\s*["']?(module|application\/json|importmap)/i.test(attrs)) continue;
+    const body = String(match[2] || "").trim();
+    if (!body) continue;
+    try {
+      new Function(body);
+    } catch (err) {
+      return err instanceof Error ? err.message : "JS non valido";
+    }
+  }
+  if (/\$\{/.test(String(html || "").replace(/<script\b[\s\S]*?<\/script>/gi, " "))) {
+    return "Template literal nel markup";
+  }
+  return "";
+}
+
 function json(res, status, body) {
   res.writeHead(status, {
     "Content-Type": "application/json",
@@ -626,6 +644,21 @@ const server = createServer(async (req, res) => {
       const result = isBuild
         ? await generate(prompt, html, instruction)
         : await polish(prompt, html, instruction);
+      const broken = scriptsSyntax(result.html);
+      if (broken) {
+        if (isBuild) {
+          job.status = "err";
+          job.error = `HTML non valido: ${broken}`;
+          job.log = [...result.log, job.error];
+          return;
+        }
+        job.status = "ok";
+        job.html = html;
+        job.meta = result.meta;
+        job.log = [...result.log, `Rifinitura scartata (${broken}). Resta la bozza.`];
+        job.files = [];
+        return;
+      }
       job.status = "ok";
       job.html = result.html;
       job.meta = result.meta;

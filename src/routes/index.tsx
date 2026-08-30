@@ -21,6 +21,11 @@ function Home() {
   const [brief, setBrief] = useState("");
   const [choice, setChoice] = useState<ProductChoice>("auto");
   const [ai, setAi] = useState<boolean | null>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     let live = true;
@@ -48,8 +53,8 @@ function Home() {
     void navigate({ to: "/studio/$projectId", params: { projectId: project.id } });
   }
 
-  const recents = hydrated ? projects.slice(0, 6) : [];
-  const emptyCredits = hydrated && creditsRemaining < 1;
+  const recents = mounted && hydrated ? projects.slice(0, 6) : [];
+  const emptyCredits = mounted && hydrated && creditsRemaining < 1;
 
   return (
     <AppShell

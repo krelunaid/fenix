@@ -1,9 +1,10 @@
 import type { StreamEvent } from "./stages";
-import { applyBuildResult, useProjectStore } from "@/lib/projects/store";
+import { applyBuildResult, promoteReady, useProjectStore } from "@/lib/projects/store";
 import { parseBuildOutput, type BuildResult } from "./parse";
 import { isWeakPreview, lookInstruction, resetAudit, waitPreviewAudit, waitPreviewShot } from "./look";
 import { APP_SHELL_HTML, APP_SHELL_INSTRUCTION } from "./app-shell";
 import { CREATE_COST, ITERATE_COST } from "@/lib/projects/credits";
+import { formatHtmlErrors, validateProductHtml } from "@/lib/projects/validate-html";
 import { uid } from "@/lib/utils";
 
 const inflight = new Set<string>();
@@ -121,7 +122,8 @@ async function consumeViaWorker(
             `<<<META>>>\n${JSON.stringify(job.meta ?? {})}\n<<<HTML>>>\n${job.html}\n<<<END>>>`,
           );
           if (!result) throw new Error("Risposta non valida");
-          applyBuildResult(projectId, result);
+          const report = applyBuildResult(projectId, result, "building");
+          if (!report.syntaxOk) throw new Error(formatHtmlErrors(report) || "HTML non valido");
           if (!quiet) {
             store.addMessage(projectId, {
               id: uid(),
@@ -184,8 +186,18 @@ async function consumeStream(
         }
       } else if (event.t === "ok") {
         const result = event.result as BuildResult;
-        applyBuildResult(projectId, result);
-        if (!quiet) {
+        const report = applyBuildResult(projectId, result, "building");
+        if (!report.syntaxOk) {
+          store.updateProject(projectId, {
+            status: "error",
+            error: formatHtmlErrors(report) || "HTML non valido",
+          });
+          store.addMessage(projectId, {
+            id: uid(),
+            role: "assistant",
+            content: formatHtmlErrors(report) || "HTML non valido. Non pubblico.",
+          });
+        } else if (!quiet) {
           store.addMessage(projectId, {
             id: uid(),
             role: "assistant",
@@ -276,22 +288,33 @@ export async function runBuild(projectId: string, instruction?: string) {
         return;
       }
       if (latest?.html) {
+        const draftCheck = validateProductHtml(latest.html, { kind: latest.kind });
+        if (!draftCheck.syntaxOk) {
+          store.refundCredit(cost);
+          charged = false;
+          store.updateProject(projectId, {
+            status: "error",
+            error: formatHtmlErrors(draftCheck) || "HTML non valido",
+          });
+          store.addMessage(projectId, {
+            id: uid(),
+            role: "assistant",
+            content: `Non pubblico: ${formatHtmlErrors(draftCheck)}. Credito rimborsato.`,
+          });
+          return;
+        }
         store.updateProject(projectId, {
-          status: "ready",
-          buildLog: [
-            ...(latest.buildLog ?? []),
-            instruction ? "Motore visivo in sottofondo" : "Motore visivo in sottofondo",
-          ],
+          status: "building",
+          buildLog: [...(latest.buildLog ?? []), "Motore visivo in sottofondo"],
         });
         store.addMessage(projectId, {
           id: uid(),
           role: "assistant",
           content: instruction
-            ? "Bozza in anteprima. Il motore visivo rifinisce in sottofondo (icone, 5–10 min). Puoi già usarla."
-            : "Bozza in anteprima. Puoi già usarla. Il motore visivo rifinisce in sottofondo (icone e foto, 5–10 min).",
+            ? "Bozza valida in anteprima. Il motore visivo rifinisce (icone, 5–10 min). Pubblica resta chiusa finché non è pronto."
+            : "Bozza valida in anteprima. Il motore visivo rifinisce in sottofondo. Pubblica resta chiusa finché non è pronto.",
         });
-        let polished = false;
-        let workerError = "";
+        let lastValidHtml = latest.html;
         try {
           const data = await callWorker(project.prompt, latest.html, instruction);
           const fileBlocks = (data?.files ?? [])
@@ -303,109 +326,113 @@ export async function runBuild(projectId: string, instruction?: string) {
               `<<<META>>>\n${JSON.stringify(data.meta ?? {})}\n${fileBlocks}\n<<<HTML>>>\n${data.html ?? ""}\n<<<END>>>`,
             );
           if (result?.html) {
-            applyBuildResult(projectId, result);
-            const logs = data?.log ?? [];
-            store.updateProject(projectId, {
-              status: "ready",
-              buildLog: [
-                ...(useProjectStore.getState().getProject(projectId)?.buildLog ?? []),
-                ...logs,
-                "Anteprima rifinita",
-              ],
-            });
-            store.addMessage(projectId, {
-              id: uid(),
-              role: "assistant",
-              content: [
-                `Motore visivo: ${logs.length ? logs.join(" · ") : "icone e rifinitura"}.`,
-                readyCopy(result),
-              ].join("\n\n"),
-            });
-            polished = true;
+            const report = applyBuildResult(projectId, result, "building");
+            if (report.syntaxOk) {
+              lastValidHtml = result.html;
+              const logs = data?.log ?? [];
+              store.updateProject(projectId, {
+                buildLog: [
+                  ...(useProjectStore.getState().getProject(projectId)?.buildLog ?? []),
+                  ...logs,
+                  "Anteprima rifinita",
+                ],
+              });
+              store.addMessage(projectId, {
+                id: uid(),
+                role: "assistant",
+                content: [
+                  `Motore visivo: ${logs.length ? logs.join(" · ") : "icone e rifinitura"}.`,
+                  readyCopy(result),
+                ].join("\n\n"),
+              });
+            } else {
+              store.updateProject(projectId, { html: lastValidHtml, status: "building" });
+              store.addMessage(projectId, {
+                id: uid(),
+                role: "assistant",
+                content: `Rifinitura scartata (JS non valido). Resta la bozza valida. ${formatHtmlErrors(report)}`,
+              });
+            }
           }
         } catch (err) {
-          workerError = err instanceof Error ? err.message : "errore";
+          const workerError = err instanceof Error ? err.message : "errore";
+          store.addMessage(projectId, {
+            id: uid(),
+            role: "assistant",
+            content: `Motore visivo non ha risposto (${workerError}). Uso gli sguardi in pagina.`,
+          });
         }
-        if (polished) return;
+
+        if (!(instruction || isIOS())) {
+          const look = async (label: string) => {
+            const current = useProjectStore.getState().getProject(projectId);
+            const snapshot = current?.html;
+            if (!snapshot) return false;
+            store.updateProject(projectId, {
+              status: "building",
+              buildLog: [...(current.buildLog ?? []), label],
+            });
+            const shot = await waitPreviewShot(5500);
+            const audit = await waitPreviewAudit(500);
+            if (!shot && !isWeakPreview(audit)) return false;
+            await consumeStream(
+              projectId,
+              {
+                prompt: project.prompt,
+                html: snapshot,
+                instruction: lookInstruction(audit, Boolean(shot)),
+                shot: shot || undefined,
+              },
+              true,
+            );
+            const after = useProjectStore.getState().getProject(projectId);
+            const afterReport = after?.html
+              ? validateProductHtml(after.html, { kind: after.kind })
+              : { syntaxOk: false };
+            if (!afterReport.syntaxOk) {
+              store.updateProject(projectId, {
+                status: "building",
+                error: undefined,
+                html: snapshot,
+              });
+              return false;
+            }
+            resetAudit();
+            return true;
+          };
+
+          await Promise.race([
+            look("Guardo i pixel"),
+            new Promise((r) => window.setTimeout(r, 20000)),
+          ]);
+          await new Promise((r) => window.setTimeout(r, 800));
+          const second = await waitPreviewAudit(1800);
+          if (isWeakPreview(second)) {
+            await look("Secondo sguardo");
+          }
+        }
+
+        const promoted = promoteReady(projectId);
+        if (promoted.ok) {
+          store.addMessage(projectId, {
+            id: uid(),
+            role: "assistant",
+            content: "Pronto. Anteprima e Pubblica sono attive.",
+          });
+          return;
+        }
+        store.refundCredit(cost);
+        charged = false;
+        store.updateProject(projectId, {
+          status: "error",
+          error: formatHtmlErrors(promoted) || "Prodotto incompleto",
+        });
         store.addMessage(projectId, {
           id: uid(),
           role: "assistant",
-          content: workerError
-            ? `Motore visivo non ha risposto (${workerError}). Uso gli sguardi in pagina.`
-            : "Motore visivo non ha risposto. Uso gli sguardi in pagina.",
+          content: `Non pubblico: ${formatHtmlErrors(promoted)}. Credito rimborsato.`,
         });
-        if (instruction || isIOS()) {
-          store.updateProject(projectId, { status: "ready" });
-          const now = useProjectStore.getState().getProject(projectId);
-          if (now?.html) {
-            store.addMessage(projectId, {
-              id: uid(),
-              role: "assistant",
-              content: readyCopy({
-                name: now.name,
-                tagline: now.tagline,
-                kind: now.kind,
-                summary: now.summary ?? "",
-                direction: now.direction ?? "",
-                palette: now.palette,
-                html: now.html || "",
-                files: now.files ?? [],
-              }),
-            });
-          }
-          return;
-        }
-          }
-          return;
-        }
-
-        const look = async (label: string) => {
-          const current = useProjectStore.getState().getProject(projectId);
-          const snapshot = current?.html;
-          if (!snapshot) return false;
-          store.updateProject(projectId, {
-            status: "building",
-            buildLog: [...(current.buildLog ?? []), label],
-          });
-          const shot = await waitPreviewShot(5500);
-          const audit = await waitPreviewAudit(500);
-          if (!shot && !isWeakPreview(audit)) return false;
-          await consumeStream(
-            projectId,
-            {
-              prompt: project.prompt,
-              html: snapshot,
-              instruction: lookInstruction(audit, Boolean(shot)),
-              shot: shot || undefined,
-            },
-            true,
-          );
-          const after = useProjectStore.getState().getProject(projectId);
-          if (after?.status === "error") {
-            store.updateProject(projectId, {
-              status: "ready",
-              error: undefined,
-              html: snapshot,
-            });
-            return false;
-          }
-          resetAudit();
-          return true;
-        };
-
-        await Promise.race([
-          look("Guardo i pixel"),
-          new Promise((r) => window.setTimeout(r, 20000)),
-        ]);
-        await new Promise((r) => window.setTimeout(r, 800));
-        const second = await waitPreviewAudit(1800);
-        if (isWeakPreview(second)) {
-          await look("Secondo sguardo");
-        }
-        const done = useProjectStore.getState().getProject(projectId);
-        if (done && done.status !== "error") {
-          store.updateProject(projectId, { status: "ready" });
-        }
+        return;
       }
       return;
     }

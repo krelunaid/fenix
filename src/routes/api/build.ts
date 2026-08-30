@@ -3,6 +3,7 @@ import { parseBuildOutput } from "@/lib/ai/parse";
 import { generateHeroUrl, injectHero, heroAspect } from "@/lib/ai/hero-image";
 import { SYSTEM_PROMPT } from "@/lib/ai/prompt";
 import { looksCheap, reviewBuild } from "@/lib/ai/qa";
+import { gateBuildResult } from "@/lib/ai/repair";
 import { detectStage, sseLine } from "@/lib/ai/stages";
 import { designVisual } from "@/lib/ai/visual";
 import {
@@ -192,7 +193,6 @@ export const Route = createFileRoute("/api/build")({
                 signal: abort.signal,
                 body: JSON.stringify({
                   model: FENIX_MODEL,
-                  reasoning_effort: "low",
                   temperature: instruction ? 0.5 : 0.85,
                   max_tokens: 20000,
                   stream: true,
@@ -286,7 +286,7 @@ export const Route = createFileRoute("/api/build")({
                   t: "err",
                   error: acc.trim()
                     ? "Risposta incompleta. Riprova, magari con un brief più stretto."
-                    : "Grok 4.6 ha ragionato ma non ha inviato il codice. Riprova.",
+                    : "Grok Build ha ragionato ma non ha inviato il codice. Riprova.",
                 });
               } else {
                 let result = parsed;
@@ -329,15 +329,37 @@ export const Route = createFileRoute("/api/build")({
                 } catch {
                   /* senza foto, l'app resta */
                 }
-                send({ t: "s", s: "Apro l'anteprima" });
-                finish({ t: "ok", result });
+                const gated = await gateBuildResult({
+                  apiKey,
+                  prompt,
+                  result,
+                  signal: abort.signal,
+                  onStage: (s) => send({ t: "s", s }),
+                });
+                if ("error" in gated) {
+                  finish({ t: "err", error: gated.error });
+                } else {
+                  send({ t: "s", s: "Apro l'anteprima" });
+                  finish({ t: "ok", result: gated.result });
+                }
               }
             } catch (err) {
               const aborted = err instanceof Error && err.name === "AbortError";
               const salvage = parseBuildOutput(acc);
               if (salvage) {
-                send({ t: "s", s: "Apro l'anteprima" });
-                finish({ t: "ok", result: salvage });
+                const gated = await gateBuildResult({
+                  apiKey,
+                  prompt,
+                  result: salvage,
+                  signal: abort.signal,
+                  onStage: (s) => send({ t: "s", s }),
+                });
+                if ("error" in gated) {
+                  finish({ t: "err", error: gated.error });
+                } else {
+                  send({ t: "s", s: "Apro l'anteprima" });
+                  finish({ t: "ok", result: gated.result });
+                }
               } else {
                 finish({
                   t: "err",
@@ -353,8 +375,16 @@ export const Route = createFileRoute("/api/build")({
               clearTimeout(timer);
               if (!emitted) {
                 const salvage = parseBuildOutput(acc);
-                if (salvage) finish({ t: "ok", result: salvage });
-                else {
+                if (salvage) {
+                  const gated = await gateBuildResult({
+                    apiKey,
+                    prompt,
+                    result: salvage,
+                    onStage: (s) => send({ t: "s", s }),
+                  });
+                  if ("error" in gated) finish({ t: "err", error: gated.error });
+                  else finish({ t: "ok", result: gated.result });
+                } else {
                   finish({
                     t: "err",
                     error: "Non è arrivata una risposta dal modello. Riprova.",

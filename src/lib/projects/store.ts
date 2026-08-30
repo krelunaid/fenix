@@ -4,6 +4,7 @@ import { uid } from "@/lib/utils";
 import type { ProjectFile } from "./files";
 import { CREDITS_GRANT, CREDIT_COST } from "./credits";
 import { DEMOS } from "./demos";
+import { validateProductHtml, formatHtmlErrors, type HtmlReport } from "./validate-html";
 import {
   DEFAULT_PALETTE,
   type BuildStatus,
@@ -193,15 +194,26 @@ export const useProjectStore = create<ProjectStore>()(
       }),
       onRehydrateStorage: () => (state) => {
         if (state) {
-          state.projects = state.projects.map((p) => ({
-            ...p,
-            buildLog: p.buildLog ?? [],
-            status: p.status === "building" && !p.html ? "error" : p.status,
-            error:
+          state.projects = state.projects.map((p) => {
+            let status = p.status === "building" && !p.html ? "error" : p.status;
+            let error =
               p.status === "building" && !p.html
                 ? "Interrotto. Riprova."
-                : p.error,
-          }));
+                : p.error;
+            if (p.html && (status === "ready" || status === "building")) {
+              const report = validateProductHtml(p.html, { kind: p.kind });
+              if (!report.ok) {
+                status = report.syntaxOk ? p.status === "ready" ? "error" : "building" : "error";
+                if (status === "error") error = formatHtmlErrors(report);
+              }
+            }
+            return {
+              ...p,
+              buildLog: p.buildLog ?? [],
+              status,
+              error,
+            };
+          });
           if (typeof state.creditsRemaining !== "number") {
             state.creditsRemaining = CREDITS_GRANT;
           }
@@ -225,11 +237,33 @@ export function applyBuildResult(
     html: string;
     files?: ProjectFile[];
   },
-  status: BuildStatus = "ready",
-) {
+  status: BuildStatus = "building",
+): HtmlReport {
+  const report = validateProductHtml(result.html, { kind: result.kind });
+  if (!report.syntaxOk) return report;
+  const nextStatus: BuildStatus =
+    status === "ready" ? (report.complete ? "ready" : "building") : status;
   useProjectStore.getState().updateProject(id, {
     ...result,
-    status,
+    status: nextStatus,
     error: undefined,
   });
+  return { ...report, ok: nextStatus === "ready" && report.ok };
+}
+
+export function promoteReady(id: string): HtmlReport {
+  const project = useProjectStore.getState().getProject(id);
+  if (!project?.html) {
+    return {
+      syntaxOk: false,
+      complete: false,
+      ok: false,
+      errors: ["HTML assente."],
+      scriptErrors: [],
+    };
+  }
+  const report = validateProductHtml(project.html, { kind: project.kind });
+  if (!report.ok) return report;
+  useProjectStore.getState().updateProject(id, { status: "ready", error: undefined });
+  return report;
 }

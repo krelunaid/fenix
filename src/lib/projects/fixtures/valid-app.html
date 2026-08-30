@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <title>Flusso</title>
+</head>
+<body>
+  <header><h1>Flusso</h1></header>
+  <main>
+    <section data-screen="home">Home</section>
+    <section data-screen="new" hidden>Form</section>
+    <section data-screen="list" hidden>Elenco</section>
+  </main>
+  <nav class="fk-tab" aria-label="Sezioni">
+    <button type="button" data-view="home">Home</button>
+    <button type="button" data-view="new">Nuovo</button>
+    <button type="button" data-view="list">Elenco</button>
+  </nav>
+  <script>
+    var tot = 12.5;
+    document.querySelector("h1").textContent = "Flusso " + tot.toFixed(1);
+    document.querySelectorAll("[data-view]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        var view = b.getAttribute("data-view");
+        document.querySelectorAll("[data-screen]").forEach(function (el) {
+          el.hidden = el.getAttribute("data-screen") !== view;
+        });
+      });
+    });
+    window.Fenix.load("state").then(function (st) {
+      window.Fenix.save("state", st || { items: [] });
+    });
+  </script>
+</body>
+</html>

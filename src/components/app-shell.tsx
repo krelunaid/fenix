@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { useEffect, useState } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import {
   FolderKanban,
@@ -24,7 +25,10 @@ export function AppShell({
   rail?: ReactNode;
 }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const account = typeof window !== "undefined" ? getLocalAccount() : null;
+  const [account, setAccount] = useState<{ name: string } | null>(null);
+  useEffect(() => {
+    setAccount(getLocalAccount());
+  }, []);
   const label = account?.name || "Ospite";
   const initial = label.charAt(0).toUpperCase();
 

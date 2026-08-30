@@ -1,8 +1,9 @@
 declare const Netlify: { env: { get(name: string): string | undefined } };
 
 import { QA_PROMPT, SYSTEM_PROMPT, VISUAL_PROMPT } from "../../src/lib/ai/prompts.shared.ts";
+import { validateProductHtml } from "../../src/lib/projects/validate-html.ts";
 
-const MODEL = "grok-4.6";
+const MODEL = "grok-build-0.1";
 const XAI_URL = "https://api.x.ai/v1/chat/completions";
 
 type StreamEvent =
@@ -133,7 +134,6 @@ async function designDirection(apiKey: string, prompt: string) {
       signal: controller.signal,
       body: JSON.stringify({
         model: MODEL,
-        reasoning_effort: "low",
         temperature: 0.9,
         max_tokens: 2500,
         stream: false,
@@ -189,6 +189,69 @@ async function reviewPass(apiKey: string, prompt: string, html: string, spec: st
   } finally {
     clearTimeout(timer);
   }
+}
+
+const REPAIR_PROMPT = `Ripara HTML/JS di Fenix. Compila gli script senza eseguirli. Togli \${} dal markup. 3 viste data-view, window.Fenix.load/save, niente localStorage. SOLO META+HTML.`;
+
+async function repairPass(apiKey: string, prompt: string, html: string, error: string) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 45_000);
+  try {
+    const response = await fetch(XAI_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      signal: controller.signal,
+      body: JSON.stringify({
+        model: MODEL,
+        temperature: 0.2,
+        max_tokens: 8000,
+        stream: false,
+        messages: [
+          { role: "system", content: REPAIR_PROMPT },
+          {
+            role: "user",
+            content: `BRIEF:\n${prompt}\n\nERRORI:\n${error}\n\nHTML:\n${html.slice(0, 35000)}\n\nMETA+HTML corretto.`,
+          },
+        ],
+      }),
+    });
+    if (!response.ok) return "";
+    const json = (await response.json()) as GrokChunk;
+    return textValue(json.choices?.[0]?.message?.content);
+  } catch {
+    return "";
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function gateResult(
+  apiKey: string,
+  prompt: string,
+  result: { html: string; kind?: string } | null,
+  send: (event: StreamEvent) => void,
+) {
+  if (!result) return { error: "Risposta incompleta. Riprova." };
+  let current = result;
+  let report = validateProductHtml(current.html, { kind: current.kind });
+  if (report.ok) return { result: current };
+  for (let i = 0; i < 2; i++) {
+    send({ t: "s", s: i === 0 ? "Riparo il codice" : "Secondo riparo" });
+    const fixed = await repairPass(apiKey, prompt, current.html, report.errors.join(" · "));
+    const parsed = parseResult(fixed);
+    if (!parsed) continue;
+    report = validateProductHtml(parsed.html, { kind: parsed.kind || current.kind });
+    if (report.syntaxOk) current = parsed;
+    if (report.ok) return { result: current };
+  }
+  return {
+    error: report.syntaxOk
+      ? `Il prodotto non è completo: ${report.errors.slice(0, 4).join(" · ")}`
+      : `HTML non valido, non pubblico: ${report.errors.slice(0, 4).join(" · ")}`,
+  };
 }
 
 export default async function build(request: Request) {
@@ -273,7 +336,6 @@ export default async function build(request: Request) {
           },
           body: JSON.stringify({
             model: MODEL,
-            reasoning_effort: "low",
             temperature: instruction ? 0.5 : 0.8,
             max_tokens: 20000,
             stream: true,
@@ -352,15 +414,25 @@ export default async function build(request: Request) {
             const reviewed = await reviewPass(apiKey, prompt, result.html, spec);
             result = parseResult(reviewed) ?? result;
           }
-          finish(result
-            ? { t: "ok", result }
-            : { t: "err", error: output.trim() ? "Risposta incompleta. Riprova." : "Grok 4.6 non ha inviato il codice. Riprova." });
+          const gated = await gateResult(apiKey, prompt, result, send);
+          if ("error" in gated) finish({ t: "err", error: gated.error });
+          else finish({ t: "ok", result: gated.result });
         }
       } catch (error) {
-        const result = parseResult(output);
-        finish(result
-          ? { t: "ok", result }
-          : { t: "err", error: error instanceof Error ? `Non riesco a raggiungere il modello (${error.message}).` : "Errore di rete. Riprova." });
+        const salvage = parseResult(output);
+        if (salvage) {
+          const gated = await gateResult(apiKey, prompt, salvage, send);
+          if ("error" in gated) {
+            finish({ t: "err", error: gated.error });
+          } else {
+            finish({ t: "ok", result: gated.result });
+          }
+        } else {
+          finish({
+            t: "err",
+            error: error instanceof Error ? `Non riesco a raggiungere il modello (${error.message}).` : "Errore di rete. Riprova.",
+          });
+        }
       } finally {
         clearInterval(heartbeat);
         if (!terminal) finish({ t: "err", error: "Non è arrivata una risposta dal modello. Riprova." });
