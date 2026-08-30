@@ -1,28 +1,17 @@
 import { parseBuildOutput, type BuildResult } from "./parse";
 import { FENIX_MODEL } from "./model";
+import { QA_PROMPT } from "./prompts.shared";
 
-export const QA_PROMPT = `Sei il secondo agente di Fenix: art director + tester. Hai già un HTML. Devi farlo SENTIRE un prodotto vero, come uno studio che rivede l'anteprima.
-
-Obbligo:
-1) Tieni JS, viste, dati, form che già girano. Non spegnere click e state.
-2) RISCRIVI il visivo se è piatto: palette dal brief (materia, luogo, ora), font coppia Google rara, icona app SVG del mestiere 52px, tab bar 3–4 icone in basso in flusso (non position:fixed), foto unsplash photo- se è un sito.
-3) Vietato #f5f5f7, Manrope, Inter, hero centrato, pill nera, viola AI, lorem, emoji, glass.
-4) CSS :root --bg --surface --fg --muted --accent --line. body 100dvh. App colonna.
-
-Rispondi SOLO:
-<<<META>>>
-{"name":"","tagline":"","kind":"landing|app|dashboard|tool|game|site","direction":"3-6 parole","summary":"","palette":{"bg":"#","surface":"#","fg":"#","muted":"#","accent":"#"}}
-<<<HTML>>>
-<!DOCTYPE html>...completo...
-<<<END>>>`;
+export { QA_PROMPT } from "./prompts.shared";
 
 export function looksCheap(html: string) {
   const h = html.toLowerCase();
-  if (!html || html.length < 200) return true;
+  if (!html || html.length < 400) return true;
   const apple = h.includes("#f5f5f7") || h.includes("manrope") || h.includes("font-family: inter");
+  const svgs = (h.match(/<svg/g) || []).length;
   const noMark = !h.includes('rel="icon"') && !h.includes("rel='icon'");
-  const noTabs = !h.includes("data-view") && !h.includes("class=\"tabs\"") && !h.includes("id=\"tabs\"");
-  return apple || (noMark && noTabs);
+  const noTabs = !h.includes("data-view") && !h.includes("tabbar") && !h.includes("id=\"tabs\"");
+  return apple || noMark || noTabs || svgs < 6;
 }
 
 export async function reviewBuild(input: {
@@ -52,8 +41,8 @@ export async function reviewBuild(input: {
           content: [
             `BRIEF:\n${input.prompt}`,
             input.spec ? `DIREZIONE VISIVA (legge):\n${input.spec}` : "",
-            `HTML DA RIVEDERE (anteprima):\n${input.html.slice(0, 40000)}`,
-            "Guarda come un umano: se è un template, rifai identità. Tieni le funzioni. META+HTML.",
+            `HTML DA RIVEDERE (anteprima telefono):\n${input.html.slice(0, 40000)}`,
+            "Se non sembra un'app da tasca (tab, icone, form, metriche), rifai il chrome. Tieni le funzioni. META+HTML.",
           ]
             .filter(Boolean)
             .join("\n\n"),

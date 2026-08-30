@@ -24,11 +24,15 @@ ICONE — obbligatorie e disegnate, non decorative generiche:
 
 CSS: :root con --bg --surface --fg --muted --accent --line. body 100dvh. App a colonna: header, main flex 1 overflow, tabbar flex-shrink 0 in flusso, mai position:fixed dentro iframe. Contrasto AA, color-scheme e prefers-reduced-motion.
 
-App:
-- Icona 52px rx 13, SVG pittogramma proprietario del mestiere a 2 colori, stessa geometria in rel=icon; deve restare leggibile a 16px.
-- Tab bar 72px, 3–4 voci, SVG 28px stroke currentColor; .on = accent e fill 20%. Mai solo testo.
-- Almeno 3 viste che cambiano davvero, state+render e calcoli corretti.
-- Persistenza: usa await window.Fenix.load("state") e window.Fenix.save("state", data). Mai localStorage: l'anteprima è sandboxed.
+App — chrome da prodotto in tasca (non admin, non landing):
+- Tutto lo schermo: header compatto, main scroll, tab bar 5 voci in FLUSSO in basso (altezza 64–72, padding-bottom safe). Mai position:fixed. Mai max-width 430 con bande vuote.
+- Header: saluto + ruolo/contesto a sinistra, un'azione (esci/share) a destra. Sotto, data o stato in 12px muted.
+- Home: 1 card panoramica (2×2 metriche vere), 1 blocco eroico del mestiere (misura, serbatoio, turno — non un hero slogan), 2×2 tile bianche/surface con icona SVG + numero, 1 CTA full-width in basso nel main.
+- Tab: 4 o 5. Ogni voce = SVG outline 26px + label 10px. Voce .on = accento. Glyph tutti diversi, stessa famiglia stroke 2.2. Viste: home, registra/nuovo, storico, numeri, gestione (adatta i nomi al brief).
+- Form (Registra): label 13px, campo con icona a sinistra, chip rapidi (+50, +100…) se ha senso, select, data, nota, bottone primario a pillola larga "Salva…". Validazione visibile.
+- Icona app 52px rx 13, pittogramma del mestiere, stessa in rel=icon, leggibile a 16px.
+- ≥4 viste che cambiano sul serio, state+render, calcoli giusti.
+- Persistenza: await window.Fenix.load("state") e window.Fenix.save("state", data). Mai localStorage (sandbox).
 
 Sito: nav, almeno 4 sezioni, form che conferma, testi veri (città, prezzi, orari), 2–4 immagini Unsplash photo- con &w=1600.
 
@@ -49,14 +53,19 @@ Regole dure:
 - Verifica prima di rispondere: fg/bg e fg/surface almeno 4.5:1; muted almeno 3:1 e mai per testo essenziale; accent con contrasto sufficiente sullo sfondo d'uso. Correggi gli hex se non passano.
 - Vietato: #f5f5f7, #ffffff, #1d1d1f, viola AI, rame-officina se non è un'officina, Inter, Manrope, hero centrato, pill nera, glass, neon ed emoji.
 - Font: coppia Google rara e coerente, display diverso dal body.
-- App: 3–4 tab con glyph diversi ma stessa famiglia; icona app = oggetto, quadrato rx 13, silhouette leggibile a 16px e spazio negativo intenzionale.
+- App: 4–5 tab, glyph diversi stessa famiglia; home con metriche+CTA; form con chip; icona oggetto rx 13.
 - Sito: magazine o split; foto Unsplash reale photo- con &w=1600, non stock smile.
 - mood specifico: "terracotta mezzogiorno Grottaglie", non "elegante moderno".`;
 
-export const QA_PROMPT = `Sei il secondo agente di Fenix: art director + tester. Hai già un HTML. Devi farlo SENTIRE un prodotto vero.
+export const QA_PROMPT = `Sei il secondo agente di Fenix. Guardi l'HTML come uno screenshot di app telefono.
 
-1) Tieni JS, viste, dati, form. Non spegnere i click.
-2) Se è piatto, RISCRIVI il visivo dal brief: palette materia/luogo, font Google rari, icona app 52px, tab bar 3–4 icone in flusso.
-3) Vietato #f5f5f7, Manrope, Inter, hero centrato, pill nera, viola AI, lorem, emoji, glass.
+Se manca ANCHE UNO di questi, riscrivi il chrome (tieni i dati e il JS che già girano):
+- tab bar in flusso, 4–5 voci, SVG diversi, label 10px
+- header saluto + azione
+- home: metriche + blocco eroico del mestiere + CTA
+- form con label, campo, chip se serve, salva
+- icona app SVG in header e rel=icon
+- palette dal brief, contrasto AA, niente #f5f5f7/Manrope/Inter/viola AI/emoji/lorem
+
 Rispondi SOLO META + HTML completo.`;
 
