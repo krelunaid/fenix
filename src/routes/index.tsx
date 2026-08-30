@@ -6,6 +6,7 @@ import { AppShell } from "@/components/app-shell";
 import { ProjectCard } from "@/components/project-card";
 import { Textarea } from "@/components/ui/textarea";
 import { getAiStatus } from "@/lib/ai/generate";
+import { formatPrefix, inferKind, type ProductChoice } from "@/lib/projects/infer";
 import { useProjectStore } from "@/lib/projects/store";
 
 export const Route = createFileRoute("/")({ component: Home });
@@ -18,6 +19,7 @@ function Home() {
   const createFromBrief = useProjectStore((s) => s.createFromBrief);
   const removeProject = useProjectStore((s) => s.removeProject);
   const [brief, setBrief] = useState("");
+  const [choice, setChoice] = useState<ProductChoice>("auto");
   const [ai, setAi] = useState<boolean | null>(null);
 
   useEffect(() => {
@@ -41,7 +43,8 @@ function Home() {
       toast("Crediti esauriti. Ogni creazione usa 1 credito.");
       return;
     }
-    const project = createFromBrief({ prompt: text });
+    const kind = choice === "auto" ? inferKind(text) : choice;
+    const project = createFromBrief({ prompt: `${formatPrefix(kind)}${text}`, kind });
     void navigate({ to: "/studio/$projectId", params: { projectId: project.id } });
   }
 
@@ -115,6 +118,38 @@ function Home() {
         className="mt-8 rounded-[22px] border border-white/10 bg-[#100c22]/80 p-5"
       >
         <p className="text-[11px] tracking-[0.18em] text-[#6e6794] uppercase">Inizia da un’idea</p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          {(
+            [
+              ["auto", "Automatico"],
+              ["app", "App"],
+              ["site", "Sito"],
+              ["dashboard", "Gestionale"],
+            ] as const
+          ).map(([id, label]) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => setChoice(id)}
+              className={
+                choice === id
+                  ? "h-8 rounded-full bg-white px-3 text-xs font-semibold text-[#1d1d1f]"
+                  : "h-8 rounded-full border border-white/12 px-3 text-xs text-[#9b93c2]"
+              }
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        <p className="mt-2 text-[11px] text-[#6e6794]">
+          {choice === "auto"
+            ? "Se non scegli: App telefono. Sito o gestionale se lo scrivi nel brief."
+            : choice === "app"
+              ? "App da telefono, tab in basso."
+              : choice === "site"
+                ? "Sito o vetrina."
+                : "Gestionale da ufficio: tabelle, form, numeri."}
+        </p>
         <label htmlFor="brief" className="sr-only">
           Brief del progetto
         </label>

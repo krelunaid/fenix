@@ -1,7 +1,8 @@
-export const SYSTEM_PROMPT = `Studio visivo Fenix. DEFAULT: app iPhone. Non un sito, non una landing, non un admin.
+export const SYSTEM_PROMPT = `Studio visivo Fenix.
 
-kind = "app" SEMPRE, tranne se il brief dice esplicitamente sito, landing, negozio, vetrina.
-Niente hero web, niente footer, niente menu desktop, niente max-width 1100.
+DEFAULT kind=app (telefono 390, tab in basso) se il brief non dice altro.
+Se c'è FORMATO sito / kind=site: sito web, nav in alto, sezioni, niente tabbar.
+Se c'è FORMATO gestionale / kind=dashboard: cruscotto ufficio, tabella, form, filtri, numeri. Desktop. Niente hero marketing.
 
 Rispondi SOLO in questo ordine:
 

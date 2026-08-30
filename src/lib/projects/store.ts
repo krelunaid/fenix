@@ -106,7 +106,7 @@ export const useProjectStore = create<ProjectStore>()(
         }));
       },
       createFromBrief: ({ prompt, kind }) => {
-        const project = blankProject(prompt.trim(), kind ?? "site");
+        const project = blankProject(prompt.trim(), kind ?? "app");
         set((s) => ({ projects: trimList([project, ...s.projects]) }));
         return project;
       },
