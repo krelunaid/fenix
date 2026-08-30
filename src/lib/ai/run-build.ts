@@ -160,8 +160,8 @@ export async function runBuild(projectId: string, instruction?: string) {
           id: uid(),
           role: "assistant",
           content: instruction
-            ? "Bozza aggiornata. Avvio il motore visivo (icone + 3 giri iOS)…"
-            : "Bozza pronta. Avvio il motore visivo (icone + 3 giri iOS)…",
+            ? "Bozza aggiornata. Avvio il motore visivo (icone e rifinitura)…"
+            : "Bozza pronta. Avvio il motore visivo (icone e rifinitura)…",
         });
         let polished = false;
         try {
@@ -218,7 +218,7 @@ export async function runBuild(projectId: string, instruction?: string) {
                 id: uid(),
                 role: "assistant",
                 content: [
-                  `Motore visivo: ${logs.length ? logs.join(" · ") : "3 giri iOS"}.`,
+                  `Motore visivo: ${logs.length ? logs.join(" · ") : "icone e rifinitura"}.`,
                   readyCopy(result),
                 ].join("\n\n"),
               });
