@@ -1,7 +1,7 @@
 import type { StreamEvent } from "./stages";
 import { applyBuildResult, useProjectStore } from "@/lib/projects/store";
 import type { BuildResult } from "./parse";
-import { isWeakPreview, lookInstruction, resetAudit, waitPreviewAudit } from "./look";
+import { isWeakPreview, lookInstruction, resetAudit, waitPreviewAudit, waitPreviewShot } from "./look";
 import { uid } from "@/lib/utils";
 
 const inflight = new Set<string>();
@@ -19,7 +19,7 @@ function readyCopy(result: BuildResult) {
 
 async function consumeStream(
   projectId: string,
-  body: { prompt: string; html?: string; instruction?: string },
+  body: { prompt: string; html?: string; instruction?: string; shot?: string },
 ): Promise<boolean> {
   const store = useProjectStore.getState();
   const res = await fetch("/api/build", {
@@ -138,15 +138,17 @@ export async function runBuild(projectId: string, instruction?: string) {
       if (!instruction && latest?.html) {
         store.updateProject(projectId, {
           status: "building",
-          buildLog: [...(latest.buildLog ?? []), "Guardo l'anteprima"],
+          buildLog: [...(latest.buildLog ?? []), "Guardo i pixel"],
         });
-        const audit = await waitPreviewAudit(2000);
-        if (isWeakPreview(audit) && audit) {
-          const snapshot = latest.html;
+        const shot = await waitPreviewShot(4800);
+        const audit = await waitPreviewAudit(400);
+        const snapshot = latest.html;
+        if (shot || isWeakPreview(audit)) {
           await consumeStream(projectId, {
             prompt: project.prompt,
             html: snapshot,
-            instruction: lookInstruction(audit),
+            instruction: lookInstruction(audit, Boolean(shot)),
+            shot: shot || undefined,
           });
           const after = useProjectStore.getState().getProject(projectId);
           if (after?.status === "error" && snapshot) {

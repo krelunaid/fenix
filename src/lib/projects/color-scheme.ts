@@ -105,6 +105,22 @@ export function fenixRuntimeScript(projectId: string) {
   }
   if (document.readyState === "complete") setTimeout(audit, 40);
   else window.addEventListener("load", function(){ setTimeout(audit, 40); });
+  function sendShot(data){
+    try { window.parent && window.parent.postMessage({ t: "fenix-shot", data: data || "" }, "*"); } catch (e) {}
+  }
+  function shoot(){
+    try {
+      if (!window.html2canvas) { sendShot(""); return; }
+      window.html2canvas(document.documentElement, { scale: 0.42, useCORS: true, logging: false }).then(function(c){
+        sendShot(c.toDataURL("image/jpeg", 0.55));
+      }).catch(function(){ sendShot(""); });
+    } catch (e) { sendShot(""); }
+  }
+  var hs = document.createElement("script");
+  hs.src = "https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js";
+  hs.onload = function(){ setTimeout(shoot, 80); };
+  hs.onerror = function(){ sendShot(""); };
+  document.head.appendChild(hs);
 })();
 </script>`;
 }

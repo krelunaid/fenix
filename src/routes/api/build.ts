@@ -15,6 +15,7 @@ type Body = {
   prompt?: string;
   html?: string;
   instruction?: string;
+  shot?: string;
 };
 
 type GrokChunk = {
@@ -96,6 +97,10 @@ export const Route = createFileRoute("/api/build")({
 
         const instruction = (body.instruction ?? "").trim().slice(0, 2500);
         const html = (body.html ?? "").slice(0, 90000);
+        const shot =
+          typeof body.shot === "string" && body.shot.startsWith("data:image")
+            ? body.shot.slice(0, 380000)
+            : "";
 
         const seed = Array.from(prompt).reduce((h, c) => ((h << 5) - h + c.charCodeAt(0)) | 0, 0);
         const userParts = [
@@ -107,6 +112,11 @@ export const Route = createFileRoute("/api/build")({
         if (instruction) {
           userParts.push(
             `MODIFICA:\n${instruction}\nApplica questa modifica, tieni identità e funzioni già ok, restituisci l'app completa.`,
+          );
+        }
+        if (shot) {
+          userParts.push(
+            "SCREENSHOT allegato: VEDI l'anteprima. Correggi chrome, contrasto, tab, icone, form. Tieni il JS.",
           );
         }
         userParts.push("Costruisci ora. Formato META + HTML, nient'altro. Niente ragionamento nel documento.");
@@ -187,7 +197,15 @@ export const Route = createFileRoute("/api/build")({
                   stream: true,
                   messages: [
                     { role: "system", content: SYSTEM_PROMPT },
-                    { role: "user", content: userParts.join("\n\n") },
+                    {
+                      role: "user",
+                      content: shot
+                        ? [
+                            { type: "text", text: userParts.join("\n\n") },
+                            { type: "image_url", image_url: { url: shot } },
+                          ]
+                        : userParts.join("\n\n"),
+                    },
                   ],
                 }),
               });
@@ -271,7 +289,7 @@ export const Route = createFileRoute("/api/build")({
                 });
               } else {
                 let result = parsed;
-                const shouldReview = !instruction || looksCheap(parsed.html);
+                const shouldReview = !shot && (!instruction || looksCheap(parsed.html));
                 if (shouldReview) {
                   send({ t: "s", s: "Provo la grafica" });
                   const visCtl = new AbortController();

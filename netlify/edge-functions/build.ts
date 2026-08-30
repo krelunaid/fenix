@@ -198,7 +198,7 @@ export default async function build(request: Request) {
     return Response.json({ t: "err", error: "Manca XAI_API_KEY sul server" }, { status: 503 });
   }
 
-  let body: { prompt?: string; html?: string; instruction?: string };
+  let body: { prompt?: string; html?: string; instruction?: string; shot?: string };
   try {
     body = await request.json();
   } catch {
@@ -210,11 +210,16 @@ export default async function build(request: Request) {
   }
   const instruction = (body.instruction ?? "").trim().slice(0, 2500);
   const currentHtml = (body.html ?? "").slice(0, 90000);
+  const shot =
+    typeof body.shot === "string" && body.shot.startsWith("data:image")
+      ? body.shot.slice(0, 380000)
+      : "";
   const userParts = [
     `BRIEF:\n${prompt}`,
     "Crea un prodotto completo, specifico e immediatamente utilizzabile.",
     instruction && currentHtml ? `APP ATTUALE:\n${currentHtml}` : "",
     instruction ? `MODIFICA:\n${instruction}\nRestituisci il documento completo.` : "",
+    shot ? "SCREENSHOT allegato: VEDI l'anteprima e correggi chrome, tab, icone, contrasto. Tieni il JS." : "",
     "Costruisci ora. Formato META + HTML, nient'altro.",
   ].filter(Boolean);
 
@@ -274,7 +279,15 @@ export default async function build(request: Request) {
             stream: true,
             messages: [
               { role: "system", content: SYSTEM_PROMPT },
-              { role: "user", content: userParts.join("\n\n") },
+              {
+                role: "user",
+                content: shot
+                  ? [
+                      { type: "text", text: userParts.join("\n\n") },
+                      { type: "image_url", image_url: { url: shot } },
+                    ]
+                  : userParts.join("\n\n"),
+              },
             ],
           }),
         });
@@ -334,7 +347,7 @@ export default async function build(request: Request) {
         }
         if (!terminal) {
           let result = parseResult(output);
-          if (result && !instruction) {
+          if (result && !instruction && !shot) {
             send({ t: "s", s: "Provo la grafica" });
             const reviewed = await reviewPass(apiKey, prompt, result.html, spec);
             result = parseResult(reviewed) ?? result;
