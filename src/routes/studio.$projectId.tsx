@@ -17,6 +17,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Wordmark } from "@/components/wordmark";
 import { CreditMeter } from "@/components/credit-meter";
 import { runBuild } from "@/lib/ai/run-build";
+import { suggestEdits } from "@/lib/ai/suggest";
 import { useProjectStore } from "@/lib/projects/store";
 import { cn } from "@/lib/utils";
 
@@ -70,12 +71,12 @@ function StudioPage() {
     [project],
   );
 
-  function handleIterate() {
-    const text = draft.trim();
-    if (!project || text.length < 2 || building || emptyCredits) return;
-    addMessage(project.id, { role: "user", content: text });
+  function handleIterate(text = draft) {
+    const next = text.trim();
+    if (!project || next.length < 2 || building || emptyCredits) return;
+    addMessage(project.id, { role: "user", content: next });
     setDraft("");
-    void runBuild(project.id, text);
+    void runBuild(project.id, next);
   }
 
   if (!project) {
@@ -158,6 +159,12 @@ function StudioPage() {
             building={building}
             errored={project.status === "error"}
             onSubmit={handleIterate}
+            suggestions={
+              project.status === "ready" && !building
+                ? suggestEdits(project.prompt, project.name)
+                : []
+            }
+            onSuggest={handleIterate}
             onRetry={() => void runBuild(project.id)}
             threadRef={threadRef}
             palette={paletteStrip}
@@ -194,6 +201,12 @@ function StudioPage() {
               building={building}
               errored={project.status === "error"}
               onSubmit={handleIterate}
+            suggestions={
+              project.status === "ready" && !building
+                ? suggestEdits(project.prompt, project.name)
+                : []
+            }
+            onSuggest={handleIterate}
               onRetry={() => void runBuild(project.id)}
               threadRef={threadRef}
               palette={paletteStrip}
@@ -264,6 +277,8 @@ function ChatColumn({
   errored,
   onSubmit,
   onRetry,
+  suggestions = [],
+  onSuggest,
   threadRef,
   palette,
   buildLog,
@@ -277,6 +292,8 @@ function ChatColumn({
   errored: boolean;
   onSubmit: () => void;
   onRetry: () => void;
+  suggestions?: string[];
+  onSuggest?: (text: string) => void;
   threadRef: RefObject<HTMLDivElement | null>;
   palette: string[];
   buildLog: string[];
@@ -352,6 +369,20 @@ function ChatColumn({
           onSubmit();
         }}
       >
+        {suggestions.length && !building && !emptyCredits ? (
+          <div className="mb-2 flex flex-wrap gap-1.5">
+            {suggestions.map((s) => (
+              <button
+                key={s}
+                type="button"
+                onClick={() => onSuggest?.(s)}
+                className="max-w-full truncate rounded-full border border-white/12 bg-[#16122c] px-3 py-1.5 text-left text-[11px] text-[#cfc8ea] hover:border-white/25 hover:text-white"
+              >
+                {s}
+              </button>
+            ))}
+          </div>
+        ) : null}
         <div className="rounded-lg bg-paper p-2">
           <Textarea
             rows={3}

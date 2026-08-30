@@ -12,7 +12,7 @@ function readyCopy(result: BuildResult) {
   return [
     `Pronto. ${result.name} è in anteprima: ${result.files?.length || 1} file, si usa.`,
     summary,
-    "Dimmi cosa cambiare: comportamento, schermate, dati, tono.",
+    "Tocca un suggerimento sotto, o scrivi cosa cambiare.",
   ]
     .filter(Boolean)
     .join("\n\n");
