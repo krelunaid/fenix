@@ -1,25 +1,25 @@
 @import "tailwindcss";
 
 @theme {
-  --font-display: "Instrument Serif", ui-serif, Georgia, serif;
+  --font-display: "Manrope", ui-sans-serif, system-ui, sans-serif;
   --font-sans: "Manrope", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 
-  --color-background: #07111f;
-  --color-foreground: #f3efe6;
-  --color-card: #0d1a2c;
-  --color-raised: #122033;
-  --color-muted: #122033;
-  --color-muted-foreground: #8b9aab;
-  --color-faint: #6a7a8c;
-  --color-primary: #f3efe6;
-  --color-primary-foreground: #07111f;
-  --color-border: #1c2d42;
-  --color-ring: #f3efe6;
-  --color-destructive: #d47868;
-  --color-paper: #0d1a2c;
-  --color-paper-foreground: #f3efe6;
-  --color-paper-muted: #8b9aab;
+  --color-background: #07041a;
+  --color-foreground: #f4f1ff;
+  --color-card: #120c28;
+  --color-raised: #1a1238;
+  --color-muted: #1a1238;
+  --color-muted-foreground: #9b93c2;
+  --color-faint: #6e6794;
+  --color-primary: #8b7cff;
+  --color-primary-foreground: #f4f1ff;
+  --color-border: #2a2150;
+  --color-ring: #8b7cff;
+  --color-destructive: #f0719a;
+  --color-paper: #120c28;
+  --color-paper-foreground: #f4f1ff;
+  --color-paper-muted: #9b93c2;
 
   --radius-xs: 4px;
   --radius-sm: 8px;
@@ -84,6 +84,20 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+.helix-grid {
+  background-color: var(--color-background);
+  background-image:
+    linear-gradient(rgba(139, 124, 255, 0.07) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(139, 124, 255, 0.07) 1px, transparent 1px);
+  background-size: 44px 44px;
+}
+
+.fenix-grad {
+  background: linear-gradient(100deg, #c4b5fd 0%, #818cf8 45%, #67e8f9 100%);
+  background-clip: text;
+  color: transparent;
 }
 
 .rise-in {

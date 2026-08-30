@@ -17,7 +17,7 @@ export const Route = createRootRoute({
         content:
           "Fenix by Kreluna. Descrivi un'idea: sito, app o programma. Lo costruisce e te lo mostra in anteprima.",
       },
-      { name: "theme-color", content: "#07111f" },
+      { name: "theme-color", content: "#07041a" },
     ],
     links: [
       { rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },
