@@ -87,11 +87,11 @@
 }
 
 .helix-grid {
-  background-color: var(--color-background);
+  background-color: #07041a;
   background-image:
-    linear-gradient(rgba(139, 124, 255, 0.07) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(139, 124, 255, 0.07) 1px, transparent 1px);
-  background-size: 44px 44px;
+    linear-gradient(rgba(124, 107, 255, 0.09) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(124, 107, 255, 0.09) 1px, transparent 1px);
+  background-size: 52px 52px;
 }
 
 .fenix-grad {

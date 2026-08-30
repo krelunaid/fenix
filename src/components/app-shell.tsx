@@ -8,12 +8,13 @@ import {
   Plus,
   Sparkles,
 } from "lucide-react";
-import { CreditMeter } from "@/components/credit-meter";
 import { cn } from "@/lib/utils";
 
 const NAV = [
   { to: "/", label: "Home", icon: Home, end: true },
+  { to: "/#nuovo", label: "Nuovo progetto", icon: Plus, end: false, hash: true },
   { to: "/vetrina", label: "I miei progetti", icon: FolderKanban, end: false },
+  { to: "/#demo", label: "Progetti demo", icon: LayoutGrid, end: false, hash: true },
 ] as const;
 
 export function AppShell({
@@ -26,97 +27,108 @@ export function AppShell({
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
   return (
-    <div className="helix-grid min-h-dvh bg-background text-foreground">
-      <div className="mx-auto flex min-h-dvh w-full max-w-[1440px]">
-        <aside className="hidden w-[232px] shrink-0 flex-col border-r border-border/80 px-4 py-5 lg:flex">
+    <div className="helix-grid min-h-dvh overflow-x-auto text-foreground">
+      <div className="flex min-h-dvh w-full min-w-[1100px]">
+        <aside className="flex w-[220px] shrink-0 flex-col border-r border-white/5 px-3 py-5">
           <Link to="/" className="flex items-center gap-2.5 px-2 no-underline">
-            <img
-              src="/fenix-orb.jpg"
-              alt=""
-              className="size-9 rounded-full object-cover"
-            />
+            <img src="/fenix-orb.jpg" alt="" className="size-8 rounded-full object-cover" />
             <span className="flex flex-col leading-none">
-              <span className="text-[15px] font-semibold tracking-tight">FENIX</span>
-              <span className="mt-1 text-[10px] font-medium tracking-[0.18em] text-muted-foreground">
+              <span className="text-[13px] font-semibold tracking-[0.14em]">FENIX</span>
+              <span className="mt-1 text-[9px] font-medium tracking-[0.2em] text-muted-foreground">
                 BY KRELUNA
               </span>
             </span>
           </Link>
 
-          <nav className="mt-8 flex flex-col gap-1 text-sm">
+          <nav className="mt-8 flex flex-col gap-0.5 text-[13px]">
             {NAV.map((item) => {
-              const active = item.end
-                ? pathname === item.to
-                : pathname.startsWith(item.to);
+              const active = item.end && pathname === "/";
               const Icon = item.icon;
+              const className = cn(
+                "flex h-10 items-center gap-3 rounded-xl px-3 no-underline transition-colors",
+                active
+                  ? "bg-[#5b4dff]/25 text-white"
+                  : "text-[#9b93c2] hover:bg-white/5 hover:text-white",
+              );
+              if ("hash" in item && item.hash) {
+                return (
+                  <a key={item.label} href={item.to} className={className}>
+                    <Icon className="size-4 opacity-80" />
+                    {item.label}
+                  </a>
+                );
+              }
               return (
-                <Link
-                  key={item.to}
-                  to={item.to}
-                  className={cn(
-                    "flex h-11 items-center gap-3 rounded-xl px-3 no-underline transition-colors",
-                    active
-                      ? "bg-primary/15 text-foreground"
-                      : "text-muted-foreground hover:bg-raised hover:text-foreground",
-                  )}
-                >
-                  <Icon className="size-4" />
+                <Link key={item.label} to={item.to} className={className}>
+                  <Icon className="size-4 opacity-80" />
                   {item.label}
                 </Link>
               );
             })}
             <a
-              href="#brief"
-              className="flex h-11 items-center gap-3 rounded-xl px-3 text-muted-foreground no-underline hover:bg-raised hover:text-foreground"
-            >
-              <Plus className="size-4" />
-              Nuovo progetto
-            </a>
-            <a
-              href="#demo"
-              className="flex h-11 items-center gap-3 rounded-xl px-3 text-muted-foreground no-underline hover:bg-raised hover:text-foreground"
-            >
-              <LayoutGrid className="size-4" />
-              Progetti demo
-            </a>
-            <a
               href="https://www.kreluna.it"
-              className="flex h-11 items-center gap-3 rounded-xl px-3 text-muted-foreground no-underline hover:bg-raised hover:text-foreground"
+              className="flex h-10 items-center gap-3 rounded-xl px-3 text-[#9b93c2] no-underline hover:bg-white/5 hover:text-white"
             >
-              <Sparkles className="size-4" />
+              <Sparkles className="size-4 opacity-80" />
               Prezzi
             </a>
             <a
               href="https://www.kreluna.it"
-              className="flex h-11 items-center gap-3 rounded-xl px-3 text-muted-foreground no-underline hover:bg-raised hover:text-foreground"
+              className="flex h-10 items-center gap-3 rounded-xl px-3 text-[#9b93c2] no-underline hover:bg-white/5 hover:text-white"
             >
-              <HelpCircle className="size-4" />
+              <HelpCircle className="size-4 opacity-80" />
               Assistenza
             </a>
           </nav>
 
-          <div className="mt-auto rounded-2xl border border-border bg-card px-3 py-3">
-            <p className="text-sm font-medium">Ospite</p>
-            <p className="text-xs text-muted-foreground">Sala 01</p>
+          <div className="mt-auto px-1">
+            <p className="mb-3 flex flex-wrap gap-x-3 text-[11px] text-[#6e6794]">
+              <a href="https://www.kreluna.it" className="no-underline hover:text-white">
+                Contatti
+              </a>
+              <a href="https://www.kreluna.it" className="no-underline hover:text-white">
+                Privacy
+              </a>
+              <a href="https://www.kreluna.it" className="no-underline hover:text-white">
+                Termini
+              </a>
+            </p>
+            <p className="mb-3 text-[11px] text-[#6e6794]">Kreluna</p>
+            <div className="flex items-center gap-2 rounded-2xl border border-white/10 bg-[#16122c] px-3 py-2.5">
+              <span className="grid size-8 place-items-center rounded-full bg-[#7c6bff] text-xs font-semibold">
+                F
+              </span>
+              <span>
+                <span className="block text-sm font-medium">Ospite</span>
+                <span className="text-[11px] text-[#9b93c2]">Sala 01</span>
+              </span>
+            </div>
           </div>
         </aside>
 
         <div className="flex min-w-0 flex-1 flex-col">
-          <header className="flex items-center justify-end gap-2 px-4 py-3 sm:px-6">
-            <span className="hidden rounded-full border border-border bg-card px-3 py-1.5 text-xs text-muted-foreground sm:inline">
+          <header className="flex items-center justify-end gap-2 px-6 py-4">
+            <button
+              type="button"
+              className="grid size-9 place-items-center rounded-full border border-white/10 text-[#9b93c2]"
+              aria-label="Aiuto"
+            >
+              <HelpCircle className="size-4" />
+            </button>
+            <span className="inline-flex h-9 items-center rounded-full border border-white/10 bg-[#16122c] px-3 text-xs text-[#cfc8ea]">
               Italiano
             </span>
-            <CreditMeter />
-            <span className="grid size-9 place-items-center rounded-full bg-primary/20 text-sm font-semibold text-primary">
-              F
+            <span className="inline-flex h-9 items-center gap-2 rounded-full border border-white/10 bg-[#16122c] pl-1 pr-3 text-xs">
+              <span className="grid size-7 place-items-center rounded-full bg-[#7c6bff] font-semibold">
+                F
+              </span>
+              Ospite
             </span>
           </header>
           <div className="flex min-w-0 flex-1">
-            <div className="min-w-0 flex-1 px-4 pb-16 sm:px-8 lg:px-10">{children}</div>
+            <div className="min-w-0 flex-1 px-8 pb-10">{children}</div>
             {rail ? (
-              <aside className="hidden w-[280px] shrink-0 flex-col gap-3 border-l border-border/80 p-4 xl:flex">
-                {rail}
-              </aside>
+              <aside className="flex w-[260px] shrink-0 flex-col gap-3 p-4 pr-6">{rail}</aside>
             ) : null}
           </div>
         </div>

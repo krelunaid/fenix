@@ -1,15 +1,13 @@
 import { useEffect, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { ArrowRight, HelpCircle } from "lucide-react";
+import { Activity, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/app-shell";
 import { ProjectCard } from "@/components/project-card";
-import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { getAiStatus } from "@/lib/ai/generate";
 import { EXAMPLES } from "@/lib/projects/examples";
 import { useProjectStore } from "@/lib/projects/store";
-import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/")({ component: Home });
 
@@ -48,47 +46,51 @@ function Home() {
     void navigate({ to: "/studio/$projectId", params: { projectId: project.id } });
   }
 
-  const recents = hydrated ? projects.slice(0, 4) : [];
+  const recents = hydrated ? projects.slice(0, 3) : [];
   const emptyCredits = hydrated && creditsRemaining < 1;
 
   return (
     <AppShell
       rail={
         <>
-          <div className="rounded-2xl border border-border bg-card p-4">
+          <div className="rounded-2xl border border-white/8 bg-[#16122c]/90 p-4">
             <p className="text-sm font-semibold">Panoramica</p>
-            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-              Luce bassa. Un oggetto. Il resto aspetta te.
+            <p className="mt-2 text-[13px] leading-relaxed text-[#9b93c2]">
+              Luce bassa. Un oggetto.
+              <br />
+              Il resto aspetta te.
             </p>
           </div>
-          <div className="rounded-2xl border border-border bg-card p-4">
-            <p className="text-sm font-semibold">Stato build</p>
-            <p className="mt-3 rounded-full border border-border px-3 py-1.5 text-xs text-muted-foreground">
+          <div className="rounded-2xl border border-white/8 bg-[#16122c]/90 p-4">
+            <p className="flex items-center justify-between text-sm font-semibold">
+              Stato build
+              <Activity className="size-3.5 text-[#7c6bff]" />
+            </p>
+            <p className="mt-3 rounded-full border border-white/10 px-3 py-1.5 text-xs text-[#9b93c2]">
               Nessuna build attiva
             </p>
           </div>
-          <div className="rounded-2xl border border-border bg-card p-4">
+          <div className="rounded-2xl border border-white/8 bg-[#16122c]/90 p-4">
             <p className="text-sm font-semibold">Attività recente</p>
-            <p className="mt-2 text-sm text-muted-foreground">
+            <p className="mt-2 text-[13px] text-[#9b93c2]">
               {recents[0] ? recents[0].name : "Nessuna attività recente"}
             </p>
           </div>
-          <div className="rounded-2xl border border-border bg-card p-4">
+          <div className="rounded-2xl border border-white/8 bg-[#16122c]/90 p-4">
             <p className="flex items-center gap-2 text-sm font-semibold">
-              <HelpCircle className="size-4 text-primary" />
+              <Sparkles className="size-4 text-[#7c6bff]" />
               Assistenza
             </p>
-            <p className="mt-2 text-sm text-muted-foreground">Fenix by Kreluna</p>
+            <p className="mt-2 text-[13px] text-[#9b93c2]">Fenix by Kreluna</p>
           </div>
         </>
       }
     >
-      <p className="text-[11px] font-medium tracking-[0.22em] text-muted-foreground uppercase">
-        01 / CREATE
-      </p>
-      <p className="mt-6 text-lg text-muted-foreground">Ciao</p>
-      <div className="mt-2 flex flex-col items-start gap-6 lg:flex-row lg:items-center lg:justify-between">
-        <h1 className="max-w-xl text-[clamp(2.4rem,6vw,4.4rem)] leading-[1.05] font-semibold tracking-[-0.04em]">
+      <p className="text-[11px] tracking-[0.22em] text-[#6e6794] uppercase">01 / CREATE</p>
+      <p className="mt-5 text-[17px] text-[#cfc8ea]">Ciao 👋</p>
+
+      <div className="relative mt-2 min-h-[220px] pr-[200px]">
+        <h1 className="max-w-[16ch] text-[52px] leading-[1.02] font-semibold tracking-[-0.045em]">
           Cosa vuoi
           <br />
           <span className="fenix-grad">creare oggi?</span>
@@ -96,24 +98,24 @@ function Home() {
         <img
           src="/fenix-orb.jpg"
           alt="Fenix"
-          className="mx-auto w-[min(280px,70vw)] shrink-0 drop-shadow-[0_0_40px_rgba(139,124,255,0.45)] lg:mx-0"
+          className="pointer-events-none absolute top-[-36px] right-[-8px] w-[240px] drop-shadow-[0_0_50px_rgba(124,107,255,0.55)]"
         />
       </div>
-      <p className="mt-4 max-w-xl text-base leading-relaxed text-muted-foreground sm:text-lg">
-        Descrivi la tua idea. Fenix crea un prototipo funzionante, con codice esportabile
-        e opzioni di pubblicazione.
+
+      <p className="mt-2 max-w-[520px] text-[15px] leading-relaxed text-[#9b93c2]">
+        Descrivi la tua idea. Fenix crea un prototipo funzionante, con codice esportabile e
+        opzioni di pubblicazione.
       </p>
 
       <form
+        id="nuovo"
         onSubmit={(e) => {
           e.preventDefault();
           handleBuild();
         }}
-        className="mt-8 rounded-2xl border border-border bg-card/80 p-5"
+        className="mt-8 rounded-[22px] border border-white/10 bg-[#100c22]/80 p-5"
       >
-        <p className="text-[11px] font-medium tracking-[0.18em] text-muted-foreground uppercase">
-          Inizia da un’idea
-        </p>
+        <p className="text-[11px] tracking-[0.18em] text-[#6e6794] uppercase">Inizia da un’idea</p>
         <label htmlFor="brief" className="sr-only">
           Brief del progetto
         </label>
@@ -129,40 +131,40 @@ function Home() {
             }
           }}
           placeholder="Descrivi il software che vuoi creare..."
-          className="mt-3 min-h-[140px] text-[16px] sm:text-[17px]"
+          className="mt-3 min-h-[132px] text-[16px] text-white placeholder:text-[#6e6794]"
         />
-        <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-sm text-muted-foreground">
+        <div className="mt-3 flex items-center justify-between">
+          <p className="text-xs text-[#6e6794]">
             {ai === false
-              ? "Studio non disponibile. Riprova tra un attimo."
+              ? "Studio non disponibile."
               : emptyCredits
                 ? "Crediti esauriti."
-                : "Ogni creazione usa 1 credito."}
+                : "Invio per creare · 1 credito"}
           </p>
-          <Button
+          <button
             type="submit"
-            variant="default"
-            size="lg"
             disabled={brief.trim().length < 3 || emptyCredits}
-            className="min-h-12 w-full bg-primary text-primary-foreground sm:w-auto"
+            className="h-9 rounded-full bg-[#7c6bff] px-4 text-sm font-medium text-white disabled:opacity-40"
           >
             Crea
-            <ArrowRight />
-          </Button>
+          </button>
         </div>
       </form>
 
-      <div id="demo" className="mt-6 grid gap-3 sm:grid-cols-2">
+      <p className="mt-6 text-[11px] tracking-[0.2em] text-[#6e6794] uppercase">
+        Fenix selected / 06
+      </p>
+
+      <div id="demo" className="mt-8 grid grid-cols-2 gap-3">
         <button
           type="button"
           onClick={() => {
             const project = openDemo("grottaglie");
             void navigate({ to: "/studio/$projectId", params: { projectId: project.id } });
           }}
-          className="rounded-2xl border border-border bg-card p-4 text-left hover:bg-raised"
+          className="rounded-2xl border border-white/8 bg-[#16122c] p-4 text-left text-sm hover:border-white/20"
         >
-          <p className="text-xs tracking-[0.16em] text-muted-foreground uppercase">Demo</p>
-          <p className="mt-1 text-lg font-semibold">Fornace Grottaglie</p>
+          Fornace Grottaglie
         </button>
         <button
           type="button"
@@ -170,14 +172,13 @@ function Home() {
             const project = openDemo("catenaria");
             void navigate({ to: "/studio/$projectId", params: { projectId: project.id } });
           }}
-          className="rounded-2xl border border-border bg-card p-4 text-left hover:bg-raised"
+          className="rounded-2xl border border-white/8 bg-[#16122c] p-4 text-left text-sm hover:border-white/20"
         >
-          <p className="text-xs tracking-[0.16em] text-muted-foreground uppercase">Demo</p>
-          <p className="mt-1 text-lg font-semibold">Officina Catenaria</p>
+          Officina Catenaria
         </button>
       </div>
 
-      <div className="mt-5 flex flex-wrap gap-2">
+      <div className="mt-4 flex flex-wrap gap-2">
         {EXAMPLES.map((ex) => (
           <button
             key={ex.id}
@@ -186,10 +187,7 @@ function Home() {
               setBrief(ex.prompt);
               document.getElementById("brief")?.focus();
             }}
-            className={cn(
-              "inline-flex h-10 items-center rounded-full border border-border bg-card px-4",
-              "text-sm text-muted-foreground hover:bg-raised hover:text-foreground",
-            )}
+            className="h-9 rounded-full border border-white/10 px-3 text-xs text-[#9b93c2] hover:text-white"
           >
             {ex.label}
           </button>
@@ -197,14 +195,14 @@ function Home() {
       </div>
 
       {recents.length > 0 ? (
-        <section className="mt-14">
-          <div className="mb-4 flex items-end justify-between">
-            <h2 className="text-xl font-semibold">I miei progetti</h2>
-            <Link to="/vetrina" className="text-sm text-muted-foreground no-underline hover:text-foreground">
+        <section className="mt-10">
+          <div className="mb-3 flex justify-between">
+            <h2 className="text-sm font-semibold">I miei progetti</h2>
+            <Link to="/vetrina" className="text-xs text-[#9b93c2] no-underline hover:text-white">
               Vedi tutti
             </Link>
           </div>
-          <ul className="grid gap-3 sm:grid-cols-2">
+          <ul className="grid grid-cols-2 gap-3">
             {recents.map((p) => (
               <li key={p.id}>
                 <ProjectCard project={p} />
