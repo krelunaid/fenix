@@ -16,11 +16,42 @@ export function parseProjectFiles(text: string): ProjectFile[] {
     seen.add(path);
     files.push({ path, content });
   }
-  return files.slice(0, 16);
+  return files.slice(0, 24);
+}
+
+function screenIdFromAttrs(attrs: string) {
+  return (
+    attrs.match(/\bid=["']t-([^"']+)["']/)?.[1] ||
+    attrs.match(/data-screen=["']([^"']+)["']/)?.[1] ||
+    ""
+  ).toLowerCase();
+}
+
+export function extractScreens(html: string): ProjectFile[] {
+  if (!html) return [];
+  const out: ProjectFile[] = [];
+  const seen = new Set<string>();
+  for (const match of html.matchAll(/<template([^>]*)>([\s\S]*?)<\/template>/gi)) {
+    const id = screenIdFromAttrs(match[1] ?? "");
+    const content = (match[2] ?? "").trim();
+    if (!id || !content || seen.has(id)) continue;
+    seen.add(id);
+    out.push({ path: `screens/${id}.html`, content });
+  }
+  return out;
+}
+
+export function ensureScreenFiles(files: ProjectFile[], html: string): ProjectFile[] {
+  const map = new Map(files.map((f) => [f.path, f]));
+  if (html && !map.has("index.html")) map.set("index.html", { path: "index.html", content: html });
+  for (const screen of extractScreens(html)) {
+    if (!map.has(screen.path)) map.set(screen.path, screen);
+  }
+  return [...map.values()];
 }
 
 export function assembleHtml(files: ProjectFile[], fallbackHtml = "") {
-  const index =
+  let index =
     files.find((f) => /(^|\/)index\.html$/i.test(f.path))?.content ?? fallbackHtml;
   if (!index) return "";
 
@@ -42,10 +73,25 @@ export function assembleHtml(files: ProjectFile[], fallbackHtml = "") {
       : `${tag}${html}`;
   }
   if (screens.length) {
-    const templates = screens
+    for (const f of screens) {
+      const id = f.path.replace(/^screens\//i, "").replace(/\.html$/i, "");
+      const tRe = new RegExp(
+        `(<template[^>]*\\bid=["']t-${id}["'][^>]*>)[\\s\\S]*?(</template>)`,
+        "i",
+      );
+      if (tRe.test(html)) {
+        html = html.replace(tRe, `$1${f.content}$2`);
+      }
+    }
+    const missing = screens.filter((f) => {
+      const id = f.path.replace(/^screens\//i, "").replace(/\.html$/i, "");
+      return !new RegExp(`id=["']t-${id}["']`, "i").test(html);
+    });
+    if (missing.length) {
+    const templates = missing
       .map((f) => {
         const id = f.path.replace(/^screens\//i, "").replace(/\.html$/i, "");
-        return `<template data-screen="${id}">${f.content}</template>`;
+        return `<template id="t-${id}" data-screen="${id}">${f.content}</template>`;
       })
       .join("");
     const router = `<script data-fenix-screens>
@@ -74,6 +120,7 @@ export function assembleHtml(files: ProjectFile[], fallbackHtml = "") {
     html = /<\/body>/i.test(html)
       ? html.replace(/<\/body>/i, `${templates}${router}</body>`)
       : `${html}${templates}${router}`;
+    }
   }
   if (js && !new RegExp(js.slice(0, 40).replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).test(html)) {
     const tag = `<script>${js}</script>`;
@@ -86,5 +133,5 @@ export function assembleHtml(files: ProjectFile[], fallbackHtml = "") {
 
 export function filesFromHtml(html: string, name = "index.html"): ProjectFile[] {
   if (!html) return [];
-  return [{ path: name, content: html }];
+  return ensureScreenFiles([{ path: name, content: html }], html);
 }

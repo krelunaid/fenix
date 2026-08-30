@@ -1,5 +1,5 @@
 import { DEFAULT_PALETTE, type Palette, type ProjectKind } from "@/lib/projects/types";
-import { assembleHtml, parseProjectFiles, type ProjectFile } from "@/lib/projects/files";
+import { assembleHtml, ensureScreenFiles, parseProjectFiles, type ProjectFile } from "@/lib/projects/files";
 
 export type BuildResult = {
   name: string;
@@ -94,6 +94,8 @@ export function parseBuildOutput(text: string): BuildResult | null {
   if (!files.some((f) => /(^|\/)index\.html$/i.test(f.path))) {
     files = [{ path: "index.html", content: html }, ...files];
   }
+  files = ensureScreenFiles(files, html);
+  html = assembleHtml(files, html) || html;
 
   const meta = parseMeta(metaBlock?.[1]?.trim() || "{}");
   if (meta.name === "Studio") {

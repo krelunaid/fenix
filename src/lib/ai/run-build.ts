@@ -11,7 +11,7 @@ const inflight = new Set<string>();
 function readyCopy(result: BuildResult) {
   const summary = result.summary?.trim();
   return [
-    `Pronto. ${result.name} è in anteprima: ${result.files?.length || 1} file, si usa.`,
+    `Pronto. ${result.name} è in anteprima: ${result.files?.filter((f) => f.path.startsWith("screens/")).length || 1} schermate, si usa.`,
     summary,
     "Tocca un suggerimento sotto, o scrivi cosa cambiare.",
   ]
