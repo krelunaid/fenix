@@ -89,7 +89,7 @@ export function lookInstruction(audit: PreviewAudit | null, hasShot: boolean) {
     "Correggi SOLO chrome/CSS/icone. NON spegnere il JS.",
     "Obbligo canvas telefono: html/body 100dvh, colonna, width 100%, niente max-width 1100, niente 3 colonne desktop.",
     "Tab bar in flusso in basso, 4–5 voci STESSA larghezza, SVG 24px + label 10px intere, niente testo tagliato.",
-    (audit.mainChars ?? 0) < 80
+    (audit?.mainChars ?? 0) < 80
       ? "HOME VUOTA. Riempi main: metriche, blocco, CTA, lista. Non lasciare il bianco."
       : "Header saluto. Main overflow auto. CTA visibile senza scroll orizzontale.",
     "Stile iOS: #f5f5f7 #1d1d1f accento #0071e3, aria, tab intere, niente viola neon.",
