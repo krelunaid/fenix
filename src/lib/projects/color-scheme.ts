@@ -69,6 +69,10 @@ body{display:flex!important;flex-direction:column!important;min-height:100dvh;fo
 .fk-tab button.on,.tabbar button.on,nav[aria-label] button.on{color:var(--accent,#1a73c7)}
 .fk-tab svg,.tabbar svg,nav[aria-label] svg{width:24px;height:24px;flex:0 0 24px}
 .fk-tab span,.tabbar span,nav[aria-label] span{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+main,.fk-main,main p,main li,main b,.fk-tile,.fk-tile b,.fk-tile span,.fk-panel,.fk-hello,.fk-lbl{color:var(--fg,#1d1d1f)!important;opacity:1!important}
+.fk-role,.fk-date,main .muted{color:#3a3a3c!important;opacity:1!important}
+.fk-btn,.fk-panel,.fk-panel h2,.fk-panel h3,.fk-stat,.fk-stat b,.fk-stat span{color:#f5f5f7!important}
+.fk-btn{color:#fff!important}
 </style>`;
 
 export function fenixRuntimeScript(projectId: string) {

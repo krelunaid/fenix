@@ -211,6 +211,7 @@ body {
   font: 600 10px/1.1 system-ui, sans-serif;
 }
 .fk-tab button.on { color: var(--accent); }
+.fk-screen, .fk-screen p, .fk-screen li, .fk-screen span, .fk-screen b { color: var(--fg); }
 `,
     },
     {
