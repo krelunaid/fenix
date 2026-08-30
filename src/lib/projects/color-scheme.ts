@@ -28,27 +28,47 @@ document.addEventListener("click", function (e) {
 
 const PHONE_KIT = `<style data-fenix-phone>
 html,body{height:100%;margin:0}
-body{min-height:100dvh;max-width:100%;overflow-x:hidden}
+body{min-height:100dvh;max-width:100%;overflow-x:hidden;color:var(--fg,#111);background:var(--bg,#f4f6fa)}
 body:has(.fk-tab),body:has(.tabbar),body:has(nav[aria-label]){
-  display:flex;flex-direction:column;overflow:hidden;font-size:16px;
+  display:flex;flex-direction:column;overflow:hidden;font-size:16px;-webkit-font-smoothing:antialiased;
 }
-.fk-top,body>header{flex-shrink:0;padding:12px 16px 8px}
-.fk-main,body>main{flex:1;min-height:0;overflow:auto;-webkit-overflow-scrolling:touch}
+.fk-top,body>header{flex-shrink:0;padding:14px 16px 10px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.fk-hello{margin:0;font-size:22px;font-weight:700;letter-spacing:-.03em;line-height:1.15}
+.fk-role{margin:4px 0 0;font-size:12px;color:var(--muted,#6b7280)}
+.fk-date{margin:0 16px 10px;font-size:12px;color:var(--muted,#6b7280)}
+.fk-main,body>main{flex:1;min-height:0;overflow:auto;padding:0 16px 20px;-webkit-overflow-scrolling:touch}
+.fk-panel{background:var(--fg,#0b1c2c);color:#fff;border-radius:22px;padding:18px 16px;margin:0 0 14px}
+.fk-panel h2,.fk-panel h3{margin:0 0 12px;font-size:15px}
+.fk-grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.fk-stat{background:color-mix(in srgb,#fff 8%,transparent);border-radius:14px;padding:12px 12px 10px}
+.fk-stat b{display:block;font-size:22px;letter-spacing:-.03em}
+.fk-stat span{font-size:11px;opacity:.7}
+.fk-tile{background:var(--surface,#fff);border-radius:16px;padding:14px;box-shadow:0 1px 0 color-mix(in srgb,#000 6%,transparent)}
+.fk-tile b{display:block;font-size:20px;margin-top:8px;letter-spacing:-.03em}
+.fk-tile span{font-size:12px;color:var(--muted,#6b7280)}
+.fk-seg{display:flex;background:color-mix(in srgb,#fff 10%,transparent);border-radius:999px;padding:3px;gap:2px;margin:8px 0 14px}
+.fk-seg button{flex:1;border:0;background:none;color:inherit;border-radius:999px;padding:8px 6px;font:600 13px/1 system-ui,sans-serif}
+.fk-seg button.on{background:#fff;color:#111}
+.fk-btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;border:0;border-radius:16px;padding:14px 16px;font:700 16px/1 system-ui,sans-serif;background:var(--accent,#1a73c7);color:#fff}
+.fk-chiprow{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 14px}
+.fk-chip{border:0;border-radius:12px;padding:10px 12px;font:650 13px/1 system-ui,sans-serif;background:color-mix(in srgb,var(--accent,#1a73c7) 16%,transparent);color:var(--fg,#111)}
+.fk-field{display:flex;align-items:center;gap:10px;background:var(--surface,#fff);border:1px solid var(--line,#e5e7eb);border-radius:14px;padding:12px 14px;margin:6px 0 14px}
+.fk-field input,.fk-field select,.fk-field textarea{flex:1;border:0;background:none;font:inherit;color:inherit;outline:none;min-width:0}
+.fk-lbl{display:block;font-size:12px;font-weight:650;margin:10px 0 0;color:var(--muted,#6b7280)}
 .fk-tab,.tabbar,nav[aria-label]{
   flex-shrink:0;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));
   height:64px;padding:6px 4px calc(6px + env(safe-area-inset-bottom));
   border-top:1px solid color-mix(in srgb, currentColor 12%, transparent);
-  background:inherit;
+  background:var(--bg,#f4f6fa);color:var(--muted,#6b7280);
 }
 .fk-tab button,.tabbar button,nav[aria-label] button{
   min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
   gap:3px;margin:0;padding:0 2px;border:0;background:none;color:inherit;
-  font:600 10px/1.1 system-ui,sans-serif;letter-spacing:.01em;
+  font:600 10px/1.1 system-ui,sans-serif;
 }
+.fk-tab button.on,.tabbar button.on,nav[aria-label] button.on{color:var(--accent,#1a73c7)}
 .fk-tab svg,.tabbar svg,nav[aria-label] svg{width:24px;height:24px;flex:0 0 24px}
-.fk-tab span,.tabbar span,nav[aria-label] span{
-  max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
-}
+.fk-tab span,.tabbar span,nav[aria-label] span{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 </style>`;
 
 export function fenixRuntimeScript(projectId: string) {

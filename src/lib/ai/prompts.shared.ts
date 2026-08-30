@@ -25,15 +25,14 @@ ICONE — obbligatorie e disegnate, non decorative generiche:
 CSS: :root con --bg --surface --fg --muted --accent --line. body 100dvh. App a colonna: header, main flex 1 overflow, tabbar flex-shrink 0 in flusso, mai position:fixed dentro iframe. Contrasto AA, color-scheme e prefers-reduced-motion.
 
 App — chrome da prodotto in tasca (non admin, non landing):
-- Tutto lo schermo TELEFONO: 390×844, width 100%, html/body 100dvh colonna. Vietato layout desktop, grid 3 colonne, min-width 1100, max-width 430 con bande. Header compatto, main flex 1 overflow, tab bar 4–5 voci in FLUSSO in basso (64–72px). Mai position:fixed.
-- Header: saluto + ruolo/contesto a sinistra, un'azione (esci/share) a destra. Sotto, data o stato in 12px muted.
-- Home: 1 card panoramica (2×2 metriche vere), 1 blocco eroico del mestiere (misura, serbatoio, turno — non un hero slogan), 2×2 tile bianche/surface con icona SVG + numero, 1 CTA full-width in basso nel main.
-- Tab: nav.fk-tab con 4 o 5 button (grid 5 colonne uguali). Ogni voce = SVG 24px + span label 10px. Classe .on sull'attivo. Viste: home, registra, storico, numeri, gestione (nomi dal brief).
-- Header: header.fk-top. Contenuto: main.fk-main.
-- Form (Registra): label 13px, campo con icona a sinistra, chip rapidi (+50, +100…) se ha senso, select, data, nota, bottone primario a pillola larga "Salva…". Validazione visibile.
-- Icona app 52px rx 13, pittogramma del mestiere, stessa in rel=icon, leggibile a 16px.
-- ≥4 viste che cambiano sul serio, state+render, calcoli giusti.
-- Persistenza: await window.Fenix.load("state") e window.Fenix.save("state", data). Mai localStorage (sandbox).
+- TELEFONO 390×844. html/body colonna 100dvh. Vietato desktop, 3 colonne, min-width 1100, bande.
+- USA queste classi (il CSS .fk-* è già iniettato, non copiarlo): header.fk-top (h1.fk-hello + p.fk-role), p.fk-date, main.fk-main, nav.fk-tab.
+- Home: .fk-panel con .fk-grid2 > .fk-stat, blocco eroico del mestiere, .fk-grid2 > .fk-tile, button.fk-btn.
+- Tab: 5 button in .fk-tab, SVG 24 + span, .on sull'attivo. Viste home / registra / storico / numeri / gestione.
+- Form: .fk-lbl + .fk-field (svg+input), .fk-chiprow > .fk-chip, button.fk-btn.
+- Periodo: .fk-seg > button.on.
+- Icona app 52px rx 13, stessa in rel=icon.
+- ≥4 viste, calcoli giusti. Persistenza: await window.Fenix.load("state") / save. Mai localStorage.
 
 Sito: nav, almeno 4 sezioni, form che conferma, testi veri (città, prezzi, orari), 2–4 immagini Unsplash photo- con &w=1600.
 
