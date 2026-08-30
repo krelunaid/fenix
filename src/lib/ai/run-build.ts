@@ -4,6 +4,7 @@ import { parseBuildOutput, type BuildResult } from "./parse";
 import { isWeakPreview, lookInstruction, resetAudit, waitPreviewAudit, waitPreviewShot } from "./look";
 import { APP_SHELL_HTML, APP_SHELL_INSTRUCTION } from "./app-shell";
 import { CREATE_COST, ITERATE_COST } from "@/lib/projects/credits";
+import { uid } from "@/lib/utils";
 
 const inflight = new Set<string>();
 
