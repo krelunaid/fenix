@@ -20,7 +20,9 @@ ICONE (giro dedicato, non opzionale):
 - Ridisegna TUTTE le SVG: pittogramma del mestiere, path originali, viewBox 0 0 24 24, stroke 1.8 round, fill none tranne .on
 - 5 tab = 5 silhouette diverse, si capiscono senza label. Vietato cerchio+lettera, emoji, icone clonate
 - Icona app 52px rx 13 in header + rel=icon, 2 colori #1d1d1f / #0071e3
-Correggi SOLO chrome/CSS/icone/layout. NON spegnere JS, form, state.
+Correggi SOLO chrome/CSS/icone/layout.
+VIETATO riscrivere, accorciare o "pulire" i tag <script>. Copiali IDENTICI dall'HTML in ingresso.
+Se un form o una lista già c'è, non toccare gli id, gli onclick, i data-view.
 Canvas: body colonna 100dvh, header.fk-top, main.fk-main, nav.fk-tab.
 Non scrivere le parole Apple, iOS, Fenix, Grok nel prodotto.
 Rispondi SOLO:
@@ -44,6 +46,22 @@ function parseHtml(text) {
     meta = {};
   }
   return { html, meta };
+}
+
+function keepScripts(from, to) {
+  if (!from || !to) return to;
+  const grab = (html) => [...html.matchAll(/<script\b[\s\S]*?<\/script>/gi)].map((m) => m[0]);
+  const orig = grab(from);
+  if (!orig.length) return to;
+  const next = grab(to);
+  const origLen = orig.join("").length;
+  const nextLen = next.join("").length;
+  if (nextLen >= origLen * 0.85) return to;
+  const stripped = to.replace(/<script\b[\s\S]*?<\/script>/gi, "");
+  const block = orig.join("\n");
+  return /<\/body>/i.test(stripped)
+    ? stripped.replace(/<\/body>/i, `${block}</body>`)
+    : `${stripped}${block}`;
 }
 
 async function grok(apiKey, prompt, html, shotB64, pass, instruction) {
@@ -210,9 +228,9 @@ async function polish(prompt, html, instruction) {
     const text = await grok(apiKey, prompt, current, shot, pass, instruction);
     const parsed = parseHtml(text);
     if (parsed?.html) {
-      current = parsed.html;
+      current = keepScripts(current, parsed.html);
       meta = parsed.meta;
-      log.push(`Patch ${pass} ok (${current.length} caratteri)`);
+      log.push(`Patch ${pass} ok (${current.length} caratteri, JS conservato)`);
     } else {
       log.push(`Patch ${pass} ignorata`);
     }

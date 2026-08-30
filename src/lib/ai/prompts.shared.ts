@@ -42,7 +42,10 @@ App — chrome da prodotto in tasca (non admin, non landing):
 - Form in screens/new.html: .fk-lbl + .fk-field, .fk-chiprow, button.fk-btn.
 - Periodo: .fk-seg > button.on.
 - Icona app 52px rx 13, stessa in rel=icon.
-- ≥4 viste, calcoli giusti. Persistenza: await window.Fenix.load("state") / save. Mai localStorage.
+- ≥4 viste, calcoli giusti.
+- Persistenza: await window.Fenix.load("state") all'avvio e window.Fenix.save("state", data) dopo OGNI add/remove/salva.
+- Form: preventDefault. Se il campo è vuoto NON aggiungere. Ogni riga della lista mostra il testo (nome, litri…). Vietato righe vuote con solo "Rimuovi". Lista vuota = una riga "Nessun elemento".
+- I 4 Rimuovi senza nome = BUG. Non farlo.
 
 Sito: nav, almeno 4 sezioni, form che conferma, testi veri (città, prezzi, orari), 2–4 immagini Unsplash photo- con &w=1600.
 
@@ -70,7 +73,8 @@ Se manca ANCHE UNO di questi, riscrivi il chrome (tieni i dati e il JS che già 
 - tab bar in flusso, 4–5 voci, SVG diversi, label 10px
 - header saluto + azione
 - home: metriche + blocco eroico del mestiere + CTA
-- form con label, campo, chip se serve, salva
+- form con label, campo, chip se serve, salva; lista che mostra i nomi; niente righe Rimuovi vuote
+- JS: preventDefault, Fenix.save, niente localStorage
 - icona app SVG in header e rel=icon
 - palette iOS, contrasto AA, icone SVG diverse, niente viola/emoji/lorem
 
