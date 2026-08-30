@@ -37,19 +37,19 @@ body{display:flex!important;flex-direction:column!important;min-height:100dvh;fo
   flex:1 1 0%!important;min-height:0!important;overflow-y:scroll!important;
   padding:0 16px 28px;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;
 }
-.fk-panel{background:var(--fg,#1d1d1f);color:#f5f5f7;border-radius:22px;padding:18px 16px;margin:0 0 14px}
-.fk-panel h2,.fk-panel h3{margin:0 0 12px;font-size:15px;color:#f5f5f7}
+.fk-panel{background:var(--surface,#fff);color:var(--fg,#1d1d1f);border:1px solid var(--line,#e5e5ea);border-radius:22px;padding:18px 16px;margin:0 0 14px}
+.fk-panel h2,.fk-panel h3{margin:0 0 12px;font-size:15px;color:var(--fg,#1d1d1f)}
 .fk-grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.fk-stat{background:color-mix(in srgb,#fff 12%,transparent);border-radius:14px;padding:12px 12px 10px;color:#fff}
-.fk-stat b{display:block;font-size:22px;letter-spacing:-.03em;color:#fff}
-.fk-stat span{font-size:11px;opacity:.85;color:#fff}
+.fk-stat{background:color-mix(in srgb,var(--fg,#1d1d1f) 6%,var(--surface,#fff));border-radius:14px;padding:12px 12px 10px;color:var(--fg,#1d1d1f)}
+.fk-stat b{display:block;font-size:22px;letter-spacing:-.03em;color:var(--fg,#1d1d1f)}
+.fk-stat span{font-size:11px;opacity:.85;color:var(--muted,#3a3a3c)}
 .fk-tile{background:var(--surface,#fff);border:1px solid var(--line,#d2d2d7);border-radius:16px;padding:14px}
 .fk-tile b{display:block;font-size:20px;margin-top:8px;letter-spacing:-.03em;color:var(--fg,#1d1d1f)}
 .fk-tile span{font-size:12px;color:var(--muted,#3a3a3c)}
 .fk-seg{display:flex;background:var(--line,#e5e5ea);border-radius:999px;padding:3px;gap:2px;margin:8px 0 14px}
 .fk-seg button{flex:1;border:0;background:none;color:var(--fg,#1d1d1f);border-radius:999px;padding:8px 6px;font:600 13px/1 system-ui,sans-serif}
 .fk-seg button.on{background:var(--surface,#fff);color:var(--fg,#1d1d1f);box-shadow:0 1px 2px rgba(0,0,0,.12)}
-.fk-btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;border:0;border-radius:16px;padding:14px 16px;font:700 16px/1 system-ui,sans-serif;background:var(--accent,#0071e3);color:#fff}
+.fk-btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;border:0;border-radius:16px;padding:14px 16px;font:700 16px/1 system-ui,sans-serif;background:var(--accent,#3d4a1f);color:#fff}
 .fk-chiprow{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 14px}
 .fk-chip{border:0;border-radius:12px;padding:10px 12px;font:650 13px/1 system-ui,sans-serif;background:color-mix(in srgb,var(--accent,#0071e3) 18%,#fff);color:var(--fg,#1d1d1f)}
 .fk-field{display:flex;align-items:center;gap:10px;background:var(--surface,#fff);border:1px solid var(--line,#c7c7cc);border-radius:14px;padding:12px 14px;margin:6px 0 14px;color:var(--fg,#1d1d1f)}
@@ -72,9 +72,8 @@ body{display:flex!important;flex-direction:column!important;min-height:100dvh;fo
 .fk-tab span,.tabbar span,nav[aria-label] span{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .fk-hero{width:100%;height:160px;object-fit:cover;border-radius:20px;display:block;margin:8px 0 14px;background:#e8e8ed}
 img[src=""],img:not([src]){display:none!important}
-main,.fk-main,main p,main li,main b,.fk-tile,.fk-tile b,.fk-tile span,.fk-panel,.fk-hello,.fk-lbl{color:var(--fg,#1d1d1f)!important;opacity:1!important}
-.fk-role,.fk-date,main .muted{color:#3a3a3c!important;opacity:1!important}
-.fk-btn,.fk-panel,.fk-panel h2,.fk-panel h3,.fk-stat,.fk-stat b,.fk-stat span{color:#f5f5f7!important}
+main,.fk-main,main p,main li,main b,.fk-tile,.fk-tile b,.fk-hello,.fk-lbl{color:var(--fg,#1d1d1f)!important;opacity:1!important}
+.fk-role,.fk-date,main .muted,.fk-stat span{color:var(--muted,#3a3a3c)!important;opacity:1!important}
 .fk-btn{color:#fff!important}
 </style>`;
 
@@ -331,7 +330,8 @@ export function sanitizePreviewHtml(html: string) {
     .replace(/(<body[^>]*>)\s*"\s*\/>/i, "$1")
     .replace(/^\s*"\s*\/>/gm, "")
     .replace(/>\s*"\s*\/>/g, ">")
-    .replace(/"\s*\/>/g, "");
+    .replace(/"\s*\/>/g, "")
+    .replace(/\$\{[^}]+\}/g, "");
 }
 
 export function prepareSrcDoc(html: string, bg: string, projectId = "preview", kind?: string) {
