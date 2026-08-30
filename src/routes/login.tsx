@@ -32,14 +32,14 @@ function Login() {
   }
 
   return (
-    <main className="grid min-h-dvh place-items-center bg-[#07041a] px-6 text-white">
-      <div className="w-full max-w-[380px] text-center">
-        <img src="/fenix-login.png" alt="Fenix" className="mx-auto h-40 w-40 object-contain" />
+    <main className="fixed inset-0 grid place-items-center overflow-auto bg-[#07041a] px-6 py-8 text-white">
+      <div className="m-auto flex w-full max-w-[360px] flex-col items-center text-center">
+        <img src="/fenix-login.png" alt="Fenix" className="h-40 w-40 object-contain" />
         <p className="mt-4 text-[11px] font-semibold tracking-[0.28em] text-[#9b93c2]">FENIX · KRELUNA</p>
         <h1 className="mt-3 font-display text-4xl italic tracking-tight">Accedi</h1>
         <p className="mt-2 text-sm text-[#9b93c2]">Iscriviti con email. Poi entri sempre da qui.</p>
 
-        <div className="mt-8 mb-3 flex gap-2">
+        <div className="mt-8 mb-3 flex w-full gap-2">
           <button
             type="button"
             onClick={() => setMode("up")}
@@ -56,7 +56,7 @@ function Login() {
           </button>
         </div>
 
-        <form onSubmit={onEmail} className="space-y-2 text-left">
+        <form onSubmit={onEmail} className="w-full space-y-2 text-left">
           {mode === "up" ? (
             <input
               value={name}
