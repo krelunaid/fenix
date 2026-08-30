@@ -1,6 +1,6 @@
 import type { StreamEvent } from "./stages";
 import { applyBuildResult, useProjectStore } from "@/lib/projects/store";
-import type { BuildResult } from "./parse";
+import { parseBuildOutput, type BuildResult } from "./parse";
 import { isWeakPreview, lookInstruction, resetAudit, waitPreviewAudit, waitPreviewShot } from "./look";
 import { uid } from "@/lib/utils";
 
@@ -148,9 +148,19 @@ export async function runBuild(projectId: string, instruction?: string) {
             body: JSON.stringify({ prompt: project.prompt, html: latest.html }),
           });
           if (res.status !== 204 && res.ok) {
-            const payload = (await res.json()) as { result?: BuildResult; log?: string[] };
-            if (payload.result?.html) {
-              applyBuildResult(projectId, payload.result);
+            const payload = (await res.json()) as {
+              result?: BuildResult;
+              html?: string;
+              meta?: Record<string, unknown>;
+              log?: string[];
+            };
+            const result =
+              payload.result ??
+              parseBuildOutput(
+                `<<<META>>>\n${JSON.stringify(payload.meta ?? {})}\n<<<HTML>>>\n${payload.html ?? ""}\n<<<END>>>`,
+              );
+            if (result?.html) {
+              applyBuildResult(projectId, result);
               const logs = payload.log ?? [];
               store.updateProject(projectId, {
                 status: "ready",
