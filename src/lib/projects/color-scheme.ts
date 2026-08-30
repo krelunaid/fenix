@@ -30,6 +30,22 @@ export function fenixRuntimeScript(projectId: string) {
   return `<script data-fenix-runtime>
 (function(){
   var pid = ${JSON.stringify(projectId)};
+  try {
+    void window.localStorage;
+  } catch (e) {
+    var memoryStorage = {};
+    Object.defineProperty(window, "localStorage", {
+      configurable: true,
+      value: {
+        getItem: function(key){ return Object.prototype.hasOwnProperty.call(memoryStorage, key) ? memoryStorage[key] : null; },
+        setItem: function(key, value){ memoryStorage[key] = String(value); },
+        removeItem: function(key){ delete memoryStorage[key]; },
+        clear: function(){ memoryStorage = {}; },
+        key: function(index){ return Object.keys(memoryStorage)[index] || null; },
+        get length(){ return Object.keys(memoryStorage).length; }
+      }
+    });
+  }
   function localKey(col){ return "fenix-db:"+pid+":"+col; }
   function fallbackLoad(col){
     try { return JSON.parse(localStorage.getItem(localKey(col)) || "null"); }
