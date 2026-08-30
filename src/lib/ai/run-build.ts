@@ -247,8 +247,8 @@ export async function runBuild(projectId: string, instruction?: string) {
                 summary: now.summary,
                 direction: now.direction,
                 palette: now.palette,
-                html: now.html,
-                files: now.files,
+                html: now.html || "",
+                files: now.files ?? [],
               }),
             });
           }
