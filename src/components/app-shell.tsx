@@ -4,7 +4,6 @@ import {
   FolderKanban,
   HelpCircle,
   Home,
-  LayoutGrid,
   Plus,
   Sparkles,
 } from "lucide-react";
@@ -15,7 +14,6 @@ const NAV = [
   { to: "/", label: "Home", icon: Home, end: true },
   { href: "/#nuovo", label: "Nuovo progetto", icon: Plus, end: false },
   { to: "/vetrina", label: "I miei progetti", icon: FolderKanban, end: false },
-  { href: "/#demo", label: "Progetti demo", icon: LayoutGrid, end: false },
 ] as const;
 
 export function AppShell({

@@ -6,7 +6,6 @@ import { AppShell } from "@/components/app-shell";
 import { ProjectCard } from "@/components/project-card";
 import { Textarea } from "@/components/ui/textarea";
 import { getAiStatus } from "@/lib/ai/generate";
-import { EXAMPLES } from "@/lib/projects/examples";
 import { useProjectStore } from "@/lib/projects/store";
 
 export const Route = createFileRoute("/")({ component: Home });
@@ -17,7 +16,6 @@ function Home() {
   const projects = useProjectStore((s) => s.projects);
   const creditsRemaining = useProjectStore((s) => s.creditsRemaining);
   const createFromBrief = useProjectStore((s) => s.createFromBrief);
-  const openDemo = useProjectStore((s) => s.openDemo);
   const removeProject = useProjectStore((s) => s.removeProject);
   const [brief, setBrief] = useState("");
   const [ai, setAi] = useState<boolean | null>(null);
@@ -151,49 +149,6 @@ function Home() {
           </button>
         </div>
       </form>
-
-      <p className="mt-6 text-[11px] tracking-[0.2em] text-[#6e6794] uppercase">
-        Fenix selected / 06
-      </p>
-
-      <div id="demo" className="mt-8 grid grid-cols-2 gap-3">
-        <button
-          type="button"
-          onClick={() => {
-            const project = openDemo("grottaglie");
-            void navigate({ to: "/studio/$projectId", params: { projectId: project.id } });
-          }}
-          className="rounded-2xl border border-white/8 bg-[#16122c] p-4 text-left text-sm hover:border-white/20"
-        >
-          Fornace Grottaglie
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            const project = openDemo("catenaria");
-            void navigate({ to: "/studio/$projectId", params: { projectId: project.id } });
-          }}
-          className="rounded-2xl border border-white/8 bg-[#16122c] p-4 text-left text-sm hover:border-white/20"
-        >
-          Officina Catenaria
-        </button>
-      </div>
-
-      <div className="mt-4 flex flex-wrap gap-2">
-        {EXAMPLES.map((ex) => (
-          <button
-            key={ex.id}
-            type="button"
-            onClick={() => {
-              setBrief(ex.prompt);
-              document.getElementById("brief")?.focus();
-            }}
-            className="h-9 rounded-full border border-white/10 px-3 text-xs text-[#9b93c2] hover:text-white"
-          >
-            {ex.label}
-          </button>
-        ))}
-      </div>
 
       {recents.length > 0 ? (
         <section className="mt-10">
