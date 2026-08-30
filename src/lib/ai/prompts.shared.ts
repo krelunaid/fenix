@@ -28,7 +28,8 @@ App — chrome da prodotto in tasca (non admin, non landing):
 - Tutto lo schermo TELEFONO: 390×844, width 100%, html/body 100dvh colonna. Vietato layout desktop, grid 3 colonne, min-width 1100, max-width 430 con bande. Header compatto, main flex 1 overflow, tab bar 4–5 voci in FLUSSO in basso (64–72px). Mai position:fixed.
 - Header: saluto + ruolo/contesto a sinistra, un'azione (esci/share) a destra. Sotto, data o stato in 12px muted.
 - Home: 1 card panoramica (2×2 metriche vere), 1 blocco eroico del mestiere (misura, serbatoio, turno — non un hero slogan), 2×2 tile bianche/surface con icona SVG + numero, 1 CTA full-width in basso nel main.
-- Tab: 4 o 5. Ogni voce = SVG outline 26px + label 10px. Voce .on = accento. Glyph tutti diversi, stessa famiglia stroke 2.2. Viste: home, registra/nuovo, storico, numeri, gestione (adatta i nomi al brief).
+- Tab: nav.fk-tab con 4 o 5 button (grid 5 colonne uguali). Ogni voce = SVG 24px + span label 10px. Classe .on sull'attivo. Viste: home, registra, storico, numeri, gestione (nomi dal brief).
+- Header: header.fk-top. Contenuto: main.fk-main.
 - Form (Registra): label 13px, campo con icona a sinistra, chip rapidi (+50, +100…) se ha senso, select, data, nota, bottone primario a pillola larga "Salva…". Validazione visibile.
 - Icona app 52px rx 13, pittogramma del mestiere, stessa in rel=icon, leggibile a 16px.
 - ≥4 viste che cambiano sul serio, state+render, calcoli giusti.

@@ -136,14 +136,17 @@ export async function runBuild(projectId: string, instruction?: string) {
         return;
       }
       if (!instruction && latest?.html) {
-        store.updateProject(projectId, {
-          status: "building",
-          buildLog: [...(latest.buildLog ?? []), "Guardo i pixel"],
-        });
-        const shot = await waitPreviewShot(4800);
-        const audit = await waitPreviewAudit(400);
-        const snapshot = latest.html;
-        if (shot || isWeakPreview(audit)) {
+        const look = async (label: string) => {
+          const current = useProjectStore.getState().getProject(projectId);
+          const snapshot = current?.html;
+          if (!snapshot) return false;
+          store.updateProject(projectId, {
+            status: "building",
+            buildLog: [...(current.buildLog ?? []), label],
+          });
+          const shot = await waitPreviewShot(5500);
+          const audit = await waitPreviewAudit(500);
+          if (!shot && !isWeakPreview(audit)) return false;
           await consumeStream(projectId, {
             prompt: project.prompt,
             html: snapshot,
@@ -151,14 +154,26 @@ export async function runBuild(projectId: string, instruction?: string) {
             shot: shot || undefined,
           });
           const after = useProjectStore.getState().getProject(projectId);
-          if (after?.status === "error" && snapshot) {
+          if (after?.status === "error") {
             store.updateProject(projectId, {
               status: "ready",
               error: undefined,
               html: snapshot,
             });
+            return false;
           }
-        } else {
+          resetAudit();
+          return true;
+        };
+
+        await look("Guardo i pixel");
+        await new Promise((r) => window.setTimeout(r, 800));
+        const second = await waitPreviewAudit(1800);
+        if (isWeakPreview(second)) {
+          await look("Secondo sguardo");
+        }
+        const done = useProjectStore.getState().getProject(projectId);
+        if (done && done.status !== "error") {
           store.updateProject(projectId, { status: "ready" });
         }
       }

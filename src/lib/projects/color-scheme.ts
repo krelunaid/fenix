@@ -26,6 +26,31 @@ document.addEventListener("click", function (e) {
 }, true);
 </script>`;
 
+const PHONE_KIT = `<style data-fenix-phone>
+html,body{height:100%;margin:0}
+body{min-height:100dvh;max-width:100%;overflow-x:hidden}
+body:has(.fk-tab),body:has(.tabbar),body:has(nav[aria-label]){
+  display:flex;flex-direction:column;overflow:hidden;font-size:16px;
+}
+.fk-top,body>header{flex-shrink:0;padding:12px 16px 8px}
+.fk-main,body>main{flex:1;min-height:0;overflow:auto;-webkit-overflow-scrolling:touch}
+.fk-tab,.tabbar,nav[aria-label]{
+  flex-shrink:0;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));
+  height:64px;padding:6px 4px calc(6px + env(safe-area-inset-bottom));
+  border-top:1px solid color-mix(in srgb, currentColor 12%, transparent);
+  background:inherit;
+}
+.fk-tab button,.tabbar button,nav[aria-label] button{
+  min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:3px;margin:0;padding:0 2px;border:0;background:none;color:inherit;
+  font:600 10px/1.1 system-ui,sans-serif;letter-spacing:.01em;
+}
+.fk-tab svg,.tabbar svg,nav[aria-label] svg{width:24px;height:24px;flex:0 0 24px}
+.fk-tab span,.tabbar span,nav[aria-label] span{
+  max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+</style>`;
+
 export function fenixRuntimeScript(projectId: string) {
   return `<script data-fenix-runtime>
 (function(){
@@ -156,14 +181,10 @@ export function prepareSrcDoc(html: string, bg: string, projectId = "preview") {
       ? next.replace(/<\/body>/i, `${NAV_GUARD}</body>`)
       : `${next}${NAV_GUARD}`;
   }
-  if (
-    /tabbar|data-view|data-tab/i.test(next) &&
-    !/data-fenix-phone/.test(next)
-  ) {
-    const phone = `<style data-fenix-phone>html,body{height:100%;margin:0}body{min-height:100dvh;display:flex;flex-direction:column;overflow:hidden}body>header,body>.hdr{flex-shrink:0}body>main{flex:1;min-height:0;overflow:auto}body>nav,.tabbar,nav[aria-label]{flex-shrink:0}</style>`;
+  if (!/data-fenix-phone/.test(next)) {
     next = /<head[^>]*>/i.test(next)
-      ? next.replace(/<head[^>]*>/i, (open) => `${open}${phone}`)
-      : `${phone}${next}`;
+      ? next.replace(/<head[^>]*>/i, (open) => `${open}${PHONE_KIT}`)
+      : `${PHONE_KIT}${next}`;
   }
   return next;
 }
