@@ -187,6 +187,39 @@ export function fenixRuntimeScript(projectId: string) {
   document.querySelectorAll("nav button, .fk-tab button, .tabbar button").forEach(function(b){
     b.setAttribute("type", "button");
   });
+  var items = [];
+  function listEl(){
+    var ul = document.getElementById("fk-saved");
+    if (ul) return ul;
+    ul = document.createElement("ul");
+    ul.id = "fk-saved";
+    ul.style.cssText = "list-style:none;margin:14px 0 0;padding:0;display:flex;flex-direction:column;gap:8px";
+    var main = document.querySelector("main") || document.body;
+    main.appendChild(ul);
+    return ul;
+  }
+  function labelOf(it){
+    return it.nome || it.name || it.n || it.capo || it.v || Object.keys(it).filter(function(k){return it[k];}).map(function(k){return it[k];}).join(" · ");
+  }
+  function renderItems(){
+    var ul = listEl();
+    if (!items.length) { ul.innerHTML = ""; return; }
+    ul.innerHTML = items.map(function(it){
+      return '<li class="fk-tile"><b>'+labelOf(it)+'</b></li>';
+    }).join("");
+  }
+  if (window.Fenix && window.Fenix.load) {
+    window.Fenix.load("items").then(function(v){
+      if (Array.isArray(v)) items = v;
+      renderItems();
+    });
+  }
+  document.addEventListener("click", function(e){
+    var chip = e.target.closest && e.target.closest(".fk-chip, [data-chip]");
+    if (!chip) return;
+    document.querySelectorAll(".fk-chip, [data-chip]").forEach(function(c){ c.classList.remove("on"); });
+    chip.classList.add("on");
+  }, true);
   document.addEventListener("submit", function(e){
     e.preventDefault();
     e.stopPropagation();
@@ -194,11 +227,20 @@ export function fenixRuntimeScript(projectId: string) {
     if (!f || !f.querySelector) return;
     var data = {};
     try { new FormData(f).forEach(function(v,k){ if(String(v).trim()) data[k]=String(v); }); } catch(err) {}
-    if (window.Fenix) window.Fenix.save("form", data);
+    var on = document.querySelector(".fk-chip.on, [data-chip].on");
+    if (on && !data.categoria) data.categoria = (on.textContent || "").trim();
+    if (!data.nome && !data.name && !data.n) {
+      var first = f.querySelector("input, select, textarea");
+      if (first && first.value) data.nome = String(first.value);
+    }
+    items.unshift(data);
+    if (window.Fenix) window.Fenix.save("items", items);
+    renderItems();
+    try { f.reset(); } catch(err) {}
     var btn = f.querySelector('button[type="submit"], button:not([type]), .fk-btn');
     if (btn) {
       var old = btn.textContent;
-      btn.textContent = "Salvato";
+      btn.textContent = "Salvato in elenco";
       setTimeout(function(){ btn.textContent = old; }, 1400);
     }
   }, true);

@@ -25,22 +25,29 @@ const WORKER_POLISH =
   "https://fenix-production-d9f5.up.railway.app";
 
 async function callWorker(prompt: string, html: string, instruction?: string) {
-  const bases = ["/__worker", WORKER_POLISH.replace(/\/$/, "")];
+  const attempts: { polish: string; job: (id: string) => string }[] = [
+    { polish: "/api/polish", job: (id) => `/api/jobs/${id}` },
+    { polish: "/__worker/polish", job: (id) => `/__worker/jobs/${id}` },
+    {
+      polish: `${WORKER_POLISH.replace(/\/$/, "")}/polish`,
+      job: (id) => `${WORKER_POLISH.replace(/\/$/, "")}/jobs/${id}`,
+    },
+  ];
   let lastErr = "Load failed";
-  for (const base of bases) {
+  const body = JSON.stringify({ prompt, html, instruction: instruction || undefined });
+  for (const a of attempts) {
     try {
-      await fetch(`${base}/health`).catch(() => null);
-      const started = await fetch(`${base}/polish`, {
+      const started = await fetch(a.polish, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt, html, instruction: instruction || undefined }),
+        body,
       });
       if (started.status === 202) {
         const { id } = (await started.json()) as { id?: string };
         if (!id) continue;
         for (let i = 0; i < 180; i++) {
           await new Promise((r) => window.setTimeout(r, 2000));
-          const jobRes = await fetch(`${base}/jobs/${id}`);
+          const jobRes = await fetch(a.job(id));
           if (!jobRes.ok) continue;
           const job = (await jobRes.json()) as {
             status?: string;

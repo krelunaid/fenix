@@ -1,7 +1,12 @@
 export function suggestEdits(prompt: string, name = "") {
   const p = `${prompt} ${name}`.toLowerCase();
   const out: string[] = [];
-  if (/barba|taglio|salone|barbiere/.test(p)) {
+  if (/moda|abbigli|boutique|negozio|capo|vendit/.test(p)) {
+    out.push("Quando salvi, il capo deve comparire in Vetrina");
+    out.push("Foto di ogni capo in elenco");
+    out.push("Database vendite del giorno, con totale cassa");
+    out.push("Grafica boutique: crema, nero, niente blu generico");
+  } else if (/barba|taglio|salone|barbiere/.test(p)) {
     out.push("Aggiungi la foto di ogni barbiere in staff");
     out.push("Lista attese di oggi, con orario");
     out.push("Dopo Prenota, mostra il riepilogo");
