@@ -27,7 +27,7 @@ export async function designVisual(input: {
     body: JSON.stringify({
       model: FENIX_MODEL,
       temperature: 0.85,
-      max_tokens: 900,
+      max_tokens: 2500,
       stream: false,
       messages: [
         { role: "system", content: VISUAL_PROMPT },

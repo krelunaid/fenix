@@ -11,6 +11,58 @@ type Body = {
   instruction?: string;
 };
 
+type GrokChunk = {
+  error?: { message?: string; error?: string } | string;
+  choices?: {
+    finish_reason?: string | null;
+    delta?: {
+      content?: unknown;
+      reasoning_content?: unknown;
+    };
+    message?: {
+      content?: unknown;
+      reasoning_content?: unknown;
+    };
+  }[];
+};
+
+function asText(value: unknown): string {
+  if (typeof value === "string") return value;
+  if (Array.isArray(value)) {
+    return value
+      .map((part) => {
+        if (typeof part === "string") return part;
+        if (part && typeof part === "object") {
+          const rec = part as { text?: unknown; content?: unknown };
+          if (typeof rec.text === "string") return rec.text;
+          if (typeof rec.content === "string") return rec.content;
+        }
+        return "";
+      })
+      .join("");
+  }
+  return "";
+}
+
+function grokDelta(json: GrokChunk) {
+  if (json.error) {
+    const err = json.error;
+    const message =
+      typeof err === "string"
+        ? err
+        : err.message || err.error || "Errore dal modello.";
+    return { content: "", reasoning: "", finish: null as string | null, error: message };
+  }
+  const choice = json.choices?.[0];
+  const part = choice?.delta ?? choice?.message ?? {};
+  return {
+    content: asText(part.content),
+    reasoning: asText(part.reasoning_content),
+    finish: choice?.finish_reason ?? null,
+    error: null as string | null,
+  };
+}
+
 export const Route = createFileRoute("/api/build")({
   server: {
     handlers: {
@@ -46,18 +98,36 @@ export const Route = createFileRoute("/api/build")({
           `COMPLETO: app/tool/gioco = 3+ viste funzionanti. Sito = 4+ sezioni, nav, form, testi veri.`,
         ];
         if (html && instruction) userParts.push(`APP ATTUALE (HTML):\n${html}`);
-        if (instruction) userParts.push(`MODIFICA:\n${instruction}\nApplica questa modifica, tieni identità e funzioni già ok, restituisci l'app completa.`);
-        userParts.push("Costruisci ora. Formato META + HTML, nient'altro.");
+        if (instruction) {
+          userParts.push(
+            `MODIFICA:\n${instruction}\nApplica questa modifica, tieni identità e funzioni già ok, restituisci l'app completa.`,
+          );
+        }
+        userParts.push("Costruisci ora. Formato META + HTML, nient'altro. Niente ragionamento nel documento.");
 
         const encoder = new TextEncoder();
         const stream = new ReadableStream({
           async start(controller) {
+            let closed = false;
             const send = (event: Parameters<typeof sseLine>[0]) => {
+              if (closed) return;
               controller.enqueue(encoder.encode(sseLine(event)));
+            };
+            const ping = () => {
+              if (closed) return;
+              controller.enqueue(encoder.encode(": ping\n\n"));
             };
             const abort = new AbortController();
             const timer = setTimeout(() => abort.abort(), 140_000);
+            const heartbeat = setInterval(ping, 4000);
             let acc = "";
+            let emitted = false;
+            const finish = (event: Parameters<typeof sseLine>[0]) => {
+              if (emitted || closed) return;
+              emitted = true;
+              send(event);
+            };
+
             try {
               send({ t: "s", s: "Direzione visiva" });
               if (!instruction) {
@@ -82,7 +152,10 @@ export const Route = createFileRoute("/api/build")({
                   clearTimeout(visTimer);
                 }
               }
+
               send({ t: "s", s: "Compongo colori, icone, interfaccia" });
+              // Chat Completions: grok-build-0.1 streams reasoning_content first, then content.
+              // temperature e max_tokens sono supportati. Non usare reasoning_effort.
               const res = await fetch("https://api.x.ai/v1/chat/completions", {
                 method: "POST",
                 headers: {
@@ -93,7 +166,7 @@ export const Route = createFileRoute("/api/build")({
                 body: JSON.stringify({
                   model: FENIX_MODEL,
                   temperature: instruction ? 0.5 : 0.85,
-                  max_tokens: 7000,
+                  max_tokens: 16000,
                   stream: true,
                   messages: [
                     { role: "system", content: SYSTEM_PROMPT },
@@ -108,18 +181,49 @@ export const Route = createFileRoute("/api/build")({
                   res.status === 429
                     ? "Troppe richieste. Attendi un momento e riprova."
                     : `Il modello non ha risposto (${res.status}). ${text.slice(0, 160)}`.trim();
-                send({ t: "err", error: msg });
-                controller.close();
+                finish({ t: "err", error: msg });
                 return;
               }
-
-              send({ t: "s", s: "Compongo colori, icone, interfaccia" });
 
               const reader = res.body.getReader();
               const decoder = new TextDecoder();
               let buffer = "";
-              let lastStage = "Direzione visiva";
+              let lastStage = "Compongo colori, icone, interfaccia";
               let lastProgress = 0;
+              let sawReasoning = false;
+
+              const ingest = (payload: string) => {
+                if (!payload || payload === "[DONE]") return;
+                let json: GrokChunk;
+                try {
+                  json = JSON.parse(payload) as GrokChunk;
+                } catch {
+                  return;
+                }
+                const piece = grokDelta(json);
+                if (piece.error) {
+                  finish({ t: "err", error: piece.error });
+                  return;
+                }
+                if (piece.reasoning && !sawReasoning) {
+                  sawReasoning = true;
+                  if (lastStage !== "Penso il prodotto") {
+                    lastStage = "Penso il prodotto";
+                    send({ t: "s", s: lastStage });
+                  }
+                }
+                if (!piece.content) return;
+                acc += piece.content;
+                const stage = detectStage(acc);
+                if (stage && stage !== lastStage) {
+                  lastStage = stage;
+                  send({ t: "s", s: stage });
+                }
+                if (acc.length - lastProgress >= 400) {
+                  lastProgress = acc.length;
+                  send({ t: "p", n: acc.length });
+                }
+              };
 
               while (true) {
                 const { done, value } = await reader.read();
@@ -130,48 +234,36 @@ export const Route = createFileRoute("/api/build")({
                 for (const line of chunks) {
                   const trimmed = line.trim();
                   if (!trimmed.startsWith("data:")) continue;
-                  const payload = trimmed.slice(5).trim();
-                  if (payload === "[DONE]") continue;
-                  try {
-                    const json = JSON.parse(payload) as {
-                      choices?: { delta?: { content?: string } }[];
-                    };
-                    const delta = json.choices?.[0]?.delta?.content ?? "";
-                    if (!delta) continue;
-                    acc += delta;
-                    const stage = detectStage(acc);
-                    if (stage && stage !== lastStage) {
-                      lastStage = stage;
-                      send({ t: "s", s: stage });
-                    }
-                    if (acc.length - lastProgress >= 400) {
-                      lastProgress = acc.length;
-                      send({ t: "p", n: acc.length });
-                    }
-                  } catch {
-                    /* ignore malformed sse lines */
-                  }
+                  ingest(trimmed.slice(5).trim());
+                  if (emitted) break;
                 }
+                if (emitted) break;
               }
+              const tail = (buffer + decoder.decode()).trim();
+              if (tail.startsWith("data:")) ingest(tail.slice(5).trim());
+
+              if (emitted) return;
 
               const parsed = parseBuildOutput(acc);
               if (!parsed) {
-                send({
+                finish({
                   t: "err",
-                  error: "Risposta incompleta. Riprova, magari con un brief più stretto.",
+                  error: acc.trim()
+                    ? "Risposta incompleta. Riprova, magari con un brief più stretto."
+                    : "Grok Build ha ragionato ma non ha inviato il codice. Riprova.",
                 });
               } else {
                 send({ t: "s", s: "Apro l'anteprima" });
-                send({ t: "ok", result: parsed });
+                finish({ t: "ok", result: parsed });
               }
             } catch (err) {
               const aborted = err instanceof Error && err.name === "AbortError";
-              const salvage = aborted ? parseBuildOutput(acc) : null;
+              const salvage = parseBuildOutput(acc);
               if (salvage) {
                 send({ t: "s", s: "Apro l'anteprima" });
-                send({ t: "ok", result: salvage });
+                finish({ t: "ok", result: salvage });
               } else {
-                send({
+                finish({
                   t: "err",
                   error: aborted
                     ? "Ci ho messo troppo. Accorcia il brief e riprova."
@@ -181,8 +273,24 @@ export const Route = createFileRoute("/api/build")({
                 });
               }
             } finally {
+              clearInterval(heartbeat);
               clearTimeout(timer);
-              controller.close();
+              if (!emitted) {
+                const salvage = parseBuildOutput(acc);
+                if (salvage) finish({ t: "ok", result: salvage });
+                else {
+                  finish({
+                    t: "err",
+                    error: "Non è arrivata una risposta dal modello. Riprova.",
+                  });
+                }
+              }
+              closed = true;
+              try {
+                controller.close();
+              } catch {
+                /* already closed */
+              }
             }
           },
         });
@@ -192,6 +300,7 @@ export const Route = createFileRoute("/api/build")({
             "Content-Type": "text/event-stream; charset=utf-8",
             "Cache-Control": "no-cache, no-transform",
             Connection: "keep-alive",
+            "X-Accel-Buffering": "no",
           },
         });
       },
