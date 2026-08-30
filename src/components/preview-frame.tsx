@@ -32,8 +32,12 @@ export function PreviewFrame({
 }) {
   const width = WIDTH[device];
   const srcDoc = useMemo(() => {
-    const reactDoc = files?.length ? fenix2PreviewHtml(files, name) : "";
-    if (reactDoc) return reactDoc;
+    const ios =
+      typeof navigator !== "undefined" && /iP(hone|od|ad)/.test(navigator.userAgent);
+    if (!ios) {
+      const reactDoc = files?.length ? fenix2PreviewHtml(files, name) : "";
+      if (reactDoc) return reactDoc;
+    }
     return html ? prepareSrcDoc(html, background ?? "#ffffff", projectId ?? "preview") : "";
   }, [html, files, name, background, projectId]);
 
@@ -113,14 +117,14 @@ export function PreviewFrame({
           )}
           style={width === "100%" ? { width: "100%" } : { width, maxWidth: "100%" }}
         >
-          {html ? (
+          {srcDoc ? (
             <iframe
-              key={name}
+              key={`${name}-${srcDoc.length}`}
               title={`Anteprima ${name}`}
               sandbox="allow-scripts allow-forms allow-modals allow-same-origin"
               srcDoc={srcDoc}
-              className="h-full w-full border-0"
-              style={{ background: background ?? "var(--color-card)", overflow: "auto" }}
+              className="h-full min-h-[70vh] w-full border-0 bg-white"
+              style={{ background: background ?? "var(--color-card)", overflow: "auto", WebkitOverflowScrolling: "touch" }}
             />
           ) : (
             <div className="grid h-full place-items-center px-8 text-center">
