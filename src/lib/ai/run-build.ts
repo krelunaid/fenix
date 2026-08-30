@@ -38,7 +38,7 @@ async function callWorker(prompt: string, html: string, instruction?: string) {
       if (started.status === 202) {
         const { id } = (await started.json()) as { id?: string };
         if (!id) continue;
-        for (let i = 0; i < 120; i++) {
+        for (let i = 0; i < 180; i++) {
           await new Promise((r) => window.setTimeout(r, 2000));
           const jobRes = await fetch(`${base}/jobs/${id}`);
           if (!jobRes.ok) continue;
@@ -158,7 +158,7 @@ export async function runBuild(projectId: string, instruction?: string) {
     store.addMessage(projectId, {
       id: uid(),
       role: "assistant",
-      content: "Crediti esauriti. Una creazione usa 2 crediti, una modifica 1.",
+      content: "Crediti esauriti. Una creazione usa 3 crediti, una modifica 2.",
     });
     inflight.delete(projectId);
     return;

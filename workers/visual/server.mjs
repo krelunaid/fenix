@@ -1,14 +1,14 @@
 import { createServer } from "node:http";
 
 /**
- * Worker visivo Fenix — 3 giri Playwright 390×844 + Grok 4.6.
+ * Worker visivo Fenix — 5 giri (una tab ciascuno) Playwright + Grok 4.6.
  * Env: XAI_API_KEY, PORT (8787).
  * POST /polish  { prompt, html }  →  { html, name, log }
  */
 const PORT = Number(process.env.PORT || 8787);
 const MODEL = "grok-4.6";
 const XAI = "https://api.x.ai/v1/chat/completions";
-const PASSES = 3;
+const PASSES = 5;
 
 const SYSTEM = `Sei il motore visivo di Fenix. Vedi uno screenshot TELEFONO 390×844 e l'HTML.
 Legge grafica: app telefono, tab in basso, tanta aria. Palette DAL MESTIERE, non sempre grigio iPhone.
@@ -73,8 +73,8 @@ async function grok(apiKey, prompt, html, shotB64, pass, instruction) {
         instruction ? `MODIFICA DA TENERE:\n${instruction}\nNon disfare questa modifica.` : "",
         `HTML:\n${html.slice(0, 32000)}`,
         pass === PASSES
-          ? "ULTIMO GIRO: questa è un'ALTRA tab. Riempi la schermata se vuota. Tieni JS. META+HTML."
-          : `Stai guardando la TAB ${pass} (1=home, 2=form, 3=elenco). Rifai SOLO quella schermata se è vuota o illeggibile. Tieni le altre. META+HTML.`,
+          ? "ULTIMO GIRO (tab Altro/Staff). Schermata piena, contrasto, JS integro. META+HTML."
+          : `Stai guardando la TAB ${pass} di 5 (1 home, 2 nuovo/form, 3 elenco, 4 numeri, 5 altro). Se è vuota o illeggibile, RIEMPILA. Non cancellare le altre tab. META+HTML.`,
       ]
         .filter(Boolean)
         .join("\n\n"),
