@@ -15,6 +15,7 @@ La chiave è esclusivamente server-side. Mai `VITE_XAI_API_KEY`, mai nel fronten
 | Nome | Dove | Note |
 |---|---|---|
 | `XAI_API_KEY` | server | Tua, creata su [console.x.ai](https://console.x.ai) |
+| `VISUAL_WORKER_URL` | server | Opzionale. Worker Playwright (3 giri telefono). Es. `https://fenix-visual.up.railway.app` |
 | `VITE_AUTH_ENABLED` | build | `false` |
 
 ## Configurazione Netlify
@@ -32,3 +33,19 @@ Le app generate (Grottaglie, Catenaria, …) si scaricano da **Pubblica** (ZIP /
 ## Locale
 
 `npm install` poi `npm run dev`. `npm test` e `npm run typecheck`.
+
+## Worker visivo (come Emergent, in piccolo)
+
+Netlify taglia le richieste lunghe. Il motore a 3 giri sta in `workers/visual/`:
+
+```bash
+cd workers/visual
+npm install
+npx playwright install chromium
+XAI_API_KEY=… npm start
+```
+
+Su Railway/Fly: stesso comando, porta `PORT`. Poi su Netlify aggiungi `VISUAL_WORKER_URL` = URL del worker, solo server.
+
+Senza questa variabile Fenix resta sui due sguardi nell’anteprima (html2canvas).
+

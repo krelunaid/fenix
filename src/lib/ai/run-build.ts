@@ -136,6 +136,34 @@ export async function runBuild(projectId: string, instruction?: string) {
         return;
       }
       if (!instruction && latest?.html) {
+        store.updateProject(projectId, {
+          status: "building",
+          buildLog: [...(latest.buildLog ?? []), "Motore visivo"],
+        });
+        let polished = false;
+        try {
+          const res = await fetch("/api/polish", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ prompt: project.prompt, html: latest.html }),
+          });
+          if (res.status !== 204 && res.ok) {
+            const payload = (await res.json()) as { result?: BuildResult; log?: string[] };
+            if (payload.result?.html) {
+              applyBuildResult(projectId, payload.result);
+              const logs = payload.log ?? [];
+              store.updateProject(projectId, {
+                status: "ready",
+                buildLog: [...(useProjectStore.getState().getProject(projectId)?.buildLog ?? []), ...logs, "Anteprima rifinita"],
+              });
+              polished = true;
+            }
+          }
+        } catch {
+          /* fallback sguardi in pagina */
+        }
+        if (polished) return;
+
         const look = async (label: string) => {
           const current = useProjectStore.getState().getProject(projectId);
           const snapshot = current?.html;
