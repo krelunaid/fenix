@@ -187,6 +187,7 @@ function StudioPage() {
             <>
               <PreviewFrame
                 html={project.html}
+                files={project.files}
                 name={project.name}
                 device={building ? "mobile" : device}
                 background={project.palette.bg}
@@ -231,6 +232,7 @@ function StudioPage() {
             <>
               <PreviewFrame
                 html={project.html}
+                files={project.files}
                 name={project.name}
                 device="mobile"
                 background={project.palette.bg}

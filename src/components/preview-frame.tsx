@@ -1,5 +1,6 @@
 import { useEffect, useMemo } from "react";
 import { prepareSrcDoc } from "@/lib/projects/color-scheme";
+import { fenix2PreviewHtml } from "@/lib/projects/fenix2";
 import { rememberAudit, rememberShot, type PreviewAudit } from "@/lib/ai/look";
 import { useProjectStore } from "@/lib/projects/store";
 import { cn } from "@/lib/utils";
@@ -14,6 +15,7 @@ const WIDTH: Record<Device, number | "100%"> = {
 
 export function PreviewFrame({
   html,
+  files,
   name,
   device,
   background,
@@ -21,6 +23,7 @@ export function PreviewFrame({
   className,
 }: {
   html: string;
+  files?: { path: string; content: string }[];
   name: string;
   device: Device;
   background?: string;
@@ -28,10 +31,11 @@ export function PreviewFrame({
   className?: string;
 }) {
   const width = WIDTH[device];
-  const srcDoc = useMemo(
-    () => (html ? prepareSrcDoc(html, background ?? "#ffffff", projectId ?? "preview") : ""),
-    [html, background, projectId],
-  );
+  const srcDoc = useMemo(() => {
+    const reactDoc = files?.length ? fenix2PreviewHtml(files, name) : "";
+    if (reactDoc) return reactDoc;
+    return html ? prepareSrcDoc(html, background ?? "#ffffff", projectId ?? "preview") : "";
+  }, [html, files, name, background, projectId]);
 
   useEffect(() => {
     function onMessage(event: MessageEvent) {

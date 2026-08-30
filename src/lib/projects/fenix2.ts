@@ -155,7 +155,7 @@ const TABS = [
 ] as const;
 
 export default function App() {
-  const [tab, setTab] = useState<(typeof TABS)[number]["id"]>("home");
+  const [tab, setTab] = useState("home");
   const current = TABS.find((t) => t.id === tab) ?? TABS[0];
   const View = current.View;
   return (
@@ -224,8 +224,51 @@ npm i
 npm run dev
 \`\`\`
 
-Le schermate sono in \`src/screens/\`. L'anteprima su fenix.kreluna.it monta gli stessi contenuti.
+Le schermate sono in \`src/screens/\`. L'anteprima su fenix.kreluna.it monta React.
 `,
     },
   ];
+}
+
+function stripTsx(src: string) {
+  return src
+    .replace(/^import[\s\S]*?;\s*/gm, "")
+    .replace(/export default function/g, "function")
+    .replace(/as const/g, "")
+    .replace(/useState<[^>]+>/g, "useState");
+}
+
+export function fenix2PreviewHtml(files: ProjectFile[], name = "App") {
+  if (!files.some((f) => f.path === "src/App.tsx")) return "";
+  const css = files.find((f) => f.path === "src/index.css")?.content ?? "";
+  const screens = IDS.map((id) => {
+    const comp = componentName(id);
+    const src = files.find((f) => f.path === `src/screens/${comp}.tsx`)?.content ?? `function ${comp}(){return <div/>}`;
+    return stripTsx(src);
+  }).join("\n");
+  const app = stripTsx(files.find((f) => f.path === "src/App.tsx")?.content ?? "");
+  return `<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>${name.replace(/</g, "")}</title>
+<style>${css}
+html,body,#root{height:100%;margin:0}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script src="https://unpkg.com/react@18/umd/react.development.js" integrity=""></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script type="text/babel" data-presets="react">
+const { useState, useEffect } = React;
+${screens}
+${app}
+const root = ReactDOM.createRoot(document.getElementById("root"));
+root.render(React.createElement(App));
+</script>
+</body>
+</html>`;
 }
