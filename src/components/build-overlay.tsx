@@ -39,6 +39,9 @@ export function BuildOverlay({
         <p className={cn("mt-2 text-center text-xl font-semibold tracking-tight", "shimmer-text")}>
           {current}
         </p>
+        <p className="mt-3 text-center text-sm leading-relaxed text-[#cfc8ea]">
+          Ci vogliono circa 5–10 minuti. Pazienza: sta scrivendo le schermate e guardando i pixel. Non chiudere.
+        </p>
         {done.length ? (
           <ul className="mt-4 space-y-1.5">
             {done.map((s) => (
@@ -50,7 +53,7 @@ export function BuildOverlay({
           </ul>
         ) : null}
         <p className="mt-4 text-center text-[11px] text-[#6e6794]">
-          Se resta fermo, tocca Chat o Codice. L'app sotto c'è già. Poi ricarica.
+          Puoi aprire Chat o Codice. Se dopo 10 minuti è fermo, ricarica: spesso l'app sotto c'è già.
         </p>
       </div>
     </div>

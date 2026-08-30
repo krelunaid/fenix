@@ -245,7 +245,7 @@ export async function runBuild(projectId: string, instruction?: string) {
     role: "assistant",
     content: instruction
       ? `Ok. Applico: ${instruction.slice(0, 140)}`
-      : "Ok. Lo costruisco.",
+      : "Ok. Lo costruisco. Circa 5–10 minuti: schermate, icone, foto. Pazienza, non chiudere.",
   });
 
   let charged = true;
