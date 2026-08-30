@@ -1,16 +1,9 @@
 declare const Netlify: { env: { get(name: string): string | undefined } };
 
+import { SYSTEM_PROMPT, VISUAL_PROMPT } from "../../src/lib/ai/prompts.shared.ts";
+
 const MODEL = "grok-build-0.1";
 const XAI_URL = "https://api.x.ai/v1/chat/completions";
-
-const SYSTEM_PROMPT = `Studio visivo Fenix. Dal brief costruisci un prodotto completo che si usa e con identità visiva nata dal brief.
-Rispondi soltanto in questo formato:
-<<<META>>>
-{"name":"","tagline":"","kind":"landing|app|dashboard|tool|game|site","direction":"","summary":"","palette":{"bg":"#rrggbb","surface":"#rrggbb","fg":"#rrggbb","muted":"#rrggbb","accent":"#rrggbb"}}
-<<<HTML>>>
-<!DOCTYPE html>...documento completo con CSS e JavaScript inclusi...
-<<<END>>>
-App, tool e giochi: almeno 3 viste funzionanti, dati e interazioni reali. Siti: navigazione, almeno 4 sezioni, form funzionante e testi reali. Palette, font, layout e icone devono derivare dal soggetto. Niente template generici, lorem, emoji, glass, viola AI, Inter o Manrope. Lingua uguale al brief. Non citare Fenix, Grok o xAI. Massimo circa 280 righe.`;
 
 type StreamEvent =
   | { t: "s"; s: string }
@@ -127,6 +120,41 @@ function stage(output: string) {
   return output.trim().length > 8 ? "Compongo colori, icone, interfaccia" : null;
 }
 
+async function designDirection(apiKey: string, prompt: string) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 22_000);
+  try {
+    const response = await fetch(XAI_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      signal: controller.signal,
+      body: JSON.stringify({
+        model: MODEL,
+        temperature: 0.9,
+        max_tokens: 2500,
+        stream: false,
+        messages: [
+          { role: "system", content: VISUAL_PROMPT },
+          {
+            role: "user",
+            content: `BRIEF:\n${prompt}\n\nRestituisci un unico JSON di direzione visiva, senza markdown.`,
+          },
+        ],
+      }),
+    });
+    if (!response.ok) return "";
+    const json = (await response.json()) as GrokChunk;
+    return textValue(json.choices?.[0]?.message?.content).trim().slice(0, 9000);
+  } catch {
+    return "";
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 export default async function build(request: Request) {
   if (request.method !== "POST") return new Response("Method Not Allowed", { status: 405 });
   const apiKey = Netlify.env.get("XAI_API_KEY")?.trim();
@@ -146,13 +174,13 @@ export default async function build(request: Request) {
   }
   const instruction = (body.instruction ?? "").trim().slice(0, 2500);
   const currentHtml = (body.html ?? "").slice(0, 90000);
-  const user = [
+  const userParts = [
     `BRIEF:\n${prompt}`,
     "Crea un prodotto completo, specifico e immediatamente utilizzabile.",
     instruction && currentHtml ? `APP ATTUALE:\n${currentHtml}` : "",
     instruction ? `MODIFICA:\n${instruction}\nRestituisci il documento completo.` : "",
     "Costruisci ora. Formato META + HTML, nient'altro.",
-  ].filter(Boolean).join("\n\n");
+  ].filter(Boolean);
 
   const encoder = new TextEncoder();
   const stream = new ReadableStream<Uint8Array>({
@@ -173,6 +201,17 @@ export default async function build(request: Request) {
       }, 4000);
 
       try {
+        if (!instruction) {
+          send({ t: "s", s: "Direzione visiva" });
+          const visual = await designDirection(apiKey, prompt);
+          if (visual) {
+            userParts.splice(
+              1,
+              0,
+              `DIREZIONE VISIVA (legge, non ispirazione — hex, font, icona, tab, foto):\n${visual}`,
+            );
+          }
+        }
         send({ t: "s", s: "Penso il prodotto" });
         const response = await fetch(XAI_URL, {
           method: "POST",
@@ -187,7 +226,7 @@ export default async function build(request: Request) {
             stream: true,
             messages: [
               { role: "system", content: SYSTEM_PROMPT },
-              { role: "user", content: user },
+              { role: "user", content: userParts.join("\n\n") },
             ],
           }),
         });
