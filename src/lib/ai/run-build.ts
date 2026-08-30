@@ -9,7 +9,7 @@ const inflight = new Set<string>();
 function readyCopy(result: BuildResult) {
   const summary = result.summary?.trim();
   return [
-    `Pronto. ${result.name} è in anteprima e si usa.`,
+    `Pronto. ${result.name} è in anteprima: ${result.files?.length || 1} file, si usa.`,
     summary,
     "Dimmi cosa cambiare: comportamento, schermate, dati, tono.",
   ]
