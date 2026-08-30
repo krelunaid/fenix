@@ -4,8 +4,8 @@ export type ProductChoice = "auto" | "app" | "site" | "dashboard";
 
 export function inferKind(brief: string): ProjectKind {
   const p = brief.toLowerCase();
-  if (/\b(sito|landing|vetrina|negozio|pagina web|e-?commerc)/.test(p)) return "site";
-  if (/\b(gestional|ufficio|fattur|clienti|magazzin|crm|ordini|timesheet|dipendent)/.test(p))
+  if (/\b(sito web|landing|pagina web)\b/.test(p)) return "site";
+  if (/\b(gestional|cruscotto|crm desktop|timesheet|fatturazione ufficio)\b/.test(p))
     return "dashboard";
   return "app";
 }

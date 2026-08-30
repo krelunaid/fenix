@@ -240,8 +240,14 @@ export function fenixRuntimeScript(projectId: string) {
       if (ul && ul.id === "fk-saved") ul.innerHTML = '<li class="fk-tile" style="color:#1d1d1f">Nessun elemento. Compila il form e salva.</li>';
       return;
     }
+    var hero = document.querySelector(".fk-hero, img.cover, header img");
+    var heroSrc = hero && hero.getAttribute("src");
     ul.innerHTML = items.map(function(it){
-      return '<li class="fk-tile" style="color:#1d1d1f;background:#fff;border:1px solid #e5e5ea;border-radius:14px;padding:12px 14px"><b>'+labelOf(it)+'</b></li>';
+      var src = it.foto || it.img || it.image || heroSrc || "";
+      var pic = src
+        ? '<img src="'+src+'" alt="" width="56" height="56" style="width:56px;height:56px;object-fit:cover;border-radius:12px;flex-shrink:0"/>'
+        : "";
+      return '<li class="fk-tile" style="display:flex;align-items:center;gap:12px;color:#1d1d1f;background:#fff;border:1px solid #e5e5ea;border-radius:14px;padding:10px 12px">'+pic+'<b style="color:#1d1d1f">'+labelOf(it)+'</b></li>';
     }).join("");
     document.querySelectorAll("p, .fk-role").forEach(function(p){
       if (/nessun elemento/i.test(p.textContent || "")) p.style.display = "none";
