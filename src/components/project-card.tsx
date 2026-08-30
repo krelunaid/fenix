@@ -1,6 +1,10 @@
 import { Link } from "@tanstack/react-router";
+import { prepareSrcDoc } from "@/lib/projects/color-scheme";
 import type { Project } from "@/lib/projects/types";
 import { cn } from "@/lib/utils";
+
+const PHONE_W = 390;
+const SCALE = 0.42;
 
 export function ProjectCard({
   project,
@@ -9,56 +13,72 @@ export function ProjectCard({
   project: Project;
   onDelete?: (id: string) => void;
 }) {
-  const status =
-    project.status === "ready"
-      ? "Pronto"
-      : project.status === "building"
-        ? "In corso"
-        : project.status === "error"
-          ? "Da ritoccare"
-          : "Bozza";
+  const src = project.html ? prepareSrcDoc(project.html, project.id) : "";
+  const frameH = Math.round(844 * SCALE);
 
   return (
-    <article className="flex flex-col rounded-2xl border border-border bg-card p-4">
-      <span className="mb-4 flex h-14 w-full overflow-hidden rounded-xl" aria-hidden="true">
-        {Object.values(project.palette)
-          .slice(0, 5)
-          .map((c, i) => (
-            <span key={i} className="h-full flex-1" style={{ background: c }} />
-          ))}
-      </span>
-      <h3 className="font-display text-xl font-normal tracking-tight">{project.name}</h3>
-      <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
+    <article className="flex flex-col items-center rounded-3xl border border-white/8 bg-[#120e24] p-5">
+      <div
+        className="rounded-[2rem] border border-white/12 bg-[#0a0a0c] p-2 shadow-[0_20px_50px_rgba(0,0,0,.45)]"
+        style={{ width: Math.round(PHONE_W * SCALE) + 16 }}
+      >
+        <div className="mx-auto mb-1.5 h-1 w-10 rounded-full bg-white/20" />
+        <div className="relative overflow-hidden rounded-[1.35rem] bg-[#f5f5f7]" style={{ height: frameH }}>
+          {src ? (
+            <iframe
+              title={project.name}
+              srcDoc={src}
+              sandbox="allow-scripts allow-same-origin"
+              tabIndex={-1}
+              className="pointer-events-none origin-top-left border-0"
+              style={{
+                width: PHONE_W,
+                height: 844,
+                transform: `scale(${SCALE})`,
+              }}
+            />
+          ) : (
+            <div className="grid h-full place-items-center px-4 text-center text-[11px] text-[#86868b]">
+              Ancora nessuna anteprima
+            </div>
+          )}
+        </div>
+      </div>
+
+      <h3 className="mt-4 w-full truncate text-center text-base font-semibold tracking-tight">{project.name}</h3>
+      <p className="mt-1 line-clamp-2 w-full text-center text-xs text-[#9b93c2]">
         {project.tagline || project.prompt}
       </p>
-      <p className="mt-3 text-xs tracking-wide text-faint uppercase">{status}</p>
-      <div className="mt-4 flex flex-wrap gap-2">
-        <Link
-          to="/studio/$projectId"
-          params={{ projectId: project.id }}
-          className={cn(
-            "inline-flex h-10 min-h-11 items-center rounded-full bg-primary px-4",
-            "text-sm font-medium text-primary-foreground no-underline hover:opacity-90",
-          )}
-        >
-          Modifica
-        </Link>
+
+      <div className="mt-4 flex w-full flex-wrap justify-center gap-2">
         {project.html ? (
           <Link
             to="/sito/$projectId"
             params={{ projectId: project.id }}
-            className="inline-flex h-10 min-h-11 items-center rounded-full border border-border px-4 text-sm text-foreground no-underline hover:bg-raised"
+            className={cn(
+              "inline-flex h-9 items-center rounded-full bg-white px-3.5",
+              "text-xs font-semibold text-[#1d1d1f] no-underline hover:opacity-90",
+            )}
           >
             Apri
           </Link>
         ) : null}
+        <Link
+          to="/studio/$projectId"
+          params={{ projectId: project.id }}
+          className="inline-flex h-9 items-center rounded-full border border-white/15 px-3.5 text-xs text-white no-underline hover:bg-white/8"
+        >
+          Modifica
+        </Link>
         {onDelete ? (
           <button
             type="button"
-            onClick={() => onDelete(project.id)}
-            className="inline-flex h-10 min-h-11 items-center rounded-full px-3 text-sm text-muted-foreground hover:text-foreground"
+            onClick={() => {
+              if (window.confirm(`Eliminare ${project.name}?`)) onDelete(project.id);
+            }}
+            className="inline-flex h-9 items-center rounded-full px-3 text-xs text-[#9b93c2] hover:text-white"
           >
-            Togli
+            Elimina
           </button>
         ) : null}
       </div>

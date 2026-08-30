@@ -18,6 +18,7 @@ function Home() {
   const creditsRemaining = useProjectStore((s) => s.creditsRemaining);
   const createFromBrief = useProjectStore((s) => s.createFromBrief);
   const openDemo = useProjectStore((s) => s.openDemo);
+  const removeProject = useProjectStore((s) => s.removeProject);
   const [brief, setBrief] = useState("");
   const [ai, setAi] = useState<boolean | null>(null);
 
@@ -46,7 +47,7 @@ function Home() {
     void navigate({ to: "/studio/$projectId", params: { projectId: project.id } });
   }
 
-  const recents = hydrated ? projects.slice(0, 3) : [];
+  const recents = hydrated ? projects.slice(0, 6) : [];
   const emptyCredits = hydrated && creditsRemaining < 1;
 
   return (
@@ -202,10 +203,10 @@ function Home() {
               Vedi tutti
             </Link>
           </div>
-          <ul className="grid grid-cols-2 gap-3">
+          <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {recents.map((p) => (
               <li key={p.id}>
-                <ProjectCard project={p} />
+                <ProjectCard project={p} onDelete={removeProject} />
               </li>
             ))}
           </ul>
