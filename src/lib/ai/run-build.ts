@@ -2,6 +2,7 @@ import type { StreamEvent } from "./stages";
 import { applyBuildResult, useProjectStore } from "@/lib/projects/store";
 import { parseBuildOutput, type BuildResult } from "./parse";
 import { isWeakPreview, lookInstruction, resetAudit, waitPreviewAudit, waitPreviewShot } from "./look";
+import { APP_SHELL_HTML, APP_SHELL_INSTRUCTION } from "./app-shell";
 import { uid } from "@/lib/utils";
 
 const inflight = new Set<string>();
@@ -135,8 +136,8 @@ export async function runBuild(projectId: string, instruction?: string) {
       projectId,
       {
         prompt: project.prompt,
-        html: instruction ? project.html : undefined,
-        instruction,
+        html: instruction ? project.html : APP_SHELL_HTML,
+        instruction: instruction || APP_SHELL_INSTRUCTION,
       },
       true,
     );
