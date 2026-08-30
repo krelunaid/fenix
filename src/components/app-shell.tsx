@@ -9,6 +9,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { clearLocalAccount, getLocalAccount } from "@/lib/local-account";
+import { cn } from "@/lib/utils";
 
 const NAV = [
   { to: "/", label: "Home", icon: Home, end: true },
