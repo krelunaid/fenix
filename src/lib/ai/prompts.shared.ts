@@ -15,7 +15,8 @@ CSS: :root con --bg --surface --fg --muted --accent --line. body 100dvh. App a c
 App:
 - Icona 52px rx 13, SVG pittogramma del mestiere a 2 colori, stessa in rel=icon.
 - Tab bar 72px, 3–4 voci, SVG 28px stroke currentColor; .on = accent e fill 20%. Mai solo testo.
-- Almeno 3 viste che cambiano davvero, state+render, localStorage con chiave unica e calcoli corretti.
+- Almeno 3 viste che cambiano davvero, state+render e calcoli corretti.
+- Persistenza: usa await window.Fenix.load("state") e window.Fenix.save("state", data). Mai localStorage: l'anteprima è sandboxed.
 
 Sito: nav, almeno 4 sezioni, form che conferma, testi veri (città, prezzi, orari), 2–4 immagini Unsplash photo- con &w=1600.
 
