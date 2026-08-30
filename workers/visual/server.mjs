@@ -25,12 +25,46 @@ Correggi chrome/CSS/icone. Se lo screenshot è BIANCO o main vuoto, RIEMPI la ho
 Copia i tag <script> identici se il JS già fa add/save. Se non c'è contenuto visibile, puoi aggiungere HTML in main.
 Canvas: body colonna 100dvh, header.fk-top, main.fk-main, nav.fk-tab.
 Non scrivere le parole Apple, iOS, Fenix, Grok nel prodotto.
-Rispondi SOLO:
-<<<META>>>
-{"name":"","tagline":"","kind":"app","direction":"","summary":"","palette":{"bg":"#f5f5f7","surface":"#ffffff","fg":"#1d1d1f","muted":"#86868b","accent":"#0071e3"}}
-<<<HTML>>>
-<!DOCTYPE html>...completo...
-<<<END>>>`;
+Rispondi SOLO con la schermata di QUESTA tab, non l'HTML intero:
+<<<SCREEN id="home|new|list|stats|more">>>
+<!-- solo il contenuto di main di QUESTA tab: metriche, form o lista. Niente html/body/nav -->
+<<<END>>>
+Se proprio non puoi, allora META+HTML completo come ultima spiaggia.`;
+
+const TAB_IDS = ["home", "new", "list", "stats", "more"];
+
+function parseScreen(text) {
+  const m = text.match(/<<<SCREEN(?:\s+id=["']?(\w+)["']?)?>>>\s*([\s\S]*?)(?:<<<END>>>|$)/i);
+  if (!m) return null;
+  let inner = m[2].trim();
+  inner = inner.replace(/^```(?:html)?\s*/i, "").replace(/\s*```$/, "");
+  inner = inner.replace(/<!DOCTYPE[\s\S]*?<body[^>]*>/i, "").replace(/<\/body>[\s\S]*$/i, "").trim();
+  inner = inner.replace(/<\/?(html|head|body)[^>]*>/gi, "").trim();
+  if (inner.length < 24) return null;
+  return { id: (m[1] || "").toLowerCase(), inner };
+}
+
+function spliceScreen(html, id, inner) {
+  if (!html || !inner) return html;
+  const tid = TAB_IDS.includes(id) ? id : "home";
+  let next = html;
+  const tRe = new RegExp(`(<template[^>]*\\bid=["']t-${tid}["'][^>]*>)([\\s\\S]*?)(<\\/template>)`, "i");
+  if (tRe.test(next)) {
+    next = next.replace(tRe, `$1${inner}$3`);
+  } else if (/<\/body>/i.test(next)) {
+    next = next.replace(/<\/body>/i, `<template id="t-${tid}">${inner}</template></body>`);
+  } else {
+    next += `<template id="t-${tid}">${inner}</template>`;
+  }
+  return next;
+}
+
+function restoreHome(html) {
+  const m = html.match(/<template[^>]*id=["']t-home["'][^>]*>([\s\S]*?)<\/template>/i);
+  if (!m) return html;
+  if (!/<main\b/i.test(html)) return html;
+  return html.replace(/<main\b[^>]*>[\s\S]*?<\/main>/i, `<main class="fk-main">${m[1]}</main>`);
+}
 
 function parseHtml(text) {
   const htmlMatch =
@@ -71,10 +105,9 @@ async function grok(apiKey, prompt, html, shotB64, pass, instruction) {
       text: [
         `GIRO ${pass}/${PASSES}. BRIEF:\n${prompt}`,
         instruction ? `MODIFICA DA TENERE:\n${instruction}\nNon disfare questa modifica.` : "",
-        `HTML:\n${html.slice(0, 32000)}`,
-        pass === PASSES
-          ? "ULTIMO GIRO (tab Altro/Staff). Schermata piena, contrasto, JS integro. META+HTML."
-          : `Stai guardando la TAB ${pass} di 5 (1 home, 2 nuovo/form, 3 elenco, 4 numeri, 5 altro). Se è vuota o illeggibile, RIEMPILA. Non cancellare le altre tab. META+HTML.`,
+        `TAB DA RIFARE: ${TAB_IDS[pass - 1] || "home"} (è quella nello screenshot).`,
+        `HTML (solo per contesto, NON riscriverlo):\n${html.slice(0, 12000)}`,
+        `Rispondi con <<<SCREEN id="${TAB_IDS[pass - 1]}">>> contenuto main di QUESTA tab <<<END>>>. Niente documento intero. Se la tab è vuota, riempila (form / lista / numeri).`,
       ]
         .filter(Boolean)
         .join("\n\n"),
@@ -93,7 +126,7 @@ async function grok(apiKey, prompt, html, shotB64, pass, instruction) {
       model: MODEL,
       reasoning_effort: "low",
       temperature: 0.35,
-      max_tokens: 12000,
+      max_tokens: 4000,
       stream: false,
       messages: [
         { role: "system", content: SYSTEM },
@@ -249,13 +282,20 @@ async function polish(prompt, html, instruction) {
     }
     try {
       const text = await grok(apiKey, prompt, current, shot, pass, instruction);
-      const parsed = parseHtml(text);
-      if (parsed?.html) {
-        current = keepScripts(current, parsed.html);
-        meta = parsed.meta;
-        log.push(`Patch ${pass} ok (${current.length} caratteri, JS conservato)`);
+      const screen = parseScreen(text);
+      const tabId = TAB_IDS[pass - 1] || "home";
+      if (screen?.inner) {
+        current = spliceScreen(current, screen.id || tabId, screen.inner);
+        log.push(`Patch solo tab ${screen.id || tabId} (${screen.inner.length} caratteri)`);
       } else {
-        log.push(`Patch ${pass} ignorata`);
+        const parsed = parseHtml(text);
+        if (parsed?.html) {
+          current = keepScripts(current, parsed.html);
+          meta = parsed.meta;
+          log.push(`Patch ${pass} file intero (fallback, JS conservato)`);
+        } else {
+          log.push(`Patch ${pass} ignorata`);
+        }
       }
     } catch (err) {
       log.push(`Giro ${pass} saltato: ${err instanceof Error ? err.message : "xAI"}`);
@@ -268,6 +308,7 @@ async function polish(prompt, html, instruction) {
       /* ignore */
     }
   }
+  current = restoreHome(current);
   return { html: current, meta, log };
 }
 
