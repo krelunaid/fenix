@@ -334,10 +334,10 @@ export async function runBuild(projectId: string, instruction?: string) {
             ? `Motore visivo non ha risposto (${workerError}). Uso gli sguardi in pagina.`
             : "Motore visivo non ha risposto. Uso gli sguardi in pagina.",
         });
-        if (instruction) {
+        if (instruction || isIOS()) {
           store.updateProject(projectId, { status: "ready" });
           const now = useProjectStore.getState().getProject(projectId);
-          if (now) {
+          if (now?.html) {
             store.addMessage(projectId, {
               id: uid(),
               role: "assistant",
@@ -352,6 +352,9 @@ export async function runBuild(projectId: string, instruction?: string) {
                 files: now.files ?? [],
               }),
             });
+          }
+          return;
+        }
           }
           return;
         }
@@ -390,7 +393,10 @@ export async function runBuild(projectId: string, instruction?: string) {
           return true;
         };
 
-        await look("Guardo i pixel");
+        await Promise.race([
+          look("Guardo i pixel"),
+          new Promise((r) => window.setTimeout(r, 20000)),
+        ]);
         await new Promise((r) => window.setTimeout(r, 800));
         const second = await waitPreviewAudit(1800);
         if (isWeakPreview(second)) {

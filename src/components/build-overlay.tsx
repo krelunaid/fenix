@@ -49,6 +49,9 @@ export function BuildOverlay({
             ))}
           </ul>
         ) : null}
+        <p className="mt-4 text-center text-[11px] text-[#6e6794]">
+          Se resta fermo, tocca Chat o Codice. L'app sotto c'è già. Poi ricarica.
+        </p>
       </div>
     </div>
   );
