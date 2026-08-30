@@ -174,7 +174,7 @@ function Home() {
             {
               n: "02",
               t: "Fenix costruisce",
-              d: "Agente visivo (colori, icone, layout), poi il codice. Un prodotto che gira.",
+              d: "Art director (colori, icone, materia), poi Grok Build scrive il prodotto.",
             },
             {
               n: "03",

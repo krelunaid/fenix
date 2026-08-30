@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { FENIX_MODEL, getXaiApiKey, XAI_CHAT_COMPLETIONS_URL, XAI_MISSING_KEY_ERROR } from "@/lib/ai/model";
+import { FENIX_MODEL } from "@/lib/ai/model";
 import { parseBuildOutput } from "@/lib/ai/parse";
 import { SYSTEM_PROMPT } from "@/lib/ai/prompt";
 import { detectStage, sseLine } from "@/lib/ai/stages";
@@ -68,9 +68,12 @@ export const Route = createFileRoute("/api/build")({
     handlers: {
       POST: async ({ request }) => {
         // Server-only. Never VITE_XAI_API_KEY — that would leak to the browser.
-        const apiKey = getXaiApiKey();
+        const apiKey = process.env.XAI_API_KEY;
         if (!apiKey) {
-          return Response.json({ t: "err", error: XAI_MISSING_KEY_ERROR }, { status: 503 });
+          return Response.json(
+            { t: "err", error: "Fenix non è disponibile in questo ambiente." },
+            { status: 503 },
+          );
         }
 
         let body: Body = {};
@@ -129,7 +132,7 @@ export const Route = createFileRoute("/api/build")({
               send({ t: "s", s: "Direzione visiva" });
               if (!instruction) {
                 const visCtl = new AbortController();
-                const visTimer = setTimeout(() => visCtl.abort(), 14_000);
+                const visTimer = setTimeout(() => visCtl.abort(), 22_000);
                 try {
                   const spec = await designVisual({
                     apiKey,
@@ -140,7 +143,7 @@ export const Route = createFileRoute("/api/build")({
                     userParts.splice(
                       1,
                       0,
-                      `DIREZIONE VISIVA (agente visivo — obbedisci):\n${spec}`,
+                      `DIREZIONE VISIVA (legge, non ispirazione — hex, font, icona, tab, foto):\n${spec}`,
                     );
                   }
                 } catch {
@@ -153,7 +156,7 @@ export const Route = createFileRoute("/api/build")({
               send({ t: "s", s: "Compongo colori, icone, interfaccia" });
               // Chat Completions: grok-build-0.1 streams reasoning_content first, then content.
               // temperature e max_tokens sono supportati. Non usare reasoning_effort.
-              const res = await fetch(XAI_CHAT_COMPLETIONS_URL, {
+              const res = await fetch("https://api.x.ai/v1/chat/completions", {
                 method: "POST",
                 headers: {
                   "Content-Type": "application/json",
