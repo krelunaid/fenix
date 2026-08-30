@@ -129,16 +129,23 @@ function inferTab(instruction) {
   return 0;
 }
 
-const GENERATE_SYSTEM = `Generi l'HTML di Fenix. Italiano.
-SITO (kind=site, "sito web"): nav in alto, sezioni, footer. NON tabbar, NON 390.
-APP: telefono, tab in basso, 5 schermate, form che salvano.
-Palette dal mestiere. Testo #1d1d1f su fondo chiaro, contrasto 4.5:1.
-Niente parole Apple, iOS, Grok, Fenix nel prodotto.
+const GENERATE_SYSTEM = `Motore Fenix. Generi APP a 5 schermate, non un sito, salvo brief "sito web".
+Italiano. Palette dal mestiere. Testo #1d1d1f su chiaro.
+Ogni schermata PIENA (numeri, form o lista). Form che salvano.
+Niente Apple, iOS, Grok, Fenix nel prodotto.
 Rispondi SOLO:
 <<<META>>>
 {"name":"","tagline":"","kind":"app","summary":"","palette":{"bg":"#f5f5f7","surface":"#ffffff","fg":"#1d1d1f","muted":"#3a3a3c","accent":"#0071e3"}}
+<<<FILE path="screens/home.html">>>
+inner della home
+<<<FILE path="screens/new.html">>>
+form
+<<<FILE path="screens/list.html">>>
+elenco
+<<<FILE path="screens/stats.html">>>
+<<<FILE path="screens/more.html">>>
 <<<HTML>>>
-<!DOCTYPE html>...completo...
+<!DOCTYPE html> con header.fk-top, main, nav.fk-tab 5 data-view, template id=t-home t-new t-list t-stats t-more
 <<<END>>>`;
 
 async function generateHero(apiKey, prompt, aspect) {
@@ -212,12 +219,28 @@ async function generate(prompt, html, instruction) {
   const parsed = parseHtml(text);
   if (!parsed?.html) throw new Error("HTML non valido");
   let out = parsed.html;
-  const hero = await generateHero(apiKey, prompt, /fk-tab/i.test(out) ? "1:1" : "16:9");
-  if (hero) {
-    out = injectHero(out, hero);
-    return { html: out, meta: parsed.meta, log: ["Bozza pronta", "Foto hero"], files: [] };
+  const fileRe = /<<<FILE path="([^"]+)">>>\s*([\s\S]*?)(?=<<<FILE|<<<HTML|<<<END|$)/g;
+  const fromGrok = [];
+  let m;
+  while ((m = fileRe.exec(text))) {
+    const path = m[1];
+    const content = m[2].trim();
+    fromGrok.push({ path, content });
+    const sm = path.match(/^screens\/(\w+)\.html$/);
+    if (sm) {
+      out = spliceScreen(out, sm[1], content);
+      const comp = TSX_NAME[sm[1]];
+      if (comp) fromGrok.push({ path: `src/screens/${comp}.tsx`, content: htmlToJsx(content, comp) });
+    }
   }
-  return { html: out, meta: parsed.meta, log: ["Bozza pronta (iOS)"], files: [] };
+  const hero = await generateHero(apiKey, prompt, /fk-tab/i.test(out) ? "1:1" : "16:9");
+  if (hero) out = injectHero(out, hero);
+  return {
+    html: out,
+    meta: parsed.meta,
+    log: hero ? ["Bozza 5 schermate", "Foto hero"] : ["Bozza 5 schermate"],
+    files: fromGrok,
+  };
 }
 
 async function grok(apiKey, prompt, html, shotB64, pass, instruction, tabId) {

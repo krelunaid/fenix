@@ -4,30 +4,28 @@ DEFAULT kind=app (telefono 390, tab in basso) se il brief non dice altro.
 Se c'è FORMATO sito / kind=site: sito web, nav in alto, sezioni, niente tabbar.
 Se c'è FORMATO gestionale / kind=dashboard: cruscotto ufficio, tabella, form, filtri, numeri. Desktop. Niente hero marketing.
 
-Rispondi SOLO in questo ordine:
+Rispondi SOLO in questo ordine. I FILE src/screens/*.tsx SONO LA LEGGE (JSX vero, className, form). L'HTML è solo l'anteprima montata dalle STESSE schermate. Non inventare un sito se è un'app.
 
 <<<META>>>
-{"name":"","tagline":"","kind":"landing|app|dashboard|tool|game|site","direction":"3-6 parole","summary":"cosa gira ora","palette":{"bg":"#rrggbb","surface":"#rrggbb","fg":"#rrggbb","muted":"#rrggbb","accent":"#rrggbb"}}
-<<<FILE path="index.html">>>
-<!DOCTYPE html> shell: header.fk-top, main.fk-main, nav.fk-tab con 5 button data-view="home|new|list|stats|more"
+{"name":"","tagline":"","kind":"app","direction":"3-6 parole","summary":"cosa gira ora","palette":{"bg":"#rrggbb","surface":"#rrggbb","fg":"#rrggbb","muted":"#rrggbb","accent":"#rrggbb"}}
+<<<FILE path="src/screens/Home.tsx">>>
+export default function Home(){ return (<div className="fk-screen">JSX home piena: numeri, foto, CTA</div>); }
+<<<FILE path="src/screens/New.tsx">>>
+export default function New(){ return (<div className="fk-screen">form che salva</div>); }
+<<<FILE path="src/screens/List.tsx">>>
+export default function List(){ return (<div className="fk-screen">elenco righe</div>); }
+<<<FILE path="src/screens/Stats.tsx">>>
+<<<FILE path="src/screens/More.tsx">>>
 <<<FILE path="screens/home.html">>>
-solo il contenuto di main (niente html/body)
+stesso contenuto della Home, solo inner HTML
 <<<FILE path="screens/new.html">>>
 <<<FILE path="screens/list.html">>>
 <<<FILE path="screens/stats.html">>>
 <<<FILE path="screens/more.html">>>
-<<<FILE path="css/app.css">>>
-:root e regole del mestiere. Non copiare .fk-*
-<<<FILE path="js/app.js">>>
-state, show(), Fenix.load/save. Le tab hanno già data-view.
-<<<FILE path="src/screens/Home.tsx">>>
-export default function Home(){ return (<div className="fk-screen">JSX della home</div>); }
-<<<FILE path="src/screens/New.tsx">>>
-<<<FILE path="src/screens/List.tsx">>>
-<<<FILE path="src/screens/Stats.tsx">>>
-<<<FILE path="src/screens/More.tsx">>>
+<<<FILE path="index.html">>>
+shell: header.fk-top, main.fk-main, nav.fk-tab 5 button data-view, template#t-home … t-more
 <<<HTML>>>
-documento unico già montato (stesse 5 schermate) per l'anteprima
+documento unico già montato (stesse 5 schermate)
 <<<END>>>
 
 DIREZIONE VISIVA: se c'è, è legge. Copia i valori hex in :root, i font nel <link>, il raggio, l'icona, le tab e la foto. Non ispirarti: esegui.
