@@ -113,7 +113,7 @@ export function PreviewFrame({
             <iframe
               key={name}
               title={`Anteprima ${name}`}
-              sandbox="allow-scripts allow-forms allow-modals"
+              sandbox="allow-scripts allow-forms allow-modals allow-same-origin"
               srcDoc={srcDoc}
               className="h-full w-full border-0"
               style={{ background: background ?? "var(--color-card)", overflow: "auto" }}

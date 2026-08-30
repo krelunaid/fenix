@@ -184,6 +184,39 @@ export function fenixRuntimeScript(projectId: string) {
   hs.onload = function(){ setTimeout(shoot, 80); };
   hs.onerror = function(){ sendShot(""); };
   document.head.appendChild(hs);
+  document.querySelectorAll("nav button, .fk-tab button, .tabbar button").forEach(function(b){
+    b.setAttribute("type", "button");
+  });
+  document.addEventListener("submit", function(e){
+    e.preventDefault();
+    e.stopPropagation();
+    var f = e.target;
+    if (!f || !f.querySelector) return;
+    var data = {};
+    try { new FormData(f).forEach(function(v,k){ if(String(v).trim()) data[k]=String(v); }); } catch(err) {}
+    if (window.Fenix) window.Fenix.save("form", data);
+    var btn = f.querySelector('button[type="submit"], button:not([type]), .fk-btn');
+    if (btn) {
+      var old = btn.textContent;
+      btn.textContent = "Salvato";
+      setTimeout(function(){ btn.textContent = old; }, 1400);
+    }
+  }, true);
+  document.addEventListener("click", function(e){
+    var b = e.target.closest && e.target.closest("nav button, .fk-tab button, .tabbar button, [data-view], [data-go]");
+    if (!b) return;
+    var view = b.getAttribute("data-view") || b.getAttribute("data-go");
+    if (!view) {
+      var sp = b.querySelector("span");
+      view = (sp && sp.textContent ? sp.textContent : "").trim().toLowerCase();
+    }
+    if (!view) return;
+    var nav = b.closest("nav") || document.querySelector(".fk-tab, .tabbar, nav");
+    if (nav) nav.querySelectorAll("button").forEach(function(x){ x.classList.toggle("on", x === b); });
+    document.querySelectorAll("[data-screen]").forEach(function(el){
+      el.hidden = String(el.getAttribute("data-screen")).toLowerCase() !== String(view).toLowerCase();
+    });
+  }, true);
 })();
 </script>`;
 }
