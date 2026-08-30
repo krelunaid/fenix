@@ -170,27 +170,28 @@ export async function runBuild(projectId: string, instruction?: string) {
             html: latest.html,
             instruction: instruction || undefined,
           });
-          const ctrl = new AbortController();
-          const timer = window.setTimeout(() => ctrl.abort(), 240_000);
           let res: Response | null = null;
-          for (const url of [`${WORKER_POLISH}/polish`, "/api/polish"]) {
-            try {
-              res = await fetch(url, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: payload,
-                signal: ctrl.signal,
-              });
-              if (res.status === 204) {
+          for (let attempt = 0; attempt < 2 && !res?.ok; attempt++) {
+            if (attempt) await new Promise((r) => window.setTimeout(r, 1500));
+            const ctrl = new AbortController();
+            const timer = window.setTimeout(() => ctrl.abort(), 240_000);
+            for (const url of [`${WORKER_POLISH}/polish`, "/api/polish"]) {
+              try {
+                const next = await fetch(url, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: payload,
+                  signal: ctrl.signal,
+                });
+                if (next.status === 204) continue;
+                res = next;
+                if (res.ok) break;
+              } catch {
                 res = null;
-                continue;
               }
-              if (res.ok) break;
-            } catch {
-              res = null;
             }
+            window.clearTimeout(timer);
           }
-          window.clearTimeout(timer);
           if (res?.ok) {
             const data = (await res.json()) as {
               result?: BuildResult;

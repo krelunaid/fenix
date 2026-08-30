@@ -29,7 +29,10 @@ function asHex(value: unknown, fallback: string) {
 
 function asText(value: unknown, fallback: string, max = 80) {
   if (typeof value !== "string") return fallback;
-  const t = value.replace(/\s+/g, " ").trim();
+  const t = value
+    .replace(/\b(iOS|Apple|Grok|Fenix|xAI|Emergent|Kreluna)\b/gi, "")
+    .replace(/\s+/g, " ")
+    .trim();
   if (!t) return fallback;
   return t.slice(0, max);
 }
