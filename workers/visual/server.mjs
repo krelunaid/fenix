@@ -224,14 +224,18 @@ async function polish(prompt, html, instruction) {
     } catch (err) {
       log.push(`Screenshot fallito: ${err instanceof Error ? err.message : "errore"}`);
     }
-    const text = await grok(apiKey, prompt, current, shot, pass, instruction);
-    const parsed = parseHtml(text);
-    if (parsed?.html) {
-      current = keepScripts(current, parsed.html);
-      meta = parsed.meta;
-      log.push(`Patch ${pass} ok (${current.length} caratteri, JS conservato)`);
-    } else {
-      log.push(`Patch ${pass} ignorata`);
+    try {
+      const text = await grok(apiKey, prompt, current, shot, pass, instruction);
+      const parsed = parseHtml(text);
+      if (parsed?.html) {
+        current = keepScripts(current, parsed.html);
+        meta = parsed.meta;
+        log.push(`Patch ${pass} ok (${current.length} caratteri, JS conservato)`);
+      } else {
+        log.push(`Patch ${pass} ignorata`);
+      }
+    } catch (err) {
+      log.push(`Giro ${pass} saltato: ${err instanceof Error ? err.message : "xAI"}`);
     }
   }
   return { html: current, meta, log };
@@ -242,26 +246,53 @@ function json(res, status, body) {
     "Content-Type": "application/json",
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Headers": "content-type",
-    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
   });
   res.end(JSON.stringify(body));
 }
 
+const jobs = new Map();
+let queue = Promise.resolve();
+
+function enqueue(fn) {
+  const run = queue.then(fn, fn);
+  queue = run.then(
+    () => {},
+    () => {},
+  );
+  return run;
+}
+
+function cors(res) {
+  res.writeHead(204, {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Headers": "content-type",
+    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+  });
+  res.end();
+}
+
 const server = createServer(async (req, res) => {
   if (req.method === "OPTIONS") {
-    res.writeHead(204, {
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Headers": "content-type",
-      "Access-Control-Allow-Methods": "POST, OPTIONS",
-    });
-    res.end();
+    cors(res);
     return;
   }
-  if (req.method === "GET" && (req.url === "/" || req.url === "/health")) {
-    json(res, 200, { ok: true, model: MODEL, passes: PASSES });
+  const url = req.url || "/";
+  if (req.method === "GET" && (url === "/" || url === "/health")) {
+    json(res, 200, { ok: true, model: MODEL, passes: PASSES, jobs: jobs.size });
     return;
   }
-  if (req.method !== "POST" || !req.url?.startsWith("/polish")) {
+  if (req.method === "GET" && url.startsWith("/jobs/")) {
+    const id = url.slice("/jobs/".length).split("?")[0];
+    const job = jobs.get(id);
+    if (!job) {
+      json(res, 404, { error: "Job non trovato" });
+      return;
+    }
+    json(res, 200, job);
+    return;
+  }
+  if (req.method !== "POST" || !url.startsWith("/polish")) {
     json(res, 404, { error: "POST /polish" });
     return;
   }
@@ -281,14 +312,27 @@ const server = createServer(async (req, res) => {
     json(res, 400, { error: "Servono brief e HTML." });
     return;
   }
-  try {
-    const result = await polish(prompt, html, instruction);
-    json(res, 200, result);
-  } catch (err) {
-    json(res, 500, { error: err instanceof Error ? err.message : "Worker visivo fallito" });
-  }
+  const id = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+  const job = { id, status: "run", log: ["In coda"], html: null, meta: {}, error: null };
+  jobs.set(id, job);
+  enqueue(async () => {
+    job.log = ["Partito"];
+    try {
+      const result = await polish(prompt, html, instruction);
+      job.status = "ok";
+      job.html = result.html;
+      job.meta = result.meta;
+      job.log = result.log;
+    } catch (err) {
+      job.status = "err";
+      job.error = err instanceof Error ? err.message : "Worker visivo fallito";
+      job.log = [...job.log, job.error];
+    }
+    setTimeout(() => jobs.delete(id), 30 * 60 * 1000);
+  });
+  json(res, 202, { id, status: "run" });
 });
 
 server.listen(PORT, "0.0.0.0", () => {
-  console.log(`Fenix visual worker su :${PORT} — POST /polish`);
+  console.log(`Fenix visual worker su :${PORT} — POST /polish (coda)`);
 });

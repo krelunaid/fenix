@@ -23,6 +23,41 @@ const WORKER_POLISH =
     (import.meta as { env?: { VITE_VISUAL_WORKER_URL?: string } }).env?.VITE_VISUAL_WORKER_URL?.replace(/\/$/, "")) ||
   "https://fenix-production-d9f5.up.railway.app";
 
+async function callWorker(prompt: string, html: string, instruction?: string) {
+  const base = WORKER_POLISH.replace(/\/$/, "");
+  await fetch(`${base}/health`).catch(() => null);
+  const started = await fetch(`${base}/polish`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ prompt, html, instruction: instruction || undefined }),
+  });
+  if (started.status === 202) {
+    const { id } = (await started.json()) as { id?: string };
+    if (!id) return null;
+    for (let i = 0; i < 120; i++) {
+      await new Promise((r) => window.setTimeout(r, 2000));
+      const jobRes = await fetch(`${base}/jobs/${id}`);
+      if (!jobRes.ok) continue;
+      const job = (await jobRes.json()) as {
+        status?: string;
+        html?: string;
+        meta?: Record<string, unknown>;
+        log?: string[];
+        error?: string;
+      };
+      if (job.status === "ok" && job.html) return job;
+      if (job.status === "err") throw new Error(job.error || "Worker visivo fallito");
+    }
+    throw new Error("Motore visivo in coda troppo a lungo");
+  }
+  if (!started.ok) throw new Error(`Worker HTTP ${started.status}`);
+  return (await started.json()) as {
+    html?: string;
+    meta?: Record<string, unknown>;
+    log?: string[];
+  };
+}
+
 async function consumeStream(
   projectId: string,
   body: { prompt: string; html?: string; instruction?: string; shot?: string },
@@ -164,76 +199,45 @@ export async function runBuild(projectId: string, instruction?: string) {
             : "Bozza pronta. Avvio il motore visivo (icone e rifinitura)…",
         });
         let polished = false;
+        let workerError = "";
         try {
-          const payload = JSON.stringify({
-            prompt: project.prompt,
-            html: latest.html,
-            instruction: instruction || undefined,
-          });
-          let res: Response | null = null;
-          for (let attempt = 0; attempt < 2 && !res?.ok; attempt++) {
-            if (attempt) await new Promise((r) => window.setTimeout(r, 1500));
-            const ctrl = new AbortController();
-            const timer = window.setTimeout(() => ctrl.abort(), 240_000);
-            for (const url of [`${WORKER_POLISH}/polish`, "/api/polish"]) {
-              try {
-                const next = await fetch(url, {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: payload,
-                  signal: ctrl.signal,
-                });
-                if (next.status === 204) continue;
-                res = next;
-                if (res.ok) break;
-              } catch {
-                res = null;
-              }
-            }
-            window.clearTimeout(timer);
+          const data = await callWorker(project.prompt, latest.html, instruction);
+          const result =
+            data &&
+            parseBuildOutput(
+              `<<<META>>>\n${JSON.stringify(data.meta ?? {})}\n<<<HTML>>>\n${data.html ?? ""}\n<<<END>>>`,
+            );
+          if (result?.html) {
+            applyBuildResult(projectId, result);
+            const logs = data.log ?? [];
+            store.updateProject(projectId, {
+              status: "ready",
+              buildLog: [
+                ...(useProjectStore.getState().getProject(projectId)?.buildLog ?? []),
+                ...logs,
+                "Anteprima rifinita",
+              ],
+            });
+            store.addMessage(projectId, {
+              id: uid(),
+              role: "assistant",
+              content: [
+                `Motore visivo: ${logs.length ? logs.join(" · ") : "icone e rifinitura"}.`,
+                readyCopy(result),
+              ].join("\n\n"),
+            });
+            polished = true;
           }
-          if (res?.ok) {
-            const data = (await res.json()) as {
-              result?: BuildResult;
-              html?: string;
-              meta?: Record<string, unknown>;
-              log?: string[];
-            };
-            const result =
-              data.result ??
-              parseBuildOutput(
-                `<<<META>>>\n${JSON.stringify(data.meta ?? {})}\n<<<HTML>>>\n${data.html ?? ""}\n<<<END>>>`,
-              );
-            if (result?.html) {
-              applyBuildResult(projectId, result);
-              const logs = data.log ?? [];
-              store.updateProject(projectId, {
-                status: "ready",
-                buildLog: [
-                  ...(useProjectStore.getState().getProject(projectId)?.buildLog ?? []),
-                  ...logs,
-                  "Anteprima rifinita",
-                ],
-              });
-              store.addMessage(projectId, {
-                id: uid(),
-                role: "assistant",
-                content: [
-                  `Motore visivo: ${logs.length ? logs.join(" · ") : "icone e rifinitura"}.`,
-                  readyCopy(result),
-                ].join("\n\n"),
-              });
-              polished = true;
-            }
-          }
-        } catch {
-          /* fallback sguardi in pagina */
+        } catch (err) {
+          workerError = err instanceof Error ? err.message : "errore";
         }
         if (polished) return;
         store.addMessage(projectId, {
           id: uid(),
           role: "assistant",
-          content: "Motore visivo non ha risposto. Uso gli sguardi in pagina.",
+          content: workerError
+            ? `Motore visivo non ha risposto (${workerError}). Uso gli sguardi in pagina.`
+            : "Motore visivo non ha risposto. Uso gli sguardi in pagina.",
         });
         if (instruction) {
           store.updateProject(projectId, { status: "ready" });
