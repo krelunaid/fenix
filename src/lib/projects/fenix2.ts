@@ -15,16 +15,48 @@ function slug(name: string) {
   );
 }
 
-function esc(html: string) {
-  return html.replace(/\\/g, "\\\\").replace(/`/g, "\\`").replace(/\$\{/g, "\\${");
+function componentName(id: string) {
+  return id.charAt(0).toUpperCase() + id.slice(1);
 }
 
 function screenInner(files: ProjectFile[], id: string) {
   return files.find((f) => f.path === `screens/${id}.html`)?.content?.trim() || `<p>${id}</p>`;
 }
 
-function componentName(id: string) {
-  return id.charAt(0).toUpperCase() + id.slice(1);
+function htmlToJsx(html: string, comp: string) {
+  let j = html
+    .replace(/\sclass=/gi, " className=")
+    .replace(/\sfor=/gi, " htmlFor=")
+    .replace(/\sstroke-width=/gi, " strokeWidth=")
+    .replace(/\sstroke-linecap=/gi, " strokeLinecap=")
+    .replace(/\sstroke-linejoin=/gi, " strokeLinejoin=")
+    .replace(/\sstroke-dasharray=/gi, " strokeDasharray=")
+    .replace(/\sfill-rule=/gi, " fillRule=")
+    .replace(/\sclip-path=/gi, " clipPath=")
+    .replace(/\sviewbox=/gi, " viewBox=")
+    .replace(/\stabindex=/gi, " tabIndex=")
+    .replace(/\scolspan=/gi, " colSpan=")
+    .replace(/\srowspan=/gi, " rowSpan=")
+    .replace(/\sautocomplete=/gi, " autoComplete=")
+    .replace(/<(img|input|br|hr|meta|link|source)([^>]*?)\/?>/gi, "<$1$2 />");
+  j = j.trim() || "<p>Vuoto</p>";
+  return `export default function ${comp}() {
+  return (
+    <div className="fk-screen">
+      ${j}
+    </div>
+  );
+}
+`;
+}
+
+function screenTsx(files: ProjectFile[], id: string) {
+  const comp = componentName(id);
+  const existing = files.find((f) => f.path === `src/screens/${comp}.tsx`)?.content ?? "";
+  if (existing.includes("export default function") && !existing.includes("dangerouslySetInnerHTML")) {
+    return existing;
+  }
+  return htmlToJsx(screenInner(files, id), comp);
 }
 
 export function fenix2Files(
@@ -35,15 +67,7 @@ export function fenix2Files(
   const { bg, surface, fg, muted, accent } = opts.palette;
   const screens = IDS.map((id) => ({
     path: `src/screens/${componentName(id)}.tsx`,
-    content: `export default function ${componentName(id)}() {
-  return (
-    <div
-      className="fk-screen"
-      dangerouslySetInnerHTML={{ __html: \`${esc(screenInner(files, id))}\` }}
-    />
-  );
-}
-`,
+    content: screenTsx(files, id),
   }));
 
   const extra = files.filter(

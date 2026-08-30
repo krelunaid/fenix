@@ -20,6 +20,12 @@ solo il contenuto di main (niente html/body)
 :root e regole del mestiere. Non copiare .fk-*
 <<<FILE path="js/app.js">>>
 state, show(), Fenix.load/save. Le tab hanno già data-view.
+<<<FILE path="src/screens/Home.tsx">>>
+export default function Home(){ return (<div className="fk-screen">JSX della home</div>); }
+<<<FILE path="src/screens/New.tsx">>>
+<<<FILE path="src/screens/List.tsx">>>
+<<<FILE path="src/screens/Stats.tsx">>>
+<<<FILE path="src/screens/More.tsx">>>
 <<<HTML>>>
 documento unico già montato (stesse 5 schermate) per l'anteprima
 <<<END>>>
