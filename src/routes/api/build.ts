@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { FENIX_MODEL } from "@/lib/ai/model";
+import { FENIX_MODEL, getXaiApiKey, XAI_CHAT_COMPLETIONS_URL, XAI_MISSING_KEY_ERROR } from "@/lib/ai/model";
 import { parseBuildOutput } from "@/lib/ai/parse";
 import { SYSTEM_PROMPT } from "@/lib/ai/prompt";
 import { detectStage, sseLine } from "@/lib/ai/stages";
@@ -16,12 +16,9 @@ export const Route = createFileRoute("/api/build")({
     handlers: {
       POST: async ({ request }) => {
         // Server-only. Never VITE_XAI_API_KEY — that would leak to the browser.
-        const apiKey = process.env.XAI_API_KEY;
+        const apiKey = getXaiApiKey();
         if (!apiKey) {
-          return Response.json(
-            { t: "err", error: "Fenix non è disponibile in questo ambiente." },
-            { status: 503 },
-          );
+          return Response.json({ t: "err", error: XAI_MISSING_KEY_ERROR }, { status: 503 });
         }
 
         let body: Body = {};
@@ -83,7 +80,7 @@ export const Route = createFileRoute("/api/build")({
                 }
               }
               send({ t: "s", s: "Compongo colori, icone, interfaccia" });
-              const res = await fetch("https://api.x.ai/v1/chat/completions", {
+              const res = await fetch(XAI_CHAT_COMPLETIONS_URL, {
                 method: "POST",
                 headers: {
                   "Content-Type": "application/json",
