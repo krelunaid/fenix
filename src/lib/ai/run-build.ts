@@ -135,17 +135,24 @@ export async function runBuild(projectId: string, instruction?: string) {
         charged = false;
         return;
       }
-      if (!instruction && latest?.html) {
+      if (latest?.html) {
         store.updateProject(projectId, {
           status: "building",
-          buildLog: [...(latest.buildLog ?? []), "Motore visivo"],
+          buildLog: [
+            ...(latest.buildLog ?? []),
+            instruction ? "Motore visivo (modifica)" : "Motore visivo",
+          ],
         });
         let polished = false;
         try {
           const res = await fetch("/api/polish", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ prompt: project.prompt, html: latest.html }),
+            body: JSON.stringify({
+              prompt: project.prompt,
+              html: latest.html,
+              instruction: instruction || undefined,
+            }),
           });
           if (res.status !== 204 && res.ok) {
             const payload = (await res.json()) as {
@@ -173,6 +180,10 @@ export async function runBuild(projectId: string, instruction?: string) {
           /* fallback sguardi in pagina */
         }
         if (polished) return;
+        if (instruction) {
+          store.updateProject(projectId, { status: "ready" });
+          return;
+        }
 
         const look = async (label: string) => {
           const current = useProjectStore.getState().getProject(projectId);

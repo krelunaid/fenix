@@ -42,9 +42,19 @@ function parseHtml(text) {
   return { html, meta };
 }
 
-async function grok(apiKey, prompt, html, shotB64, pass) {
+async function grok(apiKey, prompt, html, shotB64, pass, instruction) {
   const user = [
-    { type: "text", text: `GIRO ${pass}/${PASSES}. BRIEF:\n${prompt}\n\nHTML:\n${html.slice(0, 32000)}\n\nStile iOS obbligatorio: #f5f5f7 #ffffff #1d1d1f #0071e3. Tab intere, aria, CTA pillola, 390px. Tieni il JS. META+HTML.` },
+    {
+      type: "text",
+      text: [
+        `GIRO ${pass}/${PASSES}. BRIEF:\n${prompt}`,
+        instruction ? `MODIFICA DA TENERE:\n${instruction}\nNon disfare questa modifica.` : "",
+        `HTML:\n${html.slice(0, 32000)}`,
+        "Stile iOS obbligatorio: #f5f5f7 #ffffff #1d1d1f #0071e3. Tab intere, aria, CTA pillola, 390px. Tieni il JS. META+HTML.",
+      ]
+        .filter(Boolean)
+        .join("\n\n"),
+    },
   ];
   if (shotB64) {
     user.push({ type: "image_url", image_url: { url: `data:image/jpeg;base64,${shotB64}` } });
@@ -91,7 +101,7 @@ async function withBrowser(html) {
   }
 }
 
-async function polish(prompt, html) {
+async function polish(prompt, html, instruction) {
   const apiKey = (process.env.XAI_API_KEY || "").trim();
   if (!apiKey) throw new Error("Manca XAI_API_KEY");
   const log = [];
@@ -106,7 +116,7 @@ async function polish(prompt, html) {
     } catch (err) {
       log.push(`Screenshot fallito: ${err instanceof Error ? err.message : "errore"}`);
     }
-    const text = await grok(apiKey, prompt, current, shot, pass);
+    const text = await grok(apiKey, prompt, current, shot, pass, instruction);
     const parsed = parseHtml(text);
     if (parsed?.html) {
       current = parsed.html;
@@ -158,12 +168,13 @@ const server = createServer(async (req, res) => {
   }
   const prompt = String(body.prompt || "").slice(0, 2500);
   const html = String(body.html || "").slice(0, 120000);
+  const instruction = String(body.instruction || "").slice(0, 2500);
   if (prompt.length < 3 || html.length < 80) {
     json(res, 400, { error: "Servono brief e HTML." });
     return;
   }
   try {
-    const result = await polish(prompt, html);
+    const result = await polish(prompt, html, instruction);
     json(res, 200, result);
   } catch (err) {
     json(res, 500, { error: err instanceof Error ? err.message : "Worker visivo fallito" });
