@@ -79,6 +79,67 @@ async function callWorker(prompt: string, html: string, instruction?: string) {
   throw new Error(lastErr);
 }
 
+function isIOS() {
+  if (typeof navigator === "undefined") return false;
+  return /iP(hone|od|ad)/.test(navigator.userAgent);
+}
+
+async function consumeViaWorker(
+  projectId: string,
+  body: { prompt: string; html?: string; instruction?: string },
+  quiet = false,
+): Promise<boolean> {
+  const store = useProjectStore.getState();
+  const bases = ["/__worker", WORKER_POLISH.replace(/\/$/, "")];
+  let lastErr = "Load failed";
+  for (const base of bases) {
+    try {
+      const started = await fetch(`${base}/build`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (started.status !== 202) {
+        lastErr = `Build HTTP ${started.status}`;
+        continue;
+      }
+      const { id } = (await started.json()) as { id?: string };
+      if (!id) continue;
+      for (let i = 0; i < 90; i++) {
+        await new Promise((r) => window.setTimeout(r, 2000));
+        const jobRes = await fetch(`${base}/jobs/${id}`);
+        if (!jobRes.ok) continue;
+        const job = (await jobRes.json()) as {
+          status?: string;
+          html?: string;
+          meta?: Record<string, unknown>;
+          log?: string[];
+          error?: string;
+        };
+        if (job.status === "ok" && job.html) {
+          const result = parseBuildOutput(
+            `<<<META>>>\n${JSON.stringify(job.meta ?? {})}\n<<<HTML>>>\n${job.html}\n<<<END>>>`,
+          );
+          if (!result) throw new Error("Risposta non valida");
+          applyBuildResult(projectId, result);
+          if (!quiet) {
+            store.addMessage(projectId, {
+              id: uid(),
+              role: "assistant",
+              content: readyCopy(result),
+            });
+          }
+          return true;
+        }
+        if (job.status === "err") throw new Error(job.error || "Build fallita");
+      }
+    } catch (err) {
+      lastErr = err instanceof Error ? err.message : "Load failed";
+    }
+  }
+  throw new Error(lastErr);
+}
+
 async function consumeStream(
   projectId: string,
   body: { prompt: string; html?: string; instruction?: string; shot?: string },
@@ -189,15 +250,24 @@ export async function runBuild(projectId: string, instruction?: string) {
 
   let charged = true;
   try {
-    const streamed = await consumeStream(
-      projectId,
-      {
-        prompt: project.prompt,
-        html: instruction ? project.html : APP_SHELL_HTML,
-        instruction: instruction || APP_SHELL_INSTRUCTION,
-      },
-      true,
-    );
+    let streamed = false;
+    const payload = {
+      prompt: project.prompt,
+      html: instruction ? project.html : APP_SHELL_HTML,
+      instruction: instruction || APP_SHELL_INSTRUCTION,
+    };
+    try {
+      streamed = isIOS()
+        ? await consumeViaWorker(projectId, payload, true)
+        : await consumeStream(projectId, payload, true);
+    } catch (first) {
+      const msg = first instanceof Error ? first.message : "";
+      if (/load failed|failed to fetch/i.test(msg)) {
+        streamed = await consumeViaWorker(projectId, payload, true);
+      } else {
+        throw first;
+      }
+    }
     if (streamed) {
       const latest = useProjectStore.getState().getProject(projectId);
       if (latest?.status === "error") {

@@ -129,6 +129,55 @@ function inferTab(instruction) {
   return 0;
 }
 
+const GENERATE_SYSTEM = `Generi l'HTML di Fenix. Italiano.
+SITO (kind=site, "sito web"): nav in alto, sezioni, footer. NON tabbar, NON 390.
+APP: telefono, tab in basso, 5 schermate, form che salvano.
+Palette dal mestiere. Testo #1d1d1f su fondo chiaro, contrasto 4.5:1.
+Niente parole Apple, iOS, Grok, Fenix nel prodotto.
+Rispondi SOLO:
+<<<META>>>
+{"name":"","tagline":"","kind":"app","summary":"","palette":{"bg":"#f5f5f7","surface":"#ffffff","fg":"#1d1d1f","muted":"#3a3a3c","accent":"#0071e3"}}
+<<<HTML>>>
+<!DOCTYPE html>...completo...
+<<<END>>>`;
+
+async function generate(prompt, html, instruction) {
+  const apiKey = (process.env.XAI_API_KEY || "").trim();
+  if (!apiKey) throw new Error("Manca XAI_API_KEY");
+  const user = [
+    `BRIEF:\n${prompt}`,
+    html ? `HTML ATTUALE:\n${html.slice(0, 20000)}` : "",
+    instruction ? `MODIFICA:\n${instruction}` : "",
+    "META + HTML completo ora.",
+  ]
+    .filter(Boolean)
+    .join("\n\n");
+  const res = await fetch(XAI, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model: MODEL,
+      reasoning_effort: "low",
+      temperature: 0.7,
+      max_tokens: 8000,
+      stream: false,
+      messages: [
+        { role: "system", content: GENERATE_SYSTEM },
+        { role: "user", content: user },
+      ],
+    }),
+  });
+  if (!res.ok) throw new Error(`xAI ${res.status}`);
+  const payload = await res.json();
+  const text = payload.choices?.[0]?.message?.content ?? "";
+  const parsed = parseHtml(text);
+  if (!parsed?.html) throw new Error("HTML non valido");
+  return { html: parsed.html, meta: parsed.meta, log: ["Bozza pronta (iOS)"], files: [] };
+}
+
 async function grok(apiKey, prompt, html, shotB64, pass, instruction, tabId) {
   const user = [
     {
@@ -470,8 +519,8 @@ const server = createServer(async (req, res) => {
     json(res, 200, job);
     return;
   }
-  if (req.method !== "POST" || !url.startsWith("/polish")) {
-    json(res, 404, { error: "POST /polish" });
+  if (req.method !== "POST" || !(url.startsWith("/polish") || url.startsWith("/build"))) {
+    json(res, 404, { error: "POST /polish o POST /build" });
     return;
   }
   const chunks = [];
@@ -486,8 +535,9 @@ const server = createServer(async (req, res) => {
   const prompt = String(body.prompt || "").slice(0, 2500);
   const html = String(body.html || "").slice(0, 120000);
   const instruction = String(body.instruction || "").slice(0, 2500);
-  if (prompt.length < 3 || html.length < 80) {
-    json(res, 400, { error: "Servono brief e HTML." });
+  const isBuild = url.startsWith("/build");
+  if (prompt.length < 3 || (!isBuild && html.length < 80)) {
+    json(res, 400, { error: isBuild ? "Serve un brief." : "Servono brief e HTML." });
     return;
   }
   const id = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
@@ -496,7 +546,9 @@ const server = createServer(async (req, res) => {
   enqueue(async () => {
     job.log = ["Partito"];
     try {
-      const result = await polish(prompt, html, instruction);
+      const result = isBuild
+        ? await generate(prompt, html, instruction)
+        : await polish(prompt, html, instruction);
       job.status = "ok";
       job.html = result.html;
       job.meta = result.meta;
@@ -513,5 +565,5 @@ const server = createServer(async (req, res) => {
 });
 
 server.listen(PORT, "0.0.0.0", () => {
-  console.log(`Fenix visual worker su :${PORT} — POST /polish (coda)`);
+  console.log(`Fenix visual worker su :${PORT} — POST /polish /build (coda)`);
 });
