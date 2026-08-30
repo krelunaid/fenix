@@ -28,7 +28,6 @@ export async function designVisual(input: {
       model: FENIX_MODEL,
       temperature: 0.85,
       max_tokens: 900,
-      reasoning_effort: "low",
       stream: false,
       messages: [
         { role: "system", content: VISUAL_PROMPT },
