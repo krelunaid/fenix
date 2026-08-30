@@ -1,6 +1,6 @@
 [build]
   command = "node scripts/with-app-env.mjs ./node_modules/.bin/vite build && node scripts/migrate.mjs"
-  publish = "dist/client"
+  publish = "dist"
 
 [build.environment]
   VITE_AUTH_ENABLED = "false"
