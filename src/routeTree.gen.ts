@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as VetrinaRouteImport } from './routes/vetrina'
 import { Route as ApiBuildRouteImport } from './routes/api/build'
+import { Route as ApiPolishRouteImport } from './routes/api/polish'
 import { Route as SitoProjectIdRouteImport } from './routes/sito.$projectId'
 import { Route as StudioProjectIdRouteImport } from './routes/studio.$projectId'
 
@@ -30,6 +31,11 @@ const ApiBuildRoute = ApiBuildRouteImport.update({
   path: '/api/build',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPolishRoute = ApiPolishRouteImport.update({
+  id: '/api/polish',
+  path: '/api/polish',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SitoProjectIdRoute = SitoProjectIdRouteImport.update({
   id: '/sito/$projectId',
   path: '/sito/$projectId',
@@ -45,6 +51,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/vetrina': typeof VetrinaRoute
   '/api/build': typeof ApiBuildRoute
+  '/api/polish': typeof ApiPolishRoute
   '/sito/$projectId': typeof SitoProjectIdRoute
   '/studio/$projectId': typeof StudioProjectIdRoute
 }
@@ -52,6 +59,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/vetrina': typeof VetrinaRoute
   '/api/build': typeof ApiBuildRoute
+  '/api/polish': typeof ApiPolishRoute
   '/sito/$projectId': typeof SitoProjectIdRoute
   '/studio/$projectId': typeof StudioProjectIdRoute
 }
@@ -60,21 +68,23 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/vetrina': typeof VetrinaRoute
   '/api/build': typeof ApiBuildRoute
+  '/api/polish': typeof ApiPolishRoute
   '/sito/$projectId': typeof SitoProjectIdRoute
   '/studio/$projectId': typeof StudioProjectIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    '/' | '/vetrina' | '/api/build' | '/sito/$projectId' | '/studio/$projectId'
+    '/' | '/vetrina' | '/api/build' | '/api/polish' | '/sito/$projectId' | '/studio/$projectId'
   fileRoutesByTo: FileRoutesByTo
   to:
-    '/' | '/vetrina' | '/api/build' | '/sito/$projectId' | '/studio/$projectId'
+    '/' | '/vetrina' | '/api/build' | '/api/polish' | '/sito/$projectId' | '/studio/$projectId'
   id:
     | '__root__'
     | '/'
     | '/vetrina'
     | '/api/build'
+    | '/api/polish'
     | '/sito/$projectId'
     | '/studio/$projectId'
   fileRoutesById: FileRoutesById
@@ -83,6 +93,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   VetrinaRoute: typeof VetrinaRoute
   ApiBuildRoute: typeof ApiBuildRoute
+  ApiPolishRoute: typeof ApiPolishRoute
   SitoProjectIdRoute: typeof SitoProjectIdRoute
   StudioProjectIdRoute: typeof StudioProjectIdRoute
 }
@@ -110,6 +121,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiBuildRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/polish': {
+      id: '/api/polish'
+      path: '/api/polish'
+      fullPath: '/api/polish'
+      preLoaderRoute: typeof ApiPolishRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/sito/$projectId': {
       id: '/sito/$projectId'
       path: '/sito/$projectId'
@@ -131,6 +149,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   VetrinaRoute: VetrinaRoute,
   ApiBuildRoute: ApiBuildRoute,
+  ApiPolishRoute: ApiPolishRoute,
   SitoProjectIdRoute: SitoProjectIdRoute,
   StudioProjectIdRoute: StudioProjectIdRoute,
 }
