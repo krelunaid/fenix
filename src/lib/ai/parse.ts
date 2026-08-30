@@ -1,5 +1,5 @@
 import { DEFAULT_PALETTE, type Palette, type ProjectKind } from "@/lib/projects/types";
-import { assembleHtml, ensureScreenFiles, parseProjectFiles, type ProjectFile } from "@/lib/projects/files";
+import { assembleHtml, ensureScreenFiles, parseProjectFiles, seedFiveScreens, type ProjectFile } from "@/lib/projects/files";
 
 export type BuildResult = {
   name: string;
@@ -95,9 +95,12 @@ export function parseBuildOutput(text: string): BuildResult | null {
     files = [{ path: "index.html", content: html }, ...files];
   }
   files = ensureScreenFiles(files, html);
+  files = seedFiveScreens(files, html, metaBlock ? undefined : "App");
   html = assembleHtml(files, html) || html;
 
   const meta = parseMeta(metaBlock?.[1]?.trim() || "{}");
+  files = seedFiveScreens(files, html, meta.name);
+  html = assembleHtml(files, html) || html;
   if (meta.name === "Studio") {
     const title = html.match(/<title>([^<]+)<\/title>/i)?.[1]?.trim();
     if (title) meta.name = title.slice(0, 80);

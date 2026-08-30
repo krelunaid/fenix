@@ -5,7 +5,7 @@ NON cancellare sezioni. NON lasciare main vuoto. NON fare un sito.
 Palette unica dal brief (non tutte grigio iPhone). Date in italiano, non ISO.
 Tieni header.fk-top, main, nav.fk-tab, form, liste, Fenix.load/save.
 Ogni tab mostra una vista vera. Form: preventDefault, niente righe vuote.
-Restituisci META + HTML completo (e FILE screens se puoi).`;
+Restituisci META + FILE screens/home.html new list stats more + HTML montato.`;
 
 export const APP_SHELL_HTML = `<!DOCTYPE html>
 <html lang="it">

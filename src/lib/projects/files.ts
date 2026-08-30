@@ -27,7 +27,38 @@ function screenIdFromAttrs(attrs: string) {
   ).toLowerCase();
 }
 
-export function extractScreens(html: string): ProjectFile[] {
+const SCREEN_IDS = ["home", "new", "list", "stats", "more"] as const;
+
+function stubScreen(id: string, name: string) {
+  if (id === "home") {
+    return `<section class="fk-panel"><h2>${name}</h2><div class="fk-grid2"><div class="fk-stat"><b>—</b><span>oggi</span></div><div class="fk-stat"><b>—</b><span>in corso</span></div></div></section><button type="button" class="fk-btn" data-go="new">Nuovo</button>`;
+  }
+  if (id === "new") {
+    return `<h2>Nuovo</h2><form><label class="fk-lbl">Nome</label><div class="fk-field"><input name="n" required placeholder="Nome"/></div><button type="submit" class="fk-btn">Salva</button></form>`;
+  }
+  if (id === "list") {
+    return `<h2>Elenco</h2><p class="fk-role">Vuoto. Salva da Nuovo.</p>`;
+  }
+  if (id === "stats") {
+    return `<h2>Numeri</h2><div class="fk-grid2"><div class="fk-tile"><span>Oggi</span><b>0</b></div><div class="fk-tile"><span>Mese</span><b>0</b></div></div>`;
+  }
+  return `<h2>Altro</h2><p class="fk-role">Impostazioni e staff.</p><form data-team><div class="fk-field"><input name="who" placeholder="Nome"/></div><button type="submit" class="fk-btn">Aggiungi</button></form>`;
+}
+
+export function seedFiveScreens(files: ProjectFile[], html: string, name = "App"): ProjectFile[] {
+  const map = new Map(files.map((f) => [f.path, f]));
+  if (html && !map.has("index.html")) map.set("index.html", { path: "index.html", content: html });
+  const main = html.match(/<main[^>]*>([\s\S]*?)<\/main>/i)?.[1]?.trim();
+  if (main && (!map.get("screens/home.html")?.content || map.get("screens/home.html")!.content.length < 40)) {
+    map.set("screens/home.html", { path: "screens/home.html", content: main });
+  }
+  for (const id of SCREEN_IDS) {
+    const path = `screens/${id}.html`;
+    const cur = map.get(path)?.content?.trim() ?? "";
+    if (cur.length < 24) map.set(path, { path, content: stubScreen(id, name) });
+  }
+  return [...map.values()];
+}
   if (!html) return [];
   const out: ProjectFile[] = [];
   const seen = new Set<string>();
