@@ -63,7 +63,6 @@ export const generateBuild = createServerFn({ method: "POST" })
           model: FENIX_MODEL,
           temperature: data.instruction ? 0.55 : 0.92,
           max_tokens: 14000,
-          reasoning_effort: "low",
           messages: [
             { role: "system", content: SYSTEM_PROMPT },
             { role: "user", content: userParts.join("\n\n") },
