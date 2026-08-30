@@ -16,7 +16,7 @@ La chiave è esclusivamente server-side. Mai `VITE_XAI_API_KEY`, mai nel fronten
 |---|---|---|
 | `XAI_API_KEY` | server | Tua, creata su [console.x.ai](https://console.x.ai) |
 | `VISUAL_WORKER_URL` | server | Opzionale. Worker Playwright (3 giri telefono). Es. `https://fenix-visual.up.railway.app` |
-| `VITE_AUTH_ENABLED` | build | `false` |
+| `VITE_AUTH_ENABLED` | build | `false` di default su Netlify: si crea senza account. Per Gmail/email metti `true` e `DATABASE_URL` |
 
 ## Configurazione Netlify
 
