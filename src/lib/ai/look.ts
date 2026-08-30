@@ -87,7 +87,7 @@ export function lookInstruction(audit: PreviewAudit | null, hasShot: boolean) {
     "Obbligo canvas telefono: html/body 100dvh, colonna, width 100%, niente max-width 1100, niente 3 colonne desktop.",
     "Tab bar in flusso in basso, 4–5 voci STESSA larghezza, SVG 24px + label 10px intere, niente testo tagliato.",
     "Header saluto. Main overflow auto. CTA visibile senza scroll orizzontale.",
-    "Se lo screenshot è storto, riscrivi CSS da zero sul contenuto già lì.",
+    "Stile iOS: #f5f5f7 #1d1d1f accento #0071e3, aria, tab intere, niente viola neon.",
     "META+HTML completo.",
   ].join("\n");
 }

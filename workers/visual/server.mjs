@@ -11,12 +11,17 @@ const XAI = "https://api.x.ai/v1/chat/completions";
 const PASSES = 3;
 
 const SYSTEM = `Sei il motore visivo di Fenix. Vedi uno screenshot TELEFONO 390×844 e l'HTML.
+Legge grafica: iOS / Apple HIG. Sempre, anche se il brief non lo chiede.
+- bg #f5f5f7, surface #ffffff, fg #1d1d1f, muted #86868b, accent #0071e3, line #d2d2d7
+- font: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui (niente Inter Manrope viola neon)
+- tanta aria, titoli grandi tracking stretto, raggio 12–16, tab bar 5 colonne in basso
+- card bianche, panel scuro solo se serve un dato, CTA pillola blu
 Correggi SOLO chrome/CSS/icone/layout. NON spegnere JS, form, state.
-Canvas: body colonna 100dvh, header.fk-top, main.fk-main, nav.fk-tab 4–5 button in grid colonne uguali.
-Tab SVG 24px + span 10px interi. Niente overflow-x, niente desktop, niente #f5f5f7 Manrope Inter viola.
+Canvas: body colonna 100dvh, header.fk-top, main.fk-main, nav.fk-tab.
+Non scrivere le parole Apple, iOS, Fenix, Grok nel prodotto.
 Rispondi SOLO:
 <<<META>>>
-{"name":"","tagline":"","kind":"app","direction":"","summary":"","palette":{"bg":"#","surface":"#","fg":"#","muted":"#","accent":"#"}}
+{"name":"","tagline":"","kind":"app","direction":"","summary":"","palette":{"bg":"#f5f5f7","surface":"#ffffff","fg":"#1d1d1f","muted":"#86868b","accent":"#0071e3"}}
 <<<HTML>>>
 <!DOCTYPE html>...completo...
 <<<END>>>`;
@@ -39,7 +44,7 @@ function parseHtml(text) {
 
 async function grok(apiKey, prompt, html, shotB64, pass) {
   const user = [
-    { type: "text", text: `GIRO ${pass}/${PASSES}. BRIEF:\n${prompt}\n\nHTML:\n${html.slice(0, 32000)}\n\nChecklist: tab intere, no scroll laterale, contrasto, icone diverse, form, CTA, 390px. Tieni il JS. META+HTML.` },
+    { type: "text", text: `GIRO ${pass}/${PASSES}. BRIEF:\n${prompt}\n\nHTML:\n${html.slice(0, 32000)}\n\nStile iOS obbligatorio: #f5f5f7 #ffffff #1d1d1f #0071e3. Tab intere, aria, CTA pillola, 390px. Tieni il JS. META+HTML.` },
   ];
   if (shotB64) {
     user.push({ type: "image_url", image_url: { url: `data:image/jpeg;base64,${shotB64}` } });
