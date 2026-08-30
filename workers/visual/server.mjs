@@ -32,6 +32,28 @@ Rispondi SOLO con la schermata di QUESTA tab, non l'HTML intero:
 Se proprio non puoi, allora META+HTML completo come ultima spiaggia.`;
 
 const TAB_IDS = ["home", "new", "list", "stats", "more"];
+const TSX_NAME = { home: "Home", new: "New", list: "List", stats: "Stats", more: "More" };
+
+function htmlToJsx(inner, comp) {
+  let j = String(inner || "")
+    .replace(/\sclass=/gi, " className=")
+    .replace(/\sfor=/gi, " htmlFor=")
+    .replace(/\sstroke-width=/gi, " strokeWidth=")
+    .replace(/\sstroke-linecap=/gi, " strokeLinecap=")
+    .replace(/\sstroke-linejoin=/gi, " strokeLinejoin=")
+    .replace(/\sviewbox=/gi, " viewBox=")
+    .replace(/<(img|input|br|hr)([^>]*?)\/?>/gi, "<$1$2 />")
+    .trim();
+  if (!j) j = "<p>Vuoto</p>";
+  return `export default function ${comp}() {
+  return (
+    <div className="fk-screen">
+      ${j}
+    </div>
+  );
+}
+`;
+}
 
 function parseScreen(text) {
   const m = text.match(/<<<SCREEN(?:\s+id=["']?(\w+)["']?)?>>>\s*([\s\S]*?)(?:<<<END>>>|$)/i);
@@ -279,6 +301,7 @@ async function polish(prompt, html, instruction) {
   const log = [];
   let current = html;
   let meta = {};
+  const tsx = {};
   try {
     if (instruction) {
       log.push("Modifica: salto icone, sistemo solo la tab");
@@ -325,7 +348,10 @@ async function polish(prompt, html, instruction) {
       const screen = parseScreen(text);
       if (screen?.inner) {
         current = spliceScreen(current, screen.id || tabId, screen.inner);
-        log.push(`Patch solo tab ${screen.id || tabId} (${screen.inner.length} caratteri)`);
+        const id = screen.id || tabId;
+        const comp = TSX_NAME[id] || "Home";
+        tsx[comp] = htmlToJsx(screen.inner, comp);
+        log.push(`Patch solo tab ${id} + src/screens/${comp}.tsx`);
       } else {
         const parsed = parseHtml(text);
         if (parsed?.html) {
@@ -365,7 +391,10 @@ async function polish(prompt, html, instruction) {
         const screen = parseScreen(text);
         if (screen?.inner) {
           current = spliceScreen(current, screen.id || tabId, screen.inner);
-          log.push(`Patch extra ${tabId}`);
+          const id = screen.id || tabId;
+          const comp = TSX_NAME[id] || "Home";
+          tsx[comp] = htmlToJsx(screen.inner, comp);
+          log.push(`Patch extra ${id} + src/screens/${comp}.tsx`);
         } else {
           log.push(`Extra ${tabId} senza patch`);
         }
@@ -382,7 +411,12 @@ async function polish(prompt, html, instruction) {
     }
   }
   current = restoreHome(current);
-  return { html: current, meta, log };
+  const files = Object.entries(tsx).map(([comp, content]) => ({
+    path: `src/screens/${comp}.tsx`,
+    content,
+  }));
+  if (files.length) log.push(`TSX aggiornati: ${files.map((f) => f.path).join(", ")}`);
+  return { html: current, meta, log, files };
 }
 
 function json(res, status, body) {
@@ -467,6 +501,7 @@ const server = createServer(async (req, res) => {
       job.html = result.html;
       job.meta = result.meta;
       job.log = result.log;
+      job.files = result.files || [];
     } catch (err) {
       job.status = "err";
       job.error = err instanceof Error ? err.message : "Worker visivo fallito";

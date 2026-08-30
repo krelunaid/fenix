@@ -54,6 +54,7 @@ async function callWorker(prompt: string, html: string, instruction?: string) {
             html?: string;
             meta?: Record<string, unknown>;
             log?: string[];
+            files?: { path: string; content: string }[];
             error?: string;
           };
           if (job.status === "ok" && job.html) return job;
@@ -69,6 +70,7 @@ async function callWorker(prompt: string, html: string, instruction?: string) {
         html?: string;
         meta?: Record<string, unknown>;
         log?: string[];
+        files?: { path: string; content: string }[];
       };
     } catch (err) {
       lastErr = err instanceof Error ? err.message : "Load failed";
@@ -222,10 +224,13 @@ export async function runBuild(projectId: string, instruction?: string) {
         let workerError = "";
         try {
           const data = await callWorker(project.prompt, latest.html, instruction);
+          const fileBlocks = (data?.files ?? [])
+            .map((f) => `<<<FILE path="${f.path}">>>\n${f.content}`)
+            .join("\n");
           const result =
             data &&
             parseBuildOutput(
-              `<<<META>>>\n${JSON.stringify(data.meta ?? {})}\n<<<HTML>>>\n${data.html ?? ""}\n<<<END>>>`,
+              `<<<META>>>\n${JSON.stringify(data.meta ?? {})}\n${fileBlocks}\n<<<HTML>>>\n${data.html ?? ""}\n<<<END>>>`,
             );
           if (result?.html) {
             applyBuildResult(projectId, result);
