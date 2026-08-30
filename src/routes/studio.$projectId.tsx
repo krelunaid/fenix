@@ -18,6 +18,8 @@ import { Wordmark } from "@/components/wordmark";
 import { CreditMeter } from "@/components/credit-meter";
 import { runBuild } from "@/lib/ai/run-build";
 import { suggestEdits } from "@/lib/ai/suggest";
+import { fenix2Files } from "@/lib/projects/fenix2";
+import { seedFiveScreens } from "@/lib/projects/files";
 import { useProjectStore } from "@/lib/projects/store";
 import { cn } from "@/lib/utils";
 
@@ -175,7 +177,12 @@ function StudioPage() {
 
         <section className="relative hidden min-h-0 min-w-0 flex-1 md:block">
           {pane === "code" ? (
-            <CodePane html={project.html} files={project.files} />
+            <CodePane
+              html={project.html}
+              files={project.files}
+              name={project.name}
+              palette={project.palette}
+            />
           ) : (
             <>
               <PreviewFrame
@@ -214,7 +221,12 @@ function StudioPage() {
               emptyCredits={emptyCredits}
             />
           ) : pane === "code" ? (
-            <CodePane html={project.html} files={project.files} />
+            <CodePane
+              html={project.html}
+              files={project.files}
+              name={project.name}
+              palette={project.palette}
+            />
           ) : (
             <>
               <PreviewFrame
@@ -412,11 +424,34 @@ function ChatColumn({
   );
 }
 
-function CodePane({ html, files }: { html: string; files?: { path: string; content: string }[] }) {
-  const list =
-    files && files.length > 0 ? files : html ? [{ path: "index.html", content: html }] : [];
-  const [active, setActive] = useState(list[0]?.path ?? "index.html");
-  const current = list.find((f) => f.path === active) ?? list[0];
+function CodePane({
+  html,
+  files,
+  name,
+  palette,
+}: {
+  html: string;
+  files?: { path: string; content: string }[];
+  name: string;
+  palette: { bg: string; surface: string; fg: string; muted: string; accent: string };
+}) {
+  const list = useMemo(() => {
+    const base =
+      files && files.length > 0 ? files : html ? [{ path: "index.html", content: html }] : [];
+    if (base.some((f) => f.path === "src/App.tsx")) return base;
+    if (!html) return base;
+    return fenix2Files(seedFiveScreens(base, html, name), { name, palette });
+  }, [files, html, name, palette]);
+  const ordered = useMemo(
+    () =>
+      [...list].sort((a, b) => {
+        const rank = (p: string) => (p.startsWith("src/") ? 0 : p === "package.json" ? 1 : 2);
+        return rank(a.path) - rank(b.path) || a.path.localeCompare(b.path);
+      }),
+    [list],
+  );
+  const [active, setActive] = useState("src/App.tsx");
+  const current = ordered.find((f) => f.path === active) ?? ordered[0];
 
   if (!current) {
     return (
@@ -429,7 +464,7 @@ function CodePane({ html, files }: { html: string; files?: { path: string; conte
   return (
     <div className="flex h-full min-h-0 flex-col bg-card">
       <div className="flex shrink-0 gap-1 overflow-x-auto border-b border-border px-2 py-2">
-        {list.map((f) => (
+        {ordered.map((f) => (
           <button
             key={f.path}
             type="button"
