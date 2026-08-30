@@ -56,18 +56,19 @@ body{display:flex!important;flex-direction:column!important;min-height:100dvh;fo
 .fk-field input,.fk-field select,.fk-field textarea{flex:1;border:0;background:none;font:inherit;color:var(--fg,#1d1d1f);outline:none;min-width:0}
 .fk-lbl{display:block;font-size:12px;font-weight:650;margin:10px 0 0;color:var(--fg,#1d1d1f)}
 .fk-tab,.tabbar,nav[aria-label]{
-  flex-shrink:0;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));
-  height:64px;padding:6px 4px calc(6px + env(safe-area-inset-bottom));
+  flex-shrink:0;display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr))!important;
+  height:64px!important;max-height:72px;padding:6px 4px calc(6px + env(safe-area-inset-bottom));
   border-top:1px solid color-mix(in srgb, currentColor 12%, transparent);
   background:var(--bg,#f4f6fa);color:var(--muted,#6b7280);
+  position:sticky;bottom:0;z-index:20;
 }
 .fk-tab button,.tabbar button,nav[aria-label] button{
-  min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
-  gap:3px;margin:0;padding:0 2px;border:0;background:none;color:inherit;
-  font:600 10px/1.1 system-ui,sans-serif;
+  min-width:0;max-height:56px;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:3px;margin:0;padding:0 2px!important;border:0;background:none!important;color:inherit;
+  font:600 10px/1.1 system-ui,sans-serif!important;transform:none!important;
 }
-.fk-tab button.on,.tabbar button.on,nav[aria-label] button.on{color:var(--accent,#1a73c7)}
-.fk-tab svg,.tabbar svg,nav[aria-label] svg{width:24px;height:24px;flex:0 0 24px}
+.fk-tab button.on,.tabbar button.on,nav[aria-label] button.on{color:var(--accent,#1a73c7)!important;background:none!important;box-shadow:none!important}
+.fk-tab svg,.tabbar svg,nav[aria-label] svg,.fk-tab button svg{width:24px!important;height:24px!important;flex:0 0 24px!important;transform:none!important}
 .fk-tab span,.tabbar span,nav[aria-label] span{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .fk-hero{width:100%;height:160px;object-fit:cover;border-radius:20px;display:block;margin:8px 0 14px;background:#e8e8ed}
 img[src=""],img:not([src]){display:none!important}
@@ -95,9 +96,9 @@ img[src=""],img:not([src]){display:none!important}
 </style>`;
 
 function looksLikeSite(html: string, kind?: string) {
-  if (kind === "site" || kind === "landing") return true;
+  if (/fk-tab|data-view=["']home["']|data-view=["']list["']/i.test(html)) return false;
   if (kind === "app" || kind === "dashboard") return false;
-  if (/fk-tab|data-view=["']home["']/i.test(html)) return false;
+  if (kind === "site" || kind === "landing") return true;
   return /<footer/i.test(html) || (/<nav/i.test(html) && /href=/i.test(html));
 }
 
