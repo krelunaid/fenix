@@ -11,8 +11,9 @@ const XAI = "https://api.x.ai/v1/chat/completions";
 const PASSES = 3;
 
 const SYSTEM = `Sei il motore visivo di Fenix. Vedi uno screenshot TELEFONO 390×844 e l'HTML.
-Legge grafica: iOS / Apple HIG. Sempre, anche se il brief non lo chiede.
-- bg #f5f5f7, surface #ffffff, fg #1d1d1f, muted #86868b, accent #0071e3, line #d2d2d7
+Legge grafica: app telefono, tab in basso, tanta aria. Palette DAL MESTIERE, non sempre grigio iPhone.
+Barbiere: crema + inchiostro + ruggine. Luna park: giallo + inchiostro. Acqua: cloro + terracotta.
+Testo --fg su --bg contrasto 4.5:1. Niente grigio su grigio. Niente parole Apple/iOS nel prodotto.
 - font: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui (niente Inter Manrope viola neon)
 - tanta aria, titoli grandi tracking stretto, raggio 12–16, tab bar 5 colonne in basso
 - card bianche, panel scuro solo se serve un dato, CTA pillola blu

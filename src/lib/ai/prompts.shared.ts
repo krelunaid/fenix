@@ -25,9 +25,9 @@ documento unico già montato (stesse 5 schermate) per l'anteprima
 
 DIREZIONE VISIVA: se c'è, è legge. Copia i valori hex in :root, i font nel <link>, il raggio, l'icona, le tab e la foto. Non ispirarti: esegui.
 
-COLORE — app (iOS, già al primo HTML):
-- :root --bg:#f5f5f7 --surface:#ffffff --fg:#1d1d1f --muted:#86868b --accent:#0071e3 --line:#d2d2d7. Font -apple-system, BlinkMacSystemFont, system-ui.
-- Sito/landing: palette dal mestiere, non viola AI.
+COLORE — app telefono, già al primo HTML:
+- Struttura iPhone (tab, raggio, aria) ma palette DAL MESTIERE. Barbiere ≠ luna park ≠ botte.
+- Testo --fg su --bg almeno 4.5:1. --muted non sotto #5c5c5e. Niente grigio su grigio.
 
 ICONE — il pezzo che fa la differenza:
 - Pittogramma del mestiere, path SVG originali, viewBox 0 0 24 24, stroke 1.8 round, niente Lucide copiato, niente emoji, niente lettera in un quadrato.

@@ -24,38 +24,49 @@ const WORKER_POLISH =
   "https://fenix-production-d9f5.up.railway.app";
 
 async function callWorker(prompt: string, html: string, instruction?: string) {
-  const base = WORKER_POLISH.replace(/\/$/, "");
-  await fetch(`${base}/health`).catch(() => null);
-  const started = await fetch(`${base}/polish`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ prompt, html, instruction: instruction || undefined }),
-  });
-  if (started.status === 202) {
-    const { id } = (await started.json()) as { id?: string };
-    if (!id) return null;
-    for (let i = 0; i < 120; i++) {
-      await new Promise((r) => window.setTimeout(r, 2000));
-      const jobRes = await fetch(`${base}/jobs/${id}`);
-      if (!jobRes.ok) continue;
-      const job = (await jobRes.json()) as {
-        status?: string;
+  const bases = ["/__worker", WORKER_POLISH.replace(/\/$/, "")];
+  let lastErr = "Load failed";
+  for (const base of bases) {
+    try {
+      await fetch(`${base}/health`).catch(() => null);
+      const started = await fetch(`${base}/polish`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt, html, instruction: instruction || undefined }),
+      });
+      if (started.status === 202) {
+        const { id } = (await started.json()) as { id?: string };
+        if (!id) continue;
+        for (let i = 0; i < 120; i++) {
+          await new Promise((r) => window.setTimeout(r, 2000));
+          const jobRes = await fetch(`${base}/jobs/${id}`);
+          if (!jobRes.ok) continue;
+          const job = (await jobRes.json()) as {
+            status?: string;
+            html?: string;
+            meta?: Record<string, unknown>;
+            log?: string[];
+            error?: string;
+          };
+          if (job.status === "ok" && job.html) return job;
+          if (job.status === "err") throw new Error(job.error || "Worker visivo fallito");
+        }
+        throw new Error("Motore visivo in coda troppo a lungo");
+      }
+      if (!started.ok) {
+        lastErr = `Worker HTTP ${started.status}`;
+        continue;
+      }
+      return (await started.json()) as {
         html?: string;
         meta?: Record<string, unknown>;
         log?: string[];
-        error?: string;
       };
-      if (job.status === "ok" && job.html) return job;
-      if (job.status === "err") throw new Error(job.error || "Worker visivo fallito");
+    } catch (err) {
+      lastErr = err instanceof Error ? err.message : "Load failed";
     }
-    throw new Error("Motore visivo in coda troppo a lungo");
   }
-  if (!started.ok) throw new Error(`Worker HTTP ${started.status}`);
-  return (await started.json()) as {
-    html?: string;
-    meta?: Record<string, unknown>;
-    log?: string[];
-  };
+  throw new Error(lastErr);
 }
 
 async function consumeStream(

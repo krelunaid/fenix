@@ -4,3 +4,9 @@
 
 [build.environment]
   VITE_AUTH_ENABLED = "true"
+
+[[redirects]]
+  from = "/__worker/*"
+  to = "https://fenix-production-d9f5.up.railway.app/:splat"
+  status = 200
+  force = true

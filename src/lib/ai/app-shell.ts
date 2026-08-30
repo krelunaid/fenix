@@ -2,7 +2,7 @@
 export const APP_SHELL_INSTRUCTION = `Questa è già un'app telefono funzionante.
 SOSTITUISCI testi, numeri, icone SVG, nomi delle tab e i campi col BRIEF.
 NON cancellare sezioni. NON lasciare main vuoto. NON fare un sito.
-NON scrivere Apple, iOS, Fenix, Grok nel prodotto (titoli, ruoli, tagline).
+Palette unica dal brief (non tutte grigio iPhone). Date in italiano, non ISO.
 Tieni header.fk-top, main, nav.fk-tab, form, liste, Fenix.load/save.
 Ogni tab mostra una vista vera. Form: preventDefault, niente righe vuote.
 Restituisci META + HTML completo (e FILE screens se puoi).`;
