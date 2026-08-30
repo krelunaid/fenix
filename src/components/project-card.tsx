@@ -13,7 +13,9 @@ export function ProjectCard({
   project: Project;
   onDelete?: (id: string) => void;
 }) {
-  const src = project.html ? prepareSrcDoc(project.html, project.id) : "";
+  const src = project.html
+    ? prepareSrcDoc(project.html, project.palette?.bg ?? "#ffffff", project.id, project.kind)
+    : "";
   const frameH = Math.round(844 * SCALE);
 
   return (

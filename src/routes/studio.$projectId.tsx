@@ -192,6 +192,7 @@ function StudioPage() {
                 device={building ? "mobile" : device}
                 background={project.palette.bg}
                 projectId={project.id}
+                kind={project.kind}
                 className="h-full"
               />
               <BuildOverlay active={building} steps={project.buildLog ?? []} />
@@ -237,6 +238,7 @@ function StudioPage() {
                 device="mobile"
                 background={project.palette.bg}
                 projectId={project.id}
+                kind={project.kind}
                 className="h-full"
               />
               <BuildOverlay active={building} steps={project.buildLog ?? []} />

@@ -19,6 +19,7 @@ export function PreviewFrame({
   device,
   background,
   projectId,
+  kind,
   className,
 }: {
   html: string;
@@ -27,12 +28,13 @@ export function PreviewFrame({
   device: Device;
   background?: string;
   projectId?: string;
+  kind?: string;
   className?: string;
 }) {
   const width = WIDTH[device];
   const srcDoc = useMemo(() => {
-    return html ? prepareSrcDoc(html, background ?? "#ffffff", projectId ?? "preview") : "";
-  }, [html, background, projectId]);
+    return html ? prepareSrcDoc(html, background ?? "#ffffff", projectId ?? "preview", kind) : "";
+  }, [html, background, projectId, kind]);
 
   useEffect(() => {
     function onMessage(event: MessageEvent) {

@@ -77,6 +77,30 @@ main,.fk-main,main p,main li,main b,.fk-tile,.fk-tile b,.fk-tile span,.fk-panel,
 .fk-btn{color:#fff!important}
 </style>`;
 
+const SITE_KIT = `<style data-fenix-site>
+html,body{height:auto!important;min-height:100%;margin:0;max-width:100%;overflow:auto!important;overflow-x:hidden!important;-webkit-overflow-scrolling:touch;color:var(--fg,#1d1d1f);background:var(--bg,#f5f5f7);font:400 16px/1.45 -apple-system,BlinkMacSystemFont,system-ui,sans-serif}
+body{display:block!important;padding:0 0 48px}
+header,body>header,.site-top{padding:14px 16px;display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+nav{display:flex;flex-wrap:wrap;gap:4px 2px;padding:0 12px 8px}
+nav a,nav button{border:0;background:none;color:var(--fg,#1d1d1f);font:650 14px/1.2 system-ui,sans-serif;padding:8px 10px}
+.fk-hero,header img, .hero img, img.cover{width:100%;height:200px;object-fit:cover;display:block;border-radius:0}
+main,body>main{display:block!important;overflow:visible!important;flex:none!important;padding:20px 16px 32px;max-width:40rem;margin:0 auto}
+h1{font-size:28px;letter-spacing:-.03em;line-height:1.15;margin:0 0 10px;color:#1d1d1f}
+h2{font-size:20px;margin:28px 0 10px;color:#1d1d1f}
+p,li{color:#1d1d1f;opacity:1}
+section{margin:0 0 28px}
+.card,.fk-tile{background:#fff;border-radius:16px;padding:16px;margin:0 0 12px;border:1px solid #e5e5ea;color:#1d1d1f}
+footer{padding:24px 16px;font-size:13px;color:#3a3a3c}
+img[src=""],img:not([src]){display:none!important}
+</style>`;
+
+function looksLikeSite(html: string, kind?: string) {
+  if (kind === "site" || kind === "landing") return true;
+  if (kind === "app" || kind === "dashboard") return false;
+  if (/fk-tab|data-view=["']home["']/i.test(html)) return false;
+  return /<footer/i.test(html) || (/<nav/i.test(html) && /href=/i.test(html));
+}
+
 export function fenixRuntimeScript(projectId: string) {
   return `<script data-fenix-runtime>
 (function(){
@@ -301,7 +325,7 @@ export function sanitizePreviewHtml(html: string) {
     .replace(/"\s*\/>/g, "");
 }
 
-export function prepareSrcDoc(html: string, bg: string, projectId = "preview") {
+export function prepareSrcDoc(html: string, bg: string, projectId = "preview", kind?: string) {
   if (!html) return "";
   const scheme = isLightHex(bg) ? "light" : "dark";
   let next = sanitizePreviewHtml(html);
@@ -322,10 +346,11 @@ export function prepareSrcDoc(html: string, bg: string, projectId = "preview") {
       ? next.replace(/<\/body>/i, `${NAV_GUARD}</body>`)
       : `${next}${NAV_GUARD}`;
   }
-  if (!/data-fenix-phone/.test(next)) {
+  if (!/data-fenix-phone/.test(next) && !/data-fenix-site/.test(next)) {
+    const kit = looksLikeSite(next, kind) ? SITE_KIT : PHONE_KIT;
     next = /<head[^>]*>/i.test(next)
-      ? next.replace(/<head[^>]*>/i, (open) => `${open}${PHONE_KIT}`)
-      : `${PHONE_KIT}${next}`;
+      ? next.replace(/<head[^>]*>/i, (open) => `${open}${kit}`)
+      : `${kit}${next}`;
   }
   return next;
 }
