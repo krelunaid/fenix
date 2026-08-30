@@ -29,7 +29,6 @@ export async function planBuild(input: {
       model: FENIX_MODEL,
       temperature: 0.7,
       max_tokens: 700,
-      reasoning_effort: "low",
       stream: false,
       messages: [
         { role: "system", content: PLAN_PROMPT },
