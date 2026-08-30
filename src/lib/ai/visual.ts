@@ -1,4 +1,4 @@
-import { FENIX_MODEL, XAI_CHAT_COMPLETIONS_URL } from "./model";
+import { FENIX_MODEL } from "./model";
 
 export const VISUAL_PROMPT = `Sei l'agente visivo di Fenix, come l'art director di uno studio prodotto (tipo Emergent).
 Dal brief inventi UN sistema visivo unico. Niente codice. Solo JSON valido:
@@ -17,7 +17,7 @@ export async function designVisual(input: {
   prompt: string;
   signal: AbortSignal;
 }): Promise<string | null> {
-  const res = await fetch(XAI_CHAT_COMPLETIONS_URL, {
+  const res = await fetch("https://api.x.ai/v1/chat/completions", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

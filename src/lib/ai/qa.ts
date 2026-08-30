@@ -1,5 +1,5 @@
 import { parseBuildOutput, type BuildResult } from "./parse";
-import { FENIX_MODEL, XAI_CHAT_COMPLETIONS_URL } from "./model";
+import { FENIX_MODEL } from "./model";
 
 export const QA_PROMPT = `Sei l'agente prova di Fenix. Ricevi brief + HTML. Il prodotto deve girare e non assomigliare a un template.
 
@@ -17,7 +17,7 @@ export async function reviewBuild(input: {
   html: string;
   signal: AbortSignal;
 }): Promise<BuildResult | null> {
-  const res = await fetch(XAI_CHAT_COMPLETIONS_URL, {
+  const res = await fetch("https://api.x.ai/v1/chat/completions", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

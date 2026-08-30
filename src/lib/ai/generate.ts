@@ -1,5 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
-import { FENIX_MODEL, getXaiApiKey, XAI_CHAT_COMPLETIONS_URL, XAI_MISSING_KEY_ERROR } from "./model";
+import { FENIX_MODEL } from "./model";
 import { parseBuildOutput, type BuildResult } from "./parse";
 import { SYSTEM_PROMPT } from "./prompt";
 
@@ -14,7 +14,7 @@ export type GenerateResponse =
   | { ok: false; error: string };
 
 export const getAiStatus = createServerFn({ method: "GET" }).handler(async () => {
-  return { available: Boolean(getXaiApiKey()) };
+  return { available: Boolean(process.env.XAI_API_KEY) };
 });
 
 export const generateBuild = createServerFn({ method: "POST" })
@@ -31,9 +31,9 @@ export const generateBuild = createServerFn({ method: "POST" })
   })
   .handler(async ({ data }): Promise<GenerateResponse> => {
     // Server-only. Never VITE_XAI_API_KEY — that would leak to the browser.
-    const apiKey = getXaiApiKey();
+    const apiKey = process.env.XAI_API_KEY;
     if (!apiKey) {
-      return { ok: false, error: XAI_MISSING_KEY_ERROR };
+      return { ok: false, error: "L'intelligenza artificiale non è disponibile in questo ambiente." };
     }
 
     const userParts = [
@@ -52,7 +52,7 @@ export const generateBuild = createServerFn({ method: "POST" })
     const timeout = setTimeout(() => controller.abort(), 120_000);
 
     try {
-      const res = await fetch(XAI_CHAT_COMPLETIONS_URL, {
+      const res = await fetch("https://api.x.ai/v1/chat/completions", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

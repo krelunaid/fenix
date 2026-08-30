@@ -1,4 +1,4 @@
-import { FENIX_MODEL, XAI_CHAT_COMPLETIONS_URL } from "./model";
+import { FENIX_MODEL } from "./model";
 
 export type BuildPlan = {
   name: string;
@@ -18,7 +18,7 @@ export async function planBuild(input: {
   prompt: string;
   signal: AbortSignal;
 }): Promise<string | null> {
-  const res = await fetch(XAI_CHAT_COMPLETIONS_URL, {
+  const res = await fetch("https://api.x.ai/v1/chat/completions", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
