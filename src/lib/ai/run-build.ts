@@ -26,12 +26,12 @@ const WORKER_POLISH =
 
 async function callWorker(prompt: string, html: string, instruction?: string) {
   const attempts: { polish: string; job: (id: string) => string }[] = [
-    { polish: "/api/polish", job: (id) => `/api/jobs/${id}` },
     { polish: "/__worker/polish", job: (id) => `/__worker/jobs/${id}` },
     {
       polish: `${WORKER_POLISH.replace(/\/$/, "")}/polish`,
       job: (id) => `${WORKER_POLISH.replace(/\/$/, "")}/jobs/${id}`,
     },
+    { polish: "/api/polish", job: (id) => `/api/jobs/${id}` },
   ];
   let lastErr = "Load failed";
   const body = JSON.stringify({ prompt, html, instruction: instruction || undefined });
