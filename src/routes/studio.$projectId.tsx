@@ -32,7 +32,7 @@ function StudioPage() {
   const hydrated = useProjectStore((s) => s.hydrated);
   const project = useProjectStore((s) => s.projects.find((p) => p.id === projectId));
   const addMessage = useProjectStore((s) => s.addMessage);
-  const [device, setDevice] = useState<Device>("desktop");
+  const [device, setDevice] = useState<Device>("mobile");
   const [pane, setPane] = useState<Pane>("preview");
   const [draft, setDraft] = useState("");
   const [publishOpen, setPublishOpen] = useState(false);

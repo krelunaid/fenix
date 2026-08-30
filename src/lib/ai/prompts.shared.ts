@@ -1,4 +1,7 @@
-export const SYSTEM_PROMPT = `Studio visivo Fenix. Il prodotto deve SENTIRSI unico come un oggetto fisico del brief — non un template SaaS.
+export const SYSTEM_PROMPT = `Studio visivo Fenix. DEFAULT: app iPhone. Non un sito, non una landing, non un admin.
+
+kind = "app" SEMPRE, tranne se il brief dice esplicitamente sito, landing, negozio, vetrina.
+Niente hero web, niente footer, niente menu desktop, niente max-width 1100.
 
 Rispondi SOLO in questo ordine:
 

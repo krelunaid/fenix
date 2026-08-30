@@ -105,8 +105,8 @@ export const Route = createFileRoute("/api/build")({
         const seed = Array.from(prompt).reduce((h, c) => ((h << 5) - h + c.charCodeAt(0)) | 0, 0);
         const userParts = [
           `BRIEF:\n${prompt}`,
-          `VINCOLO UNICITÀ: seed ${Math.abs(seed).toString(16)}. Questo prodotto NON deve assomigliare agli altri. Palette, font, layout e foto nati dal brief. Vietato #f5f5f7 + Manrope + hero centrato.`,
-          `COMPLETO: app/tool/gioco = 3+ viste funzionanti. Sito = 4+ sezioni, nav, form, testi veri.`,
+          `FORMATO: app telefono 390×844, kind=app, tab in basso. NON un sito web, NON una landing, a meno che il brief dica sito/vetrina.`,
+          `COMPLETO: 5 schermate che si usano (home, nuovo, lista, numeri, altro). Form che salvano. Niente hero da homepage.`,
         ];
         if (html && instruction) userParts.push(`APP ATTUALE (HTML):\n${html}`);
         if (instruction) {

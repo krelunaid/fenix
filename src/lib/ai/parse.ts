@@ -17,7 +17,7 @@ const KINDS: ProjectKind[] = ["landing", "app", "dashboard", "tool", "game", "si
 function asKind(value: unknown): ProjectKind {
   return typeof value === "string" && KINDS.includes(value as ProjectKind)
     ? (value as ProjectKind)
-    : "site";
+    : "app";
 }
 
 function asHex(value: unknown, fallback: string) {
