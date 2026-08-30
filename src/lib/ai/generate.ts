@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { FENIX_MODEL } from "./model";
 import { parseBuildOutput, type BuildResult } from "./parse";
 import { SYSTEM_PROMPT } from "./prompt";
 
@@ -59,7 +60,7 @@ export const generateBuild = createServerFn({ method: "POST" })
         },
         signal: controller.signal,
         body: JSON.stringify({
-          model: "grok-4.5",
+          model: FENIX_MODEL,
           temperature: data.instruction ? 0.55 : 0.92,
           max_tokens: 14000,
           reasoning_effort: "low",

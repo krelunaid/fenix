@@ -1,3 +1,5 @@
+import { FENIX_MODEL } from "./model";
+
 export const VISUAL_PROMPT = `Sei l'agente visivo di Fenix, come l'art director di uno studio prodotto (tipo Emergent).
 Dal brief inventi UN sistema visivo unico. Niente codice. Solo JSON valido:
 
@@ -23,7 +25,7 @@ export async function designVisual(input: {
     },
     signal: input.signal,
     body: JSON.stringify({
-      model: "grok-4.5",
+      model: FENIX_MODEL,
       temperature: 0.85,
       max_tokens: 900,
       reasoning_effort: "low",

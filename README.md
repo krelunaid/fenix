@@ -1,6 +1,6 @@
 # Fenix
 
-Studio visivo Kreluna. Descrivi un’app, un sito o un programma: l’**agente visivo** (palette, icone, layout) poi il codice. Anteprima, chat, vetrina, crediti.
+Studio visivo Kreluna. Usa **Grok Build** (`grok-build-0.1`), non un modello chat generico. Descrivi un’app: agente visivo, poi codice.
 
 Prove pronte: **Fornace Grottaglie**, **Officina Catenaria**.
 

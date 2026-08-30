@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { FENIX_MODEL } from "@/lib/ai/model";
 import { parseBuildOutput } from "@/lib/ai/parse";
 import { SYSTEM_PROMPT } from "@/lib/ai/prompt";
 import { detectStage, sseLine } from "@/lib/ai/stages";
@@ -90,7 +91,7 @@ export const Route = createFileRoute("/api/build")({
                 },
                 signal: abort.signal,
                 body: JSON.stringify({
-                  model: "grok-4.5",
+                  model: FENIX_MODEL,
                   temperature: instruction ? 0.5 : 0.85,
                   max_tokens: 7000,
                   reasoning_effort: "low",

@@ -1,4 +1,5 @@
 import { parseBuildOutput, type BuildResult } from "./parse";
+import { FENIX_MODEL } from "./model";
 
 export const QA_PROMPT = `Sei l'agente prova di Fenix. Ricevi brief + HTML. Il prodotto deve girare e non assomigliare a un template.
 
@@ -24,7 +25,7 @@ export async function reviewBuild(input: {
     },
     signal: input.signal,
     body: JSON.stringify({
-      model: "grok-4.5",
+      model: FENIX_MODEL,
       temperature: 0.35,
       max_tokens: 12000,
       reasoning_effort: "low",
