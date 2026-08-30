@@ -31,3 +31,13 @@ export function downloadTextFile(filename: string, contents: string, type: strin
   a.click();
   window.setTimeout(() => URL.revokeObjectURL(url), 1_000);
 }
+
+export function downloadBytes(filename: string, bytes: Uint8Array, type: string) {
+  const blob = new Blob([new Uint8Array(bytes)], { type });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1_000);
+}

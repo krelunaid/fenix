@@ -1,6 +1,8 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { uid } from "@/lib/utils";
+import type { ProjectFile } from "./files";
+import { CREDITS_GRANT, CREDIT_COST } from "./credits";
 import { DEMOS } from "./demos";
 import {
   DEFAULT_PALETTE,
@@ -11,7 +13,7 @@ import {
   type ProjectKind,
 } from "./types";
 
-const MAX_PROJECTS = 24;
+const MAX_PROJECTS = 48;
 
 type NewProjectInput = {
   prompt: string;
@@ -22,6 +24,8 @@ type NewProjectInput = {
 type ProjectStore = {
   hydrated: boolean;
   projects: Project[];
+  creditsRemaining: number;
+  appDb: Record<string, Record<string, unknown>>;
   setHydrated: () => void;
   createFromBrief: (input: NewProjectInput) => Project;
   openDemo: (demoId: string) => Project;
@@ -29,6 +33,10 @@ type ProjectStore = {
   addMessage: (id: string, message: Omit<ChatMessage, "id" | "at"> & { id?: string }) => void;
   removeProject: (id: string) => void;
   getProject: (id: string) => Project | undefined;
+  spendCredit: () => boolean;
+  refundCredit: () => void;
+  loadAppData: (projectId: string, collection: string) => unknown;
+  saveAppData: (projectId: string, collection: string, data: unknown) => void;
 };
 
 function trimList(projects: Project[]) {
@@ -68,8 +76,35 @@ export const useProjectStore = create<ProjectStore>()(
     (set, get) => ({
       hydrated: false,
       projects: [],
+      creditsRemaining: CREDITS_GRANT,
+      appDb: {},
       setHydrated: () => set({ hydrated: true }),
       getProject: (id) => get().projects.find((p) => p.id === id),
+      spendCredit: () => {
+        const remaining = get().creditsRemaining;
+        if (remaining < CREDIT_COST) return false;
+        set({ creditsRemaining: remaining - CREDIT_COST });
+        return true;
+      },
+      refundCredit: () => {
+        set((s) => ({
+          creditsRemaining: Math.min(CREDITS_GRANT, s.creditsRemaining + CREDIT_COST),
+        }));
+      },
+      loadAppData: (projectId, collection) => {
+        return get().appDb[projectId]?.[collection] ?? null;
+      },
+      saveAppData: (projectId, collection, data) => {
+        set((s) => ({
+          appDb: {
+            ...s.appDb,
+            [projectId]: {
+              ...(s.appDb[projectId] ?? {}),
+              [collection]: data,
+            },
+          },
+        }));
+      },
       createFromBrief: ({ prompt, kind }) => {
         const project = blankProject(prompt.trim(), kind ?? "site");
         set((s) => ({ projects: trimList([project, ...s.projects]) }));
@@ -134,7 +169,11 @@ export const useProjectStore = create<ProjectStore>()(
     }),
     {
       name: "officina-projects",
-      partialize: (s) => ({ projects: s.projects }),
+      partialize: (s) => ({
+        projects: s.projects,
+        creditsRemaining: s.creditsRemaining,
+        appDb: s.appDb,
+      }),
       onRehydrateStorage: () => (state) => {
         if (state) {
           state.projects = state.projects.map((p) => ({
@@ -146,6 +185,10 @@ export const useProjectStore = create<ProjectStore>()(
                 ? "Interrotto. Riprova."
                 : p.error,
           }));
+          if (typeof state.creditsRemaining !== "number") {
+            state.creditsRemaining = CREDITS_GRANT;
+          }
+          if (!state.appDb) state.appDb = {};
         }
         state?.setHydrated();
       },
@@ -160,8 +203,10 @@ export function applyBuildResult(
     tagline: string;
     kind: ProjectKind;
     summary: string;
+    direction?: string;
     palette: Palette;
     html: string;
+    files?: ProjectFile[];
   },
   status: BuildStatus = "ready",
 ) {

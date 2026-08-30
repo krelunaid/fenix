@@ -15,6 +15,7 @@ import { PublishPanel } from "@/components/publish-panel";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Wordmark } from "@/components/wordmark";
+import { CreditMeter } from "@/components/credit-meter";
 import { runBuild } from "@/lib/ai/run-build";
 import { useProjectStore } from "@/lib/projects/store";
 import { cn } from "@/lib/utils";
@@ -56,6 +57,8 @@ function StudioPage() {
     if (el) el.scrollTop = el.scrollHeight;
   }, [project?.messages.length, project?.status, project?.buildLog?.length]);
 
+  const creditsRemaining = useProjectStore((s) => s.creditsRemaining);
+  const emptyCredits = creditsRemaining < 1;
   const building = project?.status === "building";
 
   const paletteStrip = useMemo(
@@ -65,7 +68,7 @@ function StudioPage() {
 
   function handleIterate() {
     const text = draft.trim();
-    if (!project || text.length < 2 || building) return;
+    if (!project || text.length < 2 || building || emptyCredits) return;
     addMessage(project.id, { role: "user", content: text });
     setDraft("");
     void runBuild(project.id, text);
@@ -95,9 +98,10 @@ function StudioPage() {
         <div className="min-w-0 flex-1">
           <p className="truncate font-display text-base tracking-tight">{project.name}</p>
           <p className="hidden truncate text-xs text-muted-foreground sm:block">
-            {project.tagline || project.kind}
+            {project.direction || project.tagline || project.kind}
           </p>
         </div>
+        <CreditMeter className="hidden sm:inline-flex" />
         <div className="hidden items-center rounded-md border border-border p-0.5 md:flex">
           {(
             [
@@ -154,12 +158,13 @@ function StudioPage() {
             threadRef={threadRef}
             palette={paletteStrip}
             buildLog={project.buildLog ?? []}
+            emptyCredits={emptyCredits}
           />
         </aside>
 
         <section className="relative hidden min-h-0 min-w-0 flex-1 md:block">
           {pane === "code" ? (
-            <CodePane html={project.html} />
+            <CodePane html={project.html} files={project.files} />
           ) : (
             <>
               <PreviewFrame
@@ -167,6 +172,7 @@ function StudioPage() {
                 name={project.name}
                 device={device}
                 background={project.palette.bg}
+                projectId={project.id}
                 className="h-full"
               />
               <BuildOverlay active={building} steps={project.buildLog ?? []} />
@@ -188,9 +194,10 @@ function StudioPage() {
               threadRef={threadRef}
               palette={paletteStrip}
               buildLog={project.buildLog ?? []}
+              emptyCredits={emptyCredits}
             />
           ) : pane === "code" ? (
-            <CodePane html={project.html} />
+            <CodePane html={project.html} files={project.files} />
           ) : (
             <>
               <PreviewFrame
@@ -198,6 +205,7 @@ function StudioPage() {
                 name={project.name}
                 device="mobile"
                 background={project.palette.bg}
+                projectId={project.id}
                 className="h-full"
               />
               <BuildOverlay active={building} steps={project.buildLog ?? []} />
@@ -233,6 +241,7 @@ function StudioPage() {
         onClose={() => setPublishOpen(false)}
         name={project.name}
         html={project.html}
+        files={project.files}
         onOpenSite={() => {
           setPublishOpen(false);
           void navigate({ to: "/sito/$projectId", params: { projectId: project.id } });
@@ -254,6 +263,7 @@ function ChatColumn({
   threadRef,
   palette,
   buildLog,
+  emptyCredits,
 }: {
   projectName: string;
   messages: { id: string; role: string; content: string }[];
@@ -266,6 +276,7 @@ function ChatColumn({
   threadRef: RefObject<HTMLDivElement | null>;
   palette: string[];
   buildLog: string[];
+  emptyCredits: boolean;
 }) {
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -342,8 +353,12 @@ function ChatColumn({
             rows={3}
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
-            placeholder="Una modifica, una schermata, un comportamento…"
-            disabled={building}
+            placeholder={
+              emptyCredits
+                ? "Crediti esauriti. Puoi ancora aprire e pubblicare."
+                : "Una modifica, una schermata, un comportamento…"
+            }
+            disabled={building || emptyCredits}
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
@@ -352,7 +367,7 @@ function ChatColumn({
             }}
           />
           <div className="mt-1 flex justify-end">
-            <Button type="submit" variant="ink" size="sm" disabled={building || draft.trim().length < 2}>
+            <Button type="submit" variant="ink" size="sm" disabled={building || emptyCredits || draft.trim().length < 2}>
               Invia
             </Button>
           </div>
@@ -362,11 +377,39 @@ function ChatColumn({
   );
 }
 
-function CodePane({ html }: { html: string }) {
+function CodePane({ html, files }: { html: string; files?: { path: string; content: string }[] }) {
+  const list =
+    files && files.length > 0 ? files : html ? [{ path: "index.html", content: html }] : [];
+  const [active, setActive] = useState(list[0]?.path ?? "index.html");
+  const current = list.find((f) => f.path === active) ?? list[0];
+
+  if (!current) {
+    return (
+      <div className="grid h-full place-items-center bg-card text-sm text-muted-foreground">
+        Nessun codice ancora.
+      </div>
+    );
+  }
+
   return (
-    <div className="h-full min-h-0 overflow-auto bg-card p-4">
-      <pre className="font-mono text-[12px] leading-relaxed text-muted-foreground whitespace-pre-wrap">
-        {html || "Nessun codice ancora."}
+    <div className="flex h-full min-h-0 flex-col bg-card">
+      <div className="flex shrink-0 gap-1 overflow-x-auto border-b border-border px-2 py-2">
+        {list.map((f) => (
+          <button
+            key={f.path}
+            type="button"
+            onClick={() => setActive(f.path)}
+            className={cn(
+              "rounded-full px-3 py-1.5 font-mono text-xs",
+              f.path === current.path ? "bg-raised text-foreground" : "text-muted-foreground",
+            )}
+          >
+            {f.path}
+          </button>
+        ))}
+      </div>
+      <pre className="min-h-0 flex-1 overflow-auto p-4 font-mono text-xs leading-relaxed text-muted-foreground whitespace-pre-wrap">
+        {current.content}
       </pre>
     </div>
   );

@@ -1,13 +1,15 @@
 import { DEFAULT_PALETTE, type Palette, type ProjectKind } from "@/lib/projects/types";
-import { ensureProductIcon } from "@/lib/projects/product-icon";
+import { assembleHtml, parseProjectFiles, type ProjectFile } from "@/lib/projects/files";
 
 export type BuildResult = {
   name: string;
   tagline: string;
   kind: ProjectKind;
   summary: string;
+  direction: string;
   palette: Palette;
   html: string;
+  files: ProjectFile[];
 };
 
 const KINDS: ProjectKind[] = ["landing", "app", "dashboard", "tool", "game", "site"];
@@ -32,7 +34,7 @@ function asText(value: unknown, fallback: string, max = 80) {
   return t.slice(0, max);
 }
 
-function parseMeta(raw: string): Omit<BuildResult, "html"> {
+function parseMeta(raw: string): Omit<BuildResult, "html" | "files"> {
   try {
     const data = JSON.parse(raw) as Record<string, unknown>;
     const paletteIn =
@@ -44,6 +46,7 @@ function parseMeta(raw: string): Omit<BuildResult, "html"> {
       tagline: asText(data.tagline, "", 120),
       kind: asKind(data.kind),
       summary: asText(data.summary, "", 280),
+      direction: asText(data.direction, "", 80),
       palette: {
         bg: asHex(paletteIn.bg, DEFAULT_PALETTE.bg),
         surface: asHex(paletteIn.surface, DEFAULT_PALETTE.surface),
@@ -58,6 +61,7 @@ function parseMeta(raw: string): Omit<BuildResult, "html"> {
       tagline: "",
       kind: "site",
       summary: "",
+      direction: "",
       palette: DEFAULT_PALETTE,
     };
   }
@@ -71,28 +75,27 @@ function extractHtml(text: string) {
   return "";
 }
 
-export function parseBuildOutput(text: string, seed = ""): BuildResult | null {
+export function parseBuildOutput(text: string): BuildResult | null {
   const trimmed = text.trim();
-  const metaBlock = trimmed.match(/<<<META>>>\s*([\s\S]*?)(?:<<<HTML>>>|$)/);
-  const htmlBlock = trimmed.match(/<<<HTML>>>\s*([\s\S]*?)(?:<<<END>>>|$)/);
+  const metaBlock = trimmed.match(/<<<META>>>\s*([\s\S]*?)(?:<<<HTML>>>|<<<FILE |$)/);
+  const htmlBlock = trimmed.match(/<<<HTML>>>\s*([\s\S]*?)(?:<<<FILE |<<<END>>>|$)/);
+  let files = parseProjectFiles(trimmed);
 
   let html = "";
   if (htmlBlock) html = extractHtml(htmlBlock[1] ?? "") || htmlBlock[1]?.trim() || "";
-  if (!html) html = extractHtml(trimmed);
+  if (!html) html = assembleHtml(files) || extractHtml(trimmed);
 
   if (!html || html.length < 80) return null;
   if (!/<\/html>/i.test(html)) html = `${html}\n</body>\n</html>`;
+
+  if (!files.some((f) => /(^|\/)index\.html$/i.test(f.path))) {
+    files = [{ path: "index.html", content: html }, ...files];
+  }
 
   const meta = parseMeta(metaBlock?.[1]?.trim() || "{}");
   if (meta.name === "Studio") {
     const title = html.match(/<title>([^<]+)<\/title>/i)?.[1]?.trim();
     if (title) meta.name = title.slice(0, 80);
   }
-  html = ensureProductIcon(html, {
-    name: meta.name,
-    kind: meta.kind,
-    palette: meta.palette,
-    prompt: seed,
-  });
-  return { ...meta, html };
+  return { ...meta, html, files };
 }

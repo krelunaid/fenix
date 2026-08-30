@@ -1,6 +1,8 @@
 # Fenix
 
-Studio visivo. Descrivi un’app, un sito o un programma: Grok 4.5 lo costruisce, gira in anteprima, si itera in chat.
+Studio visivo Kreluna. Descrivi un’app, un sito o un programma: l’**agente visivo** (palette, icone, layout) poi il codice. Anteprima, chat, vetrina, crediti.
+
+Prove pronte: **Fornace Grottaglie**, **Officina Catenaria**.
 
 ## Repo
 
@@ -8,7 +10,7 @@ Studio visivo. Descrivi un’app, un sito o un programma: Grok 4.5 lo costruisce
 
 ## Chiave
 
-Server-only. Non `VITE_`.
+Solo server. Mai `VITE_XAI_API_KEY`, mai nel frontend.
 
 | Nome | Dove | Note |
 |---|---|---|
@@ -17,12 +19,14 @@ Server-only. Non `VITE_`.
 
 ## Online (Netlify)
 
-1. Crea la chiave su console.x.ai
-2. Nuovo sito Netlify da questo repo
-3. Secret: `XAI_API_KEY` = la tua chiave
-4. Dominio (es. fenix.tuodominio.it)
-5. Deploy. Brief → Build.
+1. Chiave su console.x.ai  
+2. Nuovo sito Netlify da questo repo  
+3. Secret: `XAI_API_KEY`  
+4. Dominio (es. fenix.kreluna.it)  
+5. Deploy. Brief → Crea.
+
+Le app generate (Grottaglie, Catenaria, …) si scaricano da **Pubblica** (ZIP / `index.html`) e si caricano sul sito come HTML statico.
 
 ## Locale
 
-`npm install` poi `npm run dev`. `npm test` e `npm run typecheck` per i test.
+`npm install` poi `npm run dev`. `npm test` e `npm run typecheck`.

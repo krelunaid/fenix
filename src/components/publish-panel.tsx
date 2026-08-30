@@ -2,19 +2,23 @@ import { useEffect } from "react";
 import { Check, Copy, Download, ExternalLink, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { downloadTextFile, slugify } from "@/lib/utils";
+import { downloadBytes, downloadTextFile, slugify } from "@/lib/utils";
+import { zipFiles } from "@/lib/projects/zip";
+import type { ProjectFile } from "@/lib/projects/files";
 
 export function PublishPanel({
   open,
   onClose,
   name,
   html,
+  files,
   onOpenSite,
 }: {
   open: boolean;
   onClose: () => void;
   name: string;
   html: string;
+  files?: ProjectFile[];
   onOpenSite: () => void;
 }) {
   useEffect(() => {
@@ -31,6 +35,18 @@ export function PublishPanel({
   function downloadSite() {
     downloadTextFile("index.html", html, "text/html;charset=utf-8");
     toast(`index.html scaricato · ${slugify(name)}`);
+  }
+
+  function downloadProject() {
+    const bundle =
+      files && files.length > 0
+        ? files
+        : [{ path: "index.html", content: html }];
+    if (!bundle.some((f) => /index\.html$/i.test(f.path))) {
+      bundle.unshift({ path: "index.html", content: html });
+    }
+    downloadBytes(`${slugify(name)}.zip`, zipFiles(bundle), "application/zip");
+    toast("Progetto scaricato. File, stile, dati e logica.");
   }
 
   async function copyHtml() {
@@ -72,16 +88,16 @@ export function PublishPanel({
         </div>
 
         <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-          {name} è un file HTML completo: stile, pagine e logica dentro.
-          Lo carichi sul tuo spazio, senza server da configurare.
+          {name} è un progetto: interfaccia, logica e dati. Scarichi lo ZIP, o un
+          unico HTML già pronto per il dominio.
         </p>
 
         <ol className="mt-5 space-y-3 border-t border-border pt-5">
           {[
             {
               n: "01",
-              t: "Scarica index.html",
-              d: "È la pagina iniziale che quasi tutti gli hosting si aspettano.",
+              t: "Scarica il progetto",
+              d: "ZIP con index.html, stili, logica e dati. Oppure solo la pagina.",
             },
             {
               n: "02",
@@ -105,11 +121,15 @@ export function PublishPanel({
         </ol>
 
         <div className="mt-6 flex flex-col gap-2">
-          <Button variant="ink" size="lg" onClick={downloadSite} className="w-full">
+          <Button variant="ink" size="lg" onClick={downloadProject} className="w-full">
             <Download />
-            Scarica index.html
+            Scarica progetto .zip
           </Button>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+            <Button variant="secondary" onClick={downloadSite}>
+              <Download />
+              Solo HTML
+            </Button>
             <Button variant="secondary" onClick={onOpenSite}>
               <ExternalLink />
               Apri come pagina
@@ -123,7 +143,7 @@ export function PublishPanel({
 
         <p className="mt-4 flex items-start gap-2 text-xs leading-relaxed text-faint">
           <Check className="mt-0.5 size-3.5 shrink-0" />
-          Niente database, niente installazione. Un file, il tuo dominio.
+          Dati salvati in Fenix mentre usi l'anteprima; nello ZIP restano nel browser dell'utente.
         </p>
       </div>
     </div>

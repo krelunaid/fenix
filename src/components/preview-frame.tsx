@@ -1,5 +1,6 @@
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { prepareSrcDoc } from "@/lib/projects/color-scheme";
+import { useProjectStore } from "@/lib/projects/store";
 import { cn } from "@/lib/utils";
 
 export type Device = "desktop" | "tablet" | "mobile";
@@ -15,19 +16,48 @@ export function PreviewFrame({
   name,
   device,
   background,
+  projectId,
   className,
 }: {
   html: string;
   name: string;
   device: Device;
   background?: string;
+  projectId?: string;
   className?: string;
 }) {
   const width = WIDTH[device];
   const srcDoc = useMemo(
-    () => (html ? prepareSrcDoc(html, background ?? "#ffffff") : ""),
-    [html, background],
+    () => (html ? prepareSrcDoc(html, background ?? "#ffffff", projectId ?? "preview") : ""),
+    [html, background, projectId],
   );
+
+  useEffect(() => {
+    function onMessage(event: MessageEvent) {
+      const msg = event.data as {
+        t?: string;
+        id?: string;
+        op?: string;
+        projectId?: string;
+        col?: string;
+        data?: unknown;
+      };
+      if (!msg || msg.t !== "fenix-db" || !msg.id || !msg.col) return;
+      const id = msg.projectId || projectId;
+      if (!id) return;
+      const store = useProjectStore.getState();
+      let value: unknown = null;
+      if (msg.op === "load") value = store.loadAppData(id, msg.col);
+      if (msg.op === "save") {
+        store.saveAppData(id, msg.col, msg.data);
+        value = msg.data;
+      }
+      const source = event.source as Window | null;
+      source?.postMessage({ t: "fenix-db", id: msg.id, v: value }, "*");
+    }
+    window.addEventListener("message", onMessage);
+    return () => window.removeEventListener("message", onMessage);
+  }, [projectId]);
 
   return (
     <div className={cn("flex h-full min-h-0 flex-col", className)}>
@@ -38,16 +68,16 @@ export function PreviewFrame({
           <i className="size-2 rounded-full bg-border" />
         </span>
         <div className="flex h-6 min-w-0 flex-1 items-center rounded-sm bg-raised px-3">
-          <span className="truncate font-mono text-[11px] text-muted-foreground">
+          <span className="truncate font-mono text-xs text-muted-foreground">
             {name.toLowerCase().replace(/\s+/g, "")}.preview
           </span>
         </div>
       </div>
-      <div className="flex min-h-0 flex-1 justify-center overflow-hidden bg-background p-2 sm:p-4">
+      <div className="flex min-h-0 flex-1 justify-center overflow-hidden bg-background">
         <div
           className={cn(
-            "h-full overflow-hidden rounded-lg border border-border bg-card shadow-soft",
-            device === "desktop" ? "w-full" : "mx-auto",
+            "h-full overflow-hidden bg-card",
+            device === "desktop" ? "w-full" : "mx-auto border-x border-border",
           )}
           style={width === "100%" ? { width: "100%" } : { width, maxWidth: "100%" }}
         >

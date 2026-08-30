@@ -35,7 +35,10 @@ export const generateBuild = createServerFn({ method: "POST" })
       return { ok: false, error: "L'intelligenza artificiale non è disponibile in questo ambiente." };
     }
 
-    const userParts = [`BRIEF:\n${data.prompt}`];
+    const userParts = [
+      `BRIEF:\n${data.prompt}`,
+      `VINCOLO UNICITÀ: prodotto visivamente unico, nato dal brief. Vietato #f5f5f7 + Manrope + hero centrato.`,
+    ];
     if (data.html) {
       userParts.push(`HTML ATTUALE:\n${data.html}`);
     }
@@ -56,9 +59,9 @@ export const generateBuild = createServerFn({ method: "POST" })
         },
         signal: controller.signal,
         body: JSON.stringify({
-          model: "grok-4.6",
-          temperature: 0.65,
-          max_tokens: 3200,
+          model: "grok-4.5",
+          temperature: data.instruction ? 0.55 : 0.92,
+          max_tokens: 14000,
           reasoning_effort: "low",
           messages: [
             { role: "system", content: SYSTEM_PROMPT },

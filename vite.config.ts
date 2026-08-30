@@ -3,9 +3,9 @@ import { join } from "node:path";
 import type { Plugin } from "vite";
 import { defineConfig } from "vite";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
-import netlify from "@netlify/vite-plugin-tanstack-start";
 import viteReact from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
+import { nitro } from "nitro/vite";
 // @ts-expect-error JS plugin alongside the TS vite config
 import { grokPwaPlugin } from "./scripts/grok-pwa-plugin.mjs";
 // @ts-expect-error JS plugin alongside the TS vite config
@@ -145,7 +145,7 @@ function authPopupPlugin(): Plugin {
 // `0.0.0.0:8080` is the live-preview contract — don't change host/port.
 // The dev server starts once `src/router.tsx` and `src/routes/` exist — see
 // AGENTS.md § "First scaffold".
-export default defineConfig({
+export default defineConfig(({ command, isPreview }) => ({
   server: {
     host: "0.0.0.0",
     port: 8080,
@@ -167,7 +167,17 @@ export default defineConfig({
     grokPwaPlugin(),
     tailwindcss(),
     tanstackStart(),
-    netlify(),
+    ...(command === "build" || isPreview
+      ? [
+          nitro({
+            preset: "vercel",
+            // Auto-registers server/middleware/* (the PWA install page +
+            // manifest + head-tag middleware). Nitro v3 defaults serverDir to
+            // false, so removing this silently unwires /?install=1 on deploys.
+            serverDir: "./server",
+          }),
+        ]
+      : []),
     viteReact(),
   ],
-});
+}));

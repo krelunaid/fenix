@@ -1,4 +1,6 @@
 import type { Palette, ProjectKind } from "./types";
+import { CATENARIA_HTML } from "./catenaria";
+import { GROTTAGLIE_HTML } from "./grottaglie";
 
 export type DemoSeed = {
   id: string;
@@ -11,6 +13,36 @@ export type DemoSeed = {
 };
 
 export const DEMOS: Record<string, DemoSeed> = {
+  grottaglie: {
+    id: "grottaglie",
+    name: "Fornace Grottaglie",
+    tagline: "Forni, pezzi e ordini in bottega",
+    kind: "app",
+    summary: "Ceramica a Grottaglie: cotture, pezzi, ordini. Direzione visiva terracotta/calce.",
+    palette: {
+      bg: "#e8dcc8",
+      surface: "#f4ebe0",
+      fg: "#3b2a22",
+      muted: "#8a6f5c",
+      accent: "#b85c38",
+    },
+    html: GROTTAGLIE_HTML,
+  },
+  catenaria: {
+    id: "catenaria",
+    name: "Officina Catenaria",
+    tagline: "Acciaio, olio e bici d'epoca a Bologna",
+    kind: "app",
+    summary: "Appuntamenti, magazzino pezzi e riparazioni. Si usa.",
+    palette: {
+      bg: "#1a1612",
+      surface: "#2a241c",
+      fg: "#e6dcc8",
+      muted: "#9a8f7a",
+      accent: "#c45c26",
+    },
+    html: CATENARIA_HTML,
+  },
   corvo: {
     id: "corvo",
     name: "Caffè Corvo",

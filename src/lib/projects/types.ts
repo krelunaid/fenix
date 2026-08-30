@@ -1,3 +1,5 @@
+import type { ProjectFile } from "./files";
+
 export type ProjectKind = "landing" | "app" | "dashboard" | "tool" | "game" | "site";
 
 export type Palette = {
@@ -24,8 +26,10 @@ export type Project = {
   prompt: string;
   kind: ProjectKind;
   summary: string;
+  direction?: string;
   palette: Palette;
   html: string;
+  files?: ProjectFile[];
   messages: ChatMessage[];
   buildLog: string[];
   status: BuildStatus;

@@ -26,7 +26,58 @@ document.addEventListener("click", function (e) {
 }, true);
 </script>`;
 
-export function prepareSrcDoc(html: string, bg: string) {
+export function fenixRuntimeScript(projectId: string) {
+  return `<script data-fenix-runtime>
+(function(){
+  var pid = ${JSON.stringify(projectId)};
+  function localKey(col){ return "fenix-db:"+pid+":"+col; }
+  function fallbackLoad(col){
+    try { return JSON.parse(localStorage.getItem(localKey(col)) || "null"); }
+    catch(e){ return null; }
+  }
+  function fallbackSave(col, data){
+    try { localStorage.setItem(localKey(col), JSON.stringify(data)); } catch(e){}
+    return data;
+  }
+  function call(op, col, data){
+    if (!window.parent || window.parent === window) {
+      return Promise.resolve(op === "load" ? fallbackLoad(col) : fallbackSave(col, data));
+    }
+    var id = Math.random().toString(36).slice(2);
+    return new Promise(function(resolve){
+      var done = false;
+      function finish(v){
+        if (done) return;
+        done = true;
+        window.removeEventListener("message", on);
+        resolve(v);
+      }
+      function on(e){
+        var m = e.data;
+        if (!m || m.t !== "fenix-db" || m.id !== id) return;
+        finish(m.v);
+      }
+      window.addEventListener("message", on);
+      try {
+        window.parent.postMessage({ t:"fenix-db", id:id, op:op, projectId:pid, col:col, data:data }, "*");
+      } catch(err) {
+        finish(op === "load" ? fallbackLoad(col) : fallbackSave(col, data));
+      }
+      setTimeout(function(){
+        finish(op === "load" ? fallbackLoad(col) : fallbackSave(col, data));
+      }, 800);
+    });
+  }
+  window.Fenix = {
+    projectId: pid,
+    load: function(col){ return call("load", col); },
+    save: function(col, data){ fallbackSave(col, data); return call("save", col, data); }
+  };
+})();
+</script>`;
+}
+
+export function prepareSrcDoc(html: string, bg: string, projectId = "preview") {
   if (!html) return "";
   const scheme = isLightHex(bg) ? "light" : "dark";
   let next = html;
@@ -35,6 +86,12 @@ export function prepareSrcDoc(html: string, bg: string) {
     next = /<head[^>]*>/i.test(next)
       ? next.replace(/<head[^>]*>/i, (open) => `${open}${meta}`)
       : `${meta}${next}`;
+  }
+  if (!/data-fenix-runtime/.test(next)) {
+    const runtime = fenixRuntimeScript(projectId);
+    next = /<head[^>]*>/i.test(next)
+      ? next.replace(/<head[^>]*>/i, (open) => `${open}${runtime}`)
+      : `${runtime}${next}`;
   }
   if (!/data-officina-guard/.test(next)) {
     next = /<\/body>/i.test(next)

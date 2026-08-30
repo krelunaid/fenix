@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { parseBuildOutput } from "@/lib/ai/parse";
 import { SYSTEM_PROMPT } from "@/lib/ai/prompt";
 import { detectStage, sseLine } from "@/lib/ai/stages";
+import { designVisual } from "@/lib/ai/visual";
 
 type Body = {
   prompt?: string;
@@ -35,11 +36,16 @@ export const Route = createFileRoute("/api/build")({
         }
 
         const instruction = (body.instruction ?? "").trim().slice(0, 2500);
-        const html = (body.html ?? "").slice(0, 50000);
+        const html = (body.html ?? "").slice(0, 90000);
 
-        const userParts = [`BRIEF:\n${prompt}`];
+        const seed = Array.from(prompt).reduce((h, c) => ((h << 5) - h + c.charCodeAt(0)) | 0, 0);
+        const userParts = [
+          `BRIEF:\n${prompt}`,
+          `VINCOLO UNICITÀ: seed ${Math.abs(seed).toString(16)}. Questo prodotto NON deve assomigliare agli altri. Palette, font, layout e foto nati dal brief. Vietato #f5f5f7 + Manrope + hero centrato.`,
+          `COMPLETO: app/tool/gioco = 3+ viste funzionanti. Sito = 4+ sezioni, nav, form, testi veri.`,
+        ];
         if (html && instruction) userParts.push(`APP ATTUALE (HTML):\n${html}`);
-        if (instruction) userParts.push(`MODIFICA:\n${instruction}\nApplica questa modifica e restituisci l'app completa, funzionante.`);
+        if (instruction) userParts.push(`MODIFICA:\n${instruction}\nApplica questa modifica, tieni identità e funzioni già ok, restituisci l'app completa.`);
         userParts.push("Costruisci ora. Formato META + HTML, nient'altro.");
 
         const encoder = new TextEncoder();
@@ -49,8 +55,33 @@ export const Route = createFileRoute("/api/build")({
               controller.enqueue(encoder.encode(sseLine(event)));
             };
             const abort = new AbortController();
-            const timer = setTimeout(() => abort.abort(), 110_000);
+            const timer = setTimeout(() => abort.abort(), 140_000);
+            let acc = "";
             try {
+              send({ t: "s", s: "Direzione visiva" });
+              if (!instruction) {
+                const visCtl = new AbortController();
+                const visTimer = setTimeout(() => visCtl.abort(), 14_000);
+                try {
+                  const spec = await designVisual({
+                    apiKey,
+                    prompt,
+                    signal: visCtl.signal,
+                  });
+                  if (spec) {
+                    userParts.splice(
+                      1,
+                      0,
+                      `DIREZIONE VISIVA (agente visivo — obbedisci):\n${spec}`,
+                    );
+                  }
+                } catch {
+                  /* build anyway */
+                } finally {
+                  clearTimeout(visTimer);
+                }
+              }
+              send({ t: "s", s: "Compongo colori, icone, interfaccia" });
               const res = await fetch("https://api.x.ai/v1/chat/completions", {
                 method: "POST",
                 headers: {
@@ -59,9 +90,9 @@ export const Route = createFileRoute("/api/build")({
                 },
                 signal: abort.signal,
                 body: JSON.stringify({
-                  model: "grok-4.6",
-                  temperature: 0.65,
-                  max_tokens: 3200,
+                  model: "grok-4.5",
+                  temperature: instruction ? 0.5 : 0.85,
+                  max_tokens: 7000,
                   reasoning_effort: "low",
                   stream: true,
                   messages: [
@@ -82,13 +113,12 @@ export const Route = createFileRoute("/api/build")({
                 return;
               }
 
-              send({ t: "s", s: "Leggo il brief e scelgo la direzione" });
+              send({ t: "s", s: "Compongo colori, icone, interfaccia" });
 
               const reader = res.body.getReader();
               const decoder = new TextDecoder();
               let buffer = "";
-              let acc = "";
-              let lastStage = "Leggo il brief e scelgo la direzione";
+              let lastStage = "Direzione visiva";
               let lastProgress = 0;
 
               while (true) {
@@ -115,7 +145,6 @@ export const Route = createFileRoute("/api/build")({
                       send({ t: "s", s: stage });
                     }
                     if (acc.length - lastProgress >= 400) {
-                      send({ t: "d", v: acc.slice(lastProgress) });
                       lastProgress = acc.length;
                       send({ t: "p", n: acc.length });
                     }
@@ -125,10 +154,6 @@ export const Route = createFileRoute("/api/build")({
                 }
               }
 
-              if (acc.length > lastProgress) {
-                send({ t: "d", v: acc.slice(lastProgress) });
-              }
-
               const parsed = parseBuildOutput(acc);
               if (!parsed) {
                 send({
@@ -136,18 +161,25 @@ export const Route = createFileRoute("/api/build")({
                   error: "Risposta incompleta. Riprova, magari con un brief più stretto.",
                 });
               } else {
+                send({ t: "s", s: "Apro l'anteprima" });
                 send({ t: "ok", result: parsed });
               }
             } catch (err) {
               const aborted = err instanceof Error && err.name === "AbortError";
-              send({
-                t: "err",
-                error: aborted
-                  ? "Ci ho messo troppo. Accorcia il brief e riprova."
-                  : err instanceof Error
-                    ? `Non riesco a raggiungere il modello (${err.message}).`
-                    : "Errore di rete. Riprova.",
-              });
+              const salvage = aborted ? parseBuildOutput(acc) : null;
+              if (salvage) {
+                send({ t: "s", s: "Apro l'anteprima" });
+                send({ t: "ok", result: salvage });
+              } else {
+                send({
+                  t: "err",
+                  error: aborted
+                    ? "Ci ho messo troppo. Accorcia il brief e riprova."
+                    : err instanceof Error
+                      ? `Non riesco a raggiungere il modello (${err.message}).`
+                      : "Errore di rete. Riprova.",
+                });
+              }
             } finally {
               clearTimeout(timer);
               controller.close();

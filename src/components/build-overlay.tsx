@@ -35,7 +35,7 @@ export function BuildOverlay({
           </ul>
         ) : null}
         <p className="mt-4 text-sm text-muted-foreground">
-          Scrivo l'app e la faccio girare qui. Poi mi parli e la cambio.
+          Agente visivo, poi codice. Poi mi parli e la cambio.
         </p>
       </div>
     </div>
