@@ -73,8 +73,8 @@ async function grok(apiKey, prompt, html, shotB64, pass, instruction) {
         instruction ? `MODIFICA DA TENERE:\n${instruction}\nNon disfare questa modifica.` : "",
         `HTML:\n${html.slice(0, 32000)}`,
         pass === PASSES
-          ? "ULTIMO GIRO: icone + se la pagina è bianca RIEMPI la home. Script originali se già ok. META+HTML."
-          : "iOS. Se screenshot bianco: riempi main (metriche, CTA, form). Tab intere. Tieni JS se già funziona. META+HTML.",
+          ? "ULTIMO GIRO: questa è un'ALTRA tab. Riempi la schermata se vuota. Tieni JS. META+HTML."
+          : `Stai guardando la TAB ${pass} (1=home, 2=form, 3=elenco). Rifai SOLO quella schermata se è vuota o illeggibile. Tieni le altre. META+HTML.`,
       ]
         .filter(Boolean)
         .join("\n\n"),
@@ -179,7 +179,7 @@ function injectIcons(html, pack) {
   return next;
 }
 
-async function withBrowser(html) {
+async function openPage(html) {
   let chromium;
   try {
     ({ chromium } = await import("playwright"));
@@ -187,15 +187,25 @@ async function withBrowser(html) {
     return null;
   }
   const browser = await chromium.launch({ args: ["--no-sandbox", "--disable-dev-shm-usage"] });
+  const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  await page.setContent(html, { waitUntil: "domcontentloaded", timeout: 12000 });
+  await new Promise((r) => setTimeout(r, 280));
+  return { browser, page };
+}
+
+async function shotTab(page, index) {
   try {
-    const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
-    await page.setContent(html, { waitUntil: "domcontentloaded", timeout: 12000 });
-    await new Promise((r) => setTimeout(r, 250));
-    const buf = await page.screenshot({ type: "jpeg", quality: 58 });
-    return Buffer.from(buf).toString("base64");
-  } finally {
-    await browser.close();
+    const buttons = page.locator("nav button, .fk-tab button, .tabbar button");
+    const n = await buttons.count();
+    if (n > index) {
+      await buttons.nth(index).click({ timeout: 2500 });
+      await new Promise((r) => setTimeout(r, 320));
+    }
+  } catch {
+    /* tab non cliccabile */
   }
+  const buf = await page.screenshot({ type: "jpeg", quality: 58 });
+  return Buffer.from(buf).toString("base64");
 }
 
 async function polish(prompt, html, instruction) {
@@ -216,12 +226,24 @@ async function polish(prompt, html, instruction) {
   } catch (err) {
     log.push(`Icone saltate: ${err instanceof Error ? err.message : "errore"}`);
   }
+  let session = null;
+  try {
+    session = await openPage(current);
+  } catch (err) {
+    log.push(`Browser: ${err instanceof Error ? err.message : "errore"}`);
+  }
   for (let pass = 1; pass <= PASSES; pass++) {
-    log.push(`Giro ${pass}/${PASSES}`);
+    log.push(`Giro ${pass}/${PASSES} (schermata ${pass})`);
     let shot = null;
     try {
-      shot = await withBrowser(current);
-      log.push(shot ? `Screenshot ${pass}` : `Niente browser, giro ${pass} a testo`);
+      if (session?.page) {
+        await session.page.setContent(current, { waitUntil: "domcontentloaded", timeout: 12000 });
+        await new Promise((r) => setTimeout(r, 220));
+        shot = await shotTab(session.page, pass - 1);
+        log.push(`Screenshot tab ${pass}`);
+      } else {
+        log.push(`Niente browser, giro ${pass} a testo`);
+      }
     } catch (err) {
       log.push(`Screenshot fallito: ${err instanceof Error ? err.message : "errore"}`);
     }
@@ -237,6 +259,13 @@ async function polish(prompt, html, instruction) {
       }
     } catch (err) {
       log.push(`Giro ${pass} saltato: ${err instanceof Error ? err.message : "xAI"}`);
+    }
+  }
+  if (session?.browser) {
+    try {
+      await session.browser.close();
+    } catch {
+      /* ignore */
     }
   }
   return { html: current, meta, log };

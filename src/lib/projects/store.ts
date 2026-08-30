@@ -33,8 +33,8 @@ type ProjectStore = {
   addMessage: (id: string, message: Omit<ChatMessage, "id" | "at"> & { id?: string }) => void;
   removeProject: (id: string) => void;
   getProject: (id: string) => Project | undefined;
-  spendCredit: () => boolean;
-  refundCredit: () => void;
+  spendCredit: (n?: number) => boolean;
+  refundCredit: (n?: number) => void;
   loadAppData: (projectId: string, collection: string) => unknown;
   saveAppData: (projectId: string, collection: string, data: unknown) => void;
 };
@@ -80,15 +80,17 @@ export const useProjectStore = create<ProjectStore>()(
       appDb: {},
       setHydrated: () => set({ hydrated: true }),
       getProject: (id) => get().projects.find((p) => p.id === id),
-      spendCredit: () => {
+      spendCredit: (n = CREDIT_COST) => {
         const remaining = get().creditsRemaining;
-        if (remaining < CREDIT_COST) return false;
-        set({ creditsRemaining: remaining - CREDIT_COST });
+        const cost = Math.max(1, n);
+        if (remaining < cost) return false;
+        set({ creditsRemaining: remaining - cost });
         return true;
       },
-      refundCredit: () => {
+      refundCredit: (n = CREDIT_COST) => {
+        const cost = Math.max(1, n);
         set((s) => ({
-          creditsRemaining: Math.min(CREDITS_GRANT, s.creditsRemaining + CREDIT_COST),
+          creditsRemaining: Math.min(CREDITS_GRANT, s.creditsRemaining + cost),
         }));
       },
       loadAppData: (projectId, collection) => {

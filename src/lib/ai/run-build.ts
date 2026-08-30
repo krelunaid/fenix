@@ -3,7 +3,7 @@ import { applyBuildResult, useProjectStore } from "@/lib/projects/store";
 import { parseBuildOutput, type BuildResult } from "./parse";
 import { isWeakPreview, lookInstruction, resetAudit, waitPreviewAudit, waitPreviewShot } from "./look";
 import { APP_SHELL_HTML, APP_SHELL_INSTRUCTION } from "./app-shell";
-import { uid } from "@/lib/utils";
+import { CREATE_COST, ITERATE_COST } from "@/lib/projects/credits";
 
 const inflight = new Set<string>();
 
@@ -148,7 +148,8 @@ export async function runBuild(projectId: string, instruction?: string) {
     return;
   }
 
-  if (!store.spendCredit()) {
+  const cost = instruction ? ITERATE_COST : CREATE_COST;
+  if (!store.spendCredit(cost)) {
     store.updateProject(projectId, {
       status: "error",
       error: "Crediti esauriti. Il tetto di questa sessione è finito.",
@@ -156,7 +157,7 @@ export async function runBuild(projectId: string, instruction?: string) {
     store.addMessage(projectId, {
       id: uid(),
       role: "assistant",
-      content: "Crediti esauriti. Ogni creazione o modifica ne usa uno. Il tetto di questa sessione è finito.",
+      content: "Crediti esauriti. Una creazione usa 2 crediti, una modifica 1.",
     });
     inflight.delete(projectId);
     return;
@@ -190,7 +191,7 @@ export async function runBuild(projectId: string, instruction?: string) {
     if (streamed) {
       const latest = useProjectStore.getState().getProject(projectId);
       if (latest?.status === "error") {
-        store.refundCredit();
+        store.refundCredit(cost);
         charged = false;
         return;
       }
@@ -320,7 +321,7 @@ export async function runBuild(projectId: string, instruction?: string) {
       return;
     }
 
-    store.refundCredit();
+    store.refundCredit(cost);
     charged = false;
     store.updateProject(projectId, {
       status: "error",
@@ -332,7 +333,7 @@ export async function runBuild(projectId: string, instruction?: string) {
       content: "Non è arrivata una risposta. Riprova, magari con un brief più corto.",
     });
   } catch (err) {
-    if (charged) store.refundCredit();
+    if (charged) store.refundCredit(cost);
     const message =
       err instanceof Error ? err.message : "Qualcosa è andato storto. Riprova.";
     store.updateProject(projectId, { status: "error", error: message });

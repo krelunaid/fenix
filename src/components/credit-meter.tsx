@@ -14,7 +14,7 @@ export function CreditMeter({ className }: { className?: string }) {
         remaining < 1 ? "text-destructive" : "text-foreground",
         className,
       )}
-      title="Ogni creazione o modifica consuma 1 credito"
+      title="Creare usa 2 crediti, una modifica 1"
     >
       {creditsLabel(remaining, CREDITS_GRANT)} crediti
     </p>
