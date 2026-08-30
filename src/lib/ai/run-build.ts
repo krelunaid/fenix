@@ -277,18 +277,18 @@ export async function runBuild(projectId: string, instruction?: string) {
       }
       if (latest?.html) {
         store.updateProject(projectId, {
-          status: "building",
+          status: "ready",
           buildLog: [
             ...(latest.buildLog ?? []),
-            instruction ? "Motore visivo (modifica)" : "Motore visivo",
+            instruction ? "Motore visivo in sottofondo" : "Motore visivo in sottofondo",
           ],
         });
         store.addMessage(projectId, {
           id: uid(),
           role: "assistant",
           content: instruction
-            ? "Bozza aggiornata. Avvio il motore visivo (icone e rifinitura)…"
-            : "Bozza pronta. Avvio il motore visivo (icone e rifinitura)…",
+            ? "Bozza in anteprima. Il motore visivo rifinisce in sottofondo (icone, 5–10 min). Puoi già usarla."
+            : "Bozza in anteprima. Puoi già usarla. Il motore visivo rifinisce in sottofondo (icone e foto, 5–10 min).",
         });
         let polished = false;
         let workerError = "";
