@@ -61,6 +61,10 @@ function StudioPage() {
   const emptyCredits = creditsRemaining < 1;
   const building = project?.status === "building";
 
+  useEffect(() => {
+    if (building) setDevice("mobile");
+  }, [building]);
+
   const paletteStrip = useMemo(
     () => (project ? Object.values(project.palette) : []),
     [project],
@@ -170,7 +174,7 @@ function StudioPage() {
               <PreviewFrame
                 html={project.html}
                 name={project.name}
-                device={device}
+                device={building ? "mobile" : device}
                 background={project.palette.bg}
                 projectId={project.id}
                 className="h-full"

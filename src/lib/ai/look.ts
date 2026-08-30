@@ -5,6 +5,8 @@ export type PreviewAudit = {
   inputs: number;
   hasIcon: boolean;
   title: string;
+  vw?: number;
+  sw?: number;
 };
 
 let lastAudit: PreviewAudit | null = null;
@@ -39,6 +41,8 @@ export function waitPreviewAudit(ms = 1800): Promise<PreviewAudit | null> {
         inputs: Number(msg.inputs) || 0,
         hasIcon: Boolean(msg.hasIcon),
         title: String(msg.title || ""),
+        vw: Number(msg.vw) || 0,
+        sw: Number(msg.sw) || 0,
       };
       lastAudit = audit;
       resolve(audit);
@@ -47,7 +51,7 @@ export function waitPreviewAudit(ms = 1800): Promise<PreviewAudit | null> {
   });
 }
 
-export function waitPreviewShot(ms = 4500): Promise<string> {
+export function waitPreviewShot(ms = 5500): Promise<string> {
   if (lastShot) return Promise.resolve(lastShot);
   return new Promise((resolve) => {
     const timer = window.setTimeout(() => resolve(lastShot), ms);
@@ -66,24 +70,24 @@ export function waitPreviewShot(ms = 4500): Promise<string> {
 
 export function isWeakPreview(audit: PreviewAudit | null) {
   if (!audit) return true;
-  return audit.svgs < 6 || audit.tabs < 3 || !audit.hasIcon;
+  const overflow = (audit.sw ?? 0) > (audit.vw ?? 0) + 8;
+  return audit.svgs < 6 || audit.tabs < 4 || !audit.hasIcon || overflow;
 }
 
 export function lookInstruction(audit: PreviewAudit | null, hasShot: boolean) {
   const seen = audit
-    ? `Conteggio DOM: ${audit.svgs} svg, ${audit.tabs} tab, ${audit.forms} form, icona=${audit.hasIcon ? "sì" : "no"}.`
+    ? `DOM: ${audit.svgs} svg, ${audit.tabs} tab, ${audit.forms} form, icona=${audit.hasIcon ? "sì" : "no"}, viewport ${audit.vw} scroll ${audit.sw}.`
     : "DOM non misurato.";
   return [
     hasShot
-      ? "Hai lo SCREENSHOT dell'anteprima. Guardalo come un designer: spazi, contrasto, tab, icone, form, vuoti, template."
-      : "Ho guardato il DOM dell'anteprima.",
+      ? "SCREENSHOT a 390×844 (telefono). Guardalo. Se vedi bande laterali, tab tagliate, desktop schiacciato, testo che esce, rifai il LAYOUT."
+      : "Ho misurato il DOM dell'anteprima.",
     seen,
-    "Rifai il chrome da app in tasca, tieni dati e JS:",
-    "- header saluto + azione",
-    "- 4–5 tab in basso in flusso, SVG diversi",
-    "- home: metriche 2×2, blocco eroico, CTA",
-    "- form con label, chip, salva",
-    "- pittogramma app + rel=icon",
-    "Niente #f5f5f7 Manrope Inter viola AI. META+HTML completo.",
+    "Correggi SOLO chrome/CSS/icone. NON spegnere il JS.",
+    "Obbligo canvas telefono: html/body 100dvh, colonna, width 100%, niente max-width 1100, niente 3 colonne desktop.",
+    "Tab bar in flusso in basso, 4–5 voci STESSA larghezza, SVG 24px + label 10px intere, niente testo tagliato.",
+    "Header saluto. Main overflow auto. CTA visibile senza scroll orizzontale.",
+    "Se lo screenshot è storto, riscrivi CSS da zero sul contenuto già lì.",
+    "META+HTML completo.",
   ].join("\n");
 }

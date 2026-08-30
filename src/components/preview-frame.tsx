@@ -48,6 +48,8 @@ export function PreviewFrame({
         inputs?: number;
         hasIcon?: boolean;
         title?: string;
+        vw?: number;
+        sw?: number;
       };
       if (msg?.t === "fenix-shot" && typeof msg.data === "string") {
         rememberShot(msg.data);
@@ -61,6 +63,8 @@ export function PreviewFrame({
           inputs: Number(msg.inputs) || 0,
           hasIcon: Boolean(msg.hasIcon),
           title: String(msg.title || ""),
+          vw: Number(msg.vw) || 0,
+          sw: Number(msg.sw) || 0,
         } satisfies PreviewAudit);
         return;
       }

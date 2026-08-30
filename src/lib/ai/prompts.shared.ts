@@ -25,7 +25,7 @@ ICONE — obbligatorie e disegnate, non decorative generiche:
 CSS: :root con --bg --surface --fg --muted --accent --line. body 100dvh. App a colonna: header, main flex 1 overflow, tabbar flex-shrink 0 in flusso, mai position:fixed dentro iframe. Contrasto AA, color-scheme e prefers-reduced-motion.
 
 App — chrome da prodotto in tasca (non admin, non landing):
-- Tutto lo schermo: header compatto, main scroll, tab bar 5 voci in FLUSSO in basso (altezza 64–72, padding-bottom safe). Mai position:fixed. Mai max-width 430 con bande vuote.
+- Tutto lo schermo TELEFONO: 390×844, width 100%, html/body 100dvh colonna. Vietato layout desktop, grid 3 colonne, min-width 1100, max-width 430 con bande. Header compatto, main flex 1 overflow, tab bar 4–5 voci in FLUSSO in basso (64–72px). Mai position:fixed.
 - Header: saluto + ruolo/contesto a sinistra, un'azione (esci/share) a destra. Sotto, data o stato in 12px muted.
 - Home: 1 card panoramica (2×2 metriche vere), 1 blocco eroico del mestiere (misura, serbatoio, turno — non un hero slogan), 2×2 tile bianche/surface con icona SVG + numero, 1 CTA full-width in basso nel main.
 - Tab: 4 o 5. Ogni voce = SVG outline 26px + label 10px. Voce .on = accento. Glyph tutti diversi, stessa famiglia stroke 2.2. Viste: home, registra/nuovo, storico, numeri, gestione (adatta i nomi al brief).

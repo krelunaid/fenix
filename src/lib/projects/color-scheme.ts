@@ -91,7 +91,7 @@ export function fenixRuntimeScript(projectId: string) {
   };
   function audit(){
     try {
-      var tabs = document.querySelectorAll("[data-view], [data-tab], .tabbar button, nav.tabs button, .tabs [data-view]").length;
+      var tabs = document.querySelectorAll("[data-view], [data-tab], .tabbar button, nav.tabs button, .tabs button, nav[aria-label] button").length;
       window.parent && window.parent.postMessage({
         t: "fenix-audit",
         svgs: document.querySelectorAll("svg").length,
@@ -99,7 +99,9 @@ export function fenixRuntimeScript(projectId: string) {
         forms: document.querySelectorAll("form").length,
         inputs: document.querySelectorAll("input, select, textarea").length,
         hasIcon: !!document.querySelector("link[rel='icon'], link[rel=\"icon\"]"),
-        title: document.title || ""
+        title: document.title || "",
+        vw: window.innerWidth,
+        sw: document.documentElement.scrollWidth
       }, "*");
     } catch (err) {}
   }
@@ -111,8 +113,16 @@ export function fenixRuntimeScript(projectId: string) {
   function shoot(){
     try {
       if (!window.html2canvas) { sendShot(""); return; }
-      window.html2canvas(document.documentElement, { scale: 0.42, useCORS: true, logging: false }).then(function(c){
-        sendShot(c.toDataURL("image/jpeg", 0.55));
+      window.html2canvas(document.documentElement, {
+        scale: 1,
+        width: 390,
+        windowWidth: 390,
+        windowHeight: 844,
+        useCORS: true,
+        logging: false,
+        backgroundColor: null
+      }).then(function(c){
+        sendShot(c.toDataURL("image/jpeg", 0.62));
       }).catch(function(){ sendShot(""); });
     } catch (e) { sendShot(""); }
   }
@@ -146,5 +156,15 @@ export function prepareSrcDoc(html: string, bg: string, projectId = "preview") {
       ? next.replace(/<\/body>/i, `${NAV_GUARD}</body>`)
       : `${next}${NAV_GUARD}`;
   }
+  if (
+    /tabbar|data-view|data-tab/i.test(next) &&
+    !/data-fenix-phone/.test(next)
+  ) {
+    const phone = `<style data-fenix-phone>html,body{height:100%;margin:0}body{min-height:100dvh;display:flex;flex-direction:column;overflow:hidden}body>header,body>.hdr{flex-shrink:0}body>main{flex:1;min-height:0;overflow:auto}body>nav,.tabbar,nav[aria-label]{flex-shrink:0}</style>`;
+    next = /<head[^>]*>/i.test(next)
+      ? next.replace(/<head[^>]*>/i, (open) => `${open}${phone}`)
+      : `${phone}${next}`;
+  }
   return next;
 }
+
