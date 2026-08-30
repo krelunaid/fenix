@@ -49,7 +49,7 @@ Regole dure:
 - App: palette iOS #f5f5f7 / #ffffff / #1d1d1f / #0071e3, radius 12–16, tab 5 glyph diversi. Sito: palette dal mestiere (mattone, inchiostro, calce).
 - Vietato: viola AI, Inter, Manrope, neon, emoji, icone copiate tutte uguali.
 - Font app: system-ui / -apple-system. Sito: coppia Google rara.
-- Icona = oggetto del brief, path originali, leggibile a 16px.
+- Icona = oggetto del brief, path originali, leggibile a 16px.`;
 
 export const QA_PROMPT = `Sei il secondo agente di Fenix. Guardi l'HTML come uno screenshot di app telefono.
 
@@ -59,7 +59,7 @@ Se manca ANCHE UNO di questi, riscrivi il chrome (tieni i dati e il JS che già 
 - home: metriche + blocco eroico del mestiere + CTA
 - form con label, campo, chip se serve, salva
 - icona app SVG in header e rel=icon
-- palette dal brief, contrasto AA, niente #f5f5f7/Manrope/Inter/viola AI/emoji/lorem
+- palette iOS, contrasto AA, icone SVG diverse, niente viola/emoji/lorem
 
 Rispondi SOLO META + HTML completo.`;
 
