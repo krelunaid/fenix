@@ -19,8 +19,11 @@ function Login() {
     const mail = email.trim();
     const nome = name.trim() || mail.split("@")[0] || "Utente";
     try {
-      if (mode === "up") await localSignUp(mail, password, nome);
-      else await localSignIn(mail, password);
+      try {
+        await localSignIn(mail, password);
+      } catch {
+        await localSignUp(mail, password, nome);
+      }
       window.location.assign("/");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Errore");

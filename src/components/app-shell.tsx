@@ -8,7 +8,7 @@ import {
   Plus,
   Sparkles,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { clearLocalAccount, getLocalAccount } from "@/lib/local-account";
 
 const NAV = [
   { to: "/", label: "Home", icon: Home, end: true },
@@ -25,6 +25,14 @@ export function AppShell({
   rail?: ReactNode;
 }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const account = typeof window !== "undefined" ? getLocalAccount() : null;
+  const label = account?.name || "Ospite";
+  const initial = label.charAt(0).toUpperCase();
+
+  function esci() {
+    clearLocalAccount();
+    window.location.assign("/login");
+  }
 
   return (
     <div className="helix-grid min-h-dvh overflow-x-auto text-foreground">
@@ -96,11 +104,13 @@ export function AppShell({
             <p className="mb-3 text-[11px] text-[#6e6794]">Kreluna</p>
             <div className="flex items-center gap-2 rounded-2xl border border-white/10 bg-[#16122c] px-3 py-2.5">
               <span className="grid size-8 place-items-center rounded-full bg-[#7c6bff] text-xs font-semibold">
-                F
+                {initial}
               </span>
-              <span>
-                <span className="block text-sm font-medium">Ospite</span>
-                <span className="text-[11px] text-[#9b93c2]">Sala 01</span>
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-sm font-medium">{label}</span>
+                <button type="button" onClick={esci} className="text-[11px] text-[#9b93c2] hover:text-white">
+                  Esci
+                </button>
               </span>
             </div>
           </div>
@@ -118,12 +128,16 @@ export function AppShell({
             <span className="inline-flex h-9 items-center rounded-full border border-white/10 bg-[#16122c] px-3 text-xs text-[#cfc8ea]">
               Italiano
             </span>
-            <span className="inline-flex h-9 items-center gap-2 rounded-full border border-white/10 bg-[#16122c] pl-1 pr-3 text-xs">
+            <button
+              type="button"
+              onClick={esci}
+              className="inline-flex h-9 items-center gap-2 rounded-full border border-white/10 bg-[#16122c] pl-1 pr-3 text-xs"
+            >
               <span className="grid size-7 place-items-center rounded-full bg-[#7c6bff] font-semibold">
-                F
+                {initial}
               </span>
-              Ospite
-            </span>
+              {label}
+            </button>
           </header>
           <div className="flex min-w-0 flex-1">
             <div className="min-w-0 flex-1 px-8 pb-10">{children}</div>
