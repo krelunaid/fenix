@@ -1,6 +1,5 @@
 import { useEffect, useMemo } from "react";
 import { prepareSrcDoc } from "@/lib/projects/color-scheme";
-import { fenix2PreviewHtml } from "@/lib/projects/fenix2";
 import { rememberAudit, rememberShot, type PreviewAudit } from "@/lib/ai/look";
 import { useProjectStore } from "@/lib/projects/store";
 import { cn } from "@/lib/utils";
@@ -32,14 +31,8 @@ export function PreviewFrame({
 }) {
   const width = WIDTH[device];
   const srcDoc = useMemo(() => {
-    const ios =
-      typeof navigator !== "undefined" && /iP(hone|od|ad)/.test(navigator.userAgent);
-    if (!ios) {
-      const reactDoc = files?.length ? fenix2PreviewHtml(files, name) : "";
-      if (reactDoc) return reactDoc;
-    }
     return html ? prepareSrcDoc(html, background ?? "#ffffff", projectId ?? "preview") : "";
-  }, [html, files, name, background, projectId]);
+  }, [html, background, projectId]);
 
   useEffect(() => {
     function onMessage(event: MessageEvent) {
