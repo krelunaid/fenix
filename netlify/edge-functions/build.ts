@@ -1,6 +1,6 @@
 declare const Netlify: { env: { get(name: string): string | undefined } };
 
-import { SYSTEM_PROMPT, VISUAL_PROMPT } from "../../src/lib/ai/prompts.shared.ts";
+import { QA_PROMPT, SYSTEM_PROMPT, VISUAL_PROMPT } from "../../src/lib/ai/prompts.shared.ts";
 
 const MODEL = "grok-build-0.1";
 const XAI_URL = "https://api.x.ai/v1/chat/completions";
@@ -155,6 +155,41 @@ async function designDirection(apiKey: string, prompt: string) {
   }
 }
 
+async function reviewPass(apiKey: string, prompt: string, html: string, spec: string) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 45_000);
+  try {
+    const response = await fetch(XAI_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      signal: controller.signal,
+      body: JSON.stringify({
+        model: MODEL,
+        temperature: 0.55,
+        max_tokens: 8000,
+        stream: false,
+        messages: [
+          { role: "system", content: QA_PROMPT },
+          {
+            role: "user",
+            content: `BRIEF:\n${prompt}\n\n${spec ? `DIREZIONE VISIVA:\n${spec}\n\n` : ""}HTML DA RIVEDERE:\n${html.slice(0, 35000)}\n\nRivedi la grafica, tieni le funzioni, META+HTML.`,
+          },
+        ],
+      }),
+    });
+    if (!response.ok) return "";
+    const json = (await response.json()) as GrokChunk;
+    return textValue(json.choices?.[0]?.message?.content);
+  } catch {
+    return "";
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 export default async function build(request: Request) {
   if (request.method !== "POST") return new Response("Method Not Allowed", { status: 405 });
   const apiKey = Netlify.env.get("XAI_API_KEY")?.trim();
@@ -201,14 +236,15 @@ export default async function build(request: Request) {
       }, 4000);
 
       try {
+        let spec = "";
         if (!instruction) {
           send({ t: "s", s: "Direzione visiva" });
-          const visual = await designDirection(apiKey, prompt);
-          if (visual) {
+          spec = await designDirection(apiKey, prompt);
+          if (spec) {
             userParts.splice(
               1,
               0,
-              `DIREZIONE VISIVA (legge, non ispirazione — hex, font, icona, tab, foto):\n${visual}`,
+              `DIREZIONE VISIVA (legge, non ispirazione — hex, font, icona, tab, foto):\n${spec}`,
             );
           }
         }
@@ -285,7 +321,12 @@ export default async function build(request: Request) {
           if (trimmed.startsWith("data:")) ingest(trimmed.slice(5).trim());
         }
         if (!terminal) {
-          const result = parseResult(output);
+          let result = parseResult(output);
+          if (result && !instruction) {
+            send({ t: "s", s: "Provo la grafica" });
+            const reviewed = await reviewPass(apiKey, prompt, result.html, spec);
+            result = parseResult(reviewed) ?? result;
+          }
           finish(result
             ? { t: "ok", result }
             : { t: "err", error: output.trim() ? "Risposta incompleta. Riprova." : "Grok Build non ha inviato il codice. Riprova." });

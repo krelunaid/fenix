@@ -35,7 +35,7 @@ export function BuildOverlay({
           </ul>
         ) : null}
         <p className="mt-4 text-sm text-muted-foreground">
-          Art director, poi Grok Build scrive. Poi mi parli e la cambio.
+          Come me: direzione, codice, poi rivedo la grafica.
         </p>
       </div>
     </div>

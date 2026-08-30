@@ -1,23 +1,38 @@
 import { parseBuildOutput, type BuildResult } from "./parse";
-import { FENIX_MODEL, XAI_CHAT_COMPLETIONS_URL } from "./model";
+import { FENIX_MODEL } from "./model";
 
-export const QA_PROMPT = `Sei l'agente prova di Fenix. Ricevi brief + HTML. Il prodotto deve girare e non assomigliare a un template.
+export const QA_PROMPT = `Sei il secondo agente di Fenix: art director + tester. Hai già un HTML. Devi farlo SENTIRE un prodotto vero, come uno studio che rivede l'anteprima.
 
-Fai, in quest'ordine:
-1) Ripara JS rotto, click morti, form che non confermano, viste che non cambiano, calcoli sbagliati.
-2) Se vedi #f5f5f7 + Manrope + hero centrato o tre card clone: riscrivi identità visiva dal brief (palette, font, layout, foto).
-3) Completa: app/tool/gioco ≥3 viste + dati in localStorage con chiave unica. Sito ≥4 sezioni, nav, form, testi veri.
-4) Tieni ciò che già funziona e ha carattere.
+Obbligo:
+1) Tieni JS, viste, dati, form che già girano. Non spegnere click e state.
+2) RISCRIVI il visivo se è piatto: palette dal brief (materia, luogo, ora), font coppia Google rara, icona app SVG del mestiere 52px, tab bar 3–4 icone in basso in flusso (non position:fixed), foto unsplash photo- se è un sito.
+3) Vietato #f5f5f7, Manrope, Inter, hero centrato, pill nera, viola AI, lorem, emoji, glass.
+4) CSS :root --bg --surface --fg --muted --accent --line. body 100dvh. App colonna.
 
-Rispondi SOLO nel formato Fenix: META + FILE path="styles.css"|db.js|app.js|index.html + END. Tieni i file separati. Usa window.Fenix.load/save se serve persistenza.`;
+Rispondi SOLO:
+<<<META>>>
+{"name":"","tagline":"","kind":"landing|app|dashboard|tool|game|site","direction":"3-6 parole","summary":"","palette":{"bg":"#","surface":"#","fg":"#","muted":"#","accent":"#"}}
+<<<HTML>>>
+<!DOCTYPE html>...completo...
+<<<END>>>`;
+
+export function looksCheap(html: string) {
+  const h = html.toLowerCase();
+  if (!html || html.length < 200) return true;
+  const apple = h.includes("#f5f5f7") || h.includes("manrope") || h.includes("font-family: inter");
+  const noMark = !h.includes('rel="icon"') && !h.includes("rel='icon'");
+  const noTabs = !h.includes("data-view") && !h.includes("class=\"tabs\"") && !h.includes("id=\"tabs\"");
+  return apple || (noMark && noTabs);
+}
 
 export async function reviewBuild(input: {
   apiKey: string;
   prompt: string;
   html: string;
+  spec?: string;
   signal: AbortSignal;
 }): Promise<BuildResult | null> {
-  const res = await fetch(XAI_CHAT_COMPLETIONS_URL, {
+  const res = await fetch("https://api.x.ai/v1/chat/completions", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -26,14 +41,21 @@ export async function reviewBuild(input: {
     signal: input.signal,
     body: JSON.stringify({
       model: FENIX_MODEL,
-      temperature: 0.35,
-      max_tokens: 12000,
+      temperature: 0.55,
+      max_tokens: 8000,
       stream: false,
       messages: [
         { role: "system", content: QA_PROMPT },
         {
           role: "user",
-          content: `BRIEF:\n${input.prompt}\n\nHTML DA PROVARE:\n${input.html.slice(0, 80000)}\n\nCorreggi e restituisci il prodotto completo.`,
+          content: [
+            `BRIEF:\n${input.prompt}`,
+            input.spec ? `DIREZIONE VISIVA (legge):\n${input.spec}` : "",
+            `HTML DA RIVEDERE (anteprima):\n${input.html.slice(0, 40000)}`,
+            "Guarda come un umano: se è un template, rifai identità. Tieni le funzioni. META+HTML.",
+          ]
+            .filter(Boolean)
+            .join("\n\n"),
         },
       ],
     }),

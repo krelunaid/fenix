@@ -1,14 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { FENIX_MODEL } from "@/lib/ai/model";
 import { parseBuildOutput } from "@/lib/ai/parse";
 import { SYSTEM_PROMPT } from "@/lib/ai/prompt";
+import { looksCheap, reviewBuild } from "@/lib/ai/qa";
 import { detectStage, sseLine } from "@/lib/ai/stages";
 import { designVisual } from "@/lib/ai/visual";
-import {
-  getXaiApiKey,
-  XAI_CHAT_COMPLETIONS_URL,
-  XAI_MISSING_KEY_ERROR,
-  FENIX_MODEL,
-} from "@/lib/ai/model";
 
 type Body = {
   prompt?: string;
@@ -53,14 +49,17 @@ function grokDelta(json: GrokChunk) {
   if (json.error) {
     const err = json.error;
     const message =
-      typeof err === "string" ? err : err.message || err.error || "Errore dal modello.";
-    return { content: "", reasoning: "", error: message };
+      typeof err === "string"
+        ? err
+        : err.message || err.error || "Errore dal modello.";
+    return { content: "", reasoning: "", finish: null as string | null, error: message };
   }
   const choice = json.choices?.[0];
   const part = choice?.delta ?? choice?.message ?? {};
   return {
     content: asText(part.content),
     reasoning: asText(part.reasoning_content),
+    finish: choice?.finish_reason ?? null,
     error: null as string | null,
   };
 }
@@ -70,9 +69,12 @@ export const Route = createFileRoute("/api/build")({
     handlers: {
       POST: async ({ request }) => {
         // Server-only. Never VITE_XAI_API_KEY — that would leak to the browser.
-        const apiKey = getXaiApiKey();
+        const apiKey = process.env.XAI_API_KEY;
         if (!apiKey) {
-          return Response.json({ t: "err", error: XAI_MISSING_KEY_ERROR }, { status: 503 });
+          return Response.json(
+            { t: "err", error: "Fenix non è disponibile in questo ambiente." },
+            { status: 503 },
+          );
         }
 
         let body: Body = {};
@@ -97,7 +99,11 @@ export const Route = createFileRoute("/api/build")({
           `COMPLETO: app/tool/gioco = 3+ viste funzionanti. Sito = 4+ sezioni, nav, form, testi veri.`,
         ];
         if (html && instruction) userParts.push(`APP ATTUALE (HTML):\n${html}`);
-        if (instruction) userParts.push(`MODIFICA:\n${instruction}\nApplica questa modifica, tieni identità e funzioni già ok, restituisci l'app completa.`);
+        if (instruction) {
+          userParts.push(
+            `MODIFICA:\n${instruction}\nApplica questa modifica, tieni identità e funzioni già ok, restituisci l'app completa.`,
+          );
+        }
         userParts.push("Costruisci ora. Formato META + HTML, nient'altro. Niente ragionamento nel documento.");
 
         const encoder = new TextEncoder();
@@ -109,10 +115,11 @@ export const Route = createFileRoute("/api/build")({
               controller.enqueue(encoder.encode(sseLine(event)));
             };
             const ping = () => {
-              if (!closed) controller.enqueue(encoder.encode(": ping\n\n"));
+              if (closed) return;
+              controller.enqueue(encoder.encode(": ping\n\n"));
             };
             const abort = new AbortController();
-            const timer = setTimeout(() => abort.abort(), 140_000);
+            const timer = setTimeout(() => abort.abort(), 175_000);
             const heartbeat = setInterval(ping, 4000);
             let acc = "";
             let emitted = false;
@@ -121,6 +128,8 @@ export const Route = createFileRoute("/api/build")({
               emitted = true;
               send(event);
             };
+
+            let visualSpec = "";
             try {
               send({ t: "s", s: "Direzione visiva" });
               if (!instruction) {
@@ -133,6 +142,7 @@ export const Route = createFileRoute("/api/build")({
                     signal: visCtl.signal,
                   });
                   if (spec) {
+                    visualSpec = spec;
                     userParts.splice(
                       1,
                       0,
@@ -145,8 +155,11 @@ export const Route = createFileRoute("/api/build")({
                   clearTimeout(visTimer);
                 }
               }
+
               send({ t: "s", s: "Compongo colori, icone, interfaccia" });
-              const res = await fetch(XAI_CHAT_COMPLETIONS_URL, {
+              // Chat Completions: grok-build-0.1 streams reasoning_content first, then content.
+              // temperature e max_tokens sono supportati. Non usare reasoning_effort.
+              const res = await fetch("https://api.x.ai/v1/chat/completions", {
                 method: "POST",
                 headers: {
                   "Content-Type": "application/json",
@@ -175,8 +188,6 @@ export const Route = createFileRoute("/api/build")({
                 return;
               }
 
-              send({ t: "s", s: "Compongo colori, icone, interfaccia" });
-
               const reader = res.body.getReader();
               const decoder = new TextDecoder();
               let buffer = "";
@@ -199,8 +210,10 @@ export const Route = createFileRoute("/api/build")({
                 }
                 if (piece.reasoning && !sawReasoning) {
                   sawReasoning = true;
-                  lastStage = "Penso il prodotto";
-                  send({ t: "s", s: lastStage });
+                  if (lastStage !== "Penso il prodotto") {
+                    lastStage = "Penso il prodotto";
+                    send({ t: "s", s: lastStage });
+                  }
                 }
                 if (!piece.content) return;
                 acc += piece.content;
@@ -243,8 +256,31 @@ export const Route = createFileRoute("/api/build")({
                     : "Grok Build ha ragionato ma non ha inviato il codice. Riprova.",
                 });
               } else {
+                let result = parsed;
+                const shouldReview = !instruction || looksCheap(parsed.html);
+                if (shouldReview) {
+                  send({ t: "s", s: "Provo la grafica" });
+                  const visCtl = new AbortController();
+                  const visTimer = setTimeout(() => visCtl.abort(), 50_000);
+                  try {
+                    const reviewed = await reviewBuild({
+                      apiKey,
+                      prompt,
+                      html: parsed.html,
+                      spec: visualSpec || undefined,
+                      signal: visCtl.signal,
+                    });
+                    if (reviewed?.html && reviewed.html.length > 120) {
+                      result = reviewed;
+                    }
+                  } catch {
+                    /* keep first HTML */
+                  } finally {
+                    clearTimeout(visTimer);
+                  }
+                }
                 send({ t: "s", s: "Apro l'anteprima" });
-                finish({ t: "ok", result: parsed });
+                finish({ t: "ok", result });
               }
             } catch (err) {
               const aborted = err instanceof Error && err.name === "AbortError";
@@ -268,7 +304,12 @@ export const Route = createFileRoute("/api/build")({
               if (!emitted) {
                 const salvage = parseBuildOutput(acc);
                 if (salvage) finish({ t: "ok", result: salvage });
-                else finish({ t: "err", error: "Non è arrivata una risposta dal modello. Riprova." });
+                else {
+                  finish({
+                    t: "err",
+                    error: "Non è arrivata una risposta dal modello. Riprova.",
+                  });
+                }
               }
               closed = true;
               try {
