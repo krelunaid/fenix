@@ -1,5 +1,6 @@
 import { DEFAULT_PALETTE, type Palette, type ProjectKind } from "@/lib/projects/types";
-import { assembleHtml, ensureScreenFiles, parseProjectFiles, seedFiveScreens, type ProjectFile } from "@/lib/projects/files";
+import { assembleHtml, ensureScreenFiles, parseProjectFiles, seedFiveScreens } from "@/lib/projects/files";
+import { fenix2Files } from "@/lib/projects/fenix2";
 
 export type BuildResult = {
   name: string;
@@ -101,6 +102,7 @@ export function parseBuildOutput(text: string): BuildResult | null {
   const meta = parseMeta(metaBlock?.[1]?.trim() || "{}");
   files = seedFiveScreens(files, html, meta.name);
   html = assembleHtml(files, html) || html;
+  files = fenix2Files(files, { name: meta.name, palette: meta.palette });
   if (meta.name === "Studio") {
     const title = html.match(/<title>([^<]+)<\/title>/i)?.[1]?.trim();
     if (title) meta.name = title.slice(0, 80);
