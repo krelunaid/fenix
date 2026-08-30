@@ -54,7 +54,7 @@ export async function localSignIn(email: string, password: string) {
   const key = email.trim().toLowerCase();
   const pass = await digest(password);
   const found = list.find((a) => a.email === key && a.pass === pass);
-  if (!found) throw new Error("Email o password non corretti.");
+  if (!found) throw new Error("Nessun account con questi dati. Iscriviti prima.");
   const session = { email: found.email, name: found.name };
   localStorage.setItem(SESSION, JSON.stringify(session));
   return session;
