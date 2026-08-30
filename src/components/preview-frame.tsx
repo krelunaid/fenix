@@ -50,6 +50,7 @@ export function PreviewFrame({
         title?: string;
         vw?: number;
         sw?: number;
+        mainChars?: number;
       };
       if (msg?.t === "fenix-shot" && typeof msg.data === "string") {
         rememberShot(msg.data);
@@ -65,6 +66,7 @@ export function PreviewFrame({
           title: String(msg.title || ""),
           vw: Number(msg.vw) || 0,
           sw: Number(msg.sw) || 0,
+          mainChars: Number(msg.mainChars) || 0,
         } satisfies PreviewAudit);
         return;
       }

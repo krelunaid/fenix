@@ -39,7 +39,7 @@ CSS: :root con --bg --surface --fg --muted --accent --line. body 100dvh. App a c
 App — chrome da prodotto in tasca (non admin, non landing):
 - TELEFONO 390×844. html/body colonna 100dvh. Vietato desktop, 3 colonne, min-width 1100, bande.
 - USA queste classi (il CSS .fk-* è già iniettato, non copiarlo): header.fk-top (h1.fk-hello + p.fk-role), p.fk-date, main.fk-main, nav.fk-tab.
-- Home: .fk-panel con .fk-grid2 > .fk-stat, blocco eroico del mestiere, .fk-grid2 > .fk-tile, button.fk-btn.
+- Home: .fk-panel con .fk-grid2 > .fk-stat, blocco eroico del mestiere, .fk-grid2 > .fk-tile, button.fk-btn. VIETATO main vuoto / pagina bianca al primo HTML.
 - Tab: 5 button in .fk-tab, SVG 24 + span, data-view uguale al file screens/*.html, .on sull'attivo.
 - Schermate OBLIGATORIE in file separati (home, new, list, stats, more). Ogni file è una vista vera, non un titolo.
 - Form in screens/new.html: .fk-lbl + .fk-field, .fk-chiprow, button.fk-btn.

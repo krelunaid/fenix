@@ -20,9 +20,8 @@ ICONE (giro dedicato, non opzionale):
 - Ridisegna TUTTE le SVG: pittogramma del mestiere, path originali, viewBox 0 0 24 24, stroke 1.8 round, fill none tranne .on
 - 5 tab = 5 silhouette diverse, si capiscono senza label. Vietato cerchio+lettera, emoji, icone clonate
 - Icona app 52px rx 13 in header + rel=icon, 2 colori #1d1d1f / #0071e3
-Correggi SOLO chrome/CSS/icone/layout.
-VIETATO riscrivere, accorciare o "pulire" i tag <script>. Copiali IDENTICI dall'HTML in ingresso.
-Se un form o una lista già c'è, non toccare gli id, gli onclick, i data-view.
+Correggi chrome/CSS/icone. Se lo screenshot è BIANCO o main vuoto, RIEMPI la home: metriche, oggetto del mestiere, CTA, form. Non lasciare una pagina bianca.
+Copia i tag <script> identici se il JS già fa add/save. Se non c'è contenuto visibile, puoi aggiungere HTML in main.
 Canvas: body colonna 100dvh, header.fk-top, main.fk-main, nav.fk-tab.
 Non scrivere le parole Apple, iOS, Fenix, Grok nel prodotto.
 Rispondi SOLO:
@@ -73,8 +72,8 @@ async function grok(apiKey, prompt, html, shotB64, pass, instruction) {
         instruction ? `MODIFICA DA TENERE:\n${instruction}\nNon disfare questa modifica.` : "",
         `HTML:\n${html.slice(0, 32000)}`,
         pass === PASSES
-          ? "ULTIMO GIRO: solo icone. Ridisegna ogni SVG della tab bar e l'icona app. Non toccare il JS. META+HTML."
-          : "Stile iOS: #f5f5f7 #ffffff #1d1d1f #0071e3. Tab intere, aria, CTA, icone originali, 390px. Tieni il JS. META+HTML.",
+          ? "ULTIMO GIRO: icone + se la pagina è bianca RIEMPI la home. Script originali se già ok. META+HTML."
+          : "iOS. Se screenshot bianco: riempi main (metriche, CTA, form). Tab intere. Tieni JS se già funziona. META+HTML.",
       ]
         .filter(Boolean)
         .join("\n\n"),

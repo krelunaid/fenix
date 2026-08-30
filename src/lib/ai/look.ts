@@ -7,6 +7,7 @@ export type PreviewAudit = {
   title: string;
   vw?: number;
   sw?: number;
+  mainChars?: number;
 };
 
 let lastAudit: PreviewAudit | null = null;
@@ -43,6 +44,7 @@ export function waitPreviewAudit(ms = 1800): Promise<PreviewAudit | null> {
         title: String(msg.title || ""),
         vw: Number(msg.vw) || 0,
         sw: Number(msg.sw) || 0,
+        mainChars: Number(msg.mainChars) || 0,
       };
       lastAudit = audit;
       resolve(audit);
@@ -70,8 +72,9 @@ export function waitPreviewShot(ms = 5500): Promise<string> {
 
 export function isWeakPreview(audit: PreviewAudit | null) {
   if (!audit) return true;
+  const empty = (audit.mainChars ?? 0) < 80;
   const overflow = (audit.sw ?? 0) > (audit.vw ?? 0) + 8;
-  return audit.svgs < 6 || audit.tabs < 4 || !audit.hasIcon || overflow;
+  return empty || audit.svgs < 6 || audit.tabs < 4 || !audit.hasIcon || overflow;
 }
 
 export function lookInstruction(audit: PreviewAudit | null, hasShot: boolean) {
@@ -86,7 +89,9 @@ export function lookInstruction(audit: PreviewAudit | null, hasShot: boolean) {
     "Correggi SOLO chrome/CSS/icone. NON spegnere il JS.",
     "Obbligo canvas telefono: html/body 100dvh, colonna, width 100%, niente max-width 1100, niente 3 colonne desktop.",
     "Tab bar in flusso in basso, 4–5 voci STESSA larghezza, SVG 24px + label 10px intere, niente testo tagliato.",
-    "Header saluto. Main overflow auto. CTA visibile senza scroll orizzontale.",
+    (audit.mainChars ?? 0) < 80
+      ? "HOME VUOTA. Riempi main: metriche, blocco, CTA, lista. Non lasciare il bianco."
+      : "Header saluto. Main overflow auto. CTA visibile senza scroll orizzontale.",
     "Stile iOS: #f5f5f7 #1d1d1f accento #0071e3, aria, tab intere, niente viola neon.",
     "META+HTML completo.",
   ].join("\n");

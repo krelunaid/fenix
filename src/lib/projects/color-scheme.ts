@@ -146,7 +146,8 @@ export function fenixRuntimeScript(projectId: string) {
         hasIcon: !!document.querySelector("link[rel='icon'], link[rel=\"icon\"]"),
         title: document.title || "",
         vw: window.innerWidth,
-        sw: document.documentElement.scrollWidth
+        sw: document.documentElement.scrollWidth,
+        mainChars: ((document.querySelector("main") || document.body).innerText || "").trim().length
       }, "*");
     } catch (err) {}
   }
