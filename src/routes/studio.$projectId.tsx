@@ -56,6 +56,17 @@ function StudioPage() {
   }, [hydrated, project?.id, project?.status, project?.html]);
 
   useEffect(() => {
+    if (!project || project.status !== "building" || !project.html) return;
+    const t = window.setTimeout(() => {
+      const now = useProjectStore.getState().getProject(project.id);
+      if (now?.status === "building" && now.html) {
+        useProjectStore.getState().updateProject(project.id, { status: "ready" });
+      }
+    }, 45000);
+    return () => window.clearTimeout(t);
+  }, [project?.id, project?.status, project?.html]);
+
+  useEffect(() => {
     const el = threadRef.current;
     if (el) el.scrollTop = el.scrollHeight;
   }, [project?.messages.length, project?.status, project?.buildLog?.length]);

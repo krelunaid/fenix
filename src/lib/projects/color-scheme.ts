@@ -245,6 +245,8 @@ export function fenixRuntimeScript(projectId: string) {
     document.querySelectorAll("p, .fk-role").forEach(function(p){
       if (/nessun elemento/i.test(p.textContent || "")) p.style.display = "none";
     });
+    var stat = document.querySelector(".fk-stat b, [data-count]");
+    if (stat) stat.textContent = String(items.length);
   }
   function persist(){
     if (window.Fenix) {
