@@ -12,9 +12,9 @@ import { cn } from "@/lib/utils";
 
 const NAV = [
   { to: "/", label: "Home", icon: Home, end: true },
-  { to: "/#nuovo", label: "Nuovo progetto", icon: Plus, end: false, hash: true },
+  { href: "/#nuovo", label: "Nuovo progetto", icon: Plus, end: false },
   { to: "/vetrina", label: "I miei progetti", icon: FolderKanban, end: false },
-  { to: "/#demo", label: "Progetti demo", icon: LayoutGrid, end: false, hash: true },
+  { href: "/#demo", label: "Progetti demo", icon: LayoutGrid, end: false },
 ] as const;
 
 export function AppShell({
@@ -50,9 +50,9 @@ export function AppShell({
                   ? "bg-[#5b4dff]/25 text-white"
                   : "text-[#9b93c2] hover:bg-white/5 hover:text-white",
               );
-              if ("hash" in item && item.hash) {
+              if ("href" in item) {
                 return (
-                  <a key={item.label} href={item.to} className={className}>
+                  <a key={item.label} href={item.href} className={className}>
                     <Icon className="size-4 opacity-80" />
                     {item.label}
                   </a>
