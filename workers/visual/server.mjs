@@ -98,16 +98,25 @@ function keepScripts(from, to) {
     : `${stripped}${block}`;
 }
 
-async function grok(apiKey, prompt, html, shotB64, pass, instruction) {
+function inferTab(instruction) {
+  const p = String(instruction || "").toLowerCase();
+  if (/form|salva|nuovo|inser|foto|capo|prenot|campo/.test(p)) return 1;
+  if (/elenco|lista|vetrina|righe|attese/.test(p)) return 2;
+  if (/numer|cassa|stat|total|kpi/.test(p)) return 3;
+  if (/staff|altro|impost|team|barbiere/.test(p)) return 4;
+  return 0;
+}
+
+async function grok(apiKey, prompt, html, shotB64, pass, instruction, tabId) {
   const user = [
     {
       type: "text",
       text: [
         `GIRO ${pass}/${PASSES}. BRIEF:\n${prompt}`,
         instruction ? `MODIFICA DA TENERE:\n${instruction}\nNon disfare questa modifica.` : "",
-        `TAB DA RIFARE: ${TAB_IDS[pass - 1] || "home"} (è quella nello screenshot).`,
+        `TAB DA RIFARE: ${tabId || TAB_IDS[pass - 1] || "home"} (è quella nello screenshot).`,
         `HTML (solo per contesto, NON riscriverlo):\n${html.slice(0, 12000)}`,
-        `Rispondi con <<<SCREEN id="${TAB_IDS[pass - 1]}">>> contenuto main di QUESTA tab <<<END>>>. Niente documento intero. Se la tab è vuota, riempila (form / lista / numeri).`,
+        `Rispondi con <<<SCREEN id="${tabId || TAB_IDS[pass - 1]}">>> contenuto main di QUESTA tab <<<END>>>. Niente documento intero. Se la tab è vuota, riempila (form / lista / numeri).`,
       ]
         .filter(Boolean)
         .join("\n\n"),
@@ -248,13 +257,17 @@ async function polish(prompt, html, instruction) {
   let current = html;
   let meta = {};
   try {
-    log.push("Disegno icone");
-    const pack = await designIcons(apiKey, prompt);
-    if (pack) {
-      current = injectIcons(current, pack);
-      log.push(`Icone ok (${pack.tabs.length} tab)`);
+    if (instruction) {
+      log.push("Modifica: salto icone, sistemo solo la tab");
     } else {
-      log.push("Icone: JSON non valido, continuo");
+      log.push("Disegno icone");
+      const pack = await designIcons(apiKey, prompt);
+      if (pack) {
+        current = injectIcons(current, pack);
+        log.push(`Icone ok (${pack.tabs.length} tab)`);
+      } else {
+        log.push("Icone: JSON non valido, continuo");
+      }
     }
   } catch (err) {
     log.push(`Icone saltate: ${err instanceof Error ? err.message : "errore"}`);
@@ -265,25 +278,28 @@ async function polish(prompt, html, instruction) {
   } catch (err) {
     log.push(`Browser: ${err instanceof Error ? err.message : "errore"}`);
   }
-  for (let pass = 1; pass <= PASSES; pass++) {
-    log.push(`Giro ${pass}/${PASSES} (schermata ${pass})`);
+  const focus = instruction ? inferTab(instruction) : -1;
+  const rounds = instruction ? 2 : PASSES;
+  for (let i = 0; i < rounds; i++) {
+    const tabIndex = focus >= 0 ? focus : i;
+    const tabId = TAB_IDS[tabIndex] || "home";
+    log.push(instruction ? `Modifica tab ${tabId} (${i + 1}/${rounds})` : `Giro ${i + 1}/${PASSES} (schermata ${tabId})`);
     let shot = null;
     try {
       if (session?.page) {
         await session.page.setContent(current, { waitUntil: "domcontentloaded", timeout: 12000 });
         await new Promise((r) => setTimeout(r, 220));
-        shot = await shotTab(session.page, pass - 1);
-        log.push(`Screenshot tab ${pass}`);
+        shot = await shotTab(session.page, tabIndex);
+        log.push(`Screenshot tab ${tabId}`);
       } else {
-        log.push(`Niente browser, giro ${pass} a testo`);
+        log.push(`Niente browser, giro ${tabId} a testo`);
       }
     } catch (err) {
       log.push(`Screenshot fallito: ${err instanceof Error ? err.message : "errore"}`);
     }
     try {
-      const text = await grok(apiKey, prompt, current, shot, pass, instruction);
+      const text = await grok(apiKey, prompt, current, shot, tabIndex + 1, instruction, tabId);
       const screen = parseScreen(text);
-      const tabId = TAB_IDS[pass - 1] || "home";
       if (screen?.inner) {
         current = spliceScreen(current, screen.id || tabId, screen.inner);
         log.push(`Patch solo tab ${screen.id || tabId} (${screen.inner.length} caratteri)`);
@@ -292,13 +308,13 @@ async function polish(prompt, html, instruction) {
         if (parsed?.html) {
           current = keepScripts(current, parsed.html);
           meta = parsed.meta;
-          log.push(`Patch ${pass} file intero (fallback, JS conservato)`);
+          log.push(`Patch ${tabId} file intero (fallback, JS conservato)`);
         } else {
-          log.push(`Patch ${pass} ignorata`);
+          log.push(`Patch ${tabId} ignorata`);
         }
       }
     } catch (err) {
-      log.push(`Giro ${pass} saltato: ${err instanceof Error ? err.message : "xAI"}`);
+      log.push(`Giro ${tabId} saltato: ${err instanceof Error ? err.message : "xAI"}`);
     }
   }
   if (session?.browser) {
