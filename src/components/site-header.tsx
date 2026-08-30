@@ -3,11 +3,13 @@ import { CreditMeter } from "@/components/credit-meter";
 import { Wordmark } from "@/components/wordmark";
 import { SignedIn, SignedOut, UserButton } from "@/lib/auth/gates";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
+import { clearLocalAccount, getLocalAccount } from "@/lib/local-account";
 import { cn } from "@/lib/utils";
 
 function AuthSlot() {
   const { user, isPending } = useCurrentUserState();
-  if (isPending) {
+  const local = typeof window !== "undefined" ? getLocalAccount() : null;
+  if (isPending && !local && !user) {
     return <div className="h-9 w-9 shrink-0 animate-pulse rounded-full bg-white/10" />;
   }
   if (user) {
@@ -15,6 +17,20 @@ function AuthSlot() {
       <SignedIn>
         <UserButton />
       </SignedIn>
+    );
+  }
+  if (local) {
+    return (
+      <button
+        type="button"
+        onClick={() => {
+          clearLocalAccount();
+          window.location.assign("/login");
+        }}
+        className="inline-flex h-9 items-center rounded-full border border-white/15 px-3 text-xs text-white"
+      >
+        {local.name} · esci
+      </button>
     );
   }
   return (
