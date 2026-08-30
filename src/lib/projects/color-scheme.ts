@@ -27,15 +27,16 @@ document.addEventListener("click", function (e) {
 </script>`;
 
 const PHONE_KIT = `<style data-fenix-phone>
-html,body{height:100%!important;margin:0;max-width:100%;overflow:hidden!important;color:var(--fg,#111);background:var(--bg,#f4f6fa)}
-body{display:flex!important;flex-direction:column!important;min-height:100dvh;font-size:16px;-webkit-font-smoothing:antialiased}
+html,body{height:100%!important;margin:0;max-width:100%;overflow:hidden;color:var(--fg,#111);background:var(--bg,#f4f6fa)}
+body{display:flex!important;flex-direction:column!important;min-height:100dvh;max-height:100dvh;font-size:16px;-webkit-font-smoothing:antialiased;touch-action:pan-y}
 .fk-top,body>header{flex-shrink:0;padding:14px 16px 10px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
 .fk-hello{margin:0;font-size:22px;font-weight:700;letter-spacing:-.03em;line-height:1.15}
 .fk-role{margin:4px 0 0;font-size:12px;color:var(--muted,#3a3a3c);opacity:1}
 .fk-date{margin:0 16px 10px;font-size:12px;color:var(--muted,#3a3a3c)}
 .fk-main,body>main,main{
-  flex:1 1 0%!important;min-height:0!important;overflow-y:scroll!important;
-  padding:0 16px 28px;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;
+  flex:1 1 auto!important;min-height:0!important;overflow-y:auto!important;
+  padding:0 16px 28px;-webkit-overflow-scrolling:touch!important;overscroll-behavior:contain;
+  touch-action:pan-y;
 }
 .fk-panel{background:var(--surface,#fff);color:var(--fg,#1d1d1f);border:1px solid var(--line,#e5e5ea);border-radius:22px;padding:18px 16px;margin:0 0 14px}
 .fk-panel h2,.fk-panel h3{margin:0 0 12px;font-size:15px;color:var(--fg,#1d1d1f)}

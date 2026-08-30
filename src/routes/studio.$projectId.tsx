@@ -388,6 +388,23 @@ function ChatColumn({
             Riprova. Lo ricostruisco.
           </button>
         ) : null}
+        {suggestions.length && !building && !emptyCredits ? (
+          <div className="space-y-2 pt-2">
+            <p className="text-[11px] font-medium tracking-[0.12em] text-muted-foreground uppercase">
+              Fenix propone
+            </p>
+            {suggestions.map((s) => (
+              <button
+                key={s}
+                type="button"
+                onClick={() => onSuggest?.(s)}
+                className="w-full rounded-xl border border-border bg-card px-3 py-3 text-left text-sm leading-relaxed text-foreground hover:border-primary/40"
+              >
+                {s}
+              </button>
+            ))}
+          </div>
+        ) : null}
       </div>
       <form
         className="border-t border-border p-3"
@@ -396,25 +413,6 @@ function ChatColumn({
           onSubmit();
         }}
       >
-        {suggestions.length && !building && !emptyCredits ? (
-          <div className="mb-2">
-            <p className="mb-1.5 px-1 text-[10px] tracking-[0.16em] text-[#6e6794] uppercase">
-              Suggerimenti
-            </p>
-            <div className="flex flex-wrap gap-1.5">
-            {suggestions.map((s) => (
-              <button
-                key={s}
-                type="button"
-                onClick={() => onSuggest?.(s)}
-                className="max-w-full rounded-full border border-white/12 bg-[#16122c] px-3 py-1.5 text-left text-[11px] leading-snug text-[#cfc8ea] hover:border-white/25 hover:text-white"
-              >
-                {s}
-              </button>
-            ))}
-            </div>
-          </div>
-        ) : null}
         <div className="rounded-lg bg-paper p-2">
           <Textarea
             rows={3}

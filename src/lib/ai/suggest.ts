@@ -1,30 +1,23 @@
 export function suggestEdits(prompt: string, name = "") {
   const p = `${prompt} ${name}`.toLowerCase();
   const out: string[] = [];
-  if (/moda|abbigli|boutique|negozio|capo|vendit/.test(p)) {
-    out.push("Database capi e vendite: ogni Salva resta in elenco e in cassa");
-    out.push("Grafica boutique: crema, nero, foto capo, niente blu generico");
+  if (/moda|abbigli|boutique|negozio|capo|panno/.test(p)) {
+    out.push("Ogni capo che salvi deve restare in Elenco e aggiornare la cassa.");
+    out.push("Grafica boutique: crema, nero, foto del capo — niente blu generico.");
   } else if (/frant|olio|oliv|lotti|resa/.test(p)) {
-    out.push("Database lotti e bottiglie: salva e vedi la riga in elenco");
-    out.push("Grafica frantoio: oro, verde oliva, contrasto alto");
-  } else if (/barba|taglio|salone|barbiere/.test(p)) {
-    out.push("Database prenotazioni: dopo Prenota compare in Agenda");
-    out.push("Foto di ogni barbiere in staff");
-  } else if (/acqua|botte|irror|fusto|campo/.test(p)) {
-    out.push("Database interventi: il form deve far comparire la riga");
-    out.push("Home con litri e limite del giorno");
+    out.push("Quando registri un lotto, deve comparire in Lotti e i litri in home.");
+    out.push("Tieni oro e verde oliva, alza il contrasto, una foto del frantoio in home.");
+  } else if (/cantiere|opera|rapporto|giornate/.test(p)) {
+    out.push("Il rapporto del giorno deve restare in Giornate dopo Salva.");
+    out.push("Togli i riquadri di altre app: una foto di cantiere, numeri veri.");
+  } else if (/barba|taglio|salone/.test(p)) {
+    out.push("Dopo Prenota, la riga deve comparire in Agenda.");
+    out.push("Foto di ogni barbiere in Staff, non icone vuote.");
   } else {
-    out.push("Database: ogni Salva resta in elenco, anche se ricarichi");
-    out.push("Grafica da prodotto: palette del mestiere, contrasto, niente template");
+    out.push("Ogni Salva deve lasciare una riga in elenco, anche se ricarichi.");
+    out.push("Palette del mestiere e contrasto alto: si deve leggere tutto.");
   }
-  const always = [
-    "Foto vere del mestiere, non riquadri vuoti",
-    "Le 5 tab aprono 5 schermate diverse, piene",
-    "Form che salva, con conferma e niente pagina bianca",
-    "Numeri in home (oggi / mese), non placeholder",
-  ];
-  for (const s of always) {
-    if (!out.includes(s)) out.push(s);
-  }
-  return out.slice(0, 6);
+  out.push("Le cinque tab devono aprire cinque schermate diverse e piene.");
+  out.push("Il form deve confermare e non lasciare la pagina bianca.");
+  return out.slice(0, 4);
 }

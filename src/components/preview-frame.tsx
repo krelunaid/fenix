@@ -119,7 +119,11 @@ export function PreviewFrame({
               sandbox="allow-scripts allow-forms allow-modals allow-same-origin"
               srcDoc={srcDoc}
               className="h-full min-h-[70vh] w-full border-0 bg-white"
-              style={{ background: background ?? "var(--color-card)", overflow: "auto", WebkitOverflowScrolling: "touch" }}
+              style={{
+                background: background ?? "var(--color-card)",
+                overflow: "auto",
+                WebkitOverflowScrolling: "touch",
+              }}
             />
           ) : (
             <div className="grid h-full place-items-center px-8 text-center">
