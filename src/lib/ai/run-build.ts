@@ -209,7 +209,7 @@ export async function runBuild(projectId: string, instruction?: string) {
             );
           if (result?.html) {
             applyBuildResult(projectId, result);
-            const logs = data.log ?? [];
+            const logs = data?.log ?? [];
             store.updateProject(projectId, {
               status: "ready",
               buildLog: [
