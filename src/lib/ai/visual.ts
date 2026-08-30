@@ -1,4 +1,4 @@
-import { XAI_CHAT_COMPLETIONS_URL, XAI_MODEL } from "./model";
+import { FENIX_MODEL, XAI_CHAT_COMPLETIONS_URL } from "./model";
 import { VISUAL_PROMPT } from "./prompts.shared";
 
 export { VISUAL_PROMPT } from "./prompts.shared";
@@ -16,7 +16,7 @@ export async function designVisual(input: {
     },
     signal: input.signal,
     body: JSON.stringify({
-      model: XAI_MODEL,
+      model: FENIX_MODEL,
       temperature: 0.9,
       max_tokens: 2500,
       stream: false,
