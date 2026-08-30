@@ -124,6 +124,29 @@
   }
 }
 
+.kit-orb {
+  animation: kit-breathe 1.6s ease-in-out infinite;
+  filter: drop-shadow(0 0 22px rgba(124, 107, 255, 0.65));
+}
+
+.kit-led {
+  background: linear-gradient(180deg, #e9d5ff 0%, #7c6bff 55%, #22d3ee 100%);
+  box-shadow: 0 0 8px rgba(124, 107, 255, 0.7);
+  transition: height 70ms linear;
+}
+
+@keyframes kit-breathe {
+  0%,
+  100% {
+    transform: scale(0.96);
+    filter: drop-shadow(0 0 14px rgba(124, 107, 255, 0.4));
+  }
+  50% {
+    transform: scale(1.04);
+    filter: drop-shadow(0 0 32px rgba(124, 107, 255, 0.85));
+  }
+}
+
 .shimmer-text {
   background: linear-gradient(
     90deg,
@@ -148,6 +171,7 @@
   .rise-in-2,
   .rise-in-3,
   .rise-in-4,
+  .kit-orb,
   .shimmer-text {
     animation: none;
     color: inherit;
