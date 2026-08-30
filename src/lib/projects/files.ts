@@ -59,6 +59,8 @@ export function seedFiveScreens(files: ProjectFile[], html: string, name = "App"
   }
   return [...map.values()];
 }
+
+export function extractScreens(html: string): ProjectFile[] {
   if (!html) return [];
   const out: ProjectFile[] = [];
   const seen = new Set<string>();
