@@ -193,28 +193,48 @@ export function fenixRuntimeScript(projectId: string) {
   });
   var items = [];
   function listEl(){
-    var ul = document.getElementById("fk-saved");
+    var ul = document.getElementById("fk-saved")
+      || document.querySelector("[data-list], .fk-list, #elenco, #lista");
     if (ul) return ul;
+    var main = document.querySelector('[data-view="list"], #view-list, main') || document.body;
     ul = document.createElement("ul");
     ul.id = "fk-saved";
     ul.style.cssText = "list-style:none;margin:14px 0 0;padding:0;display:flex;flex-direction:column;gap:8px";
-    var main = document.querySelector("main") || document.body;
     main.appendChild(ul);
     return ul;
   }
   function labelOf(it){
-    return it.nome || it.name || it.n || it.capo || it.v || Object.keys(it).filter(function(k){return it[k];}).map(function(k){return it[k];}).join(" · ");
+    if (!it || typeof it !== "object") return String(it || "");
+    return it.nome || it.name || it.n || it.capo || it.t || it.v || Object.keys(it).filter(function(k){return it[k];}).map(function(k){return it[k];}).join(" · ");
   }
   function renderItems(){
     var ul = listEl();
-    if (!items.length) { ul.innerHTML = ""; return; }
+    if (!items.length) {
+      if (ul && ul.id === "fk-saved") ul.innerHTML = '<li class="fk-tile" style="color:#1d1d1f">Nessun elemento. Compila il form e salva.</li>';
+      return;
+    }
     ul.innerHTML = items.map(function(it){
-      return '<li class="fk-tile"><b>'+labelOf(it)+'</b></li>';
+      return '<li class="fk-tile" style="color:#1d1d1f;background:#fff;border:1px solid #e5e5ea;border-radius:14px;padding:12px 14px"><b>'+labelOf(it)+'</b></li>';
     }).join("");
+    document.querySelectorAll("p, .fk-role").forEach(function(p){
+      if (/nessun elemento/i.test(p.textContent || "")) p.style.display = "none";
+    });
+  }
+  function persist(){
+    if (window.Fenix) {
+      window.Fenix.save("items", items);
+      window.Fenix.load("state").then(function(st){
+        var next = st && typeof st === "object" ? st : {};
+        next.items = items;
+        window.Fenix.save("state", next);
+      });
+    }
   }
   if (window.Fenix && window.Fenix.load) {
-    window.Fenix.load("items").then(function(v){
-      if (Array.isArray(v)) items = v;
+    Promise.all([window.Fenix.load("items"), window.Fenix.load("state")]).then(function(pair){
+      var a = pair[0], st = pair[1];
+      if (Array.isArray(a) && a.length) items = a;
+      else if (st && Array.isArray(st.items) && st.items.length) items = st.items;
       renderItems();
     });
   }
@@ -237,16 +257,19 @@ export function fenixRuntimeScript(projectId: string) {
       var first = f.querySelector("input, select, textarea");
       if (first && first.value) data.nome = String(first.value);
     }
+    if (!Object.keys(data).length) return;
     items.unshift(data);
-    if (window.Fenix) window.Fenix.save("items", items);
+    persist();
     renderItems();
     try { f.reset(); } catch(err) {}
     var btn = f.querySelector('button[type="submit"], button:not([type]), .fk-btn');
     if (btn) {
       var old = btn.textContent;
-      btn.textContent = "Salvato in elenco";
+      btn.textContent = "Salvato";
       setTimeout(function(){ btn.textContent = old; }, 1400);
     }
+    var listBtn = document.querySelector('[data-view="list"]');
+    if (listBtn) setTimeout(function(){ listBtn.click(); renderItems(); }, 200);
   }, true);
   document.addEventListener("click", function(e){
     var b = e.target.closest && e.target.closest("nav button, .fk-tab button, .tabbar button, [data-view], [data-go]");
@@ -262,6 +285,7 @@ export function fenixRuntimeScript(projectId: string) {
     document.querySelectorAll("[data-screen]").forEach(function(el){
       el.hidden = String(el.getAttribute("data-screen")).toLowerCase() !== String(view).toLowerCase();
     });
+    setTimeout(renderItems, 280);
   }, true);
 })();
 </script>`;
