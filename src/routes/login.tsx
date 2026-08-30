@@ -31,7 +31,7 @@ function Login() {
   return (
     <main className="grid min-h-dvh place-items-center bg-[#07041a] px-6 text-white">
       <div className="w-full max-w-[380px] text-center">
-        <img src="/fenix-mark.svg" alt="Fenix" className="mx-auto size-16" />
+        <img src="/fenix-login.svg" alt="Fenix" className="mx-auto h-36 w-36" />
         <p className="mt-4 text-[11px] font-semibold tracking-[0.28em] text-[#9b93c2]">FENIX · KRELUNA</p>
         <h1 className="mt-3 font-display text-4xl italic tracking-tight">Accedi</h1>
         <p className="mt-2 text-sm text-[#9b93c2]">Iscriviti con email. Poi entri sempre da qui.</p>
