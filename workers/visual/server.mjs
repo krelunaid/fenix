@@ -88,6 +88,79 @@ async function grok(apiKey, prompt, html, shotB64, pass, instruction) {
   return json.choices?.[0]?.message?.content ?? "";
 }
 
+async function designIcons(apiKey, prompt) {
+  const res = await fetch(XAI, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model: MODEL,
+      reasoning_effort: "low",
+      temperature: 0.4,
+      max_tokens: 2500,
+      stream: false,
+      messages: [
+        {
+          role: "system",
+          content: `Disegni pittogrammi iOS. SOLO JSON, niente markdown:
+{"app":"<svg viewBox='0 0 24 24' fill='none' stroke='#1d1d1f' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'>...</svg>","tabs":[{"id":"home","label":"max8","svg":"<svg viewBox='0 0 24 24' fill='none' stroke='#1d1d1f' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'>...</svg>"},{"id":"new","label":"","svg":""},{"id":"list","label":"","svg":""},{"id":"stats","label":"","svg":""},{"id":"more","label":"","svg":""}]}
+Oggetto del brief. 5 silhouette diverse, leggibili a 24px. Niente lettera, emoji, Lucide copiato.`,
+        },
+        { role: "user", content: `BRIEF:\n${prompt}\n\nJSON icone.` },
+      ],
+    }),
+  });
+  if (!res.ok) return null;
+  const payload = await res.json();
+  const text = payload.choices?.[0]?.message?.content ?? "";
+  const match = text.match(/\{[\s\S]*\}/);
+  if (!match) return null;
+  try {
+    const pack = JSON.parse(match[0]);
+    if (!pack?.app || !Array.isArray(pack.tabs) || pack.tabs.length < 4) return null;
+    return pack;
+  } catch {
+    return null;
+  }
+}
+
+function injectIcons(html, pack) {
+  if (!html || !pack?.app) return html;
+  let next = html;
+  const fav = `<link rel="icon" href="data:image/svg+xml,${encodeURIComponent(pack.app)}"/>`;
+  if (/rel=["']icon["']/.test(next)) {
+    next = next.replace(/<link[^>]*rel=["']icon["'][^>]*>/i, fav);
+  } else if (/<head[^>]*>/i.test(next)) {
+    next = next.replace(/<head[^>]*>/i, (open) => `${open}${fav}`);
+  }
+  const mark = `<span class="fk-appicon" aria-hidden="true" style="width:36px;height:36px;border-radius:9px;background:#1d1d1f;display:inline-grid;place-items:center;flex-shrink:0">${String(pack.app).replace("<svg", "<svg width='20' height='20'")}</span>`;
+  if (!next.includes("fk-appicon")) {
+    if (/class="[^"]*fk-hello/.test(next)) {
+      next = next.replace(/<h1([^>]*fk-hello[^>]*)>/i, `${mark}<h1$1>`);
+    } else {
+      next = next.replace(/<header([^>]*)>/i, `<header$1>${mark}`);
+    }
+  }
+  const svgs = (pack.tabs || []).map((t) => t?.svg).filter((s) => typeof s === "string" && s.includes("<svg"));
+  if (svgs.length) {
+    let i = 0;
+    next = next.replace(
+      /(<nav[^>]*(?:fk-tab|aria-label)[^>]*>)([\s\S]*?)(<\/nav>)/i,
+      (_, open, inner, close) => {
+        const replaced = inner.replace(/<svg[\s\S]*?<\/svg>/gi, () => {
+          const svg = svgs[Math.min(i, svgs.length - 1)];
+          i += 1;
+          return String(svg).replace("<svg", "<svg width='24' height='24'");
+        });
+        return `${open}${replaced}${close}`;
+      },
+    );
+  }
+  return next;
+}
+
 async function withBrowser(html) {
   let chromium;
   try {
@@ -113,6 +186,18 @@ async function polish(prompt, html, instruction) {
   const log = [];
   let current = html;
   let meta = {};
+  try {
+    log.push("Disegno icone");
+    const pack = await designIcons(apiKey, prompt);
+    if (pack) {
+      current = injectIcons(current, pack);
+      log.push(`Icone ok (${pack.tabs.length} tab)`);
+    } else {
+      log.push("Icone: JSON non valido, continuo");
+    }
+  } catch (err) {
+    log.push(`Icone saltate: ${err instanceof Error ? err.message : "errore"}`);
+  }
   for (let pass = 1; pass <= PASSES; pass++) {
     log.push(`Giro ${pass}/${PASSES}`);
     let shot = null;
