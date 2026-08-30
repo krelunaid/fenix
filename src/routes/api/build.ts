@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { parseBuildOutput } from "@/lib/ai/parse";
+import { generateHeroUrl, injectHero } from "@/lib/ai/hero-image";
 import { SYSTEM_PROMPT } from "@/lib/ai/prompt";
 import { looksCheap, reviewBuild } from "@/lib/ai/qa";
 import { detectStage, sseLine } from "@/lib/ai/stages";
@@ -310,6 +311,18 @@ export const Route = createFileRoute("/api/build")({
                   } finally {
                     clearTimeout(visTimer);
                   }
+                }
+                send({ t: "s", s: "Foto del mestiere" });
+                try {
+                  const imgCtl = new AbortController();
+                  const imgTimer = setTimeout(() => imgCtl.abort(), 25_000);
+                  const hero = await generateHeroUrl(apiKey, prompt, imgCtl.signal);
+                  clearTimeout(imgTimer);
+                  if (hero) {
+                    result = { ...result, html: injectHero(result.html, hero) };
+                  }
+                } catch {
+                  /* senza foto, l'app resta */
                 }
                 send({ t: "s", s: "Apro l'anteprima" });
                 finish({ t: "ok", result });

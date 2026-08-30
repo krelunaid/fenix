@@ -141,6 +141,39 @@ Rispondi SOLO:
 <!DOCTYPE html>...completo...
 <<<END>>>`;
 
+async function generateHero(apiKey, prompt) {
+  try {
+    const res = await fetch("https://api.x.ai/v1/images/generations", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: "grok-imagine-image-2.0",
+        prompt: `Photorealistic photo, no text, no logo, no watermark. Subject: ${String(prompt).slice(0, 280)}`,
+        aspect_ratio: "16:9",
+        quality: "low",
+        n: 1,
+      }),
+    });
+    if (!res.ok) return null;
+    const json = await res.json();
+    return json.data?.[0]?.url || null;
+  } catch {
+    return null;
+  }
+}
+
+function injectHero(html, url) {
+  if (!html || !url) return html;
+  const img = `<img class="fk-hero" src="${url}" alt="" width="1200" height="675" style="width:100%;height:200px;object-fit:cover;border-radius:18px;display:block;margin:0 0 16px"/>`;
+  let next = html.replace(/^\s*"\s*\/>/m, "").replace(/>\s*"\s*\/>/g, ">");
+  if (/<img\b/i.test(next)) return next.replace(/<img\b[^>]*>/i, img);
+  if (/<main\b[^>]*>/i.test(next)) return next.replace(/<main\b[^>]*>/i, (open) => `${open}${img}`);
+  return next;
+}
+
 async function generate(prompt, html, instruction) {
   const apiKey = (process.env.XAI_API_KEY || "").trim();
   if (!apiKey) throw new Error("Manca XAI_API_KEY");
@@ -175,7 +208,13 @@ async function generate(prompt, html, instruction) {
   const text = payload.choices?.[0]?.message?.content ?? "";
   const parsed = parseHtml(text);
   if (!parsed?.html) throw new Error("HTML non valido");
-  return { html: parsed.html, meta: parsed.meta, log: ["Bozza pronta (iOS)"], files: [] };
+  let out = parsed.html;
+  const hero = await generateHero(apiKey, prompt);
+  if (hero) {
+    out = injectHero(out, hero);
+    return { html: out, meta: parsed.meta, log: ["Bozza pronta", "Foto hero"], files: [] };
+  }
+  return { html: out, meta: parsed.meta, log: ["Bozza pronta (iOS)"], files: [] };
 }
 
 async function grok(apiKey, prompt, html, shotB64, pass, instruction, tabId) {
@@ -460,6 +499,16 @@ async function polish(prompt, html, instruction) {
     }
   }
   current = restoreHome(current);
+  try {
+    const apiKey = (process.env.XAI_API_KEY || "").trim();
+    const hero = apiKey ? await generateHero(apiKey, prompt) : null;
+    if (hero) {
+      current = injectHero(current, hero);
+      log.push("Foto hero");
+    }
+  } catch {
+    /* senza foto */
+  }
   const files = Object.entries(tsx).map(([comp, content]) => ({
     path: `src/screens/${comp}.tsx`,
     content,
