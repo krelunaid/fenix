@@ -382,17 +382,22 @@ function ChatColumn({
         }}
       >
         {suggestions.length && !building && !emptyCredits ? (
-          <div className="mb-2 flex flex-wrap gap-1.5">
+          <div className="mb-2">
+            <p className="mb-1.5 px-1 text-[10px] tracking-[0.16em] text-[#6e6794] uppercase">
+              Suggerimenti
+            </p>
+            <div className="flex flex-wrap gap-1.5">
             {suggestions.map((s) => (
               <button
                 key={s}
                 type="button"
                 onClick={() => onSuggest?.(s)}
-                className="max-w-full truncate rounded-full border border-white/12 bg-[#16122c] px-3 py-1.5 text-left text-[11px] text-[#cfc8ea] hover:border-white/25 hover:text-white"
+                className="max-w-full rounded-full border border-white/12 bg-[#16122c] px-3 py-1.5 text-left text-[11px] leading-snug text-[#cfc8ea] hover:border-white/25 hover:text-white"
               >
                 {s}
               </button>
             ))}
+            </div>
           </div>
         ) : null}
         <div className="rounded-lg bg-paper p-2">

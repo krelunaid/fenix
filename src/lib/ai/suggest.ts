@@ -2,32 +2,29 @@ export function suggestEdits(prompt: string, name = "") {
   const p = `${prompt} ${name}`.toLowerCase();
   const out: string[] = [];
   if (/moda|abbigli|boutique|negozio|capo|vendit/.test(p)) {
-    out.push("Quando salvi, il capo deve comparire in Vetrina");
-    out.push("Foto di ogni capo in elenco");
-    out.push("Database vendite del giorno, con totale cassa");
-    out.push("Grafica boutique: crema, nero, niente blu generico");
+    out.push("Database capi e vendite: ogni Salva resta in elenco e in cassa");
+    out.push("Grafica boutique: crema, nero, foto capo, niente blu generico");
+  } else if (/frant|olio|oliv|lotti|resa/.test(p)) {
+    out.push("Database lotti e bottiglie: salva e vedi la riga in elenco");
+    out.push("Grafica frantoio: oro, verde oliva, contrasto alto");
   } else if (/barba|taglio|salone|barbiere/.test(p)) {
-    out.push("Aggiungi la foto di ogni barbiere in staff");
-    out.push("Lista attese di oggi, con orario");
-    out.push("Dopo Prenota, mostra il riepilogo");
+    out.push("Database prenotazioni: dopo Prenota compare in Agenda");
+    out.push("Foto di ogni barbiere in staff");
   } else if (/acqua|botte|irror|fusto|campo/.test(p)) {
-    out.push("Il form deve salvare e far comparire la riga");
-    out.push("Limite giornaliero visibile in home");
-    out.push("Squadra: aggiungi e togli operatori");
-  } else if (/giostr|luna|park|coda/.test(p)) {
-    out.push("Mappa delle attrazioni con tempi di coda");
-    out.push("Salva una giostra tra i preferiti");
+    out.push("Database interventi: il form deve far comparire la riga");
+    out.push("Home con litri e limite del giorno");
+  } else {
+    out.push("Database: ogni Salva resta in elenco, anche se ricarichi");
+    out.push("Grafica da prodotto: palette del mestiere, contrasto, niente template");
   }
-  const base = [
-    "Tab in basso: ogni tasto apre una schermata vera",
-    "Colori più contrastati, si deve leggere tutto",
-    "Icona dell'app e pittogrammi delle tab, niente lettere",
-    "Form che salva, niente righe vuote",
-    "Home con numeri veri del mestiere, non placeholder",
+  const always = [
+    "Foto vere del mestiere, non riquadri vuoti",
+    "Le 5 tab aprono 5 schermate diverse, piene",
+    "Form che salva, con conferma e niente pagina bianca",
+    "Numeri in home (oggi / mese), non placeholder",
   ];
-  for (const s of base) {
-    if (out.length >= 5) break;
+  for (const s of always) {
     if (!out.includes(s)) out.push(s);
   }
-  return out.slice(0, 5);
+  return out.slice(0, 6);
 }
