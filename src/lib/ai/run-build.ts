@@ -1,6 +1,7 @@
 import type { StreamEvent } from "./stages";
 import { applyBuildResult, useProjectStore } from "@/lib/projects/store";
 import type { BuildResult } from "./parse";
+import { isWeakPreview, lookInstruction, resetAudit, waitPreviewAudit } from "./look";
 import { uid } from "@/lib/utils";
 
 const inflight = new Set<string>();
@@ -111,6 +112,7 @@ export async function runBuild(projectId: string, instruction?: string) {
     error: undefined,
     buildLog: [],
   });
+  resetAudit();
   store.addMessage(projectId, {
     id: uid(),
     role: "assistant",
@@ -131,6 +133,32 @@ export async function runBuild(projectId: string, instruction?: string) {
       if (latest?.status === "error") {
         store.refundCredit();
         charged = false;
+        return;
+      }
+      if (!instruction && latest?.html) {
+        store.updateProject(projectId, {
+          status: "building",
+          buildLog: [...(latest.buildLog ?? []), "Guardo l'anteprima"],
+        });
+        const audit = await waitPreviewAudit(2000);
+        if (isWeakPreview(audit) && audit) {
+          const snapshot = latest.html;
+          await consumeStream(projectId, {
+            prompt: project.prompt,
+            html: snapshot,
+            instruction: lookInstruction(audit),
+          });
+          const after = useProjectStore.getState().getProject(projectId);
+          if (after?.status === "error" && snapshot) {
+            store.updateProject(projectId, {
+              status: "ready",
+              error: undefined,
+              html: snapshot,
+            });
+          }
+        } else {
+          store.updateProject(projectId, { status: "ready" });
+        }
       }
       return;
     }

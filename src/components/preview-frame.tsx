@@ -1,5 +1,6 @@
 import { useEffect, useMemo } from "react";
 import { prepareSrcDoc } from "@/lib/projects/color-scheme";
+import { rememberAudit, type PreviewAudit } from "@/lib/ai/look";
 import { useProjectStore } from "@/lib/projects/store";
 import { cn } from "@/lib/utils";
 
@@ -41,7 +42,24 @@ export function PreviewFrame({
         projectId?: string;
         col?: string;
         data?: unknown;
+        svgs?: number;
+        tabs?: number;
+        forms?: number;
+        inputs?: number;
+        hasIcon?: boolean;
+        title?: string;
       };
+      if (msg?.t === "fenix-audit") {
+        rememberAudit({
+          svgs: Number(msg.svgs) || 0,
+          tabs: Number(msg.tabs) || 0,
+          forms: Number(msg.forms) || 0,
+          inputs: Number(msg.inputs) || 0,
+          hasIcon: Boolean(msg.hasIcon),
+          title: String(msg.title || ""),
+        } satisfies PreviewAudit);
+        return;
+      }
       if (!msg || msg.t !== "fenix-db" || !msg.id || !msg.col) return;
       const id = msg.projectId || projectId;
       if (!id) return;

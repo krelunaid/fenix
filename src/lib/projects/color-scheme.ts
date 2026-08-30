@@ -89,6 +89,22 @@ export function fenixRuntimeScript(projectId: string) {
     load: function(col){ return call("load", col); },
     save: function(col, data){ fallbackSave(col, data); return call("save", col, data); }
   };
+  function audit(){
+    try {
+      var tabs = document.querySelectorAll("[data-view], [data-tab], .tabbar button, nav.tabs button, .tabs [data-view]").length;
+      window.parent && window.parent.postMessage({
+        t: "fenix-audit",
+        svgs: document.querySelectorAll("svg").length,
+        tabs: tabs,
+        forms: document.querySelectorAll("form").length,
+        inputs: document.querySelectorAll("input, select, textarea").length,
+        hasIcon: !!document.querySelector("link[rel='icon'], link[rel=\"icon\"]"),
+        title: document.title || ""
+      }, "*");
+    } catch (err) {}
+  }
+  if (document.readyState === "complete") setTimeout(audit, 40);
+  else window.addEventListener("load", function(){ setTimeout(audit, 40); });
 })();
 </script>`;
 }
