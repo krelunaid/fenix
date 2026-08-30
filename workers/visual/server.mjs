@@ -16,6 +16,10 @@ Legge grafica: iOS / Apple HIG. Sempre, anche se il brief non lo chiede.
 - font: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui (niente Inter Manrope viola neon)
 - tanta aria, titoli grandi tracking stretto, raggio 12–16, tab bar 5 colonne in basso
 - card bianche, panel scuro solo se serve un dato, CTA pillola blu
+ICONE (giro dedicato, non opzionale):
+- Ridisegna TUTTE le SVG: pittogramma del mestiere, path originali, viewBox 0 0 24 24, stroke 1.8 round, fill none tranne .on
+- 5 tab = 5 silhouette diverse, si capiscono senza label. Vietato cerchio+lettera, emoji, icone clonate
+- Icona app 52px rx 13 in header + rel=icon, 2 colori #1d1d1f / #0071e3
 Correggi SOLO chrome/CSS/icone/layout. NON spegnere JS, form, state.
 Canvas: body colonna 100dvh, header.fk-top, main.fk-main, nav.fk-tab.
 Non scrivere le parole Apple, iOS, Fenix, Grok nel prodotto.
@@ -50,7 +54,9 @@ async function grok(apiKey, prompt, html, shotB64, pass, instruction) {
         `GIRO ${pass}/${PASSES}. BRIEF:\n${prompt}`,
         instruction ? `MODIFICA DA TENERE:\n${instruction}\nNon disfare questa modifica.` : "",
         `HTML:\n${html.slice(0, 32000)}`,
-        "Stile iOS obbligatorio: #f5f5f7 #ffffff #1d1d1f #0071e3. Tab intere, aria, CTA pillola, 390px. Tieni il JS. META+HTML.",
+        pass === PASSES
+          ? "ULTIMO GIRO: solo icone. Ridisegna ogni SVG della tab bar e l'icona app. Non toccare il JS. META+HTML."
+          : "Stile iOS: #f5f5f7 #ffffff #1d1d1f #0071e3. Tab intere, aria, CTA, icone originali, 390px. Tieni il JS. META+HTML.",
       ]
         .filter(Boolean)
         .join("\n\n"),
