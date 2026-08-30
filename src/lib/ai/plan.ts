@@ -27,6 +27,7 @@ export async function planBuild(input: {
     signal: input.signal,
     body: JSON.stringify({
       model: FENIX_MODEL,
+      reasoning_effort: "low",
       temperature: 0.7,
       max_tokens: 700,
       stream: false,

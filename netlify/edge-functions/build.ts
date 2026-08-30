@@ -2,7 +2,7 @@ declare const Netlify: { env: { get(name: string): string | undefined } };
 
 import { QA_PROMPT, SYSTEM_PROMPT, VISUAL_PROMPT } from "../../src/lib/ai/prompts.shared.ts";
 
-const MODEL = "grok-build-0.1";
+const MODEL = "grok-4.6";
 const XAI_URL = "https://api.x.ai/v1/chat/completions";
 
 type StreamEvent =
@@ -133,6 +133,7 @@ async function designDirection(apiKey: string, prompt: string) {
       signal: controller.signal,
       body: JSON.stringify({
         model: MODEL,
+        reasoning_effort: "low",
         temperature: 0.9,
         max_tokens: 2500,
         stream: false,
@@ -223,8 +224,18 @@ export default async function build(request: Request) {
       let closed = false;
       let terminal = false;
       let output = "";
+      const enqueue = (chunk: string) => {
+        if (closed) return false;
+        try {
+          controller.enqueue(encoder.encode(chunk));
+          return true;
+        } catch {
+          closed = true;
+          return false;
+        }
+      };
       const send = (event: StreamEvent) => {
-        if (!closed) controller.enqueue(encoder.encode(sse(event)));
+        enqueue(sse(event));
       };
       const finish = (event: StreamEvent) => {
         if (terminal || closed) return;
@@ -232,7 +243,7 @@ export default async function build(request: Request) {
         send(event);
       };
       const heartbeat = setInterval(() => {
-        if (!closed) controller.enqueue(encoder.encode(": ping\n\n"));
+        enqueue(": ping\n\n");
       }, 4000);
 
       try {
@@ -257,6 +268,7 @@ export default async function build(request: Request) {
           },
           body: JSON.stringify({
             model: MODEL,
+            reasoning_effort: "low",
             temperature: instruction ? 0.5 : 0.8,
             max_tokens: 20000,
             stream: true,
@@ -329,7 +341,7 @@ export default async function build(request: Request) {
           }
           finish(result
             ? { t: "ok", result }
-            : { t: "err", error: output.trim() ? "Risposta incompleta. Riprova." : "Grok Build non ha inviato il codice. Riprova." });
+            : { t: "err", error: output.trim() ? "Risposta incompleta. Riprova." : "Grok 4.6 non ha inviato il codice. Riprova." });
         }
       } catch (error) {
         const result = parseResult(output);
@@ -340,7 +352,11 @@ export default async function build(request: Request) {
         clearInterval(heartbeat);
         if (!terminal) finish({ t: "err", error: "Non è arrivata una risposta dal modello. Riprova." });
         closed = true;
-        controller.close();
+        try {
+          controller.close();
+        } catch {
+          /* The browser may already have cancelled the response stream. */
+        }
       }
     },
   });

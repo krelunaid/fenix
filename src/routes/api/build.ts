@@ -1,10 +1,15 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { FENIX_MODEL } from "@/lib/ai/model";
 import { parseBuildOutput } from "@/lib/ai/parse";
 import { SYSTEM_PROMPT } from "@/lib/ai/prompt";
 import { looksCheap, reviewBuild } from "@/lib/ai/qa";
 import { detectStage, sseLine } from "@/lib/ai/stages";
 import { designVisual } from "@/lib/ai/visual";
+import {
+  getXaiApiKey,
+  XAI_CHAT_COMPLETIONS_URL,
+  XAI_MISSING_KEY_ERROR,
+  FENIX_MODEL,
+} from "@/lib/ai/model";
 
 type Body = {
   prompt?: string;
@@ -69,10 +74,10 @@ export const Route = createFileRoute("/api/build")({
     handlers: {
       POST: async ({ request }) => {
         // Server-only. Never VITE_XAI_API_KEY — that would leak to the browser.
-        const apiKey = process.env.XAI_API_KEY;
+        const apiKey = getXaiApiKey();
         if (!apiKey) {
           return Response.json(
-            { t: "err", error: "Fenix non è disponibile in questo ambiente." },
+            { t: "err", error: XAI_MISSING_KEY_ERROR },
             { status: 503 },
           );
         }
@@ -110,13 +115,21 @@ export const Route = createFileRoute("/api/build")({
         const stream = new ReadableStream({
           async start(controller) {
             let closed = false;
+            const enqueue = (chunk: string) => {
+              if (closed) return false;
+              try {
+                controller.enqueue(encoder.encode(chunk));
+                return true;
+              } catch {
+                closed = true;
+                return false;
+              }
+            };
             const send = (event: Parameters<typeof sseLine>[0]) => {
-              if (closed) return;
-              controller.enqueue(encoder.encode(sseLine(event)));
+              enqueue(sseLine(event));
             };
             const ping = () => {
-              if (closed) return;
-              controller.enqueue(encoder.encode(": ping\n\n"));
+              enqueue(": ping\n\n");
             };
             const abort = new AbortController();
             const timer = setTimeout(() => abort.abort(), 175_000);
@@ -159,7 +172,7 @@ export const Route = createFileRoute("/api/build")({
               send({ t: "s", s: "Compongo colori, icone, interfaccia" });
               // Chat Completions: grok-build-0.1 streams reasoning_content first, then content.
               // temperature e max_tokens sono supportati. Non usare reasoning_effort.
-              const res = await fetch("https://api.x.ai/v1/chat/completions", {
+              const res = await fetch(XAI_CHAT_COMPLETIONS_URL, {
                 method: "POST",
                 headers: {
                   "Content-Type": "application/json",
@@ -168,6 +181,7 @@ export const Route = createFileRoute("/api/build")({
                 signal: abort.signal,
                 body: JSON.stringify({
                   model: FENIX_MODEL,
+                  reasoning_effort: "low",
                   temperature: instruction ? 0.5 : 0.85,
                   max_tokens: 16000,
                   stream: true,
@@ -253,7 +267,7 @@ export const Route = createFileRoute("/api/build")({
                   t: "err",
                   error: acc.trim()
                     ? "Risposta incompleta. Riprova, magari con un brief più stretto."
-                    : "Grok Build ha ragionato ma non ha inviato il codice. Riprova.",
+                    : "Grok 4.6 ha ragionato ma non ha inviato il codice. Riprova.",
                 });
               } else {
                 let result = parsed;

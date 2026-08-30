@@ -1,5 +1,5 @@
-/** Grok Build — modello coding agentico. Mai un Grok chat generico. */
-export const FENIX_MODEL = "grok-build-0.1";
+/** Modello premium xAI usato da tutte le fasi server di Fenix. */
+export const FENIX_MODEL = "grok-4.6";
 
 export const XAI_CHAT_COMPLETIONS_URL = "https://api.x.ai/v1/chat/completions";
 

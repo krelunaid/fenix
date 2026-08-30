@@ -1,6 +1,6 @@
 # Fenix
 
-Studio visivo Kreluna. Usa **Grok Build** (`grok-build-0.1`), non un modello chat generico. Tutte le fasi AI — piano, direzione visiva, build e QA — usano lo stesso modello tramite `https://api.x.ai/v1/chat/completions`.
+Studio visivo Kreluna. Usa il modello premium **Grok 4.6** (`grok-4.6`). Tutte le fasi AI — piano, direzione visiva, build e QA — usano lo stesso modello tramite `https://api.x.ai/v1/chat/completions`.
 
 Prove pronte: **Fornace Grottaglie**, **Officina Catenaria**.
 

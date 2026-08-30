@@ -17,6 +17,7 @@ export async function designVisual(input: {
     signal: input.signal,
     body: JSON.stringify({
       model: FENIX_MODEL,
+      reasoning_effort: "low",
       temperature: 0.9,
       max_tokens: 2500,
       stream: false,

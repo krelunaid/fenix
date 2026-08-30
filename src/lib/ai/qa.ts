@@ -41,8 +41,9 @@ export async function reviewBuild(input: {
     signal: input.signal,
     body: JSON.stringify({
       model: FENIX_MODEL,
-      temperature: 0.55,
-      max_tokens: 8000,
+      reasoning_effort: "low",
+      temperature: 0.35,
+      max_tokens: 12000,
       stream: false,
       messages: [
         { role: "system", content: QA_PROMPT },

@@ -9,3 +9,7 @@ artifacts
 .env.*.local
 .DS_Store
 .grok/app-env.json
+
+# Local Netlify folder
+.netlify
+node_modules.latest/
