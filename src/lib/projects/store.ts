@@ -20,13 +20,16 @@ import {
 
 import {
   APP_DB_KEY,
+  asBox,
   countItems,
   embedAppDataInProjectsBlob,
   isEmptyVal,
   mergeAppDb,
+  pickNewer,
   readAllDurable,
   readIndexedDb,
   readWebStorage,
+  unwrapItems,
   verifyDurableBytes,
   writeDurable,
   type AppDb,
@@ -73,12 +76,34 @@ function loadCollection(
   projects: Project[],
 ): unknown {
   const durable = mergeAppDb(idbSnap, readWebStorage())[projectId]?.[collection];
-  if (!isEmptyVal(durable)) return durable;
+  if (!isEmptyVal(unwrapItems(durable))) return durable;
   const mem = appDb[projectId]?.[collection];
-  if (!isEmptyVal(mem)) return mem;
+  if (!isEmptyVal(unwrapItems(mem))) return mem;
   const embedded = projects.find((p) => p.id === projectId)?.appData?.[collection];
-  if (!isEmptyVal(embedded)) return embedded;
+  if (!isEmptyVal(unwrapItems(embedded))) return embedded;
   return durable ?? mem ?? embedded ?? null;
+}
+
+function publishDiag(
+  projectId: string,
+  collection: string,
+  extra: Record<string, number | string> = {},
+) {
+  if (typeof document === "undefined") return;
+  void verifyDurableBytes(projectId, collection, 0).then((proof) => {
+    const payload = {
+      pid: projectId.slice(0, 8),
+      col: collection,
+      local: proof.local,
+      session: proof.session,
+      idb: proof.idb,
+      projects: proof.projects,
+      epoch: Date.now(),
+      hydrated: useProjectStore.getState().hydrated ? 1 : 0,
+      ...extra,
+    };
+    document.documentElement.setAttribute("data-fenix-diag", JSON.stringify(payload));
+  });
 }
 
 function trimList(projects: Project[]) {
@@ -140,34 +165,44 @@ export const useProjectStore = create<ProjectStore>()(
         return loadCollection(projectId, collection, get().appDb, get().projects);
       },
       saveAppData: async (projectId, collection, data) => {
-        const existing = loadCollection(projectId, collection, get().appDb, get().projects);
-        const toWrite =
-          countItems(data) < countItems(existing) && countItems(existing) > 0 ? existing : data;
+        const existingRaw = mergeAppDb(idbSnap, await readAllDurable())[projectId]?.[collection];
+        const existing = asBox(existingRaw);
+        const incoming = asBox(data) ?? {
+          rev: (existing?.rev ?? 0) + 1,
+          items: Array.isArray(data) ? data : [],
+          writer: "",
+          at: Date.now(),
+        };
+        const stale = Boolean(
+          existing &&
+            (incoming.rev < existing.rev ||
+              (incoming.rev === existing.rev &&
+                incoming.writer &&
+                existing.writer &&
+                incoming.writer !== existing.writer &&
+                incoming.items.length < existing.items.length)),
+        );
+        const chosen = stale
+          ? existingRaw
+          : { _fenix: 1 as const, rev: incoming.rev, items: incoming.items, writer: incoming.writer, at: incoming.at };
         const current = await readAllDurable();
-        current[projectId] = { ...(current[projectId] ?? {}), [collection]: toWrite };
+        current[projectId] = { ...(current[projectId] ?? {}), [collection]: chosen };
         await writeDurable(current);
         idbSnap = mergeAppDb(idbSnap, current);
-        embedAppDataInProjectsBlob(projectId, collection, toWrite);
+        embedAppDataInProjectsBlob(projectId, collection, chosen);
         set((s) => ({
           appDb: {
             ...s.appDb,
             [projectId]: {
               ...(s.appDb[projectId] ?? {}),
-              [collection]: toWrite,
+              [collection]: chosen,
             },
           },
-          projects: s.projects.map((p) =>
-            p.id === projectId
-              ? {
-                  ...p,
-                  appData: { ...(p.appData ?? {}), [collection]: toWrite },
-                  updatedAt: Date.now(),
-                }
-              : p,
-          ),
         }));
-        const proof = await verifyDurableBytes(projectId, collection, countItems(toWrite));
-        return { ok: proof.ok, v: proof.ok ? toWrite : null, durable: proof.durable };
+        const expected = countItems(chosen);
+        const proof = await verifyDurableBytes(projectId, collection, expected);
+        publishDiag(projectId, collection, { save: 1, durable: proof.durable, rev: incoming.rev });
+        return { ok: proof.ok, v: proof.ok ? chosen : null, durable: proof.durable };
       },
       createFromBrief: ({ prompt, kind }) => {
         const project = blankProject(prompt.trim(), kind ?? "app");
@@ -255,10 +290,7 @@ export const useProjectStore = create<ProjectStore>()(
       }),
       onRehydrateStorage: () => (state) => {
         void (async () => {
-          const idb = await Promise.race([
-            readIndexedDb(),
-            new Promise<AppDb>((resolve) => setTimeout(() => resolve({}), 800)),
-          ]);
+          const idb = await readIndexedDb();
           idbSnap = idb;
           if (state) {
             state.projects = state.projects.map((p) => {
@@ -283,9 +315,13 @@ export const useProjectStore = create<ProjectStore>()(
               state.creditsRemaining = CREDITS_GRANT;
             }
             const disk = readWebStorage();
-            const merged: AppDb = mergeAppDb(idb, disk);
+            let merged: AppDb = mergeAppDb(idb, disk);
             for (const p of state.projects) {
-              if (p.appData) merged[p.id] = { ...(merged[p.id] ?? {}), ...p.appData };
+              if (!p.appData) continue;
+              merged[p.id] = { ...(merged[p.id] ?? {}) };
+              for (const [col, val] of Object.entries(p.appData)) {
+                merged[p.id][col] = pickNewer(merged[p.id][col], val);
+              }
             }
             state.appDb = merged;
             useProjectStore.setState({
@@ -294,6 +330,8 @@ export const useProjectStore = create<ProjectStore>()(
               creditsRemaining: state.creditsRemaining,
               hydrated: true,
             });
+            const first = state.projects[0];
+            if (first) publishDiag(first.id, "items", { boot: 1 });
           } else {
             useProjectStore.getState().setHydrated();
           }
@@ -325,6 +363,7 @@ if (typeof window !== "undefined" && !(window as Window & { __fenixDbBound?: boo
       if (msg.op === "load") {
         idbSnap = mergeAppDb(idbSnap, await readIndexedDb());
         value = store.loadAppData(msg.projectId!, msg.col!);
+        publishDiag(msg.projectId!, msg.col!, { load: 1, n: countItems(value) });
       }
       if (msg.op === "save") {
         value = await store.saveAppData(msg.projectId!, msg.col!, msg.data);

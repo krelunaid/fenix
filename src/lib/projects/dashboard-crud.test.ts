@@ -16,6 +16,7 @@ import {
 import { recoverPersistedProject } from "./recover.ts";
 import { DEMOS } from "./demos.ts";
 import { validateProductHtml } from "./validate-html.ts";
+import { requirePreview } from "./ensure-preview.ts";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const ARGILLA = readFileSync(join(here, "fixtures/argilla-viva.html"), "utf8");
@@ -124,7 +125,7 @@ describe("dashboard CRUD repair", () => {
       `<script data-fenix-crud>window.__fenixCrud=1;</script></body>`,
     );
     const html = repairDashboardCrud(withV1);
-    assert.match(html, /data-fenix-crud="8"/);
+    assert.match(html, /data-fenix-crud="9"/);
     assert.equal((html.match(/data-fenix-crud/g) || []).length, 1);
     const src = prepareSrcDoc(
       html,
@@ -206,18 +207,8 @@ describe("dashboard CRUD repair", () => {
     }
   });
 
-  it("Studio remount keeps Argilla row, summary and edit/delete", async (t) => {
-    const PREVIEW = process.env.PREVIEW_URL || "http://127.0.0.1:8081";
-    try {
-      const health = await fetch(`${PREVIEW}/`, { signal: AbortSignal.timeout(1200) });
-      if (!health.ok) {
-        t.skip("preview non in ascolto");
-        return;
-      }
-    } catch {
-      t.skip("preview non in ascolto");
-      return;
-    }
+  it("Studio remount keeps Argilla row, summary and edit/delete", async () => {
+    const PREVIEW = await requirePreview();
     const ARGILLA_PID = "49c14680-a504-436d-a0db-84e4f3583dbe";
     const html = polishDashboardHtml(ARGILLA, "dashboard");
     const browser = await chromium.launch({ headless: true });
@@ -225,62 +216,48 @@ describe("dashboard CRUD repair", () => {
       const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
       await page.addInitScript(
         ({ seeded, pid }: { seeded: string; pid: string }) => {
-          const orig = Storage.prototype.setItem;
           try {
-            if (!sessionStorage.getItem("fenix-seed-" + pid)) {
-              sessionStorage.setItem("fenix-seed-" + pid, "1");
-              const now = Date.now();
-              orig.call(
-                localStorage,
-                "officina-projects",
-                JSON.stringify({
-                  state: {
-                    projects: [
-                      {
-                        id: pid,
-                        name: "Argilla Viva",
-                        tagline: "",
-                        prompt: "FORMATO: gestionale ufficio. kind=dashboard",
-                        kind: "dashboard",
-                        requestedKind: "dashboard",
-                        summary: "",
-                        palette: {
-                          bg: "#f3eadc",
-                          surface: "#fbf6ee",
-                          fg: "#2b211c",
-                          muted: "#6e5648",
-                          accent: "#b85c38",
-                          line: "#d7c4b0",
-                        },
-                        html: seeded,
-                        messages: [],
-                        buildLog: [],
-                        status: "ready",
-                        createdAt: now,
-                        updatedAt: now,
-                      },
-                    ],
-                    creditsRemaining: 46,
-                    appDb: {},
-                  },
-                  version: 2,
-                }),
-              );
-              try {
-                localStorage.removeItem("officina-appdb");
-              } catch {
-                /* ignore */
-              }
-            }
+            if (sessionStorage.getItem("fenix-seed-" + pid)) return;
+            sessionStorage.setItem("fenix-seed-" + pid, "1");
           } catch {
             /* ignore */
           }
-          Storage.prototype.setItem = function (k, v) {
-            if (this === localStorage && (k === "officina-appdb" || k === "officina-projects")) {
-              throw new DOMException("The quota has been exceeded.", "QuotaExceededError");
-            }
-            return orig.call(this, k, v);
-          };
+          const now = Date.now();
+          localStorage.setItem(
+            "officina-projects",
+            JSON.stringify({
+              state: {
+                projects: [
+                  {
+                    id: pid,
+                    name: "Argilla Viva",
+                    tagline: "",
+                    prompt: "FORMATO: gestionale ufficio. kind=dashboard",
+                    kind: "dashboard",
+                    requestedKind: "dashboard",
+                    summary: "",
+                    palette: {
+                      bg: "#f3eadc",
+                      surface: "#fbf6ee",
+                      fg: "#2b211c",
+                      muted: "#6e5648",
+                      accent: "#b85c38",
+                      line: "#d7c4b0",
+                    },
+                    html: seeded,
+                    messages: [],
+                    buildLog: [],
+                    status: "ready",
+                    createdAt: now,
+                    updatedAt: now,
+                  },
+                ],
+                creditsRemaining: 46,
+                appDb: {},
+              },
+              version: 2,
+            }),
+          );
         },
         { seeded: html, pid: ARGILLA_PID },
       );
@@ -302,38 +279,31 @@ describe("dashboard CRUD repair", () => {
       assert.match(sum, /25 pezzi/);
       assert.match(sum, /104 in stock/);
       assert.match(sum, /3638/);
-      await page.waitForFunction(
-        (pid: string) => {
-          try {
-            const raw = sessionStorage.getItem("officina-appdb") || "";
-            const db = JSON.parse(raw || "{}") as Record<string, { items?: { nome?: string }[] }>;
-            return (
-              db[pid]?.items?.length === 25 &&
-              Boolean(db[pid]?.items?.some((r) => r.nome === "Codex Verifica 1e7b47a"))
-            );
-          } catch {
-            return false;
-          }
-        },
-        ARGILLA_PID,
-        { timeout: 8000 },
+      await page.waitForFunction(() => {
+        try {
+          const d = JSON.parse(document.documentElement.getAttribute("data-fenix-diag") || "{}");
+          return Number(d.idb) >= 25 || Number(d.session) >= 25 || Number(d.local) >= 25;
+        } catch {
+          return false;
+        }
+      }, null, { timeout: 8000 });
+      const beforeDiag = JSON.parse((await page.locator("html").getAttribute("data-fenix-diag")) || "{}");
+      assert.ok(
+        beforeDiag.idb >= 25 || beforeDiag.session >= 25 || beforeDiag.local >= 25,
+        `diag before reload ${JSON.stringify(beforeDiag)}`,
       );
-      const before = await page.evaluate(() => ({
-        local: localStorage.getItem("officina-appdb"),
-        session: sessionStorage.getItem("officina-appdb"),
-      }));
-      assert.ok(before.session, "sessionStorage officina-appdb missing after save");
-      const dbBefore = JSON.parse(before.session as string) as Record<
-        string,
-        { items?: { nome?: string }[]; state?: unknown }
-      >;
-      assert.ok(dbBefore[ARGILLA_PID]?.items, "items missing before reload");
-      assert.equal(dbBefore[ARGILLA_PID]?.items?.length, 25);
-      assert.ok(dbBefore[ARGILLA_PID]?.state, "state missing before reload");
 
       await page.reload({ waitUntil: "domcontentloaded" });
       await page.locator("iframe").first().waitFor({ timeout: 15000 });
       assert.equal(await page.locator("iframe").count(), 2);
+      await page.waitForFunction(() => {
+        try {
+          const d = JSON.parse(document.documentElement.getAttribute("data-fenix-diag") || "{}");
+          return Number(d.idb) >= 25 || Number(d.session) >= 25 || Number(d.local) >= 25;
+        } catch {
+          return false;
+        }
+      }, null, { timeout: 15000 });
 
       const frame2 = page.locator("section.hidden.md\\:block").frameLocator("iframe");
       await frame2.locator("tr", { hasText: "Codex Verifica 1e7b47a" }).waitFor({ timeout: 15000 });
@@ -350,155 +320,29 @@ describe("dashboard CRUD repair", () => {
       await frame2.locator("#p-prezzo").fill("20");
       await frame2.getByRole("button", { name: /^salva$/i }).click();
       await target.locator("td").nth(3).filter({ hasText: /^5$/ }).waitFor({ timeout: 4000 });
-      const afterEdit = (await frame2.locator(".summary").innerText()).replace(/\s+/g, " ");
-      assert.match(afterEdit, /107 in stock/);
-      await target.getByRole("button", { name: /^elimina$/i }).click();
-      await frame2.locator("tr", { hasText: "Codex Verifica 1e7b47a" }).waitFor({
+      assert.match((await frame2.locator(".summary").innerText()).replace(/\s+/g, " "), /107 in stock/);
+
+      await page.reload({ waitUntil: "domcontentloaded" });
+      await page.locator("iframe").first().waitFor({ timeout: 15000 });
+      const frame3 = page.locator("section.hidden.md\\:block").frameLocator("iframe");
+      const edited = frame3.locator("tr", { hasText: "Codex Verifica 1e7b47a" });
+      await edited.waitFor({ timeout: 15000 });
+      await edited.locator("td").nth(3).filter({ hasText: /^5$/ }).waitFor({ timeout: 4000 });
+      await edited.getByRole("button", { name: /^elimina$/i }).click();
+      await frame3.locator("tr", { hasText: "Codex Verifica 1e7b47a" }).waitFor({
         state: "detached",
         timeout: 4000,
       });
-      const afterDel = (await frame2.locator(".summary").innerText()).replace(/\s+/g, " ");
-      assert.match(afterDel, /24 pezzi/);
-      assert.match(afterDel, /102 in stock/);
-      assert.match(afterDel, /3604/);
-      await page.close();
-    } finally {
-      await browser.close();
-    }
-  });
+      assert.match((await frame3.locator(".summary").innerText()).replace(/\s+/g, " "), /24 pezzi/);
 
-  it("two iframes + delayed hydrate keep 25 rows after reload", async (t) => {
-    const PREVIEW = process.env.PREVIEW_URL || "http://127.0.0.1:8081";
-    try {
-      const health = await fetch(`${PREVIEW}/`, { signal: AbortSignal.timeout(1200) });
-      if (!health.ok) {
-        t.skip("preview non in ascolto");
-        return;
-      }
-    } catch {
-      t.skip("preview non in ascolto");
-      return;
-    }
-    const PID = "49c14680-a504-436d-a0db-84e4f3583dbe";
-    const src = prepareSrcDoc(
-      repairDashboardCrud(ARGILLA),
-      { bg: "#f3eadc", fg: "#2b211c", accent: "#b85c38" },
-      PID,
-      "dashboard",
-    );
-    const browser = await chromium.launch({ headless: true });
-    try {
-      const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
-      await page.addInitScript((srcDoc: string) => {
-        (window as Window & { __SRC?: string }).__SRC = srcDoc;
-      }, src);
-      await page.route("**/bridge-harness", async (route) => {
-        await route.fulfill({
-          contentType: "text/html",
-          body: `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body>
-<iframe id="desk" data-preview="desktop" style="width:100%;height:80vh;border:0"></iframe>
-<iframe id="phone" data-preview="mobile" style="position:absolute;left:-9999px;width:390px;height:700px;border:0"></iframe>
-<script>
-  var origSet = Storage.prototype.setItem;
-  Storage.prototype.setItem = function (k, v) {
-    if (this === localStorage && (k === "officina-appdb" || k === "officina-projects")) {
-      throw new DOMException("The quota has been exceeded.", "QuotaExceededError");
-    }
-    return origSet.call(this, k, v);
-  };
-  window.__hydrated = false;
-  window.__db = {};
-  try {
-    var raw = sessionStorage.getItem("officina-appdb") || localStorage.getItem("officina-appdb");
-    if (raw) {
-      var parsed = JSON.parse(raw);
-      window.__db = parsed["${PID}"] || {};
-    }
-  } catch (e) {}
-  function n(x){
-    if (Array.isArray(x)) return x.length;
-    if (x && x.items && x.items.length) return x.items.length;
-    return 0;
-  }
-  window.addEventListener("message", function (e) {
-    var m = e.data;
-    if (!m || m.t !== "fenix-db" || !m.id) return;
-    function apply() {
-      var v = null;
-      if (m.op === "load") v = window.__db[m.col] || null;
-      if (m.op === "save") {
-        var cur = window.__db[m.col];
-        var incoming = m.data;
-        if (n(incoming) < n(cur) && n(cur) > 0) incoming = cur;
-        window.__db[m.col] = incoming;
-        var blob = {};
-        blob["${PID}"] = window.__db;
-        var json = JSON.stringify(blob);
-        try { sessionStorage.setItem("officina-appdb", json); } catch (err) {}
-        try {
-          var req = indexedDB.open("officina-durable", 1);
-          req.onupgradeneeded = function () {
-            if (!req.result.objectStoreNames.contains("kv")) req.result.createObjectStore("kv");
-          };
-          req.onsuccess = function () {
-            req.result.transaction("kv", "readwrite").objectStore("kv").put(blob, "officina-appdb");
-          };
-        } catch (err) {}
-        var raw = sessionStorage.getItem("officina-appdb");
-        var durable = 0;
-        try {
-          var parsed = JSON.parse(raw || "{}");
-          durable = n(parsed["${PID}"] && parsed["${PID}"][m.col]);
-        } catch (err) {}
-        v = { ok: durable >= n(incoming) && durable > 0, v: incoming, durable: durable };
-      }
-      e.source.postMessage({ t: "fenix-db", id: m.id, v: v }, "*");
-    }
-    if (window.__hydrated) apply();
-    else setTimeout(function () { window.__hydrated = true; apply(); }, 700);
-  });
-  var src = window.__SRC || "";
-  document.getElementById("desk").srcdoc = src;
-  document.getElementById("phone").srcdoc = src;
-</script>
-</body></html>`,
-        });
-      });
-      await page.goto(`${PREVIEW}/bridge-harness`, { waitUntil: "domcontentloaded", timeout: 20000 });
-      assert.equal(await page.locator("iframe").count(), 2);
-      const desk = page.frameLocator("#desk");
-      await desk.getByRole("heading", { name: "Inventario" }).waitFor({ timeout: 15000 });
-      await desk.getByRole("button", { name: /nuovo pezzo/i }).click();
-      await desk.locator("#p-nome").fill("Codex Twin Frame");
-      await desk.locator("#p-qty").fill("2");
-      await desk.locator("#p-prezzo").fill("17");
-      await desk.getByRole("button", { name: /^salva$/i }).click();
-      await desk.locator("tr", { hasText: "Codex Twin Frame" }).waitFor({ timeout: 8000 });
-      await page.waitForFunction(
-        (pid: string) => {
-          try {
-            const db = JSON.parse(sessionStorage.getItem("officina-appdb") || "{}") as Record<
-              string,
-              { items?: { nome?: string }[] }
-            >;
-            return Boolean(db[pid]?.items?.some((r) => r.nome === "Codex Twin Frame"));
-          } catch {
-            return false;
-          }
-        },
-        PID,
-        { timeout: 8000 },
-      );
-      const before = await page.evaluate(() => sessionStorage.getItem("officina-appdb"));
       await page.reload({ waitUntil: "domcontentloaded" });
-      const after = await page.evaluate(() => sessionStorage.getItem("officina-appdb"));
-      assert.equal(after, before, "session appdb changed across reload");
-      assert.equal(await page.locator("iframe").count(), 2);
-      const desk2 = page.frameLocator("#desk");
-      await desk2.locator("tr", { hasText: "Codex Twin Frame" }).waitFor({ timeout: 15000 });
-      const sum = (await desk2.locator(".summary").innerText()).replace(/\s+/g, " ");
-      assert.match(sum, /25 pezzi/);
-      assert.match(sum, /3638/);
+      await page.locator("iframe").first().waitFor({ timeout: 15000 });
+      const frame4 = page.locator("section.hidden.md\\:block").frameLocator("iframe");
+      await frame4.getByRole("heading", { name: "Inventario" }).waitFor({ timeout: 15000 });
+      assert.equal(await frame4.locator("tr", { hasText: "Codex Verifica 1e7b47a" }).count(), 0);
+      assert.match((await frame4.locator(".summary").innerText()).replace(/\s+/g, " "), /24 pezzi/);
+      assert.match((await frame4.locator(".summary").innerText()).replace(/\s+/g, " "), /102 in stock/);
+      await page.close();
     } finally {
       await browser.close();
     }

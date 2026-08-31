@@ -8,6 +8,7 @@ import { DEMOS } from "./demos.ts";
 import { prepareSrcDoc } from "./color-scheme.ts";
 import { RESUME_ERROR } from "./recover.ts";
 import { APP_SHELL_HTML } from "../ai/app-shell.ts";
+import { requirePreview } from "./ensure-preview.ts";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const VALID = readFileSync(join(here, "fixtures/valid-app.html"), "utf8");
@@ -68,18 +69,9 @@ describe("Fenix bridge in browser", () => {
 });
 
 describe("studio overlay and resume in browser", () => {
-  it("shows compact overlay on a building draft and Riprendi on stale error", async (t) => {
+  it("shows compact overlay on a building draft and Riprendi on stale error", async () => {
+    await requirePreview();
     let browser;
-    try {
-      const health = await fetch(PREVIEW + "/", { signal: AbortSignal.timeout(1200) });
-      if (!health.ok) {
-        t.skip("preview non in ascolto");
-        return;
-      }
-    } catch {
-      t.skip("preview non in ascolto");
-      return;
-    }
     browser = await launch();
     try {
       const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
@@ -138,18 +130,9 @@ describe("studio overlay and resume in browser", () => {
     }
   });
 
-  it("reattaches resume polling after reload without a second POST", async (t) => {
+  it("reattaches resume polling after reload without a second POST", async () => {
+    await requirePreview();
     let browser;
-    try {
-      const health = await fetch(PREVIEW + "/", { signal: AbortSignal.timeout(1200) });
-      if (!health.ok) {
-        t.skip("preview non in ascolto");
-        return;
-      }
-    } catch {
-      t.skip("preview non in ascolto");
-      return;
-    }
     const ARGILLA_PROMPT =
       "FORMATO: gestionale ufficio. kind=dashboard. Desktop: elenco, filtri, form nuovo, numeri. Tabella che si riempie. NON landing, NON tabbar iPhone.\n\nArgilla Viva — magazzino e ordini.";
     const jobId = "job-argilla-reattach";

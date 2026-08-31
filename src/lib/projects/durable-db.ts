@@ -11,7 +11,35 @@ export function isEmptyVal(v: unknown): boolean {
   return false;
 }
 
+export function isBox(v: unknown): v is { _fenix: 1; rev: number; items: unknown[]; writer?: string; at?: number } {
+  return Boolean(v && typeof v === "object" && (v as { _fenix?: number })._fenix === 1);
+}
+
+export function asBox(v: unknown): { rev: number; items: unknown[]; writer: string; at: number } | null {
+  if (isBox(v)) {
+    const items = Array.isArray(v.items) ? v.items : [];
+    return { rev: Number(v.rev) || 0, items, writer: String(v.writer || ""), at: Number(v.at) || 0 };
+  }
+  if (Array.isArray(v)) return { rev: 0, items: v, writer: "", at: 0 };
+  if (v && typeof v === "object") {
+    const o = v as { items?: unknown; rows?: unknown };
+    const items = Array.isArray(o.items) ? o.items : Array.isArray(o.rows) ? o.rows : null;
+    if (items) {
+      const rev = Number((v as { rev?: number }).rev) || 0;
+      return { rev, items, writer: String((v as { writer?: string }).writer || ""), at: 0 };
+    }
+  }
+  return null;
+}
+
+export function unwrapItems(v: unknown): unknown {
+  const box = asBox(v);
+  return box ? box.items : v;
+}
+
 export function countItems(v: unknown): number {
+  const box = asBox(v);
+  if (box) return box.items.length;
   if (Array.isArray(v)) return v.length;
   if (v && typeof v === "object") {
     const o = v as { items?: unknown; rows?: unknown };
@@ -19,6 +47,17 @@ export function countItems(v: unknown): number {
     if (Array.isArray(o.rows)) return o.rows.length;
   }
   return 0;
+}
+
+function revOf(v: unknown): number {
+  return asBox(v)?.rev ?? 0;
+}
+
+export function pickNewer(a: unknown, b: unknown): unknown {
+  const ra = revOf(a);
+  const rb = revOf(b);
+  if (rb !== ra) return rb > ra ? b : a;
+  return countItems(b) >= countItems(a) ? b ?? a : a ?? b;
 }
 
 export function mergeAppDb(a: AppDb, b: AppDb): AppDb {
@@ -31,7 +70,7 @@ export function mergeAppDb(a: AppDb, b: AppDb): AppDb {
     for (const col of cols) {
       const av = ac[col];
       const bv = bc[col];
-      out[pid][col] = countItems(bv) > countItems(av) ? bv : av ?? bv;
+      out[pid][col] = pickNewer(av, bv);
     }
   }
   return out;

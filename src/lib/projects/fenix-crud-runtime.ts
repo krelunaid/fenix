@@ -1,8 +1,8 @@
 /** Injected into gestionale HTML. No ${} — product JS, not a template. */
-export const DASHBOARD_CRUD_SCRIPT = `<script data-fenix-crud="8">
+export const DASHBOARD_CRUD_SCRIPT = `<script data-fenix-crud="9">
 (function(){
-  if (window.__fenixCrud >= 8) return;
-  window.__fenixCrud = 8;
+  if (window.__fenixCrud >= 9) return;
+  window.__fenixCrud = 9;
   function qsa(s, r){ return Array.prototype.slice.call((r || document).querySelectorAll(s)); }
   function qs(s, r){ return (r || document).querySelector(s); }
   function txt(el){ return ((el && (el.textContent || (el.getAttribute && el.getAttribute("aria-label")))) || "").replace(/\\s+/g, " ").trim(); }
@@ -97,20 +97,49 @@ export const DASHBOARD_CRUD_SCRIPT = `<script data-fenix-crud="8">
     return qsa("table thead th").map(function(th){ return txt(th); });
   }
   function host(){ return window.__fenixHost || window.Fenix; }
+  var writer = Math.random().toString(36).slice(2, 8);
+  var localRev = 0;
+  function boxOf(v){
+    if (v && typeof v === "object" && v._fenix === 1 && Array.isArray(v.items)) return v;
+    if (Array.isArray(v)) return { _fenix: 1, rev: 0, items: v, writer: "", at: 0 };
+    if (v && typeof v === "object" && Array.isArray(v.items)) return { _fenix: 1, rev: Number(v.rev)||0, items: v.items, writer: v.writer||"", at: 0 };
+    if (v && typeof v === "object" && Array.isArray(v.rows)) return { _fenix: 1, rev: Number(v.rev)||0, items: v.rows, writer: v.writer||"", at: 0 };
+    return null;
+  }
+  function itemsOf(v){
+    var b = boxOf(v);
+    return b ? b.items : (Array.isArray(v) ? v : null);
+  }
+  function markBoot(extra){
+    try {
+      var payload = {
+        pid: String((host() && host().projectId) || "").slice(0, 8),
+        writer: writer,
+        rev: localRev,
+        rows: readRows().length,
+        epoch: Date.now()
+      };
+      if (extra) Object.keys(extra).forEach(function(k){ payload[k] = extra[k]; });
+      document.documentElement.setAttribute("data-fenix-boot", JSON.stringify(payload));
+    } catch (e) {}
+  }
   function persist(rows){
     var F = host();
     if (!F || !F.save) return Promise.resolve(false);
+    localRev += 1;
+    var box = { _fenix: 1, rev: localRev, at: Date.now(), writer: writer, items: rows };
     function ackOk(v){
       if (!v || v === false) return 0;
-      if (typeof v === "object" && "ok" in v) return v.ok ? (v.durable || (Array.isArray(v.v) ? v.v.length : rows.length)) : 0;
+      if (typeof v === "object" && "ok" in v) return v.ok ? (v.durable || rows.length) : 0;
       var n = Array.isArray(v) ? v.length : (v && Array.isArray(v.items) ? v.items.length : -1);
-      return n >= rows.length ? n : 0;
+      return n >= 0 ? n : 0;
     }
     return Promise.all([
-      Promise.resolve(F.save("items", rows)),
-      Promise.resolve(F.save("state", { items: rows, rows: rows }))
+      Promise.resolve(F.save("items", box)),
+      Promise.resolve(F.save("state", box))
     ]).then(function(pair){
       var a = ackOk(pair[0]), b = ackOk(pair[1]);
+      markBoot({ save: 1, durable: Math.max(a, b) });
       return a && b ? Math.max(a, b) : false;
     }).catch(function(){ return false; });
   }
@@ -380,8 +409,11 @@ export const DASHBOARD_CRUD_SCRIPT = `<script data-fenix-crud="8">
     Promise.all([F.load("items"), F.load("state")]).then(function(pair){
       if (paintedFromHost) return;
       var a = pair[0], st = pair[1];
-      var rows = Array.isArray(a) && a.length ? a : (st && (Array.isArray(st.items) ? st.items : st.rows));
+      var box = boxOf(a) || boxOf(st);
+      if (box && box.rev) localRev = Math.max(localRev, box.rev);
+      var rows = itemsOf(a) || itemsOf(st);
       hideSaved();
+      markBoot({ boot: 1, n: rows ? rows.length : 0 });
       if (Array.isArray(rows) && rows.length) {
         var current = readRows();
         if (current.length > rows.length) {
