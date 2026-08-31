@@ -1,3 +1,5 @@
+import { DASHBOARD_CRUD_SCRIPT } from "./dashboard-crud.ts";
+
 export function isLightHex(hex: string) {
   const h = hex.replace("#", "").trim();
   if (h.length !== 6) return false;
@@ -166,6 +168,25 @@ p,li{opacity:1}
 section{margin:0 0 28px}
 .card,.fk-tile{background:var(--surface,#f7f1e4);border-radius:16px;padding:16px;margin:0 0 12px;border:1px solid var(--line,#c4b49a);color:var(--fg,#1c1712)}
 footer{padding:24px 16px;font-size:13px;color:var(--muted,#5c5348)}
+img[src=""],img:not([src]){display:none!important}
+</style>`;
+
+const DASHBOARD_KIT = `<style data-fenix-site data-fenix-desk>
+html,body{height:auto!important;min-height:100%;margin:0;max-width:100%;overflow:auto!important;overflow-x:hidden!important;color:var(--fg,#2b211c);background:var(--bg,#f3eadc);font:400 15px/1.45 "Source Sans 3",system-ui,sans-serif}
+body{display:block!important;padding:0}
+header,body>header{padding:12px 20px;display:flex;flex-wrap:wrap;align-items:center;gap:12px;border-bottom:1px solid var(--line,#d7c4b0);background:var(--surface,#fbf6ee)}
+nav{display:flex;flex-wrap:wrap;gap:4px 8px;padding:0}
+nav a,nav button{border:0;background:none;color:var(--muted,#6e5648);font:650 14px/1.2 inherit;padding:8px 10px;border-radius:0;border-bottom:2px solid transparent}
+nav button.on,nav a.on{color:var(--cobalt,#1e3a5f);border-bottom-color:var(--accent,#b85c38)}
+main,body>main{display:block!important;overflow:visible!important;flex:none!important;padding:22px 24px 64px;max-width:1120px;margin:0 auto}
+h1{font-family:"Fraunces",Georgia,serif;font-size:28px;letter-spacing:-.02em;margin:0 0 8px;color:var(--fg,#2b211c)}
+h2{font-size:18px;margin:20px 0 10px}
+table{width:100%;border-collapse:collapse;background:var(--surface,#fbf6ee)}
+th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line,#d7c4b0);color:var(--fg,#2b211c)}
+th{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted,#6e5648)}
+.card,.fk-tile{background:var(--surface,#fbf6ee);border-radius:4px;padding:16px;margin:0 0 12px;border:1px solid var(--line,#d7c4b0);color:var(--fg,#2b211c)}
+button,.cta{border-radius:2px}
+dialog,[role=dialog],.modal{background:var(--surface,#fbf6ee);color:var(--fg,#2b211c);border:1px solid var(--line,#d7c4b0);padding:20px 22px}
 img[src=""],img:not([src]){display:none!important}
 </style>`;
 
@@ -450,10 +471,15 @@ export function prepareSrcDoc(
       : `${next}${NAV_GUARD}`;
   }
   if (!/data-fenix-phone/.test(next) && !/data-fenix-site/.test(next)) {
-    const kit = looksLikeSite(next, kind) ? SITE_KIT : PHONE_KIT;
+    const kit = kind === "dashboard" ? DASHBOARD_KIT : looksLikeSite(next, kind) ? SITE_KIT : PHONE_KIT;
     next = /<head[^>]*>/i.test(next)
       ? next.replace(/<head[^>]*>/i, (open) => `${open}${kit}`)
       : `${kit}${next}`;
+  }
+  if ((kind === "dashboard" || /nuovo pezzo|inventario/i.test(next)) && !/data-fenix-crud/.test(next)) {
+    next = /<\/body>/i.test(next)
+      ? next.replace(/<\/body>/i, `${DASHBOARD_CRUD_SCRIPT}</body>`)
+      : `${next}${DASHBOARD_CRUD_SCRIPT}`;
   }
   // Last :root in <head> so the kit's var(--fg,#1c1712) resolves to the
   // project ink, not the phone-kit paper default, after authored CSS.

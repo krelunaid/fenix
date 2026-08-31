@@ -29,9 +29,13 @@ export const WORKER_JOB_POLL_MAX = 180;
 const GENERATE_POLL_MAX = 90;
 
 function readyCopy(result: BuildResult) {
-  const summary = result.summary?.trim();
+  const summary = (result.summary ?? "")
+    .replace(/Fenix 2:\s*Vite \+ React/gi, "")
+    .replace(/Persistenza via\s*,?/gi, "")
+    .replace(/\d+ schermate/gi, "")
+    .trim();
   return [
-    `Pronto. ${result.name} è in anteprima: ${result.files?.filter((f) => f.path.startsWith("screens/")).length || 1} schermate (Fenix 2: Vite + React).`,
+    `Pronto. ${result.name} è in anteprima e si usa.`,
     summary,
     "Tocca un suggerimento sotto, o scrivi cosa cambiare.",
   ]

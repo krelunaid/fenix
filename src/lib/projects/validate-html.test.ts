@@ -126,7 +126,8 @@ describe("looksLikeSite kind lock", () => {
     assert.equal(looksLikeSite(VALID, "site"), true);
     assert.equal(looksLikeSite(VALID, "app"), false);
     const dash = prepareSrcDoc(VALID, "#ffffff", "dash", "dashboard");
-    assert.match(dash, /data-fenix-site/);
+    assert.match(dash, /data-fenix-desk/);
+    assert.doesNotMatch(dash, /max-width:40rem/);
     assert.doesNotMatch(dash, /data-fenix-phone/);
     const app = prepareSrcDoc(VALID, "#ffffff", "app", "app");
     assert.match(app, /data-fenix-phone/);

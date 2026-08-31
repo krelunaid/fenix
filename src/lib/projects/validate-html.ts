@@ -129,6 +129,13 @@ export function validateProductHtml(
   if (kind === "dashboard" && /\bfk-tab\b/.test(markup)) {
     errors.push("Un gestionale non usa la tabbar telefono.");
   }
+  if (
+    kind === "dashboard" &&
+    /\+\s*nuovo|nuovo pezzo|aggiungi pezzo/i.test(text) &&
+    !/data-fenix-crud/i.test(text)
+  ) {
+    errors.push("Il pulsante Nuovo non apre un form. Annulla/Salva devono cambiare il DOM.");
+  }
 
   if (
     (kind === "app" || kind === "tool" || kind === "game") &&

@@ -102,5 +102,11 @@ describe("focus-visible and worker model", () => {
     assert.doesNotMatch(scheme, /#0071e3/);
     assert.match(scheme, /data-fenix-ready/);
     assert.match(scheme, /ready:\s*function/);
+    assert.match(scheme, /data-fenix-desk/);
+    const crud = readFileSync(join(root, "src/lib/projects/dashboard-crud.ts"), "utf8");
+    assert.match(crud, /data-fenix-crud/);
+    assert.match(crud, /b85c38/);
+    const runBuild = readFileSync(join(root, "src/lib/ai/run-build.ts"), "utf8");
+    assert.doesNotMatch(runBuild, /Fenix 2: Vite \+ React/);
   });
 });

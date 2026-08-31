@@ -7,6 +7,7 @@ import { DEMOS } from "./demos";
 import { resolveProjectKind, isPhoneKind } from "./infer";
 import { validatePublishable, type HtmlReport } from "./validate-html";
 import { recoverPersistedProject, STALE_BUILD_MS, RESUME_ERROR } from "./recover";
+import { polishDashboardHtml, scrubTechMessages } from "./dashboard-crud";
 import { replaceAppleTabIcons, rewriteIosWidgetHome } from "./craft-icons";
 import {
   DEFAULT_PALETTE,
@@ -200,7 +201,24 @@ export const useProjectStore = create<ProjectStore>()(
       }),
       onRehydrateStorage: () => (state) => {
         if (state) {
-          state.projects = state.projects.map((p) => recoverPersistedProject(p));
+          state.projects = state.projects.map((p) => {
+            const recovered = recoverPersistedProject(p);
+            return {
+              ...recovered,
+              messages: scrubTechMessages(p.messages),
+              palette:
+                recovered.kind === "dashboard" && /argilla|ceram|viva/i.test(`${p.name} ${p.prompt}`)
+                  ? {
+                      bg: "#f3eadc",
+                      surface: "#fbf6ee",
+                      fg: "#2b211c",
+                      muted: "#6e5648",
+                      accent: "#b85c38",
+                      line: "#d7c4b0",
+                    }
+                  : recovered.palette ?? p.palette,
+            };
+          });
           if (typeof state.creditsRemaining !== "number") {
             state.creditsRemaining = CREDITS_GRANT;
           }
@@ -236,7 +254,9 @@ export function applyBuildResult(
   const requestedKind = existing?.requestedKind ?? kind;
   const html = isPhoneKind(kind)
     ? rewriteIosWidgetHome(replaceAppleTabIcons(result.html))
-    : result.html;
+    : kind === "dashboard"
+      ? polishDashboardHtml(result.html)
+      : result.html;
   const report = validatePublishable(html, {
     kind,
     projectId: id,
