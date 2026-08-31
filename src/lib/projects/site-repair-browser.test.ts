@@ -464,7 +464,7 @@ describe("iframe boot error on site null.orders", () => {
                     creditRefunded: true,
                     visualJobId: "job-ghost",
                     visualJobStatus: "run",
-                    visualJobStartedAt: now - 60_000,
+                    visualJobStartedAt: now - 21 * 60 * 1000,
                     createdAt: now,
                     updatedAt: now,
                   },

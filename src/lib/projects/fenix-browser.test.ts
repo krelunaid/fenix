@@ -281,4 +281,269 @@ describe("studio overlay and resume in browser", () => {
       await browser?.close();
     }
   });
+
+  it("pending JOB_STILL_RUNNING + reload keeps the same job, one POST, credits 42, then ready", async () => {
+    await requirePreview();
+    const jobId = "job-terra-live";
+    const readyHtml = DEMOS.kiln.html;
+    const ARGILLA_PROMPT =
+      "FORMATO: gestionale ufficio. kind=dashboard. Desktop: elenco, filtri, form nuovo, numeri. Tabella che si riempie. NON landing, NON tabbar iPhone.\n\nBottega Terra.";
+    let polishPosts = 0;
+    let allowComplete = false;
+    const browser = await launch();
+    try {
+      const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+      await page.route(/\/api\/build/, async (route) => {
+        await route.fulfill({ status: 204, body: "" });
+      });
+      await page.route(/polish/, async (route) => {
+        if (route.request().method() === "POST") {
+          polishPosts += 1;
+          await route.fulfill({
+            status: 202,
+            contentType: "application/json",
+            body: JSON.stringify({ id: jobId, status: "run" }),
+          });
+          return;
+        }
+        await route.continue();
+      });
+      await page.route(/\/jobs\//, async (route) => {
+        const payload = allowComplete
+          ? {
+              id: jobId,
+              status: "ok",
+              html: readyHtml,
+              meta: { kind: "dashboard", name: "Bottega Terra" },
+              log: ["Rifinitura"],
+              files: [],
+            }
+          : { id: jobId, status: "run", log: ["Partito"], html: null };
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify(payload),
+        });
+      });
+      await page.addInitScript(
+        ({ html, prompt }: { html: string; prompt: string }) => {
+          if (localStorage.getItem("officina-projects")) return;
+          const now = Date.now();
+          localStorage.setItem(
+            "officina-projects",
+            JSON.stringify({
+              state: {
+                projects: [
+                  {
+                    id: "p-terra",
+                    name: "Bottega Terra",
+                    tagline: "",
+                    prompt,
+                    kind: "dashboard",
+                    requestedKind: "dashboard",
+                    summary: "",
+                    palette: {
+                      bg: "#f4efe6",
+                      surface: "#fffaf3",
+                      fg: "#2a241c",
+                      muted: "#6f675c",
+                      accent: "#b85c38",
+                    },
+                    html,
+                    messages: [{ id: "m1", role: "assistant", content: "JOB_STILL_RUNNING", at: now }],
+                    buildLog: ["Motore visivo in sottofondo", "Partito"],
+                    status: "error",
+                    error: "JOB_STILL_RUNNING",
+                    creditRefunded: false,
+                    visualJobId: "job-terra-live",
+                    visualJobStatus: "run",
+                    visualJobStartedAt: now - 60_000,
+                    createdAt: now,
+                    updatedAt: now,
+                  },
+                ],
+                creditsRemaining: 42,
+                appDb: {},
+              },
+              version: 2,
+            }),
+          );
+        },
+        { html: DEMOS.kiln.html, prompt: ARGILLA_PROMPT },
+      );
+      await page.goto(PREVIEW + "/studio/p-terra", { waitUntil: "domcontentloaded", timeout: 20000 });
+      await page.waitForFunction(
+        () => {
+          const raw = localStorage.getItem("officina-projects");
+          if (!raw) return false;
+          try {
+            const state = JSON.parse(raw).state;
+            const project = state.projects.find((p: { id: string }) => p.id === "p-terra");
+            return (
+              project?.status === "building" &&
+              project?.visualJobId === "job-terra-live" &&
+              state.creditsRemaining === 42
+            );
+          } catch {
+            return false;
+          }
+        },
+        null,
+        { timeout: 15000 },
+      );
+      assert.equal(await page.getByText("Bloccato").count(), 0);
+      assert.equal(polishPosts, 0, "live job must reattach, not POST again");
+      await page.reload({ waitUntil: "domcontentloaded" });
+      await new Promise((r) => setTimeout(r, 2500));
+      assert.equal(polishPosts, 0, "reload must not start a second polish job");
+      assert.equal(await page.getByText("Bloccato").count(), 0);
+      const mid = await page.evaluate(() => {
+        const raw = localStorage.getItem("officina-projects");
+        const state = JSON.parse(raw || "{}").state;
+        const project = state.projects.find((p: { id: string }) => p.id === "p-terra");
+        return {
+          jobId: project?.visualJobId,
+          status: project?.status,
+          credits: state.creditsRemaining,
+        };
+      });
+      assert.equal(mid.jobId, jobId);
+      assert.equal(mid.status, "building");
+      assert.equal(mid.credits, 42);
+      allowComplete = true;
+      await page.waitForFunction(
+        () => {
+          const raw = localStorage.getItem("officina-projects");
+          if (!raw) return false;
+          try {
+            const state = JSON.parse(raw).state;
+            const project = state.projects.find((p: { id: string }) => p.id === "p-terra");
+            return project?.status === "ready" && !project?.visualJobId && state.creditsRemaining === 42;
+          } catch {
+            return false;
+          }
+        },
+        null,
+        { timeout: 20000 },
+      );
+      assert.equal(polishPosts, 0);
+      const publish = page.getByRole("button", { name: /Pubblica/ }).first();
+      await publish.waitFor({ timeout: 8000 });
+      assert.equal(await publish.isDisabled(), false);
+    } finally {
+      await browser.close();
+    }
+  });
+
+  it("missing worker job clears once and refunds once", async () => {
+    await requirePreview();
+    const jobId = "job-gone";
+    let polishPosts = 0;
+    const browser = await launch();
+    try {
+      const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+      await page.route(/\/api\/build/, async (route) => {
+        const result = {
+          name: "Bottega Terra",
+          tagline: "Ceramica",
+          kind: "dashboard",
+          summary: "Gestionale",
+          direction: "terra",
+          palette: {
+            bg: "#f4efe6",
+            surface: "#fffaf3",
+            fg: "#2a241c",
+            muted: "#6f675c",
+            accent: "#b85c38",
+          },
+          html: DEMOS.kiln.html,
+          files: [],
+        };
+        const body =
+          `data: ${JSON.stringify({ t: "s", s: "Adatto Fenix" })}\n\n` +
+          `data: ${JSON.stringify({ t: "ok", result })}\n\n`;
+        await route.fulfill({
+          status: 200,
+          contentType: "text/event-stream; charset=utf-8",
+          body,
+        });
+      });
+      await page.route(/polish/, async (route) => {
+        if (route.request().method() === "POST") {
+          polishPosts += 1;
+          await route.fulfill({
+            status: 202,
+            contentType: "application/json",
+            body: JSON.stringify({ id: jobId, status: "run" }),
+          });
+          return;
+        }
+        await route.continue();
+      });
+      await page.route(/\/jobs\//, async (route) => {
+        await route.fulfill({ status: 404, body: "gone" });
+      });
+      await page.addInitScript(() => {
+        const now = Date.now();
+        localStorage.setItem(
+          "officina-projects",
+          JSON.stringify({
+            state: {
+              projects: [
+                {
+                  id: "p-gone",
+                  name: "Bottega Terra",
+                  tagline: "",
+                  prompt:
+                    "FORMATO: gestionale ufficio. kind=dashboard. Bottega Terra",
+                  kind: "dashboard",
+                  requestedKind: "dashboard",
+                  summary: "",
+                  palette: {
+                    bg: "#f4efe6",
+                    surface: "#fffaf3",
+                    fg: "#2a241c",
+                    muted: "#6f675c",
+                    accent: "#b85c38",
+                  },
+                  html: "",
+                  messages: [],
+                  buildLog: [],
+                  status: "error",
+                  error: "Interrotto. Riprova.",
+                  creditRefunded: true,
+                  createdAt: now,
+                  updatedAt: now,
+                },
+              ],
+              creditsRemaining: 46,
+              appDb: {},
+            },
+            version: 2,
+          }),
+        );
+      });
+      await page.goto(PREVIEW + "/studio/p-gone", { waitUntil: "domcontentloaded", timeout: 20000 });
+      await page.getByRole("button", { name: "Riprova. Lo ricostruisco." }).first().click();
+      await page.getByText("Bloccato").first().waitFor({ timeout: 40000 });
+      const snap = await page.evaluate(() => {
+        const raw = localStorage.getItem("officina-projects");
+        const state = JSON.parse(raw || "{}").state;
+        const project = state.projects.find((p: { id: string }) => p.id === "p-gone");
+        return {
+          jobId: project?.visualJobId ?? null,
+          status: project?.status,
+          credits: state.creditsRemaining,
+          refunded: project?.creditRefunded,
+        };
+      });
+      assert.equal(snap.status, "error");
+      assert.equal(snap.jobId, null);
+      assert.equal(snap.credits, 46);
+      assert.equal(polishPosts, 1);
+      assert.equal(await page.getByRole("button", { name: /pubblica/i }).isDisabled(), true);
+    } finally {
+      await browser.close();
+    }
+  });
 });

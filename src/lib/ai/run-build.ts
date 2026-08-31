@@ -155,15 +155,25 @@ async function pollWorkerJob(projectId: string, jobId: string): Promise<WorkerJo
     if (job.status === "err") {
       throw new Error(`${job.error || "Worker visivo fallito"}. Tocca Riprendi rifinitura.`);
     }
-    if (ticks >= WORKER_JOB_POLL_MAX) throw new Error(JOB_STILL_RUNNING);
-    if (ticks === WORKER_POLL_MAX) {
+    if (ticks === WORKER_POLL_MAX || ticks === WORKER_JOB_POLL_MAX) {
       const current = store.getProject(projectId);
-      store.updateProject(projectId, {
-        buildLog: [...(current?.buildLog ?? []), "Motore visivo ancora in corso"],
-      });
+      const prev = current?.buildLog ?? [];
+      if (prev[prev.length - 1] !== "Motore visivo ancora in corso") {
+        store.updateProject(projectId, {
+          status: "building",
+          error: undefined,
+          buildLog: [...prev, "Motore visivo ancora in corso"],
+        });
+      }
     }
   }
-  throw new Error("Tempo scaduto sul motore visivo. Tocca Riprendi rifinitura.");
+  const last = await fetchJob(jobId);
+  if (last?.status === "ok" && last.html) return last;
+  if (last?.status === "err") {
+    throw new Error(`${last.error || "Worker visivo fallito"}. Tocca Riprendi rifinitura.`);
+  }
+  if (!last) throw new Error("Job visivo non trovato. Tocca Riprendi rifinitura.");
+  throw new Error(JOB_STILL_RUNNING);
 }
 
 async function startPolishJob(
@@ -437,7 +447,14 @@ async function polishDraft(
     }
   } catch (err) {
     const workerError = err instanceof Error ? err.message : "errore";
-    if (workerError === JOB_STILL_RUNNING || /Riprendi rifinitura/i.test(workerError)) {
+    if (workerError === JOB_STILL_RUNNING) {
+      const current = useProjectStore.getState().getProject(projectId);
+      if (current?.visualJobId) {
+        store.updateProject(projectId, { status: "building", error: undefined });
+      }
+      throw err instanceof Error ? err : new Error(workerError);
+    }
+    if (/Riprendi rifinitura/i.test(workerError)) {
       abandonVisualJob(projectId, workerError);
       throw err instanceof Error ? err : new Error(workerError);
     }
@@ -555,6 +572,13 @@ export async function resumePolish(projectId: string) {
     finishPolish(projectId, lastValidHtml);
   } catch (err) {
     const message = err instanceof Error ? err.message : RESUME_ERROR;
+    if (message === JOB_STILL_RUNNING) {
+      const current = useProjectStore.getState().getProject(projectId);
+      if (current?.visualJobId) {
+        store.updateProject(projectId, { status: "building", error: undefined });
+      }
+      return;
+    }
     abandonVisualJob(projectId, message);
   } finally {
     inflight.delete(projectId);
@@ -760,9 +784,16 @@ export async function runBuild(projectId: string, instruction?: string) {
       content: "Non è arrivata una risposta. Riprova, magari con un brief più corto.",
     });
   } catch (err) {
-    if (charged) refundBuildCredit(projectId, cost);
     const message =
       err instanceof Error ? err.message : "Qualcosa è andato storto. Riprova.";
+    if (message === JOB_STILL_RUNNING) {
+      const current = useProjectStore.getState().getProject(projectId);
+      if (current?.visualJobId) {
+        store.updateProject(projectId, { status: "building", error: undefined });
+      }
+      return;
+    }
+    if (charged) refundBuildCredit(projectId, cost);
     abandonVisualJob(projectId, message);
   } finally {
     inflight.delete(projectId);

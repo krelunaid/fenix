@@ -29,7 +29,7 @@ describe("focus-visible and worker model", () => {
     assert.doesNotMatch(resume, /spendCredit/);
     assert.match(resume, /finishPolish/);
     assert.match(resume, /abandonVisualJob/);
-    assert.doesNotMatch(resume, /if \(message === JOB_STILL_RUNNING\) return/);
+    assert.match(resume, /if \(message === JOB_STILL_RUNNING\)/);
     assert.match(src, /if \(refund\) refundBuildCredit\(projectId, refund\)/);
     assert.match(src, /charged = !finishPolish/);
   });
@@ -118,5 +118,7 @@ describe("focus-visible and worker model", () => {
     assert.match(runBuild, /BOOT_REPAIR_MAX = 2/);
     assert.match(runBuild, /repairBootFailures/);
     assert.match(runBuild, /waitPreviewBoot/);
+    assert.doesNotMatch(runBuild, /JOB_STILL_RUNNING \|\| \/Riprendi rifinitura/);
+    assert.match(runBuild, /if \(workerError === JOB_STILL_RUNNING\)/);
   });
 });

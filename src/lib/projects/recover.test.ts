@@ -163,34 +163,31 @@ describe("recoverPersistedProject", () => {
     assert.equal((recovered.buildLog ?? []).includes("Motore visivo in sottofondo"), false);
   });
 
-  it("drops a leftover job on error even if the TTL has not expired", () => {
+  it("error + JOB_STILL_RUNNING + live job reattaches as building, no drop", () => {
     const now = Date.now();
     const recovered = recoverPersistedProject(
       seed({
-        id: "bottega",
         status: "error",
         error: "JOB_STILL_RUNNING",
-        html: BOTTEGA,
-        kind: "site",
-        prompt: "FORMATO: sito web. kind=site. Bottega del Tornio",
-        visualJobId: "job-bottega",
+        visualJobId: "job-terra",
         visualJobStatus: "run",
         visualJobStartedAt: now - 8_000,
-        buildLog: ["Motore visivo in sottofondo", "Partito", "Partito"],
+        buildLog: ["Motore visivo in sottofondo", "Partito"],
         updatedAt: now,
       }),
       now,
     );
-    assert.equal(recovered.status, "error");
-    assert.equal(recovered.visualJobId, undefined);
-    assert.match(String(recovered.error), /gestionale|orders|avvio/i);
-    assert.doesNotMatch(String(recovered.error), /JOB_STILL_RUNNING|ancora in corso/i);
+    assert.equal(recovered.status, "building");
+    assert.equal(recovered.visualJobId, "job-terra");
+    assert.equal(recovered.visualJobStartedAt, now - 8_000);
+    assert.equal(recovered.error, undefined);
     assert.equal(isPublishable(recovered), false);
     assert.equal(needsResume(recovered), false);
-    assert.equal((recovered.buildLog ?? []).filter((s) => s === "Partito").length, 0);
+    assert.ok((recovered.buildLog ?? []).includes("Partito"));
   });
 
-  it("keeps a boot-error message and still drops the leftover job", () => {
+  it("keeps a boot-error message after the leftover job has expired", () => {
+    const now = Date.now();
     const recovered = recoverPersistedProject(
       seed({
         status: "error",
@@ -200,8 +197,9 @@ describe("recoverPersistedProject", () => {
         prompt: "FORMATO: sito web. kind=site. Bottega del Tornio",
         visualJobId: "job-x",
         visualJobStatus: "run",
-        visualJobStartedAt: Date.now() - 1_000,
+        visualJobStartedAt: now - 21 * 60 * 1000,
       }),
+      now,
     );
     assert.equal(recovered.status, "error");
     assert.equal(recovered.visualJobId, undefined);

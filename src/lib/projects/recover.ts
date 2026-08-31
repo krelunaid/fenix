@@ -82,6 +82,20 @@ export function recoverPersistedProject<T extends Recoverable>(p: T, now = Date.
     status = "error";
     error = "HTML assente.";
     dropJob();
+  } else if (html && jobLive && p.visualJobId && p.status !== "ready") {
+    const report = validatePublishable(html, {
+      kind,
+      projectId: p.id,
+      bg: p.palette?.bg,
+    });
+    if (report.syntaxOk) {
+      status = "building";
+      error = undefined;
+    } else {
+      status = "error";
+      error = formatHtmlErrors(report);
+      dropJob();
+    }
   } else if (html && (p.status === "ready" || p.status === "building")) {
     const report = validatePublishable(html, {
       kind,
