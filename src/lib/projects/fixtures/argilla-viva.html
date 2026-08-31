@@ -25,15 +25,37 @@ body{font-family:Inter,system-ui,sans-serif;background:#f5f5f7;color:#1d1d1f;mar
   <section data-view-panel="dash" hidden><h1>Dashboard</h1></section>
   <section data-view-panel="inv">
     <h1>Inventario</h1>
-    <p>Persistenza via ,</p>
+    <p data-summary>24 pezzi • 102 in stock • €3604</p>
     <button type="button" id="btn-new">+ Nuovo pezzo</button>
     <table>
       <thead>
-        <tr><th>Nome</th><th>Categoria</th><th>Stato</th><th>Quantità</th><th>Prezzo</th><th>Azioni</th></tr>
+        <tr><th>Nome</th><th>Categoria</th><th>Stato</th><th>QTÀ</th><th>Prezzo</th><th>Azioni</th></tr>
       </thead>
       <tbody id="rows">
-        <tr><td>Ciotola</td><td>Terraglia</td><td>in laboratorio</td><td>4</td><td>12</td>
-          <td><button type="button" class="edit">Modifica</button></td></tr>
+        <tr><td>Ciotola</td><td>Terraglia</td><td>in laboratorio</td><td>4</td><td>20</td><td><button type="button" class="edit">Modifica</button></td></tr>
+        <tr><td>P01</td><td>Terraglia</td><td>in laboratorio</td><td>4</td><td>40</td><td><button type="button" class="edit">Modifica</button></td></tr>
+        <tr><td>P02</td><td>Terraglia</td><td>in laboratorio</td><td>4</td><td>40</td><td><button type="button" class="edit">Modifica</button></td></tr>
+        <tr><td>P03</td><td>Terraglia</td><td>in laboratorio</td><td>4</td><td>40</td><td><button type="button" class="edit">Modifica</button></td></tr>
+        <tr><td>P04</td><td>Terraglia</td><td>in laboratorio</td><td>4</td><td>40</td><td><button type="button" class="edit">Modifica</button></td></tr>
+        <tr><td>P05</td><td>Terraglia</td><td>in laboratorio</td><td>4</td><td>40</td><td><button type="button" class="edit">Modifica</button></td></tr>
+        <tr><td>P06</td><td>Terraglia</td><td>in laboratorio</td><td>4</td><td>40</td><td><button type="button" class="edit">Modifica</button></td></tr>
+        <tr><td>P07</td><td>Terraglia</td><td>in laboratorio</td><td>4</td><td>40</td><td><button type="button" class="edit">Modifica</button></td></tr>
+        <tr><td>P08</td><td>Terraglia</td><td>in laboratorio</td><td>4</td><td>40</td><td><button type="button" class="edit">Modifica</button></td></tr>
+        <tr><td>P09</td><td>Terraglia</td><td>in laboratorio</td><td>4</td><td>40</td><td><button type="button" class="edit">Modifica</button></td></tr>
+        <tr><td>P10</td><td>Terraglia</td><td>in laboratorio</td><td>4</td><td>40</td><td><button type="button" class="edit">Modifica</button></td></tr>
+        <tr><td>P11</td><td>Terraglia</td><td>in laboratorio</td><td>4</td><td>40</td><td><button type="button" class="edit">Modifica</button></td></tr>
+        <tr><td>P12</td><td>Terraglia</td><td>in laboratorio</td><td>4</td><td>40</td><td><button type="button" class="edit">Modifica</button></td></tr>
+        <tr><td>P13</td><td>Terraglia</td><td>in laboratorio</td><td>4</td><td>40</td><td><button type="button" class="edit">Modifica</button></td></tr>
+        <tr><td>P14</td><td>Terraglia</td><td>in laboratorio</td><td>4</td><td>40</td><td><button type="button" class="edit">Modifica</button></td></tr>
+        <tr><td>P15</td><td>Terraglia</td><td>in laboratorio</td><td>4</td><td>40</td><td><button type="button" class="edit">Modifica</button></td></tr>
+        <tr><td>P16</td><td>Terraglia</td><td>in laboratorio</td><td>4</td><td>40</td><td><button type="button" class="edit">Modifica</button></td></tr>
+        <tr><td>P17</td><td>Terraglia</td><td>in laboratorio</td><td>4</td><td>40</td><td><button type="button" class="edit">Modifica</button></td></tr>
+        <tr><td>P18</td><td>Terraglia</td><td>in laboratorio</td><td>4</td><td>40</td><td><button type="button" class="edit">Modifica</button></td></tr>
+        <tr><td>P19</td><td>Terraglia</td><td>in laboratorio</td><td>4</td><td>40</td><td><button type="button" class="edit">Modifica</button></td></tr>
+        <tr><td>P20</td><td>Terraglia</td><td>in laboratorio</td><td>4</td><td>40</td><td><button type="button" class="edit">Modifica</button></td></tr>
+        <tr><td>Q1</td><td>Gres</td><td>in vetrina</td><td>6</td><td>18</td><td><button type="button" class="edit">Modifica</button></td></tr>
+        <tr><td>Q2</td><td>Gres</td><td>in vetrina</td><td>6</td><td>18</td><td><button type="button" class="edit">Modifica</button></td></tr>
+        <tr><td>Q3</td><td>Gres</td><td>in vetrina</td><td>6</td><td>18</td><td><button type="button" class="edit">Modifica</button></td></tr>
       </tbody>
     </table>
     <div class="modal" id="modal" hidden>
@@ -57,16 +79,13 @@ body{font-family:Inter,system-ui,sans-serif;background:#f5f5f7;color:#1d1d1f;mar
   <section data-view-panel="cli" hidden><h1>Clienti</h1></section>
 </main>
 <script>
-  /* Original Argilla: overwrites the host Fenix, form.nome does not exist, Nuovo is a no-op. */
   window.Fenix = {
     load: function(){ return Promise.resolve({ items: [] }); },
     save: function(){ return Promise.resolve(); }
   };
   var modal = document.getElementById("modal");
   var form = document.getElementById("form-pezzo");
-  document.getElementById("btn-new").addEventListener("click", function(){
-    /* intended showModal on a div — no-op */
-  });
+  document.getElementById("btn-new").addEventListener("click", function(){});
   document.querySelectorAll(".edit").forEach(function(b){
     b.addEventListener("click", function(){
       modal.hidden = false;

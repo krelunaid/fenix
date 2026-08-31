@@ -345,6 +345,8 @@ export function fenixRuntimeScript(projectId: string) {
   });
   var items = [];
   function listEl(){
+    if (document.querySelector("table thead") && document.querySelector("table tbody")) return null;
+    if (window.__fenixCrud) return null;
     var ul = document.getElementById("fk-saved")
       || document.querySelector("[data-list], .fk-list, #elenco, #lista");
     if (ul) return ul;
@@ -361,6 +363,7 @@ export function fenixRuntimeScript(projectId: string) {
   }
   function renderItems(){
     var ul = listEl();
+    if (!ul) return;
     if (!items.length) {
       if (ul && ul.id === "fk-saved") ul.innerHTML = '<li class="fk-tile" style="color:#1c1712">Nessun elemento. Compila il form e salva.</li>';
       return;
@@ -496,7 +499,7 @@ export function prepareSrcDoc(
       ? next.replace(/<head[^>]*>/i, (open) => `${open}${kit}`)
       : `${kit}${next}`;
   }
-  if (shouldRepairDashboard(next, kind) && !/data-fenix-crud="2"/.test(next)) {
+  if (shouldRepairDashboard(next, kind) && !/data-fenix-crud="3"/.test(next)) {
     next = next.replace(/<script[^>]*data-fenix-crud[^>]*>[\s\S]*?<\/script>/gi, "");
     next = /<\/body>/i.test(next)
       ? next.replace(/<\/body>/i, `${DASHBOARD_CRUD_SCRIPT}</body>`)

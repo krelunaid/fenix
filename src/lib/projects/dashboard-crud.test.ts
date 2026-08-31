@@ -107,7 +107,7 @@ describe("dashboard CRUD repair", () => {
       `<script data-fenix-crud>window.__fenixCrud=1;</script></body>`,
     );
     const html = repairDashboardCrud(withV1);
-    assert.match(html, /data-fenix-crud="2"/);
+    assert.match(html, /data-fenix-crud="3"/);
     assert.equal((html.match(/data-fenix-crud/g) || []).length, 1);
     const src = prepareSrcDoc(
       html,
@@ -145,21 +145,36 @@ describe("dashboard CRUD repair", () => {
       await frame.locator("#p-nome").waitFor({ timeout: 3000 });
       await frame.getByRole("button", { name: /^annulla$/i }).click();
       await frame.getByRole("button", { name: /nuovo pezzo/i }).click();
-      await frame.locator("#p-nome").fill("Codex Prova 2");
+      await frame.locator("#p-nome").fill("Codex Prova Reale");
       await frame.locator("#p-qty").fill("2");
       await frame.locator("#p-prezzo").fill("17");
       await frame.getByRole("button", { name: /^salva$/i }).click();
-      await frame.getByRole("cell", { name: "Codex Prova 2" }).waitFor({ timeout: 4000 });
+      const row = frame.locator("tr", { hasText: "Codex Prova Reale" });
+      await row.waitFor({ timeout: 4000 });
+      assert.equal((await row.locator("td").nth(3).textContent())?.trim(), "2");
+      assert.equal((await row.locator("td").nth(4).textContent())?.trim(), "17");
+      await frame.getByText("25 pezzi • 104 in stock • €3638").waitFor({ timeout: 2000 });
+      assert.equal(await frame.locator("#fk-saved").count(), 0);
       const rows1 = await frame.locator("table tbody tr").count();
-      assert.ok(rows1 > rows0, `Salva did not add a row (${rows0} → ${rows1})`);
+      assert.equal(rows1, 25);
       await loadSrc();
-      await frame.getByRole("cell", { name: "Codex Prova 2" }).waitFor({ timeout: 5000 });
-      await frame.locator("tr", { hasText: "Codex Prova 2" }).getByRole("button", { name: /^modifica$/i }).click();
-      await frame.locator("#p-nome").fill("Codex Prova 2b");
+      const row2 = frame.locator("tr", { hasText: "Codex Prova Reale" });
+      await row2.waitFor({ timeout: 5000 });
+      assert.equal((await row2.locator("td").nth(3).textContent())?.trim(), "2");
+      await frame.getByText("25 pezzi • 104 in stock • €3638").waitFor({ timeout: 2000 });
+      assert.equal(await frame.locator("#fk-saved").count(), 0);
+      await row2.getByRole("button", { name: /^modifica$/i }).click();
+      assert.equal(await frame.locator("#p-nome").inputValue(), "Codex Prova Reale");
+      assert.equal(await frame.locator("#p-qty").inputValue(), "2");
+      assert.equal(await frame.locator("#p-prezzo").inputValue(), "17");
+      await frame.locator("#p-qty").fill("5");
+      await frame.locator("#p-prezzo").fill("20");
       await frame.getByRole("button", { name: /^salva$/i }).click();
-      await frame.getByRole("cell", { name: "Codex Prova 2b" }).waitFor({ timeout: 4000 });
-      await frame.locator("tr", { hasText: "Codex Prova 2b" }).getByRole("button", { name: /^elimina$/i }).click();
-      assert.equal(await frame.getByRole("cell", { name: "Codex Prova 2b" }).count(), 0);
+      await frame.getByText("25 pezzi • 107 in stock • €3704").waitFor({ timeout: 3000 });
+      await frame.locator("tr", { hasText: "Codex Prova Reale" }).getByRole("button", { name: /^elimina$/i }).click();
+      assert.equal(await frame.getByText("Codex Prova Reale").count(), 0);
+      await frame.getByText("24 pezzi • 102 in stock • €3604").waitFor({ timeout: 3000 });
+      assert.equal(await frame.locator("table tbody tr").count(), 24);
       await page.close();
     } finally {
       await browser.close();
