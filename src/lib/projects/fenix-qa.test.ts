@@ -78,6 +78,9 @@ describe("focus-visible and worker model", () => {
     assert.match(worker, /activeByProject/);
     assert.match(worker, /idempotency-key/);
     assert.match(worker, /reused: true/);
+    assert.match(worker, /function sanitizeIconPack/);
+    assert.match(worker, /isAppleChromeSvg/);
+    assert.match(worker, /CRAFT_TAB_ICONS/);
   });
 
   it("drops iOS template fallbacks from look, shell, types and cards", () => {

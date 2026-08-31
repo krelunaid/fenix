@@ -1,4 +1,5 @@
 import { prepareSrcDoc, type SrcPalette } from "./color-scheme.ts";
+import { looksLikeAppleTabIcons } from "./craft-icons.ts";
 
 export type ScriptSyntaxError = {
   index: number;
@@ -127,6 +128,13 @@ export function validateProductHtml(
 
   if (kind === "dashboard" && /\bfk-tab\b/.test(markup)) {
     errors.push("Un gestionale non usa la tabbar telefono.");
+  }
+
+  if (
+    (kind === "app" || kind === "tool" || kind === "game") &&
+    looksLikeAppleTabIcons(text)
+  ) {
+    errors.push("Le tab usano icone iPhone (casa, plus, omino). Servono pittogrammi del mestiere.");
   }
 
   if (kind === "site" || kind === "landing") {

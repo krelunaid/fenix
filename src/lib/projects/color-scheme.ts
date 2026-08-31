@@ -93,6 +93,9 @@ const PHONE_KIT = `<style data-fenix-phone>
 html,body{height:100%!important;margin:0;max-width:100%;overflow:hidden;color:var(--fg,#1c1712);background:var(--bg,#efe6d4)}
 body{display:flex!important;flex-direction:column!important;min-height:100dvh;max-height:100dvh;font-size:16px;-webkit-font-smoothing:antialiased;touch-action:pan-y}
 .fk-top,body>header{flex-shrink:0;padding:14px 16px 10px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.fk-top>div{display:flex;align-items:flex-start;gap:10px;min-width:0}
+.fk-appicon{width:36px;height:36px;border-radius:8px;background:var(--fg,#1c1712);color:var(--bg,#efe6d4);display:inline-grid;place-items:center;flex-shrink:0}
+.fk-appicon svg{width:20px;height:20px;stroke:currentColor}
 .fk-hello{margin:0;font-size:22px;font-weight:700;letter-spacing:-.03em;line-height:1.15}
 .fk-role{margin:4px 0 0;font-size:12px;color:var(--muted,#5c5348);opacity:1}
 .fk-date{margin:0 16px 10px;font-size:12px;color:var(--muted,#5c5348)}

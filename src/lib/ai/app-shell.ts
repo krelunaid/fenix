@@ -1,6 +1,10 @@
+import { CRAFT_APP_ICON, craftTabNavHtml } from "../projects/craft-icons.ts";
+
 /** Cornice telefono già piena: Grok riempie testi e mestiere, non inventa lo scheletro. */
 export const APP_SHELL_INSTRUCTION = `Questa è già un'app telefono funzionante.
 SOSTITUISCI testi, numeri, icone SVG, nomi delle tab e i campi col BRIEF.
+Le 5 icone tab devono essere OGGETTI del mestiere (quaderno, pennino, forno, chiave…), silhouette diverse, leggibili a 24px.
+VIETATO: casetta Lucide, plus in cerchio, omino, hamburger, barre iPhone, lettera in un quadrato, emoji.
 NON cancellare sezioni. NON lasciare main vuoto. NON fare un sito.
 Palette unica dal brief (carta e inchiostro del mestiere, mai grigio iPhone). Date in italiano, non ISO.
 Tieni header.fk-top, main, nav.fk-tab, form, liste, Fenix.load/save.
@@ -32,19 +36,18 @@ body{font:400 16px/1.4 "IBM Plex Sans",system-ui,sans-serif;background:var(--bg)
 <body>
 <header class="fk-top">
   <div>
+    <span class="fk-appicon" aria-hidden="true">${CRAFT_APP_ICON.replace("<svg", "<svg width='20' height='20'")}</span>
+    <div>
     <h1 class="fk-hello">Ciao</h1>
     <p class="fk-role">Operatore</p>
+    </div>
   </div>
   <button type="button" class="fk-chip" data-act="share">Condividi</button>
 </header>
 <p class="fk-date" id="data"></p>
 <main class="fk-main" id="main"></main>
 <nav class="fk-tab" aria-label="Navigazione">
-  <button type="button" data-view="home" class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 10.5 12 4l8 6.5V20H4z"/></svg><span>Home</span></button>
-  <button type="button" data-view="new"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="8"/><path d="M12 8v8M8 12h8"/></svg><span>Nuovo</span></button>
-  <button type="button" data-view="list"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5 7h14M5 12h14M5 17h10"/></svg><span>Elenco</span></button>
-  <button type="button" data-view="stats"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5 20V10M12 20V4M19 20v-7"/></svg><span>Numeri</span></button>
-  <button type="button" data-view="more"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="7" r="3"/><path d="M5 20c1.5-4 12.5-4 14 0"/></svg><span>Altro</span></button>
+  ${craftTabNavHtml()}
 </nav>
 <script>
 (function(){

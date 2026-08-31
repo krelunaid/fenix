@@ -4,9 +4,10 @@ import { uid } from "@/lib/utils";
 import type { ProjectFile } from "./files";
 import { CREDITS_GRANT, CREDIT_COST } from "./credits";
 import { DEMOS } from "./demos";
-import { resolveProjectKind } from "./infer";
+import { resolveProjectKind, isPhoneKind } from "./infer";
 import { validatePublishable, type HtmlReport } from "./validate-html";
 import { recoverPersistedProject, STALE_BUILD_MS, RESUME_ERROR } from "./recover";
+import { replaceAppleTabIcons } from "./craft-icons";
 import {
   DEFAULT_PALETTE,
   type BuildStatus,
@@ -233,7 +234,8 @@ export function applyBuildResult(
     worker: result.kind,
   });
   const requestedKind = existing?.requestedKind ?? kind;
-  const report = validatePublishable(result.html, {
+  const html = isPhoneKind(kind) ? replaceAppleTabIcons(result.html) : result.html;
+  const report = validatePublishable(html, {
     kind,
     projectId: id,
     bg: result.palette?.bg ?? existing?.palette.bg,
@@ -243,6 +245,7 @@ export function applyBuildResult(
     status === "ready" ? (report.complete ? "ready" : "building") : status;
   useProjectStore.getState().updateProject(id, {
     ...result,
+    html,
     kind,
     requestedKind,
     status: nextStatus,

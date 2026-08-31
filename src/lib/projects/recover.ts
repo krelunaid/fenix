@@ -1,11 +1,12 @@
 import { canPublishHtml, formatHtmlErrors, validatePublishable } from "./validate-html.ts";
-import { kindFromPrompt, resolveProjectKind } from "./infer.ts";
+import { isPhoneKind, kindFromPrompt, resolveProjectKind } from "./infer.ts";
 import type { BuildStatus, Palette, ProjectKind } from "./types.ts";
 import {
   clearVisualJobPatch,
   hasActiveVisualJob,
   type VisualJobStatus,
 } from "./visual-job.ts";
+import { replaceAppleTabIcons } from "./craft-icons.ts";
 
 export const STALE_BUILD_MS = 120_000;
 export const RESUME_ERROR = "Rifinitura interrotta. Tocca Riprendi rifinitura.";
@@ -35,6 +36,7 @@ export function recoverPersistedProject<T extends Recoverable>(p: T, now = Date.
   });
   const requestedKind = p.requestedKind ?? kindFromPrompt(p.prompt) ?? kind;
   const migrated = kind !== p.kind;
+  const html = isPhoneKind(kind) ? replaceAppleTabIcons(p.html) : p.html;
   const jobLive = hasActiveVisualJob(p, now);
 
   let status = p.status;
@@ -57,8 +59,8 @@ export function recoverPersistedProject<T extends Recoverable>(p: T, now = Date.
     status = "error";
     error = "HTML assente.";
     dropJob();
-  } else if (p.html && (p.status === "ready" || p.status === "building")) {
-    const report = validatePublishable(p.html, {
+  } else if (html && (p.status === "ready" || p.status === "building")) {
+    const report = validatePublishable(html, {
       kind,
       projectId: p.id,
       bg: p.palette?.bg,
@@ -92,6 +94,7 @@ export function recoverPersistedProject<T extends Recoverable>(p: T, now = Date.
   const cleared = status !== "building" ? clearVisualJobPatch() : {};
   return {
     ...p,
+    html,
     kind,
     requestedKind,
     buildLog: p.buildLog ?? [],

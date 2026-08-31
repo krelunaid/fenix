@@ -313,6 +313,62 @@ async function grok(apiKey, prompt, html, shotB64, pass, instruction, tabId) {
   return json.choices?.[0]?.message?.content ?? "";
 }
 
+const CRAFT_TAB_ICONS = [
+  {
+    id: "home",
+    label: "Home",
+    svg: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.5h11.5v17H6z"/><path d="M9 3.5v17"/><path d="M12 8h4.2M12 12h4.2M12 16h3"/></svg>`,
+  },
+  {
+    id: "new",
+    label: "Nuovo",
+    svg: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3.5 20.5 10 11 19.5H5.5V14z"/><path d="M13 4.5l6.5 6.5"/><path d="M8 13.5l3 3"/></svg>`,
+  },
+  {
+    id: "list",
+    label: "Elenco",
+    svg: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h12v13H8z"/><path d="M5 4h12"/><path d="M5 4v12"/><path d="M11 10.5h6M11 14h5"/></svg>`,
+  },
+  {
+    id: "stats",
+    label: "Numeri",
+    svg: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 5v14M10 5v14M14 5v14M18 5v14"/><path d="M5 9.5l14 5"/></svg>`,
+  },
+  {
+    id: "more",
+    label: "Altro",
+    svg: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="3.5" width="12" height="10" rx="1.2"/><path d="M9 13.5v4.5M15 13.5v4.5M8 20h8"/></svg>`,
+  },
+];
+const CRAFT_APP_ICON = CRAFT_TAB_ICONS[0].svg;
+
+function isAppleChromeSvg(svg) {
+  const s = String(svg || "");
+  return [
+    /M4 10\.5[\s,]12 4l8 6\.5V20H4/,
+    /M12 8v8M8 12h8/,
+    /M5 7h14M5 12h14M5 17h10/,
+    /M5 20V10M12 20V4M19 20v-7/,
+    /M5 20c1\.5-4[\s,]12\.5-4[\s,]14 0/,
+    /<circle[^>]*cy=["']7["'][^>]*r=["']3["']/,
+    /<circle[^>]*cx=["']12["'][^>]*cy=["']12["'][^>]*r=["']8["']/,
+  ].some((re) => re.test(s));
+}
+
+function sanitizeIconPack(pack) {
+  const fallback = { app: CRAFT_APP_ICON, tabs: CRAFT_TAB_ICONS };
+  if (!pack || !Array.isArray(pack.tabs)) return fallback;
+  const tabs = CRAFT_TAB_ICONS.map((base, i) => {
+    const t = pack.tabs[i] || pack.tabs.find((x) => x?.id === base.id);
+    if (t?.svg && /<svg/i.test(t.svg) && !isAppleChromeSvg(t.svg)) {
+      return { id: base.id, label: String(t.label || base.label).slice(0, 8), svg: t.svg };
+    }
+    return base;
+  });
+  const app = pack.app && /<svg/i.test(pack.app) && !isAppleChromeSvg(pack.app) ? pack.app : fallback.app;
+  return { app, tabs };
+}
+
 async function designIcons(apiKey, prompt) {
   const res = await fetch(XAI, {
     method: "POST",
@@ -330,23 +386,24 @@ async function designIcons(apiKey, prompt) {
           role: "system",
           content: `Disegni pittogrammi del mestiere. SOLO JSON, niente markdown:
 {"app":"<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'>...</svg>","tabs":[{"id":"home","label":"max8","svg":"<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'>...</svg>"},{"id":"new","label":"","svg":""},{"id":"list","label":"","svg":""},{"id":"stats","label":"","svg":""},{"id":"more","label":"","svg":""}]}
-Oggetto del brief. 5 silhouette diverse, leggibili a 24px. Niente lettera, emoji, Lucide copiato. Stroke currentColor, mai #1d1d1f/#0071e3.`,
+Oggetto del brief. 5 silhouette diverse, leggibili a 24px.
+VIETATO: casetta, plus in cerchio, omino, hamburger, barre iPhone, Lucide copiato, lettera, emoji.
+Per un taccuino: quaderno, pennino, fogli, tallies, timbro. Stroke currentColor, mai #1d1d1f/#0071e3.`,
         },
         { role: "user", content: `BRIEF:\n${prompt}\n\nJSON icone.` },
       ],
     }),
   });
-  if (!res.ok) return null;
+  if (!res.ok) return sanitizeIconPack(null);
   const payload = await res.json();
   const text = payload.choices?.[0]?.message?.content ?? "";
   const match = text.match(/\{[\s\S]*\}/);
-  if (!match) return null;
+  if (!match) return sanitizeIconPack(null);
   try {
     const pack = JSON.parse(match[0]);
-    if (!pack?.app || !Array.isArray(pack.tabs) || pack.tabs.length < 4) return null;
-    return pack;
+    return sanitizeIconPack(pack);
   } catch {
-    return null;
+    return sanitizeIconPack(null);
   }
 }
 
@@ -377,6 +434,21 @@ function injectIcons(html, pack) {
           const svg = svgs[Math.min(i, svgs.length - 1)];
           i += 1;
           return String(svg).replace("<svg", "<svg width='24' height='24'");
+        });
+        return `${open}${replaced}${close}`;
+      },
+    );
+  }
+  const nav = next.match(/<nav[^>]*(?:fk-tab|aria-label)[^>]*>[\s\S]*?<\/nav>/i)?.[0] || "";
+  if (isAppleChromeSvg(nav)) {
+    let j = 0;
+    next = next.replace(
+      /(<nav[^>]*(?:fk-tab|aria-label)[^>]*>)([\s\S]*?)(<\/nav>)/i,
+      (_, open, inner, close) => {
+        const replaced = inner.replace(/<svg[\s\S]*?<\/svg>/gi, () => {
+          const icon = CRAFT_TAB_ICONS[Math.min(j, CRAFT_TAB_ICONS.length - 1)];
+          j += 1;
+          return icon.svg.replace("<svg", "<svg width='24' height='24'");
         });
         return `${open}${replaced}${close}`;
       },
