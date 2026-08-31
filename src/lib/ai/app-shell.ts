@@ -60,7 +60,7 @@ body{font:400 16px/1.4 "IBM Plex Sans",system-ui,sans-serif;background:var(--bg)
   var current="home";
   var views={
     home:function(){
-      return '<div class="fk-panel"><h3>Oggi</h3><div class="fk-grid2"><div class="fk-stat"><b>'+S.items.length+'</b><span>registri</span></div><div class="fk-stat"><b>'+S.limit+'</b><span>limite</span></div><div class="fk-stat"><b>'+S.team.length+'</b><span>squadra</span></div><div class="fk-stat"><b>0</b><span>avanzamento</span></div></div></div><div class="fk-grid2"><div class="fk-tile"><span>Ultimo</span><b>'+(S.items[0]?S.items[0].t:"—")+'</b></div><div class="fk-tile"><span>Stato</span><b>Pronto</b></div></div><button type="button" class="fk-btn" data-go="new">Registra</button>';
+      return '<section class="fk-sheet"><p class="fk-kicker">Oggi</p><dl class="fk-ledger"><div><dt>Voci</dt><dd>'+S.items.length+'</dd></div><div><dt>Limite</dt><dd>'+S.limit+'</dd></div><div><dt>Squadra</dt><dd>'+S.team.length+'</dd></div></dl><p class="fk-last">'+(S.items[0]?S.items[0].t+' · '+S.items[0].n:'Nessuna riga. Compila e salva.')+'</p><button type="button" class="fk-btn" data-go="new">Nuova riga</button></section>';
     },
     new:function(){
       return '<label class="fk-lbl">Valore</label><form class="fk-field" id="fnew"><input name="v" placeholder="Es. 100" required/><button class="fk-btn" type="submit">Salva</button></form><div class="fk-chiprow"><button type="button" class="fk-chip" data-chip="50">+50</button><button type="button" class="fk-chip" data-chip="100">+100</button><button type="button" class="fk-chip" data-chip="250">+250</button></div>';

@@ -20,7 +20,8 @@ ICONE (giro dedicato, non opzionale):
 - Ridisegna TUTTE le SVG: pittogramma del mestiere, path originali, viewBox 0 0 24 24, stroke 1.8 round, fill none tranne .on
 - 5 tab = 5 silhouette diverse, si capiscono senza label. Vietato cerchio+lettera, emoji, icone clonate
 - Icona app 52px rx 13 in header + rel=icon, 2 colori DELLA PALETTE (mai #1d1d1f / #0071e3 di default)
-Correggi chrome/CSS/icone. Se lo screenshot è BIANCO o main vuoto, RIEMPI la home: metriche, oggetto del mestiere, CTA, form. Non lasciare una pagina bianca.
+Correggi chrome/CSS/icone. Se lo screenshot è BIANCO o main vuoto, RIEMPI la home: registro a righe, oggetto del mestiere, CTA, form. Non lasciare una pagina bianca.
+Se la home è 4 riquadri + «Ultimo» + «Stato», SOSTITUISCILA con un registro. Vietato copiare i widget iPhone.
 Copia i tag <script> identici se il JS già fa add/save. Se non c'è contenuto visibile, puoi aggiungere HTML in main.
 Canvas: body colonna 100dvh, header.fk-top, main.fk-main, nav.fk-tab.
 Non scrivere le parole Apple, iOS, Fenix, Grok nel prodotto.

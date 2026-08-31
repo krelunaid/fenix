@@ -6,7 +6,7 @@ import {
   hasActiveVisualJob,
   type VisualJobStatus,
 } from "./visual-job.ts";
-import { replaceAppleTabIcons } from "./craft-icons.ts";
+import { replaceAppleTabIcons, rewriteIosWidgetHome } from "./craft-icons.ts";
 
 export const STALE_BUILD_MS = 120_000;
 export const RESUME_ERROR = "Rifinitura interrotta. Tocca Riprendi rifinitura.";
@@ -36,7 +36,9 @@ export function recoverPersistedProject<T extends Recoverable>(p: T, now = Date.
   });
   const requestedKind = p.requestedKind ?? kindFromPrompt(p.prompt) ?? kind;
   const migrated = kind !== p.kind;
-  const html = isPhoneKind(kind) ? replaceAppleTabIcons(p.html) : p.html;
+  const html = isPhoneKind(kind)
+    ? rewriteIosWidgetHome(replaceAppleTabIcons(p.html))
+    : p.html;
   const jobLive = hasActiveVisualJob(p, now);
 
   let status = p.status;

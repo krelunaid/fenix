@@ -1,5 +1,5 @@
 import { prepareSrcDoc, type SrcPalette } from "./color-scheme.ts";
-import { looksLikeAppleTabIcons } from "./craft-icons.ts";
+import { looksLikeAppleTabIcons, looksLikeIosWidgetHome } from "./craft-icons.ts";
 
 export type ScriptSyntaxError = {
   index: number;
@@ -135,6 +135,12 @@ export function validateProductHtml(
     looksLikeAppleTabIcons(text)
   ) {
     errors.push("Le tab usano icone iPhone (casa, plus, omino). Servono pittogrammi del mestiere.");
+  }
+  if (
+    (kind === "app" || kind === "tool" || kind === "game") &&
+    looksLikeIosWidgetHome(text)
+  ) {
+    errors.push("La home è lo scheletro iPhone (4 riquadri + Ultimo/Stato). Serve un registro del mestiere.");
   }
 
   if (kind === "site" || kind === "landing") {

@@ -7,7 +7,7 @@ import { DEMOS } from "./demos";
 import { resolveProjectKind, isPhoneKind } from "./infer";
 import { validatePublishable, type HtmlReport } from "./validate-html";
 import { recoverPersistedProject, STALE_BUILD_MS, RESUME_ERROR } from "./recover";
-import { replaceAppleTabIcons } from "./craft-icons";
+import { replaceAppleTabIcons, rewriteIosWidgetHome } from "./craft-icons";
 import {
   DEFAULT_PALETTE,
   type BuildStatus,
@@ -234,7 +234,9 @@ export function applyBuildResult(
     worker: result.kind,
   });
   const requestedKind = existing?.requestedKind ?? kind;
-  const html = isPhoneKind(kind) ? replaceAppleTabIcons(result.html) : result.html;
+  const html = isPhoneKind(kind)
+    ? rewriteIosWidgetHome(replaceAppleTabIcons(result.html))
+    : result.html;
   const report = validatePublishable(html, {
     kind,
     projectId: id,

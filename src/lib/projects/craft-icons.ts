@@ -85,3 +85,20 @@ export function craftTabNavHtml(): string {
     return `<button type="button" data-view="${t.id}"${on}>${t.svg}<span>${t.label}</span></button>`;
   }).join("");
 }
+
+/** 4 widget + Ultimo/Stato = scheletro iPhone, non un prodotto. */
+export function looksLikeIosWidgetHome(html: string): boolean {
+  const stats = (String(html || "").match(/class=["']fk-stat["']/g) || []).length;
+  return stats >= 4 && /Ultimo/i.test(html) && /Stato/i.test(html) && /fk-grid2/.test(html);
+}
+
+const LEDGER_HOME =
+  "home:function(){ return '<section class=\"fk-sheet\"><p class=\"fk-kicker\">Oggi</p><dl class=\"fk-ledger\"><div><dt>Voci</dt><dd>'+S.items.length+'</dd></div><div><dt>Limite</dt><dd>'+S.limit+'</dd></div><div><dt>Squadra</dt><dd>'+S.team.length+'</dd></div></dl><p class=\"fk-last\">'+(S.items[0]?S.items[0].t+' · '+S.items[0].n:'Nessuna riga. Compila e salva.')+'</p><button type=\"button\" class=\"fk-btn\" data-go=\"new\">Nuova riga</button></section>'; }";
+
+export function rewriteIosWidgetHome(html: string): string {
+  if (!html || !looksLikeIosWidgetHome(html)) return html;
+  if (/home:function\(\)/.test(html)) {
+    return html.replace(/home:function\(\)\s*\{[\s\S]*?\n\s*\},/, `${LEDGER_HOME},\n    `);
+  }
+  return html;
+}

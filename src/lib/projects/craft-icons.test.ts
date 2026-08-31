@@ -4,7 +4,9 @@ import { APP_SHELL_HTML } from "../ai/app-shell.ts";
 import {
   countAppleTabIcons,
   looksLikeAppleTabIcons,
+  looksLikeIosWidgetHome,
   replaceAppleTabIcons,
+  rewriteIosWidgetHome,
 } from "./craft-icons.ts";
 import { recoverPersistedProject } from "./recover.ts";
 import { validateProductHtml } from "./validate-html.ts";
@@ -52,5 +54,34 @@ describe("craft icons vs Apple chrome", () => {
     });
     assert.equal(looksLikeAppleTabIcons(recovered.html), false);
     assert.match(recovered.html, /M6 3\.5h11\.5v17H6z/);
+  });
+
+  it("rewrites the 4-widget iPhone home into a ledger", () => {
+    const widget = `<!DOCTYPE html><html><body>
+<nav class="fk-tab" aria-label="Navigazione"><button data-view="home">Oggi</button><button data-view="new">Nuovo</button><button data-view="list">Elenco</button></nav>
+<script>
+var S={items:[],limit:100,team:[]};
+var views={
+    home:function(){
+      return '<div class="fk-panel"><h3>Oggi</h3><div class="fk-grid2"><div class="fk-stat"><b>0</b><span>attivita</span></div><div class="fk-stat"><b>4.5</b><span>ore</span></div><div class="fk-stat"><b>0</b><span>pezzi</span></div><div class="fk-stat"><b>65</b><span>%</span></div></div></div><div class="fk-grid2"><div class="fk-tile"><span>Ultimo</span><b>—</b></div><div class="fk-tile"><span>Stato</span><b>In corso</b></div></div><button type="button" class="fk-btn" data-go="new">Nuova attivita</button>';
+    },
+    new:function(){ return 'x'; }
+};
+</script>
+</body></html>`;
+    assert.equal(looksLikeIosWidgetHome(widget), true);
+    const next = rewriteIosWidgetHome(widget);
+    assert.equal(looksLikeIosWidgetHome(next), false);
+    assert.match(next, /fk-ledger/);
+    assert.doesNotMatch(next, /<span>Ultimo<\/span>/);
+    const recovered = recoverPersistedProject({
+      id: "taccuino-home",
+      status: "ready",
+      html: widget,
+      kind: "app",
+      updatedAt: Date.now(),
+    });
+    assert.match(recovered.html, /fk-ledger/);
+    assert.equal(looksLikeIosWidgetHome(recovered.html), false);
   });
 });
