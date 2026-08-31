@@ -96,7 +96,13 @@ describe("validateProductHtml", () => {
     const fixed = validateProductHtml(NULL_FIXED, { kind: "dashboard" });
     assert.equal(fixed.syntaxOk, true, fixed.errors.join(" · "));
     assert.equal(fixed.ok, true, fixed.errors.join(" · "));
-    assert.match(fenixRuntimeScript("p"), /fenix-boot-ok/);
+    assert.match(fenixRuntimeScript("p", "site"), /var desk = true/);
+    assert.match(fenixRuntimeScript("p", "landing"), /var desk = true/);
+    assert.match(fenixRuntimeScript("p", "dashboard"), /var desk = true/);
+    assert.match(fenixRuntimeScript("p", "app"), /var desk = false/);
+    assert.match(fenixRuntimeScript("p"), /var desk = false/);
+    assert.match(fenixRuntimeScript("p", "site"), /if \(desk\) return;/);
+    assert.match(fenixRuntimeScript("p", "site"), /unwrapLoad/);
   });
 });
 

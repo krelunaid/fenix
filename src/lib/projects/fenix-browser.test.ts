@@ -68,6 +68,115 @@ describe("Fenix bridge in browser", () => {
       await browser.close();
     }
   });
+
+  it("site contact form saves via Fenix and survives iframe reload even if parent boxes arrays", async () => {
+    const html = `<!DOCTYPE html><html lang="it"><head><meta charset="utf-8"/><title>Bottega</title></head>
+<body>
+<nav><a href="#visita">Visita</a></nav>
+<main>
+<section id="visita">
+<form id="contact-form">
+<label for="name">Nome</label>
+<input type="text" id="name" required>
+<label for="email">Email</label>
+<input type="email" id="email" required>
+<label for="message">Messaggio</label>
+<textarea id="message" required></textarea>
+<button type="submit">Invia messaggio</button>
+</form>
+<ul id="messages-list"></ul>
+</section>
+</main>
+<footer>via</footer>
+<script>
+async function init() {
+  const form = document.getElementById("contact-form");
+  const list = document.getElementById("messages-list");
+  let messages = [];
+  try {
+    const loaded = await window.Fenix.load("messages");
+    if (Array.isArray(loaded)) messages = loaded;
+  } catch (e) {}
+  function render() {
+    list.innerHTML = "";
+    if (!messages.length) {
+      const li = document.createElement("li");
+      li.textContent = "Nessun messaggio ancora.";
+      list.appendChild(li);
+      return;
+    }
+    messages.forEach(function (msg) {
+      const li = document.createElement("li");
+      li.textContent = msg.name + " — " + msg.message;
+      list.appendChild(li);
+    });
+  }
+  render();
+  form.addEventListener("submit", async function (e) {
+    e.preventDefault();
+    const name = document.getElementById("name").value.trim();
+    const email = document.getElementById("email").value.trim();
+    const message = document.getElementById("message").value.trim();
+    if (!name || !message) return;
+    messages.push({ name: name, email: email, message: message, date: new Date().toISOString() });
+    try { await window.Fenix.save("messages", messages); } catch (err) {}
+    render();
+    form.reset();
+  });
+}
+init();
+</script>
+</body></html>`;
+    const src = prepareSrcDoc(html, "#1a1612", "bottega-form", "site");
+    assert.match(src, /var desk = true/);
+    const browser = await launch();
+    try {
+      const page = await browser.newPage();
+      await page.setContent(`<!DOCTYPE html><html><body>
+<iframe id="f" style="width:1100px;height:800px;border:0"></iframe>
+<script>
+  window.__db = {};
+  window.addEventListener("message", function (e) {
+    var m = e.data;
+    if (!m || m.t !== "fenix-db" || !m.id) return;
+    if (m.op === "save") {
+      var boxed = Array.isArray(m.data)
+        ? { _fenix: 1, rev: 1, items: m.data, writer: "", at: Date.now() }
+        : m.data;
+      window.__db[m.col] = boxed;
+      e.source.postMessage({ t: "fenix-db", id: m.id, v: { ok: true, v: boxed, durable: 1 } }, "*");
+      return;
+    }
+    e.source.postMessage({ t: "fenix-db", id: m.id, v: window.__db[m.col] || null }, "*");
+  });
+</script>
+</body></html>`);
+      await page.locator("#f").evaluate((el, srcDoc: string) => {
+        (el as HTMLIFrameElement).srcdoc = srcDoc;
+      }, src);
+      const frame = page.frameLocator("#f");
+      await frame.locator("#contact-form").waitFor({ timeout: 8000 });
+      await frame.locator("#name").fill("Anna della Luna");
+      await frame.locator("#email").fill("anna@bottegaterra.it");
+      await frame.locator("#message").fill("Vorrei prenotare una visita.");
+      await frame.locator("#contact-form button[type=submit]").click();
+      await frame.getByText("Anna della Luna").waitFor({ timeout: 5000 });
+      assert.equal(await frame.getByText("Nessun messaggio ancora.").count(), 0);
+      const saved = await page.evaluate(
+        () => (window as unknown as { __db: { messages?: { items?: { name?: string }[] } } }).__db,
+      );
+      assert.ok(
+        saved?.messages?.items?.some((m) => m.name === "Anna della Luna"),
+        "parent store received messages array inside the durability box",
+      );
+      await page.locator("#f").evaluate((el, srcDoc: string) => {
+        (el as HTMLIFrameElement).srcdoc = srcDoc;
+      }, src);
+      await frame.getByText("Anna della Luna").waitFor({ timeout: 8000 });
+    } finally {
+      await browser.close();
+    }
+  });
 });
 
 describe("studio overlay and resume in browser", () => {

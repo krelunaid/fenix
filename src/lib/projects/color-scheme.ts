@@ -216,10 +216,11 @@ export function looksLikeSite(html: string, kind?: string) {
   return /<footer/i.test(html) || (/<nav/i.test(html) && /href=/i.test(html));
 }
 
-export function fenixRuntimeScript(projectId: string) {
+export function fenixRuntimeScript(projectId: string, kind?: string) {
   return `<script data-fenix-runtime>
 (function(){
   var pid = ${JSON.stringify(projectId)};
+  var desk = ${kind === "site" || kind === "landing" || kind === "dashboard" ? "true" : "false"};
   function reportBootError(err, kind){
     var msg = "";
     try { msg = err && err.message ? String(err.message) : String(err || "errore"); } catch (e) { msg = "errore"; }
@@ -318,15 +319,20 @@ export function fenixRuntimeScript(projectId: string) {
     if (Array.isArray(v)) return v.length === 0;
     return false;
   }
+  function unwrapLoad(v){
+    if (v && typeof v === "object" && v._fenix === 1 && Array.isArray(v.items)) return v.items;
+    return v;
+  }
   function pickLoad(v, col){
-    var local = fallbackLoad(col);
-    if (emptyVal(v) && !emptyVal(local)) return local;
-    return emptyVal(v) ? local : v;
+    var parent = unwrapLoad(v);
+    var local = unwrapLoad(fallbackLoad(col));
+    if (emptyVal(parent) && !emptyVal(local)) return local;
+    return emptyVal(parent) ? local : parent;
   }
   var inflight = 0;
   function call(op, col, data){
     if (!window.parent || window.parent === window) {
-      return Promise.resolve(op === "load" ? fallbackLoad(col) : fallbackSave(col, data));
+      return Promise.resolve(op === "load" ? unwrapLoad(fallbackLoad(col)) : fallbackSave(col, data));
     }
     var id = Math.random().toString(36).slice(2);
     inflight += 1;
@@ -465,6 +471,7 @@ export function fenixRuntimeScript(projectId: string) {
   document.querySelectorAll("nav button, .fk-tab button, .tabbar button").forEach(function(b){
     b.setAttribute("type", "button");
   });
+  if (desk) return;
   var items = [];
   function listEl(){
     if (document.querySelector("table thead") && document.querySelector("table tbody")) return null;
@@ -728,7 +735,7 @@ export function prepareSrcDoc(
     next = next.replace(/<script[^>]*data-fenix-runtime[^>]*>[\s\S]*?<\/script>/gi, "");
   }
   {
-    const runtime = fenixRuntimeScript(projectId);
+    const runtime = fenixRuntimeScript(projectId, kind);
     next = /<head[^>]*>/i.test(next)
       ? next.replace(/<head[^>]*>/i, (open) => `${open}${runtime}`)
       : `${runtime}${next}`;
