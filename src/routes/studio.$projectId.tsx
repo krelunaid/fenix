@@ -311,8 +311,13 @@ function StudioPage() {
       <PublishPanel
         open={publishOpen}
         onClose={() => setPublishOpen(false)}
+        projectId={project.id}
         name={project.name}
         html={project.html}
+        kind={project.kind}
+        palette={project.palette}
+        tagline={project.tagline}
+        summary={project.summary}
         files={project.files}
         onOpenSite={() => {
           setPublishOpen(false);

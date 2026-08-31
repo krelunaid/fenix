@@ -1,26 +1,43 @@
-import { useEffect } from "react";
-import { Check, Copy, Download, ExternalLink, X } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Check, Copy, Download, ExternalLink, Globe, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { downloadBytes, downloadTextFile, slugify } from "@/lib/utils";
 import { zipFiles } from "@/lib/projects/zip";
 import type { ProjectFile } from "@/lib/projects/files";
+import type { Palette, ProjectKind } from "@/lib/projects/types";
+import { publishSnapshot } from "@/lib/projects/publish-client";
+import type { PublishedSnapshot } from "@/lib/projects/published";
 
 export function PublishPanel({
   open,
   onClose,
+  projectId,
   name,
   html,
+  kind,
+  palette,
+  tagline,
+  summary,
   files,
   onOpenSite,
 }: {
   open: boolean;
   onClose: () => void;
+  projectId: string;
   name: string;
   html: string;
+  kind: ProjectKind;
+  palette: Palette;
+  tagline?: string;
+  summary?: string;
   files?: ProjectFile[];
   onOpenSite: () => void;
 }) {
+  const [published, setPublished] = useState<PublishedSnapshot | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
@@ -29,6 +46,35 @@ export function PublishPanel({
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [open, onClose]);
+
+  useEffect(() => {
+    if (!open || !html) return;
+    let cancelled = false;
+    setBusy(true);
+    setError(null);
+    void publishSnapshot({
+      id: projectId,
+      name,
+      html,
+      kind,
+      palette,
+      tagline,
+      summary,
+    })
+      .then((snap) => {
+        if (cancelled) return;
+        setPublished(snap);
+        setBusy(false);
+      })
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        setBusy(false);
+        setError(err instanceof Error ? err.message : "Pubblicazione rifiutata.");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [open, projectId, name, html, kind, palette, tagline, summary]);
 
   if (!open) return null;
 
@@ -58,6 +104,18 @@ export function PublishPanel({
     }
   }
 
+  async function copyLink() {
+    const url = `${window.location.origin}/sito/${projectId}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      toast("Link pubblico copiato.");
+    } catch {
+      toast(url);
+    }
+  }
+
+  const publicPath = `/sito/${projectId}`;
+
   return (
     <div
       className="fixed inset-0 z-50 grid place-items-end bg-background/80 p-3 sm:place-items-center sm:p-6"
@@ -79,7 +137,7 @@ export function PublishPanel({
               id="publish-title"
               className="mt-2 font-display text-2xl tracking-tight sm:text-3xl"
             >
-              Sì. È già un sito.
+              {published ? "È online." : "Sì. È già un sito."}
             </h2>
           </div>
           <Button variant="ghost" size="icon-sm" onClick={onClose} aria-label="Chiudi">
@@ -88,26 +146,40 @@ export function PublishPanel({
         </div>
 
         <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-          {name} è un progetto: interfaccia, logica e dati. Scarichi lo ZIP, o un
-          unico HTML già pronto per il dominio.
+          {busy
+            ? "Salvo lo snapshot sul server. Il link funziona anche da un altro browser."
+            : published
+              ? `${name} è pubblicato. Chiunque apra il link vede questa versione, non la bozza locale.`
+              : `${name} è un progetto: interfaccia, logica e dati. Scarichi lo ZIP, o un unico HTML già pronto per il dominio.`}
         </p>
+
+        {error ? (
+          <p className="mt-3 text-sm text-destructive">{error}</p>
+        ) : null}
+
+        {published ? (
+          <p className="mt-4 break-all rounded-md border border-border bg-raised px-3 py-2 font-mono text-xs">
+            {publicPath}
+            {published.version > 1 ? ` · v${published.version}` : ""}
+          </p>
+        ) : null}
 
         <ol className="mt-5 space-y-3 border-t border-border pt-5">
           {[
             {
               n: "01",
-              t: "Scarica il progetto",
-              d: "ZIP con index.html, stili, logica e dati. Oppure solo la pagina.",
+              t: "Snapshot sul server",
+              d: "Dopo il controllo, Fenix salva html, palette e versione. Non usa il localStorage di chi guarda.",
             },
             {
               n: "02",
-              t: "Caricalo sul tuo spazio",
-              d: "Netlify, Vercel, GitHub Pages, Aruba, SiteGround, o la cartella del dominio.",
+              t: "Apri il link pubblico",
+              d: "Funziona in incognito e su un altro computer. Pubblica di nuovo per aggiornare.",
             },
             {
               n: "03",
-              t: "Apri il dominio",
-              d: "Il sito è online. Se qualcosa non parte, il file deve chiamarsi index.html.",
+              t: "Oppure scarica",
+              d: "ZIP o HTML per il tuo hosting, se vuoi il dominio tuo.",
             },
           ].map((step) => (
             <li key={step.n} className="flex gap-3">
@@ -121,29 +193,35 @@ export function PublishPanel({
         </ol>
 
         <div className="mt-6 flex flex-col gap-2">
-          <Button variant="ink" size="lg" onClick={downloadProject} className="w-full">
-            <Download />
-            Scarica progetto .zip
+          <Button
+            variant="ink"
+            size="lg"
+            onClick={onOpenSite}
+            className="w-full"
+            disabled={busy || !published}
+          >
+            <Globe />
+            Apri il sito pubblicato
           </Button>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-            <Button variant="secondary" onClick={downloadSite}>
+            <Button variant="secondary" onClick={downloadProject}>
               <Download />
-              Solo HTML
+              Scarica .zip
             </Button>
-            <Button variant="secondary" onClick={onOpenSite}>
-              <ExternalLink />
-              Apri come pagina
+            <Button variant="secondary" onClick={() => void copyLink()}>
+              <Copy />
+              Copia link
             </Button>
             <Button variant="secondary" onClick={() => void copyHtml()}>
-              <Copy />
-              Copia HTML
+              <ExternalLink />
+              Solo HTML
             </Button>
           </div>
         </div>
 
         <p className="mt-4 flex items-start gap-2 text-xs leading-relaxed text-faint">
           <Check className="mt-0.5 size-3.5 shrink-0" />
-          Dati salvati in Fenix mentre usi l'anteprima; nello ZIP restano nel browser dell'utente.
+          Bozza nello studio, snapshot pubblico a parte. Pubblica modifiche sostituisce in modo atomico.
         </p>
       </div>
     </div>

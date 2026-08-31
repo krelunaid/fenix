@@ -9,6 +9,8 @@ artifacts
 .env.*.local
 .DS_Store
 .grok/app-env.json
+.grok/published/
+
 
 # Local Netlify folder
 .netlify

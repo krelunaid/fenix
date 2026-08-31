@@ -18,6 +18,7 @@ import { Route as SitoProjectIdRouteImport } from './routes/sito.$projectId'
 import { Route as StudioProjectIdRouteImport } from './routes/studio.$projectId'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiJobsIdRouteImport } from './routes/api/jobs.$id'
+import { Route as ApiSitesIdRouteImport } from './routes/api/sites.$id'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -64,6 +65,11 @@ const ApiJobsIdRoute = ApiJobsIdRouteImport.update({
   path: '/api/jobs/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiSitesIdRoute = ApiSitesIdRouteImport.update({
+  id: '/api/sites/$id',
+  path: '/api/sites/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -75,6 +81,7 @@ export interface FileRoutesByFullPath {
   '/studio/$projectId': typeof StudioProjectIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/jobs/$id': typeof ApiJobsIdRoute
+  '/api/sites/$id': typeof ApiSitesIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -86,6 +93,7 @@ export interface FileRoutesByTo {
   '/studio/$projectId': typeof StudioProjectIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/jobs/$id': typeof ApiJobsIdRoute
+  '/api/sites/$id': typeof ApiSitesIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -98,6 +106,7 @@ export interface FileRoutesById {
   '/studio/$projectId': typeof StudioProjectIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/jobs/$id': typeof ApiJobsIdRoute
+  '/api/sites/$id': typeof ApiSitesIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -111,6 +120,7 @@ export interface FileRouteTypes {
     | '/studio/$projectId'
     | '/api/auth/$'
     | '/api/jobs/$id'
+    | '/api/sites/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -122,6 +132,7 @@ export interface FileRouteTypes {
     | '/studio/$projectId'
     | '/api/auth/$'
     | '/api/jobs/$id'
+    | '/api/sites/$id'
   id:
     | '__root__'
     | '/'
@@ -133,6 +144,7 @@ export interface FileRouteTypes {
     | '/studio/$projectId'
     | '/api/auth/$'
     | '/api/jobs/$id'
+    | '/api/sites/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -145,6 +157,7 @@ export interface RootRouteChildren {
   StudioProjectIdRoute: typeof StudioProjectIdRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiJobsIdRoute: typeof ApiJobsIdRoute
+  ApiSitesIdRoute: typeof ApiSitesIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -212,6 +225,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiJobsIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/sites/$id': {
+      id: '/api/sites/$id'
+      path: '/api/sites/$id'
+      fullPath: '/api/sites/$id'
+      preLoaderRoute: typeof ApiSitesIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -225,6 +245,7 @@ const rootRouteChildren: RootRouteChildren = {
   StudioProjectIdRoute: StudioProjectIdRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiJobsIdRoute: ApiJobsIdRoute,
+  ApiSitesIdRoute: ApiSitesIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

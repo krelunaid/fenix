@@ -1,9 +1,11 @@
+import { useEffect, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { ArrowLeft, Download } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { prepareSrcDoc } from "@/lib/projects/color-scheme";
-import { useProjectStore } from "@/lib/projects/store";
+import { loadPublished } from "@/lib/projects/publish-client";
+import type { PublishedSnapshot } from "@/lib/projects/published";
 import { downloadTextFile } from "@/lib/utils";
 
 export const Route = createFileRoute("/sito/$projectId")({
@@ -13,10 +15,23 @@ export const Route = createFileRoute("/sito/$projectId")({
 function LiveSitePage() {
   const { projectId } = Route.useParams();
   const navigate = useNavigate();
-  const hydrated = useProjectStore((s) => s.hydrated);
-  const project = useProjectStore((s) => s.projects.find((p) => p.id === projectId));
+  const [snap, setSnap] = useState<PublishedSnapshot | null | undefined>(undefined);
 
-  if (!hydrated) {
+  useEffect(() => {
+    let cancelled = false;
+    void loadPublished(projectId)
+      .then((next) => {
+        if (!cancelled) setSnap(next);
+      })
+      .catch(() => {
+        if (!cancelled) setSnap(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [projectId]);
+
+  if (snap === undefined) {
     return (
       <div className="grid min-h-dvh place-items-center bg-background text-sm text-muted-foreground">
         Apro il sito…
@@ -24,13 +39,13 @@ function LiveSitePage() {
     );
   }
 
-  if (!project?.html) {
+  if (!snap?.html) {
     return (
       <div className="grid min-h-dvh place-items-center bg-background px-6 text-center">
         <div>
           <p className="font-display text-2xl tracking-tight">Sito non trovato</p>
           <p className="mt-2 text-sm text-muted-foreground">
-            Costruiscilo prima in studio, poi aprilo qui.
+            Non è ancora stato pubblicato, o il link non esiste.
           </p>
           <Button className="mt-6" onClick={() => navigate({ to: "/" })}>
             Torna a Fenix
@@ -53,12 +68,12 @@ function LiveSitePage() {
         >
           <ArrowLeft />
         </Button>
-        <p className="min-w-0 flex-1 truncate text-sm">{project.name}</p>
+        <p className="min-w-0 flex-1 truncate text-sm">{snap.name}</p>
         <Button
           variant="secondary"
           size="sm"
           onClick={() => {
-            downloadTextFile("index.html", project.html, "text/html;charset=utf-8");
+            downloadTextFile("index.html", snap.html, "text/html;charset=utf-8");
             toast("index.html scaricato");
           }}
         >
@@ -67,12 +82,12 @@ function LiveSitePage() {
         </Button>
       </header>
       <iframe
-        title={project.name}
+        title={snap.name}
         srcDoc={prepareSrcDoc(
-          project.html,
-          project.palette ?? { bg: "#ffffff" },
-          project.id,
-          project.kind,
+          snap.html,
+          snap.palette ?? { bg: "#ffffff" },
+          snap.id,
+          snap.kind,
         )}
         sandbox="allow-scripts allow-forms allow-modals allow-same-origin"
         className="min-h-0 w-full flex-1 border-0 bg-white"
