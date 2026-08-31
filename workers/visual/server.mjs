@@ -173,7 +173,10 @@ Rispondi SOLO:
 <!DOCTYPE html> gestionale desktop completo
 <<<END>>>`;
 
-function looksDashboard(prompt, instruction) {
+function looksDashboard(prompt, instruction, kind) {
+  const k = String(kind || "").toLowerCase();
+  if (k === "dashboard") return true;
+  if (k) return false;
   const p = `${prompt || ""} ${instruction || ""}`.toLowerCase();
   return (
     /\bkind\s*=\s*dashboard\b/.test(p) ||
@@ -182,14 +185,23 @@ function looksDashboard(prompt, instruction) {
   );
 }
 
-function looksSite(prompt, instruction) {
+function looksSite(prompt, instruction, kind, html) {
+  const k = String(kind || "").toLowerCase();
+  if (k === "site" || k === "landing") return true;
+  if (k) return false;
   const p = `${prompt || ""} ${instruction || ""}`.toLowerCase();
-  return (
+  if (
     /\bkind\s*=\s*site\b/.test(p) ||
     /\bkind\s*=\s*landing\b/.test(p) ||
     /formato:\s*sito/.test(p) ||
     /\bsito web\b/.test(p)
-  );
+  ) {
+    return true;
+  }
+  const h = String(html || "");
+  if (!h || looksPhoneShell(h)) return false;
+  const sections = (h.match(/<section\b/gi) || []).length;
+  return /<nav\b/i.test(h) && sections >= 3 && /<footer\b/i.test(h);
 }
 
 async function generateHero(apiKey, prompt, aspect) {
@@ -308,8 +320,14 @@ async function placeHero(html, prompt) {
 function stripPhoneChromeFromSite(html) {
   if (!html) return html;
   let next = html;
-  next = next.replace(/<nav[^>]*class=["'][^"']*bottom-tab[^"']*["'][^>]*>[\s\S]*?<\/nav>/gi, "");
-  next = next.replace(/<nav[^>]*class=["'][^"']*fk-tab[^"']*["'][^>]*>[\s\S]*?<\/nav>/gi, "");
+  const stripBottom = (s) =>
+    s.replace(/<nav[^>]*class=["'][^"']*bottom-tab[^"']*["'][^>]*>[\s\S]*?<\/nav>/gi, "");
+  const stripFk = (s) =>
+    s.replace(/<nav[^>]*class=["'][^"']*fk-tab[^"']*["'][^>]*>[\s\S]*?<\/nav>/gi, "");
+  const afterBottom = stripBottom(next);
+  const afterBoth = stripFk(afterBottom);
+  if (/<nav\b/i.test(afterBoth)) next = afterBoth;
+  else if (/<nav\b/i.test(afterBottom)) next = afterBottom;
   next = next.replace(/<span[^>]*class=["'][^"']*fk-appicon[^"']*["'][^>]*>[\s\S]*?<\/span>/gi, "");
   next = next.replace(/\.bottom-tab\s*\{[^}]*\}/g, "");
   next = next.replace(/html,\s*body\s*\{([^}]*)\}/i, (_m, body) => {
@@ -326,14 +344,17 @@ function stripPhoneChromeFromSite(html) {
       .replace(/overflow:\s*auto\s*;?/i, "");
     return `main {${cleaned}}`;
   });
+  if (/getElementById\(['"]main['"]\)/.test(next) && !/<main\b[^>]*\bid\s*=/i.test(next) && /<main\b/i.test(next)) {
+    next = next.replace(/<main\b/i, '<main id="main"');
+  }
   return next;
 }
 
-async function generate(prompt, html, instruction) {
+async function generate(prompt, html, instruction, kind) {
   const apiKey = (process.env.XAI_API_KEY || "").trim();
   if (!apiKey) throw new Error("Manca XAI_API_KEY");
-  const dashboard = looksDashboard(prompt, instruction);
-  const site = looksSite(prompt, instruction);
+  const dashboard = looksDashboard(prompt, instruction, kind);
+  const site = looksSite(prompt, instruction, kind, html);
   const user = [
     `BRIEF:\n${prompt}`,
     html ? `HTML ATTUALE:\n${html.slice(0, 20000)}` : "",
@@ -658,21 +679,21 @@ async function auditTab(page, index) {
   });
 }
 
-async function polish(prompt, html, instruction) {
+async function polish(prompt, html, instruction, kind) {
   const apiKey = (process.env.XAI_API_KEY || "").trim();
   if (!apiKey) throw new Error("Manca XAI_API_KEY");
-  if (looksDashboard(prompt, instruction)) {
+  if (looksDashboard(prompt, instruction, kind)) {
     const dashInstruction =
       instruction ||
       "SOSTITUISCI nav.fk-tab e lo scheletro telefono con un gestionale desktop. Header o sidebar, tabella, filtri, form, numeri. kind=dashboard. Niente tabbar iPhone. Tieni Fenix.load/save. CSS reale.";
-    const result = await generate(prompt, html, dashInstruction);
+    const result = await generate(prompt, html, dashInstruction, kind);
     return {
       ...result,
       meta: { ...(result.meta || {}), kind: "dashboard" },
       log: ["Rifinitura gestionale desktop", ...(result.log || [])],
     };
   }
-  if (looksSite(prompt, instruction)) {
+  if (looksSite(prompt, instruction, kind, html)) {
     const log = ["Rifinitura sito (nav in alto, niente tabbar)"];
     let current = html;
     if (looksPhoneShell(html) || /bottom-tab|fk-appicon|height:\s*100dvh/i.test(html)) {
@@ -680,6 +701,7 @@ async function polish(prompt, html, instruction) {
         prompt,
         html,
         instruction || "FORMATO: sito web. kind=site. Rigenera desktop, nav in alto, niente tabbar.",
+        kind || "site",
       );
       current = regen.html;
       log.push(...(regen.log || []), "Layout desktop");
@@ -942,6 +964,7 @@ const server = createServer(async (req, res) => {
   const prompt = String(body.prompt || "").slice(0, 2500);
   const html = String(body.html || "").slice(0, 120000);
   const instruction = String(body.instruction || "").slice(0, 2500);
+  const kind = String(body.kind || "").slice(0, 32).toLowerCase();
   const projectId = String(body.projectId || "").slice(0, 80);
   const idempotencyKey = String(
     body.jobId || body.idempotencyKey || req.headers["idempotency-key"] || "",
@@ -973,8 +996,8 @@ const server = createServer(async (req, res) => {
     job.log = ["Partito"];
     try {
       const result = isBuild
-        ? await generate(prompt, html, instruction)
-        : await polish(prompt, html, instruction);
+        ? await generate(prompt, html, instruction, kind)
+        : await polish(prompt, html, instruction, kind);
       const broken = scriptsSyntax(result.html);
       if (broken) {
         if (isBuild) {

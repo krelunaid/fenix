@@ -36,6 +36,7 @@ describe("published site is server-side, not localStorage", () => {
     assert.match(client, /\/api\/sites\//);
     assert.match(client, /OWNER_HEADER/);
     assert.match(client, /If-Match/);
+    assert.match(client, /x-fenix-if-match/);
     assert.match(client, /rememberPublishedId/);
     assert.match(client, /readPublishedId/);
     assert.match(client, /PUBLISHED_MAP_KEY/);

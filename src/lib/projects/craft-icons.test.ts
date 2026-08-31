@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 import { APP_SHELL_HTML } from "../ai/app-shell.ts";
 import {
   countAppleTabIcons,
+  ensureMainElementId,
   looksLikeAppleTabIcons,
   looksLikeIosWidgetHome,
   looksLikeSitePhoneChrome,
@@ -11,7 +12,7 @@ import {
   stripPhoneChromeFromSite,
 } from "./craft-icons.ts";
 import { recoverPersistedProject } from "./recover.ts";
-import { validateProductHtml } from "./validate-html.ts";
+import { canPublishHtml, validateProductHtml } from "./validate-html.ts";
 
 const APPLE_NAV = `<nav class="fk-tab" aria-label="Navigazione">
 <button data-view="home"><svg viewBox="0 0 24 24"><path d="M4 10.5 12 4l8 6.5V20H4z"/></svg><span>Oggi</span></button>
@@ -168,5 +169,30 @@ document.querySelectorAll('.bottom-tab button').forEach(btn => {
     });
     assert.equal(recovered.status, "ready");
     assert.doesNotMatch(recovered.html, /<nav class="bottom-tab"/);
+  });
+
+  it("keeps the only nav when a site polish result is a 5-tab shell", () => {
+    const phone = `<!DOCTYPE html><html><head><style>
+html, body { margin: 0; }
+</style></head><body>
+<header class="fk-top"><span class="fk-appicon" aria-hidden="true"><svg></svg></span><h1>Bottega Terra</h1></header>
+<main class="fk-main"><section data-view="home"><h1>Home</h1></section></main>
+<nav class="fk-tab" aria-label="Navigazione">
+<button data-view="home">Home</button>
+<button data-view="list">Elenco</button>
+<button data-view="more">Altro</button>
+</nav>
+<script>
+window.Fenix={load:function(){return Promise.resolve({})},save:function(){return Promise.resolve()}};
+document.getElementById('main').innerHTML = 'x';
+</script>
+</body></html>`;
+    assert.equal(looksLikeSitePhoneChrome(phone), true);
+    const next = stripPhoneChromeFromSite(phone);
+    assert.match(next, /<nav class="fk-tab"/);
+    assert.doesNotMatch(next, /fk-appicon/);
+    assert.match(next, /<main id="main"/);
+    assert.equal(ensureMainElementId(phone).includes('<main id="main"'), true);
+    assert.equal(canPublishHtml(next, "site", "bottega-phone"), true, validateProductHtml(next, { kind: "site" }).errors.join(" · "));
   });
 });

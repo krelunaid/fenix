@@ -115,6 +115,7 @@ describe("recover persisted site + prompt kind=dashboard", () => {
     assert.doesNotMatch(resume, /spendCredit/);
     assert.match(resume, /resolveProjectKind/);
     assert.match(resume, /DASHBOARD_POLISH_INSTRUCTION/);
+    assert.match(resume, /SITE_POLISH_INSTRUCTION/);
     assert.match(resume, /finishPolish/);
     assert.match(resume, /abandonVisualJob/);
     assert.match(resume, /const live = Boolean\(hasActiveVisualJob/);
@@ -124,6 +125,7 @@ describe("recover persisted site + prompt kind=dashboard", () => {
     assert.match(src, /hasActiveVisualJob/);
     assert.match(src, /Idempotency-Key/);
     assert.match(src, /startPolishJob/);
+    assert.match(src, /kind: resolveProjectKind/);
   });
 
   it("keeps kiln publishable as dashboard after recover", () => {

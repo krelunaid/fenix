@@ -76,7 +76,7 @@ function installFetch(sites: Map<string, { version: number; html: string; owner:
     if (method === "PUT") {
       const body = JSON.parse(String(init?.body || "{}")) as { html?: string; name?: string };
       const html = String(body.html || "");
-      puts.push({ id, owner, ifMatch: headers.get("If-Match"), html });
+      puts.push({ id, owner, ifMatch: headers.get("If-Match") || headers.get("x-fenix-if-match"), html });
       if (!owner) return Response.json({ error: "Identità assente." }, { status: 401 });
       const existing = sites.get(id);
       if (existing && !existing.owner) {

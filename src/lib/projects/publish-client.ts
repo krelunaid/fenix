@@ -99,7 +99,10 @@ export async function publishSnapshot(input: {
       "Content-Type": "application/json",
       [OWNER_HEADER]: owner,
     };
-    if (ifMatch) headers["If-Match"] = ifMatch;
+    if (ifMatch) {
+      headers["If-Match"] = ifMatch;
+      headers["x-fenix-if-match"] = ifMatch;
+    }
     return fetch(`/api/sites/${encodeURIComponent(target)}`, {
       method: "PUT",
       headers,

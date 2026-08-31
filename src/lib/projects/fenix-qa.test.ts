@@ -34,6 +34,7 @@ describe("focus-visible and worker model", () => {
     assert.match(resume, /uniqueLogs/);
     assert.match(resume, /refundBuildCredit/);
     assert.match(resume, /repairBootFailures/);
+    assert.match(resume, /SITE_POLISH_INSTRUCTION/);
     assert.match(src, /mergeUniqueLogs\(prev, job\.log\)/);
     assert.match(src, /r\.status === 404/);
     assert.match(src, /fetched\.state === "missing"/);
@@ -87,6 +88,7 @@ describe("focus-visible and worker model", () => {
     assert.match(sitesHttp, /writePublished/);
     assert.match(sitesHttp, /readPublished/);
     assert.match(sitesHttp, /ownerFromRequest/);
+    assert.match(sitesHttp, /x-fenix-if-match/);
     const owner = readFileSync(join(root, "src/lib/projects/publish-owner.ts"), "utf8");
     assert.match(owner, /x-fenix-owner/);
     assert.match(owner, /parseIfMatch/);
@@ -111,6 +113,8 @@ describe("focus-visible and worker model", () => {
     assert.doesNotMatch(worker, /2 colori #1d1d1f \/ #0071e3/);
     assert.match(worker, /function looksDashboard/);
     assert.match(worker, /function looksSite/);
+    assert.match(worker, /k === "site" \|\| k === "landing"/);
+    assert.match(worker, /body\.kind/);
     assert.match(worker, /function looksPhoneShell/);
     assert.match(worker, /nodo assente/);
     assert.doesNotMatch(worker, /<template id="t-\$\{tid\}">/);
@@ -238,6 +242,7 @@ describe("focus-visible and worker model", () => {
       runBuild.indexOf("export async function runBuild"),
     );
     assert.match(resume, /repairBootFailures/);
+    assert.match(resume, /SITE_POLISH_INSTRUCTION/);
     assert.doesNotMatch(runBuild, /JOB_STILL_RUNNING \|\| \/Riprendi rifinitura/);
     assert.match(runBuild, /if \(workerError === JOB_STILL_RUNNING\)/);
   });

@@ -341,5 +341,22 @@ describe("sites HTTP handler", () => {
     assert.equal(ok.status, 200);
     const updated = (await ok.json()) as { version: number };
     assert.equal(updated.version, 2);
+
+    const viaCustom = await handleSiteRequest(
+      new Request(`http://local/api/sites/${id}`, {
+        method: "PUT",
+        headers: {
+          "content-type": "application/json",
+          [OWNER_HEADER]: OWNER_A,
+          "x-fenix-if-match": `"2"`,
+        },
+        body: JSON.stringify({ ...payload, html: ADAPTED.replace("Onda", "Onda Netlify") }),
+      }),
+      id,
+    );
+    assert.equal(viaCustom.status, 200);
+    const custom = (await viaCustom.json()) as { version: number; html?: string };
+    assert.equal(custom.version, 3);
+    assert.match(String(custom.html || ""), /Onda Netlify/);
   });
 });

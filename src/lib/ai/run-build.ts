@@ -217,6 +217,11 @@ async function startPolishJob(
     prompt,
     html,
     instruction: instruction || undefined,
+    kind: resolveProjectKind({
+      stored: project?.kind,
+      requested: project?.requestedKind,
+      prompt: project?.prompt ?? prompt,
+    }),
     projectId,
     jobId: project?.visualJobId,
     idempotencyKey: project?.visualJobId || projectId,
@@ -267,7 +272,7 @@ function isIOS() {
 
 async function consumeViaWorker(
   projectId: string,
-  body: { prompt: string; html?: string; instruction?: string },
+  body: { prompt: string; html?: string; instruction?: string; kind?: string },
   quiet = false,
 ): Promise<boolean> {
   const store = useProjectStore.getState();
@@ -651,7 +656,11 @@ export async function resumePolish(projectId: string) {
   try {
     const phoneShell = /\bfk-tab\b/.test(project.html);
     const instruction =
-      kind === "dashboard" && phoneShell ? DASHBOARD_POLISH_INSTRUCTION : undefined;
+      kind === "dashboard" && phoneShell
+        ? DASHBOARD_POLISH_INSTRUCTION
+        : kind === "site" || kind === "landing"
+          ? SITE_POLISH_INSTRUCTION
+          : undefined;
     const lastValidHtml = await polishDraft(projectId, project.prompt, project.html, instruction);
     const latest = useProjectStore.getState().getProject(projectId);
     if (hasActiveVisualJob(latest ?? {})) return;
@@ -733,6 +742,7 @@ export async function runBuild(projectId: string, instruction?: string) {
     const payload = {
       prompt: project.prompt,
       html: instruction ? project.html : phone ? APP_SHELL_HTML : project.html || "",
+      kind,
       instruction:
         instruction ||
         (kind === "dashboard"

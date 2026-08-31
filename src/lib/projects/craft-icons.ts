@@ -114,11 +114,28 @@ export function looksLikeSitePhoneChrome(html: string): boolean {
   );
 }
 
+/** If product JS writes to #main, the <main> node must have that id. */
+export function ensureMainElementId(html: string): string {
+  const text = String(html || "");
+  if (!text) return text;
+  if (!/getElementById\(['"]main['"]\)/.test(text)) return text;
+  if (/<main\b[^>]*\bid\s*=/i.test(text)) return text;
+  if (!/<main\b/i.test(text)) return text;
+  return text.replace(/<main\b/i, '<main id="main"');
+}
+
 export function stripPhoneChromeFromSite(html: string): string {
   if (!html || !looksLikeSitePhoneChrome(html)) return html;
   let next = html;
-  next = next.replace(/<nav[^>]*class=["'][^"']*bottom-tab[^"']*["'][^>]*>[\s\S]*?<\/nav>/gi, "");
-  next = next.replace(/<nav[^>]*class=["'][^"']*fk-tab[^"']*["'][^>]*>[\s\S]*?<\/nav>/gi, "");
+  const stripBottom = (s: string) =>
+    s.replace(/<nav[^>]*class=["'][^"']*bottom-tab[^"']*["'][^>]*>[\s\S]*?<\/nav>/gi, "");
+  const stripFk = (s: string) =>
+    s.replace(/<nav[^>]*class=["'][^"']*fk-tab[^"']*["'][^>]*>[\s\S]*?<\/nav>/gi, "");
+  const afterBottom = stripBottom(next);
+  const afterBoth = stripFk(afterBottom);
+  // A site still needs a <nav>. If the tabbar is the only one, keep it.
+  if (/<nav\b/i.test(afterBoth)) next = afterBoth;
+  else if (/<nav\b/i.test(afterBottom)) next = afterBottom;
   next = next.replace(/<span[^>]*class=["'][^"']*fk-appicon[^"']*["'][^>]*>[\s\S]*?<\/span>/gi, "");
   next = next.replace(/\.bottom-tab\s*\{[^}]*\}/g, "");
   next = next.replace(/html,\s*body\s*\{([^}]*)\}/i, (_m, body: string) => {
@@ -135,5 +152,5 @@ export function stripPhoneChromeFromSite(html: string): string {
       .replace(/overflow:\s*auto\s*;?/i, "");
     return `main {${cleaned}}`;
   });
-  return next;
+  return ensureMainElementId(next);
 }

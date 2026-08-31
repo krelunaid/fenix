@@ -27,7 +27,7 @@ export async function handleSiteRequest(request: Request, id: string): Promise<R
     }
     const result = await writePublished(id, body, {
       ownerId,
-      ifMatch: request.headers.get("if-match"),
+      ifMatch: request.headers.get("if-match") || request.headers.get("x-fenix-if-match"),
     });
     if ("error" in result) {
       return json({ error: result.error }, result.status);
