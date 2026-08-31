@@ -1,8 +1,8 @@
 /** Injected into gestionale HTML. No ${} — product JS, not a template. */
-export const DASHBOARD_CRUD_SCRIPT = `<script data-fenix-crud="5">
+export const DASHBOARD_CRUD_SCRIPT = `<script data-fenix-crud="6">
 (function(){
-  if (window.__fenixCrud >= 5) return;
-  window.__fenixCrud = 5;
+  if (window.__fenixCrud >= 6) return;
+  window.__fenixCrud = 6;
   function qsa(s, r){ return Array.prototype.slice.call((r || document).querySelectorAll(s)); }
   function qs(s, r){ return (r || document).querySelector(s); }
   function txt(el){ return ((el && (el.textContent || (el.getAttribute && el.getAttribute("aria-label")))) || "").replace(/\\s+/g, " ").trim(); }
@@ -163,7 +163,12 @@ export const DASHBOARD_CRUD_SCRIPT = `<script data-fenix-crud="5">
     return cells.join("");
   }
   function num(v){
-    var n = parseFloat(String(v == null ? "" : v).replace(",", "."));
+    var s = String(v == null ? "" : v).replace(/€/g, "").replace(/\\s/g, "").trim();
+    if (!s) return 0;
+    if (/^\\d{1,3}(\\.\\d{3})+(,\\d+)?$/.test(s)) s = s.replace(/\\./g, "").replace(",", ".");
+    else if (s.indexOf(",") >= 0 && s.indexOf(".") < 0) s = s.replace(",", ".");
+    else s = s.replace(/[^\\d.-]/g, "");
+    var n = parseFloat(s);
     return isFinite(n) ? n : 0;
   }
   function totals(){

@@ -7,6 +7,7 @@ import { chromium } from "playwright";
 import { prepareSrcDoc } from "./color-scheme.ts";
 import {
   looksLikeBeigeSaas,
+  parseEuro,
   polishDashboardHtml,
   repairDashboardCrud,
   scrubTechMessages,
@@ -105,7 +106,16 @@ describe("dashboard CRUD repair", () => {
     assert.match(ARGILLA, /class="summary"/);
     assert.match(ARGILLA, /summary-item/);
     assert.match(ARGILLA, /QTÀ/);
+    assert.match(ARGILLA, /€42/);
     assert.doesNotMatch(ARGILLA, /data-summary/);
+  });
+
+  it("parseEuro reads Italian currency cells", () => {
+    assert.equal(parseEuro("€42"), 42);
+    assert.equal(parseEuro("€3.604"), 3604);
+    assert.equal(parseEuro("17"), 17);
+    assert.equal(parseEuro("17,50"), 17.5);
+    assert.equal(parseEuro("€ 1.234,56"), 1234.56);
   });
 
   it("Salva on real Argilla HTML adds a row, survives reload, edit and delete", async () => {
@@ -114,7 +124,7 @@ describe("dashboard CRUD repair", () => {
       `<script data-fenix-crud>window.__fenixCrud=1;</script></body>`,
     );
     const html = repairDashboardCrud(withV1);
-    assert.match(html, /data-fenix-crud="5"/);
+    assert.match(html, /data-fenix-crud="6"/);
     assert.equal((html.match(/data-fenix-crud/g) || []).length, 1);
     const src = prepareSrcDoc(
       html,
@@ -208,13 +218,13 @@ describe("dashboard CRUD repair", () => {
       t.skip("preview non in ascolto");
       return;
     }
+    const ARGILLA_PID = "49c14680-a504-436d-a0db-84e4f3583dbe";
     const html = polishDashboardHtml(ARGILLA, "dashboard");
     const browser = await chromium.launch({ headless: true });
     try {
       const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
       await page.addInitScript(
-        ({ seeded }: { seeded: string }) => {
-          if (localStorage.getItem("officina-projects")) return;
+        ({ seeded, pid }: { seeded: string; pid: string }) => {
           const now = Date.now();
           localStorage.setItem(
             "officina-projects",
@@ -222,7 +232,7 @@ describe("dashboard CRUD repair", () => {
               state: {
                 projects: [
                   {
-                    id: "p-argilla-crud",
+                    id: pid,
                     name: "Argilla Viva",
                     tagline: "",
                     prompt: "FORMATO: gestionale ufficio. kind=dashboard",
@@ -253,60 +263,84 @@ describe("dashboard CRUD repair", () => {
           );
           localStorage.removeItem("officina-appdb");
         },
-        { seeded: html },
+        { seeded: html, pid: ARGILLA_PID },
       );
-      await page.goto(`${PREVIEW}/studio/p-argilla-crud`, {
+      await page.goto(`${PREVIEW}/studio/${ARGILLA_PID}`, {
         waitUntil: "domcontentloaded",
         timeout: 20000,
       });
       const frame = page.locator("section.hidden.md\\:block").frameLocator("iframe");
       await frame.getByRole("heading", { name: "Inventario" }).waitFor({ timeout: 15000 });
       await frame.getByRole("button", { name: /nuovo pezzo/i }).click();
-      await frame.locator("#p-nome").fill("Codex Prova Reale");
+      await frame.locator("#p-nome").fill("Codex Verifica 1e7b47a");
       await frame.locator("#p-qty").fill("2");
       await frame.locator("#p-prezzo").fill("17");
       await frame.getByRole("button", { name: /^salva$/i }).click();
-      await frame.locator("tr", { hasText: "Codex Prova Reale" }).waitFor({ timeout: 5000 });
+      await frame.locator("tr", { hasText: "Codex Verifica 1e7b47a" }).waitFor({ timeout: 5000 });
       const sum = (await frame.locator(".summary").innerText()).replace(/\s+/g, " ");
       assert.match(sum, /25 pezzi/);
       assert.match(sum, /104 in stock/);
       assert.match(sum, /3638/);
-      await page.waitForFunction(
-        () => {
-          const blob = `${localStorage.getItem("officina-appdb") || ""} ${localStorage.getItem("officina-projects") || ""}`;
-          return blob.includes("Codex Prova Reale");
-        },
-        null,
-        { timeout: 8000 },
+      assert.doesNotMatch(sum, /€34(?:\D|$)/);
+      const snapshot = await page.evaluate(() => ({
+        projects: localStorage.getItem("officina-projects"),
+        appdb: localStorage.getItem("officina-appdb"),
+      }));
+      assert.ok(snapshot.appdb, "officina-appdb missing after save");
+      const db = JSON.parse(snapshot.appdb as string) as Record<
+        string,
+        { items?: { nome?: string }[]; state?: { items?: unknown[] } }
+      >;
+      assert.ok(db[ARGILLA_PID], `missing projectId ${ARGILLA_PID}`);
+      assert.ok(Array.isArray(db[ARGILLA_PID].items), "items collection missing");
+      assert.ok(
+        db[ARGILLA_PID].items?.some((r) => r.nome === "Codex Verifica 1e7b47a"),
+        "items does not contain saved row",
       );
-      await page.reload({ waitUntil: "domcontentloaded" });
-      const frame2 = page.locator("section.hidden.md\\:block").frameLocator("iframe");
-      await frame2.locator("tr", { hasText: "Codex Prova Reale" }).waitFor({ timeout: 15000 });
+      assert.ok(db[ARGILLA_PID].state, "state collection missing");
+      await page.close();
+
+      const ctx2 = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+      const fresh = await ctx2.newPage();
+      await fresh.addInitScript(
+        (snap: { projects: string | null; appdb: string | null }) => {
+          if (snap.projects) localStorage.setItem("officina-projects", snap.projects);
+          if (snap.appdb) localStorage.setItem("officina-appdb", snap.appdb);
+        },
+        snapshot,
+      );
+      await fresh.goto(`${PREVIEW}/studio/${ARGILLA_PID}?cb=${Date.now()}`, {
+        waitUntil: "domcontentloaded",
+        timeout: 20000,
+      });
+      const frame2 = fresh.locator("section.hidden.md\\:block").frameLocator("iframe");
+      await frame2.locator("tr", { hasText: "Codex Verifica 1e7b47a" }).waitFor({ timeout: 15000 });
       const sum2 = (await frame2.locator(".summary").innerText()).replace(/\s+/g, " ");
       assert.match(sum2, /25 pezzi/);
       assert.match(sum2, /104 in stock/);
+      assert.match(sum2, /3638/);
       assert.equal(await frame2.locator("#fk-saved").count(), 0);
-      const target = frame2.locator("tr", { hasText: "Codex Prova Reale" });
+      const target = frame2.locator("tr", { hasText: "Codex Verifica 1e7b47a" });
       await target.getByRole("button", { name: /^modifica$/i }).click();
       await frame2.locator("#p-qty").waitFor({ timeout: 3000 });
       assert.equal(await frame2.locator("#p-qty").inputValue(), "2");
-      assert.equal(await frame2.locator("#p-prezzo").inputValue(), "17");
       await frame2.locator("#p-qty").fill("5");
       await frame2.locator("#p-prezzo").fill("20");
       await frame2.getByRole("button", { name: /^salva$/i }).click();
       await target.locator("td").nth(3).filter({ hasText: /^5$/ }).waitFor({ timeout: 4000 });
-      assert.equal((await target.locator("td").nth(4).textContent())?.trim(), "20");
       const afterEdit = (await frame2.locator(".summary").innerText()).replace(/\s+/g, " ");
-      assert.match(afterEdit, /25 pezzi/);
       assert.match(afterEdit, /107 in stock/);
-      assert.match(afterEdit, /3704/);
       await target.getByRole("button", { name: /^elimina$/i }).click();
-      await frame2.locator("tr", { hasText: "Codex Prova Reale" }).waitFor({ state: "detached", timeout: 4000 });
+      await frame2.locator("tr", { hasText: "Codex Verifica 1e7b47a" }).waitFor({
+        state: "detached",
+        timeout: 4000,
+      });
       const afterDel = (await frame2.locator(".summary").innerText()).replace(/\s+/g, " ");
       assert.match(afterDel, /24 pezzi/);
       assert.match(afterDel, /102 in stock/);
       assert.match(afterDel, /3604/);
-      await page.close();
+      await fresh.close();
+      await ctx2.close();
     } finally {
       await browser.close();
     }

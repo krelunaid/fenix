@@ -121,11 +121,14 @@ export const useProjectStore = create<ProjectStore>()(
         }));
       },
       loadAppData: (projectId, collection) => {
-        const mem = get().appDb[projectId]?.[collection];
-        if (mem != null) return mem;
-        return readDiskAppDb()[projectId]?.[collection] ?? null;
+        const diskVal = readDiskAppDb()[projectId]?.[collection];
+        if (diskVal != null) return diskVal;
+        return get().appDb[projectId]?.[collection] ?? null;
       },
       saveAppData: (projectId, collection, data) => {
+        const disk = readDiskAppDb();
+        disk[projectId] = { ...(disk[projectId] ?? {}), [collection]: data };
+        writeDiskAppDb(disk);
         set((s) => ({
           appDb: {
             ...s.appDb,
@@ -135,9 +138,6 @@ export const useProjectStore = create<ProjectStore>()(
             },
           },
         }));
-        const disk = readDiskAppDb();
-        disk[projectId] = { ...(disk[projectId] ?? {}), [collection]: data };
-        writeDiskAppDb(disk);
       },
       createFromBrief: ({ prompt, kind }) => {
         const project = blankProject(prompt.trim(), kind ?? "app");
@@ -249,12 +249,11 @@ export const useProjectStore = create<ProjectStore>()(
           }
           if (!state.appDb) state.appDb = {};
           const disk = readDiskAppDb();
-          const merged: Record<string, Record<string, unknown>> = { ...disk };
-          for (const [pid, cols] of Object.entries(state.appDb)) {
-            merged[pid] = { ...(disk[pid] ?? {}), ...cols };
+          const merged: Record<string, Record<string, unknown>> = { ...state.appDb };
+          for (const [pid, cols] of Object.entries({ ...disk, ...state.appDb })) {
+            merged[pid] = { ...(state.appDb[pid] ?? {}), ...(disk[pid] ?? {}) };
           }
           state.appDb = merged;
-          writeDiskAppDb(merged);
         }
         state?.setHydrated();
       },

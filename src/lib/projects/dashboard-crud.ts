@@ -32,6 +32,23 @@ export function scrubTechMessages<T extends { content: string }>(messages: T[] =
     .filter((m) => m.content.length > 1);
 }
 
+export function parseEuro(v: unknown): number {
+  let s = String(v ?? "")
+    .replace(/€/g, "")
+    .replace(/\s/g, "")
+    .trim();
+  if (!s) return 0;
+  if (/^\d{1,3}(\.\d{3})+(,\d+)?$/.test(s)) {
+    s = s.replace(/\./g, "").replace(",", ".");
+  } else if (s.includes(",") && !s.includes(".")) {
+    s = s.replace(",", ".");
+  } else {
+    s = s.replace(/[^\d.-]/g, "");
+  }
+  const n = parseFloat(s);
+  return Number.isFinite(n) ? n : 0;
+}
+
 export function looksLikeBeigeSaas(html: string): boolean {
   const h = String(html || "");
   if (/Barlow Condensed|Fraunces|data-fenix-craft-desk/i.test(h)) return false;
