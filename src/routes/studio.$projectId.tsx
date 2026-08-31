@@ -213,6 +213,12 @@ function StudioPage() {
                 active={Boolean(building)}
                 compact={Boolean(project.html)}
                 steps={project.buildLog ?? []}
+                error={!building && project.status === "error" ? project.error : undefined}
+                onRetry={() =>
+                  canResume ? void resumePolish(project.id) : void runBuild(project.id)
+                }
+                retryLabel={canResume ? "Riprendi rifinitura" : "Riprova. Lo ricostruisco."}
+                hasDraft={Boolean(project.html)}
               />
             </>
           )}
@@ -268,6 +274,12 @@ function StudioPage() {
                 active={Boolean(building)}
                 compact={Boolean(project.html)}
                 steps={project.buildLog ?? []}
+                error={!building && project.status === "error" ? project.error : undefined}
+                onRetry={() =>
+                  canResume ? void resumePolish(project.id) : void runBuild(project.id)
+                }
+                retryLabel={canResume ? "Riprendi rifinitura" : "Riprova. Lo ricostruisco."}
+                hasDraft={Boolean(project.html)}
               />
             </>
           )}
@@ -401,7 +413,7 @@ function ChatColumn({
           <button
             type="button"
             onClick={onRetry}
-            className="text-left text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+            className="rounded-xl bg-primary px-3 py-2 text-left text-sm text-primary-foreground"
           >
             {retryLabel}
           </button>

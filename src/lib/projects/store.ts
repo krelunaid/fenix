@@ -413,6 +413,15 @@ if (typeof window !== "undefined" && !(window as Window & { __fenixDbBound?: boo
   });
 }
 
+export function refundBuildCredit(projectId: string, n?: number) {
+  const store = useProjectStore.getState();
+  const project = store.getProject(projectId);
+  if (!project || project.creditRefunded) return false;
+  store.refundCredit(n);
+  store.updateProject(projectId, { creditRefunded: true });
+  return true;
+}
+
 export function applyBuildResult(
   id: string,
   result: {

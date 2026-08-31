@@ -46,6 +46,8 @@ export type Project = {
   visualJobStartedAt?: number;
   /** Fenix.load/save collections. Persisted with the project so reload keeps rows. */
   appData?: Record<string, unknown>;
+  /** One refund per failed build. Retry spend resets this. */
+  creditRefunded?: boolean;
 };
 
 export const DEFAULT_PALETTE: Palette = {

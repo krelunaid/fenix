@@ -66,7 +66,7 @@ function markupWithoutCode(html: string) {
 function productScripts(html: string) {
   return extractInlineScripts(html).filter((s) => {
     const slice = html.slice(Math.max(0, s.start - 80), s.start + 40);
-    return !/data-fenix-runtime|data-officina-guard/i.test(slice);
+    return !/data-fenix-runtime|data-officina-guard|data-fenix-adapter/i.test(slice);
   });
 }
 

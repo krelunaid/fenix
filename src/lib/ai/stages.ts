@@ -13,7 +13,7 @@ export type StreamEvent =
   | { t: "s"; s: string }
   | { t: "p"; n: number }
   | { t: "ok"; result: unknown }
-  | { t: "err"; error: string };
+  | { t: "err"; error: string; result?: unknown };
 
 export function sseLine(event: StreamEvent) {
   return `data: ${JSON.stringify(event)}\n\n`;

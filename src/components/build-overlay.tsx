@@ -10,10 +10,18 @@ export function BuildOverlay({
   active,
   compact = false,
   steps,
+  error,
+  onRetry,
+  retryLabel = "Riprova. Lo ricostruisco.",
+  hasDraft = false,
 }: {
   active: boolean;
   compact?: boolean;
   steps: string[];
+  error?: string;
+  onRetry?: () => void;
+  retryLabel?: string;
+  hasDraft?: boolean;
 }) {
   const [muted, setMuted] = useState(() => {
     try {
@@ -34,7 +42,48 @@ export function BuildOverlay({
     }
   }, [muted]);
 
-  if (!active) return null;
+  if (!active && !error) return null;
+
+  if (error && !active) {
+    const shell = (
+      <div className="w-full max-w-sm rounded-2xl border border-white/10 bg-[#120c28]/95 px-6 py-6">
+        <p className="text-[10px] tracking-[0.14em] text-[#9b93c2] uppercase">Bloccato</p>
+        <p className="mt-2 text-lg font-semibold tracking-tight text-white">{error}</p>
+        <p className="mt-2 text-sm leading-relaxed text-[#cfc8ea]">
+          {hasDraft
+            ? "La bozza resta sotto. Puoi riprovare senza perdere quello che c’è."
+            : "Nessuna anteprima ancora. Riprova: il credito di questo tentativo è rimborsato."}
+        </p>
+        {onRetry ? (
+          <button
+            type="button"
+            onClick={onRetry}
+            className="mt-4 w-full rounded-xl bg-white px-3 py-2.5 text-sm font-medium text-[#120c28]"
+          >
+            {retryLabel}
+          </button>
+        ) : null}
+        {steps.length ? (
+          <ul className="mt-4 space-y-1.5">
+            {steps.slice(-4).map((s) => (
+              <li key={s} className="flex items-center gap-2 text-xs text-[#9b93c2]">
+                <Check className="size-3.5 shrink-0" />
+                {s}
+              </li>
+            ))}
+          </ul>
+        ) : null}
+      </div>
+    );
+    if (hasDraft) {
+      return (
+        <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex justify-center p-3">
+          <div className="pointer-events-auto">{shell}</div>
+        </div>
+      );
+    }
+    return <div className="absolute inset-0 z-10 grid place-items-center bg-[#07041a]/88 px-6 backdrop-blur-[2px]">{shell}</div>;
+  }
 
   const leds = (
     <div className="kit-leds flex h-7 items-end gap-[2px]" aria-hidden>

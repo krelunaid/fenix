@@ -28,7 +28,7 @@ describe("focus-visible and worker model", () => {
     );
     assert.doesNotMatch(resume, /spendCredit/);
     assert.match(resume, /finishPolish/);
-    assert.match(src, /if \(refund\) store\.refundCredit\(refund\)/);
+    assert.match(src, /if \(refund\) refundBuildCredit\(projectId, refund\)/);
     assert.match(src, /charged = !finishPolish/);
   });
 

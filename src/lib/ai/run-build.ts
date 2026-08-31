@@ -2,6 +2,7 @@ import type { StreamEvent } from "./stages";
 import {
   applyBuildResult,
   promoteReady,
+  refundBuildCredit,
   RESUME_ERROR,
   useProjectStore,
 } from "@/lib/projects/store";
@@ -329,6 +330,10 @@ async function consumeStream(
         }
         finished = true;
       } else if (event.t === "err") {
+        const salvage = event.result as BuildResult | undefined;
+        if (salvage && typeof salvage === "object" && salvage.html) {
+          applyBuildResult(projectId, salvage, "building");
+        }
         store.updateProject(projectId, { status: "error", error: event.error });
         store.addMessage(projectId, {
           id: uid(),
@@ -428,7 +433,7 @@ function finishPolish(projectId: string, lastValidHtml: string, refund?: number)
     });
     return true;
   }
-  if (refund) store.refundCredit(refund);
+  if (refund) refundBuildCredit(projectId, refund);
   store.updateProject(projectId, {
     html: lastValidHtml,
     status: "error",
@@ -520,6 +525,7 @@ export async function runBuild(projectId: string, instruction?: string) {
     status: "building",
     error: undefined,
     buildLog: [],
+    creditRefunded: false,
   });
   resetAudit();
   store.addMessage(projectId, {
@@ -565,14 +571,14 @@ export async function runBuild(projectId: string, instruction?: string) {
     if (streamed) {
       const latest = useProjectStore.getState().getProject(projectId);
       if (latest?.status === "error") {
-        store.refundCredit(cost);
+        refundBuildCredit(projectId, cost);
         charged = false;
         return;
       }
       if (latest?.html) {
         const draftCheck = validateProductHtml(latest.html, { kind: latest.kind });
         if (!draftCheck.syntaxOk) {
-          store.refundCredit(cost);
+          refundBuildCredit(projectId, cost);
           charged = false;
           store.updateProject(projectId, {
             status: "error",
@@ -654,7 +660,7 @@ export async function runBuild(projectId: string, instruction?: string) {
       return;
     }
 
-    store.refundCredit(cost);
+    refundBuildCredit(projectId, cost);
     charged = false;
     store.updateProject(projectId, {
       status: "error",
@@ -666,7 +672,7 @@ export async function runBuild(projectId: string, instruction?: string) {
       content: "Non è arrivata una risposta. Riprova, magari con un brief più corto.",
     });
   } catch (err) {
-    if (charged) store.refundCredit(cost);
+    if (charged) refundBuildCredit(projectId, cost);
     const message =
       err instanceof Error ? err.message : "Qualcosa è andato storto. Riprova.";
     store.updateProject(projectId, { status: "error", error: message });

@@ -1,7 +1,10 @@
 import { parseBuildOutput, type BuildResult } from "./parse";
 import { FENIX_MODEL, XAI_CHAT_COMPLETIONS_URL } from "./model";
-import { formatHtmlErrors, validateProductHtml, type HtmlReport } from "@/lib/projects/validate-html";
 import { kindFromPrompt } from "@/lib/projects/infer";
+import {
+  gateIncompleteHtml,
+  type GateOutcome,
+} from "@/lib/projects/fenix-adapter";
 
 export const REPAIR_PROMPT = `Sei il riparatore di Fenix. L'HTML ha JS rotto o markup con \${} stampato.
 
@@ -12,6 +15,9 @@ Obbligo:
 4) Documento completo <!DOCTYPE html> … </html>.
 
 Rispondi SOLO META + HTML completo.`;
+
+export { ensureFenixAdapter, htmlHasFenixApi, FENIX_ADAPTER_SCRIPT } from "@/lib/projects/fenix-adapter";
+export type { GateOutcome };
 
 export async function repairBuild(input: {
   apiKey: string;
@@ -55,44 +61,10 @@ export async function gateBuildResult(input: {
   result: BuildResult;
   signal?: AbortSignal;
   onStage?: (stage: string) => void;
-}): Promise<{ result: BuildResult; report: HtmlReport } | { error: string; report: HtmlReport }> {
-  let current = input.result;
-  const lockKind = kindFromPrompt(input.prompt) ?? input.result.kind;
-  if (lockKind && current.kind !== lockKind) current = { ...current, kind: lockKind };
-  let report = validateProductHtml(current.html, { kind: current.kind });
-  if (report.ok) return { result: current, report };
-
-  for (let attempt = 0; attempt < 2; attempt++) {
-    input.onStage?.(attempt === 0 ? "Riparo il codice" : "Secondo riparo");
-    const ctl = new AbortController();
-    const timer = setTimeout(() => ctl.abort(), 45_000);
-    const onAbort = () => ctl.abort();
-    input.signal?.addEventListener("abort", onAbort, { once: true });
-    try {
-      const fixed = await repairBuild({
-        apiKey: input.apiKey,
-        prompt: input.prompt,
-        html: current.html,
-        error: formatHtmlErrors(report),
-        signal: ctl.signal,
-      });
-      if (!fixed?.html) continue;
-      const next = validateProductHtml(fixed.html, { kind: lockKind || fixed.kind || current.kind });
-      if (next.syntaxOk) current = { ...fixed, kind: lockKind || fixed.kind };
-      report = next;
-      if (next.ok) return { result: current, report };
-    } catch {
-      /* retry */
-    } finally {
-      clearTimeout(timer);
-      input.signal?.removeEventListener("abort", onAbort);
-    }
-  }
-
-  return {
-    error: report.syntaxOk
-      ? `Il prodotto non è completo: ${formatHtmlErrors(report)}`
-      : `HTML non valido, non pubblico: ${formatHtmlErrors(report)}`,
-    report,
-  };
+  repair?: typeof repairBuild;
+}): Promise<GateOutcome> {
+  return gateIncompleteHtml({
+    ...input,
+    repair: input.repair ?? repairBuild,
+  });
 }

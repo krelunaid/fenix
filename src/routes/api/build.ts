@@ -349,7 +349,8 @@ export const Route = createFileRoute("/api/build")({
                   onStage: (s) => send({ t: "s", s }),
                 });
                 if ("error" in gated) {
-                  finish({ t: "err", error: gated.error });
+                  if (gated.result) finish({ t: "err", error: gated.error, result: gated.result });
+                  else finish({ t: "err", error: gated.error });
                 } else {
                   send({ t: "s", s: "Apro l'anteprima" });
                   finish({ t: "ok", result: gated.result });
@@ -367,7 +368,8 @@ export const Route = createFileRoute("/api/build")({
                   onStage: (s) => send({ t: "s", s }),
                 });
                 if ("error" in gated) {
-                  finish({ t: "err", error: gated.error });
+                  if (gated.result) finish({ t: "err", error: gated.error, result: gated.result });
+                  else finish({ t: "err", error: gated.error });
                 } else {
                   send({ t: "s", s: "Apro l'anteprima" });
                   finish({ t: "ok", result: gated.result });
@@ -394,8 +396,10 @@ export const Route = createFileRoute("/api/build")({
                     result: salvage,
                     onStage: (s) => send({ t: "s", s }),
                   });
-                  if ("error" in gated) finish({ t: "err", error: gated.error });
-                  else finish({ t: "ok", result: gated.result });
+                  if ("error" in gated) {
+                    if (gated.result) finish({ t: "err", error: gated.error, result: gated.result });
+                    else finish({ t: "err", error: gated.error });
+                  } else finish({ t: "ok", result: gated.result });
                 } else {
                   finish({
                     t: "err",
