@@ -6,6 +6,7 @@ import {
   dropLiveJobLogs,
   hasActiveVisualJob,
   isJobSentinelError,
+  uniqueLogs,
   type VisualJobStatus,
 } from "./visual-job.ts";
 import { polishDashboardHtml, shouldRepairDashboard } from "./dashboard-crud.ts";
@@ -66,7 +67,7 @@ export function recoverPersistedProject<T extends Recoverable>(p: T, now = Date.
   let visualJobId = p.visualJobId;
   let visualJobStatus = p.visualJobStatus;
   let visualJobStartedAt = p.visualJobStartedAt;
-  let buildLog = p.buildLog ?? [];
+  let buildLog = uniqueLogs(p.buildLog ?? []);
 
   const dropJob = () => {
     visualJobId = undefined;

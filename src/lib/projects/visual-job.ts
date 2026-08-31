@@ -36,14 +36,19 @@ export function dropLiveJobLogs(log: string[] = []): string[] {
 
 /** Reattach must not persist a second Partito / Riprendo if that phase is already live. */
 export function mergeUniqueLogs(prev: string[] = [], incoming: string[] = []): string[] {
-  const next = [...prev];
-  for (const line of incoming) {
+  const next = [...(prev ?? [])];
+  for (const line of incoming ?? []) {
     const s = String(line || "").trim();
     if (!s) continue;
     if (next.includes(s)) continue;
     next.push(s);
   }
   return next;
+}
+
+/** Collapse already-persisted duplicate Riprendo/Partito pairs. */
+export function uniqueLogs(log: string[] = []): string[] {
+  return mergeUniqueLogs([], log ?? []);
 }
 
 export function visualJobPatch(

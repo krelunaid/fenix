@@ -7,6 +7,7 @@ import {
   hasActiveVisualJob,
   isJobSentinelError,
   mergeUniqueLogs,
+  uniqueLogs,
   visualJobPatch,
 } from "./visual-job.ts";
 
@@ -62,6 +63,22 @@ describe("job sentinel", () => {
     assert.deepEqual(
       mergeUniqueLogs(["Riprendo rifinitura", "Partito"], ["Partito"]),
       ["Riprendo rifinitura", "Partito"],
+    );
+    assert.deepEqual(
+      uniqueLogs([
+        "Motore visivo in sottofondo",
+        "Partito",
+        "Riprendo rifinitura",
+        "Partito",
+        "Riprendo rifinitura",
+        "Motore visivo ancora in corso",
+      ]),
+      [
+        "Motore visivo in sottofondo",
+        "Partito",
+        "Riprendo rifinitura",
+        "Motore visivo ancora in corso",
+      ],
     );
   });
 });

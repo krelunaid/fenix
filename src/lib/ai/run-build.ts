@@ -19,6 +19,7 @@ import {
   isJobSentinelError,
   JOB_STILL_RUNNING,
   mergeUniqueLogs,
+  uniqueLogs,
   VISUAL_JOB_TTL_MS,
   visualJobPatch,
 } from "@/lib/projects/visual-job";
@@ -107,18 +108,35 @@ function jobUrls(id: string) {
   return [`/__worker/jobs/${id}`, `${base}/jobs/${id}`, `/api/jobs/${id}`];
 }
 
-async function fetchJob(id: string): Promise<WorkerJob | null> {
+type JobFetch =
+  | { state: "job"; job: WorkerJob }
+  | { state: "missing" }
+  | { state: "retry" };
+
+async function fetchJob(id: string): Promise<JobFetch> {
+  let missing = false;
+  let retry = false;
   for (const url of jobUrls(id)) {
     try {
       const r = await fetch(url, { cache: "no-store" });
-      if (!r.ok) continue;
-      return (await r.json()) as WorkerJob;
+      if (r.status === 404) {
+        missing = true;
+        continue;
+      }
+      if (!r.ok) {
+        retry = true;
+        continue;
+      }
+      return { state: "job", job: (await r.json()) as WorkerJob };
     } catch {
-      /* next endpoint */
+      retry = true;
     }
   }
-  return null;
+  if (missing) return { state: "missing" };
+  return { state: "retry" };
 }
+
+const JOB_GONE = "Job visivo non trovato. Tocca Riprendi rifinitura.";
 
 async function pollWorkerJob(projectId: string, jobId: string): Promise<WorkerJob> {
   const store = useProjectStore.getState();
@@ -128,18 +146,23 @@ async function pollWorkerJob(projectId: string, jobId: string): Promise<WorkerJo
     ...visualJobPatch(jobId, "run", started),
     status: "building",
     error: undefined,
+    buildLog: uniqueLogs(existing?.buildLog),
   });
   const deadline = started + VISUAL_JOB_TTL_MS;
   let ticks = 0;
   let misses = 0;
   while (Date.now() < deadline) {
     ticks += 1;
-    const job = await fetchJob(jobId);
-    if (!job) {
+    const fetched = await fetchJob(jobId);
+    if (fetched.state === "missing") {
+      throw new Error(JOB_GONE);
+    }
+    if (fetched.state === "retry") {
       misses += 1;
-      if (misses >= 8) throw new Error("Job visivo non trovato. Tocca Riprendi rifinitura.");
+      if (misses >= 3) throw new Error(JOB_GONE);
     } else {
       misses = 0;
+      const job = fetched.job;
       if (Array.isArray(job.log) && job.log.length) {
         const current = store.getProject(projectId);
         const prev = current?.buildLog ?? [];
@@ -151,7 +174,7 @@ async function pollWorkerJob(projectId: string, jobId: string): Promise<WorkerJo
       if (job.status === "ok" && job.html) {
         return job;
       }
-      if (job.status === "err") {
+      if (job.status === "err" || (job.status === "ok" && !job.html)) {
         throw new Error(`${job.error || "Worker visivo fallito"}. Tocca Riprendi rifinitura.`);
       }
       if (ticks === WORKER_POLL_MAX || ticks === WORKER_JOB_POLL_MAX) {
@@ -170,11 +193,11 @@ async function pollWorkerJob(projectId: string, jobId: string): Promise<WorkerJo
     await delay(WORKER_POLL_MS);
   }
   const last = await fetchJob(jobId);
-  if (last?.status === "ok" && last.html) return last;
-  if (last?.status === "err") {
-    throw new Error(`${last.error || "Worker visivo fallito"}. Tocca Riprendi rifinitura.`);
+  if (last.state === "job" && last.job.status === "ok" && last.job.html) return last.job;
+  if (last.state === "job" && last.job.status === "err") {
+    throw new Error(`${last.job.error || "Worker visivo fallito"}. Tocca Riprendi rifinitura.`);
   }
-  if (!last) throw new Error("Job visivo non trovato. Tocca Riprendi rifinitura.");
+  if (last.state !== "job") throw new Error(JOB_GONE);
   throw new Error(JOB_STILL_RUNNING);
 }
 
@@ -420,11 +443,11 @@ async function polishDraft(
         const logs = data?.log ?? [];
         store.updateProject(projectId, {
           ...clearVisualJobPatch(),
-          buildLog: [
-            ...(useProjectStore.getState().getProject(projectId)?.buildLog ?? []),
+          buildLog: uniqueLogs([
+            ...dropLiveJobLogs(useProjectStore.getState().getProject(projectId)?.buildLog ?? []),
             ...logs,
             "Anteprima rifinita",
-          ],
+          ]),
         });
         store.addMessage(projectId, {
           id: uid(),
@@ -561,7 +584,9 @@ export async function resumePolish(projectId: string) {
     requestedKind: project.requestedKind ?? kind,
     status: "building",
     error: undefined,
-    ...(live ? {} : { buildLog: mergeUniqueLogs(project.buildLog ?? [], ["Riprendo rifinitura"]) }),
+    buildLog: live
+      ? uniqueLogs(project.buildLog)
+      : mergeUniqueLogs(project.buildLog ?? [], ["Riprendo rifinitura"]),
   });
   try {
     const phoneShell = /\bfk-tab\b/.test(project.html);
@@ -582,6 +607,7 @@ export async function resumePolish(projectId: string) {
       }
       return;
     }
+    refundBuildCredit(projectId, CREATE_COST);
     abandonVisualJob(projectId, message);
   } finally {
     inflight.delete(projectId);

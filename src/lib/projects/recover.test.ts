@@ -186,6 +186,36 @@ describe("recoverPersistedProject", () => {
     assert.ok((recovered.buildLog ?? []).includes("Partito"));
   });
 
+  it("dedupes persisted Riprendo/Partito pairs on rehydrate of a live job", () => {
+    const now = Date.now();
+    const recovered = recoverPersistedProject(
+      seed({
+        status: "building",
+        visualJobId: "job-dup",
+        visualJobStatus: "run",
+        visualJobStartedAt: now - 8_000,
+        buildLog: [
+          "Motore visivo in sottofondo",
+          "Partito",
+          "Riprendo rifinitura",
+          "Partito",
+          "Riprendo rifinitura",
+          "Motore visivo ancora in corso",
+        ],
+        updatedAt: now,
+      }),
+      now,
+    );
+    assert.equal(recovered.status, "building");
+    assert.equal(recovered.visualJobId, "job-dup");
+    assert.deepEqual(recovered.buildLog, [
+      "Motore visivo in sottofondo",
+      "Partito",
+      "Riprendo rifinitura",
+      "Motore visivo ancora in corso",
+    ]);
+  });
+
   it("keeps a boot-error message after the leftover job has expired", () => {
     const now = Date.now();
     const recovered = recoverPersistedProject(

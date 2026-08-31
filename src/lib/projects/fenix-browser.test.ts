@@ -378,7 +378,14 @@ describe("studio overlay and resume in browser", () => {
                     },
                     html,
                     messages: [{ id: "m1", role: "assistant", content: "JOB_STILL_RUNNING", at: now }],
-                    buildLog: ["Motore visivo in sottofondo", "Partito"],
+                    buildLog: [
+                      "Motore visivo in sottofondo",
+                      "Partito",
+                      "Riprendo rifinitura",
+                      "Partito",
+                      "Riprendo rifinitura",
+                      "Motore visivo ancora in corso",
+                    ],
                     status: "error",
                     error: "JOB_STILL_RUNNING",
                     creditRefunded: false,
@@ -433,15 +440,17 @@ describe("studio overlay and resume in browser", () => {
             riprendo: logs.filter((s) => s === "Riprendo rifinitura").length,
             partito: logs.filter((s) => s === "Partito").length,
             sottofondo: logs.filter((s) => s === "Motore visivo in sottofondo").length,
+            ancora: logs.filter((s) => s === "Motore visivo ancora in corso").length,
           };
         });
       const first = await countPhase();
       assert.equal(first.jobId, jobId);
       assert.equal(first.status, "building");
       assert.equal(first.credits, 42);
-      assert.equal(first.riprendo, 0, "auto-reattach must not log Riprendo");
+      assert.equal(first.riprendo, 1, "historical Riprendo stays once after uniqueLogs");
       assert.equal(first.partito, 1);
       assert.equal(first.sottofondo, 1);
+      assert.equal(first.ancora, 1);
       for (let i = 0; i < 2; i++) {
         await page.reload({ waitUntil: "domcontentloaded" });
         await page.waitForFunction(
@@ -456,7 +465,7 @@ describe("studio overlay and resume in browser", () => {
                 project?.status === "building" &&
                 project?.visualJobId === "job-terra-live" &&
                 state.creditsRemaining === 42 &&
-                logs.filter((s) => s === "Riprendo rifinitura").length === 0 &&
+                logs.filter((s) => s === "Riprendo rifinitura").length === 1 &&
                 logs.filter((s) => s === "Partito").length === 1
               );
             } catch {
@@ -472,9 +481,10 @@ describe("studio overlay and resume in browser", () => {
         assert.equal(snap.jobId, jobId);
         assert.equal(snap.status, "building");
         assert.equal(snap.credits, 42);
-        assert.equal(snap.riprendo, 0);
+        assert.equal(snap.riprendo, 1);
         assert.equal(snap.partito, 1);
         assert.equal(snap.sottofondo, 1);
+        assert.equal(snap.ancora, 1);
         assert.equal(await page.getByRole("button", { name: /pubblica/i }).isDisabled(), true);
       }
       allowComplete = true;
@@ -609,6 +619,296 @@ describe("studio overlay and resume in browser", () => {
       assert.equal(snap.credits, 46);
       assert.equal(polishPosts, 1);
       assert.equal(await page.getByRole("button", { name: /pubblica/i }).isDisabled(), true);
+    } finally {
+      await browser.close();
+    }
+  });
+
+  it("duplicate live logs + 404 job clears in a few seconds, unique state, no POST", async () => {
+    await requirePreview();
+    const projectId = "8b04fd98-106c-46f5-ac9a-1e929028c476";
+    const jobId = "job-bottega-gone";
+    let polishPosts = 0;
+    const browser = await launch();
+    try {
+      const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+      await page.route(/\/api\/build/, async (route) => {
+        await route.fulfill({ status: 204, body: "" });
+      });
+      await page.route(/polish/, async (route) => {
+        if (route.request().method() === "POST") {
+          polishPosts += 1;
+          await route.fulfill({
+            status: 202,
+            contentType: "application/json",
+            body: JSON.stringify({ id: jobId, status: "run" }),
+          });
+          return;
+        }
+        await route.continue();
+      });
+      await page.route(/\/jobs\//, async (route) => {
+        await route.fulfill({
+          status: 404,
+          contentType: "application/json",
+          body: JSON.stringify({ error: "Job non trovato" }),
+        });
+      });
+      await page.addInitScript(
+        ({ html, prompt }: { html: string; prompt: string }) => {
+          if (localStorage.getItem("officina-projects")) return;
+          const now = Date.now();
+          localStorage.setItem(
+            "officina-projects",
+            JSON.stringify({
+              state: {
+                projects: [
+                  {
+                    id: "8b04fd98-106c-46f5-ac9a-1e929028c476",
+                    name: "Bottega del Tornio",
+                    tagline: "",
+                    prompt,
+                    kind: "dashboard",
+                    requestedKind: "dashboard",
+                    summary: "",
+                    palette: {
+                      bg: "#f4efe6",
+                      surface: "#fffaf3",
+                      fg: "#2a241c",
+                      muted: "#6f675c",
+                      accent: "#b85c38",
+                    },
+                    html,
+                    messages: [],
+                    buildLog: [
+                      "Motore visivo in sottofondo",
+                      "Partito",
+                      "Riprendo rifinitura",
+                      "Partito",
+                      "Riprendo rifinitura",
+                      "Motore visivo ancora in corso",
+                    ],
+                    status: "building",
+                    creditRefunded: true,
+                    visualJobId: "job-bottega-gone",
+                    visualJobStatus: "run",
+                    visualJobStartedAt: now - 60_000,
+                    createdAt: now,
+                    updatedAt: now,
+                  },
+                ],
+                creditsRemaining: 46,
+                appDb: {},
+              },
+              version: 2,
+            }),
+          );
+        },
+        {
+          html: DEMOS.kiln.html,
+          prompt:
+            "FORMATO: gestionale ufficio. kind=dashboard. Desktop: elenco, filtri, form nuovo, numeri.\n\nBottega del Tornio.",
+        },
+      );
+      await page.goto(PREVIEW + `/studio/${projectId}`, { waitUntil: "domcontentloaded", timeout: 20000 });
+      await page.waitForFunction(
+        () => {
+          const raw = localStorage.getItem("officina-projects");
+          if (!raw) return false;
+          try {
+            const state = JSON.parse(raw).state;
+            const project = state.projects.find(
+              (p: { id: string }) => p.id === "8b04fd98-106c-46f5-ac9a-1e929028c476",
+            );
+            const logs: string[] = project?.buildLog ?? [];
+            return (
+              project?.status === "error" &&
+              !project?.visualJobId &&
+              state.creditsRemaining === 46 &&
+              !logs.includes("Partito") &&
+              !logs.includes("Riprendo rifinitura") &&
+              !logs.includes("Motore visivo ancora in corso")
+            );
+          } catch {
+            return false;
+          }
+        },
+        null,
+        { timeout: 8000 },
+      );
+      assert.equal(polishPosts, 0, "404 reattach must not POST");
+      await page.getByText("Bloccato").first().waitFor({ timeout: 8000 });
+      assert.equal(await page.getByText("Motore visivo ancora in corso").count(), 0);
+      const snap = await page.evaluate(() => {
+        const raw = localStorage.getItem("officina-projects");
+        const state = JSON.parse(raw || "{}").state;
+        const project = state.projects.find(
+          (p: { id: string }) => p.id === "8b04fd98-106c-46f5-ac9a-1e929028c476",
+        );
+        const logs: string[] = project?.buildLog ?? [];
+        return {
+          jobId: project?.visualJobId ?? null,
+          status: project?.status,
+          credits: state.creditsRemaining,
+          refunded: project?.creditRefunded,
+          partito: logs.filter((s) => s === "Partito").length,
+          riprendo: logs.filter((s) => s === "Riprendo rifinitura").length,
+          ancora: logs.filter((s) => s === "Motore visivo ancora in corso").length,
+        };
+      });
+      assert.equal(snap.jobId, null);
+      assert.equal(snap.status, "error");
+      assert.equal(snap.credits, 46);
+      assert.equal(snap.refunded, true);
+      assert.equal(snap.partito, 0);
+      assert.equal(snap.riprendo, 0);
+      assert.equal(snap.ancora, 0);
+      assert.equal(await page.getByRole("button", { name: /pubblica/i }).isDisabled(), true);
+    } finally {
+      await browser.close();
+    }
+  });
+
+  it("duplicate live logs + first fetch ok promotes ready, unique logs, no POST", async () => {
+    await requirePreview();
+    const projectId = "p-bottega-done";
+    const jobId = "job-bottega-done";
+    let polishPosts = 0;
+    const browser = await launch();
+    try {
+      const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+      await page.route(/\/api\/build/, async (route) => {
+        await route.fulfill({ status: 204, body: "" });
+      });
+      await page.route(/polish/, async (route) => {
+        if (route.request().method() === "POST") {
+          polishPosts += 1;
+          await route.fulfill({
+            status: 202,
+            contentType: "application/json",
+            body: JSON.stringify({ id: jobId, status: "run" }),
+          });
+          return;
+        }
+        await route.continue();
+      });
+      await page.route(/\/jobs\//, async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            id: jobId,
+            status: "ok",
+            html: DEMOS.kiln.html,
+            meta: { kind: "dashboard", name: "Bottega del Tornio" },
+            log: ["Rifinitura"],
+            files: [],
+          }),
+        });
+      });
+      await page.addInitScript(
+        ({ html, prompt }: { html: string; prompt: string }) => {
+          if (localStorage.getItem("officina-projects")) return;
+          const now = Date.now();
+          localStorage.setItem(
+            "officina-projects",
+            JSON.stringify({
+              state: {
+                projects: [
+                  {
+                    id: "p-bottega-done",
+                    name: "Bottega del Tornio",
+                    tagline: "",
+                    prompt,
+                    kind: "dashboard",
+                    requestedKind: "dashboard",
+                    summary: "",
+                    palette: {
+                      bg: "#f4efe6",
+                      surface: "#fffaf3",
+                      fg: "#2a241c",
+                      muted: "#6f675c",
+                      accent: "#b85c38",
+                    },
+                    html,
+                    messages: [],
+                    buildLog: [
+                      "Motore visivo in sottofondo",
+                      "Partito",
+                      "Riprendo rifinitura",
+                      "Partito",
+                      "Riprendo rifinitura",
+                    ],
+                    status: "building",
+                    creditRefunded: false,
+                    visualJobId: "job-bottega-done",
+                    visualJobStatus: "run",
+                    visualJobStartedAt: now - 30_000,
+                    createdAt: now,
+                    updatedAt: now,
+                  },
+                ],
+                creditsRemaining: 46,
+                appDb: {},
+              },
+              version: 2,
+            }),
+          );
+        },
+        {
+          html: DEMOS.kiln.html,
+          prompt:
+            "FORMATO: gestionale ufficio. kind=dashboard. Desktop: elenco, filtri, form nuovo, numeri.\n\nBottega del Tornio.",
+        },
+      );
+      await page.goto(PREVIEW + `/studio/${projectId}`, { waitUntil: "domcontentloaded", timeout: 20000 });
+      await page.waitForFunction(
+        () => {
+          const raw = localStorage.getItem("officina-projects");
+          if (!raw) return false;
+          try {
+            const state = JSON.parse(raw).state;
+            const project = state.projects.find((p: { id: string }) => p.id === "p-bottega-done");
+            const logs: string[] = project?.buildLog ?? [];
+            return (
+              project?.status === "ready" &&
+              !project?.visualJobId &&
+              state.creditsRemaining === 46 &&
+              logs.filter((s) => s === "Partito").length === 0 &&
+              logs.filter((s) => s === "Riprendo rifinitura").length === 0 &&
+              logs.includes("Anteprima rifinita")
+            );
+          } catch {
+            return false;
+          }
+        },
+        null,
+        { timeout: 8000 },
+      );
+      assert.equal(polishPosts, 0);
+      const snap = await page.evaluate(() => {
+        const raw = localStorage.getItem("officina-projects");
+        const state = JSON.parse(raw || "{}").state;
+        const project = state.projects.find((p: { id: string }) => p.id === "p-bottega-done");
+        const logs: string[] = project?.buildLog ?? [];
+        return {
+          status: project?.status,
+          jobId: project?.visualJobId ?? null,
+          credits: state.creditsRemaining,
+          partito: logs.filter((s) => s === "Partito").length,
+          riprendo: logs.filter((s) => s === "Riprendo rifinitura").length,
+          refined: logs.filter((s) => s === "Anteprima rifinita").length,
+        };
+      });
+      assert.equal(snap.status, "ready");
+      assert.equal(snap.jobId, null);
+      assert.equal(snap.credits, 46);
+      assert.equal(snap.partito, 0);
+      assert.equal(snap.riprendo, 0);
+      assert.equal(snap.refined, 1);
+      const publish = page.getByRole("button", { name: /Pubblica/ }).first();
+      await publish.waitFor({ timeout: 8000 });
+      assert.equal(await publish.isDisabled(), false);
     } finally {
       await browser.close();
     }
