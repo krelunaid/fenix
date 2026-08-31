@@ -191,7 +191,7 @@ export default function App() {
 }
 html, body, #root { height: 100%; margin: 0; }
 body {
-  font: 400 16px/1.4 -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  font: 400 16px/1.4 "IBM Plex Sans", system-ui, sans-serif;
   background: var(--bg);
   color: var(--fg);
 }

@@ -37,7 +37,7 @@ describe("auditCraft fixtures", () => {
       assert.equal(report.genericFont, false, `${id}: ${report.notes.join(" · ")}`);
       assert.equal(report.ok, true, `${id}: ${report.notes.join(" · ")}`);
       assert.ok(report.contrast >= 4.5, `${id} contrast ${report.contrast}`);
-      assert.doesNotMatch(demo.html, /\bManrope\b|#f5f5f7|#0071e3/);
+      assert.doesNotMatch(demo.html, /\bManrope\b|#f5f5f7|#0071e3|unsplash|localStorage/);
       bgs.add(demo.palette.bg.toLowerCase());
       fonts.add(expected.fontHint);
     }

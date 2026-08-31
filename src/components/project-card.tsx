@@ -32,7 +32,7 @@ export function ProjectCard({
         style={{ width: Math.round(PHONE_W * SCALE) + 16 }}
       >
         <div className="mx-auto mb-1.5 h-1 w-10 rounded-full bg-white/20" />
-        <div className="relative overflow-hidden rounded-[1.35rem] bg-[#f5f5f7]" style={{ height: frameH }}>
+        <div className="relative overflow-hidden rounded-[1.35rem] bg-[#16110c]" style={{ height: frameH }}>
           {src ? (
             <iframe
               title={project.name}

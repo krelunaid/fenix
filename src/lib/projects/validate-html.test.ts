@@ -11,6 +11,7 @@ import {
   validatePublishable,
 } from "./validate-html.ts";
 import { fenixRuntimeScript, looksLikeSite, prepareSrcDoc } from "./color-scheme.ts";
+import { DEMOS } from "./demos.ts";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const BROKEN = readFileSync(join(here, "fixtures/broken-flusso.html"), "utf8");
@@ -50,6 +51,17 @@ describe("validateProductHtml", () => {
     const report = validateProductHtml(html, { kind: "app" });
     assert.equal(report.ok, false);
     assert.ok(report.errors.some((e) => /localStorage/i.test(e)));
+  });
+
+  it("accepts every demo as publishable Fenix storage, never localStorage", () => {
+    for (const demo of Object.values(DEMOS)) {
+      const own = demo.html.replace(/<script data-fenix-runtime[\s\S]*?<\/script>/gi, "");
+      assert.doesNotMatch(own, /\blocalStorage\b/, demo.id);
+      assert.doesNotMatch(demo.html, /unsplash/i, demo.id);
+      const report = validateProductHtml(demo.html, { kind: demo.kind });
+      assert.equal(report.ok, true, `${demo.id}: ${report.errors.join(" · ")}`);
+      assert.equal(canPublishHtml(demo.html, demo.kind, demo.id), true, demo.id);
+    }
   });
 });
 

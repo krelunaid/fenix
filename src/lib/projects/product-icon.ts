@@ -27,8 +27,8 @@ export function productIconSvg(input: {
   prompt?: string;
 }) {
   const seed = `${input.name} ${input.prompt ?? ""} ${input.kind}`;
-  const tile = input.palette.fg || "#1d1d1f";
-  const mark = input.palette.bg || "#f5f5f7";
+  const tile = input.palette.fg || "#efe6d4";
+  const mark = input.palette.bg || "#16110c";
   const d = motifPath(seed);
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="${tile}"/><path d="${d}" fill="none" stroke="${mark}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 }

@@ -17,7 +17,19 @@ import { GROK_PROVIDERS } from "./providers";
  * leaves the bearer token in place, and `onRequest` keeps re-attaching it, so
  * the visitor stays signed in.
  */
+function clientAuthBaseURL() {
+  if (typeof window !== "undefined") return window.location.origin;
+  try {
+    const fromEnv = globalThis.process?.env?.BETTER_AUTH_URL?.trim();
+    if (fromEnv) return fromEnv;
+  } catch {
+    /* Nitro may have no process.env */
+  }
+  return "http://127.0.0.1:8081";
+}
+
 export const authClient = createAuthClient({
+  baseURL: clientAuthBaseURL(),
   plugins: [genericOAuthClient()],
   fetchOptions: {
     onRequest(ctx) {

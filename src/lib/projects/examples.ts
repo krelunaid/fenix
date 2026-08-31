@@ -20,7 +20,7 @@ export const EXAMPLES: ExampleBrief[] = [
     label: "App meditazione",
     kind: "app",
     prompt:
-      "App notturna di respirazione 4-7-8 con timer vero, tre programmi, diario sessioni in localStorage. Atmosfera inchiostro e luna, non wellness rosa.",
+      "App notturna di respirazione 4-7-8 con timer vero, tre programmi, diario sessioni in window.Fenix.load/save. Atmosfera inchiostro e luna, non wellness rosa.",
   },
   {
     id: "split",

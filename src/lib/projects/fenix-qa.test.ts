@@ -65,4 +65,22 @@ describe("focus-visible and worker model", () => {
     assert.doesNotMatch(worker, /card bianche, panel scuro solo se serve un dato, CTA pillola blu/);
     assert.doesNotMatch(worker, /2 colori #1d1d1f \/ #0071e3/);
   });
+
+  it("drops iOS template fallbacks from look, shell, types and cards", () => {
+    const look = readFileSync(join(root, "src/lib/ai/look.ts"), "utf8");
+    assert.doesNotMatch(look, /Stile iOS/);
+    assert.doesNotMatch(look, /#f5f5f7 #1d1d1f accento #0071e3/);
+    const shell = readFileSync(join(root, "src/lib/ai/app-shell.ts"), "utf8");
+    assert.doesNotMatch(shell, /#f5f5f7/);
+    assert.doesNotMatch(shell, /#0071e3/);
+    assert.doesNotMatch(shell, /-apple-system/);
+    const types = readFileSync(join(root, "src/lib/projects/types.ts"), "utf8");
+    assert.doesNotMatch(types, /#f5f5f7/);
+    assert.doesNotMatch(types, /#0071e3/);
+    const card = readFileSync(join(root, "src/components/project-card.tsx"), "utf8");
+    assert.doesNotMatch(card, /#f5f5f7/);
+    const scheme = readFileSync(join(root, "src/lib/projects/color-scheme.ts"), "utf8");
+    assert.doesNotMatch(scheme, /#f5f5f7/);
+    assert.doesNotMatch(scheme, /#0071e3/);
+  });
 });

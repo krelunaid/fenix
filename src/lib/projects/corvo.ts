@@ -20,7 +20,7 @@ header{display:flex;justify-content:space-between;align-items:center;padding:14p
 .mark svg{width:28px;height:28px}
 nav{display:flex;gap:18px;font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:.08em}
 .hero{display:grid;grid-template-columns:1.1fr .9fr;min-height:62vh;border-bottom:2px solid var(--fg)}
-.hero img{width:100%;height:100%;object-fit:cover;filter:grayscale(.25) contrast(1.08);min-height:280px}
+.hero img,.hero-art{width:100%;height:100%;object-fit:cover;min-height:280px;display:block;background:#3d4f4a}
 .hero-copy{padding:36px 28px;background:var(--fg);color:var(--bg);display:flex;flex-direction:column;justify-content:flex-end;gap:14px}
 .hero-copy p{max-width:28rem;color:#d4cbb8}
 .cta{align-self:flex-start;height:44px;padding:0 18px;border:1px solid var(--bg);background:transparent;color:var(--bg);font:600 13px/1 "IBM Plex Sans",sans-serif;letter-spacing:.08em;text-transform:uppercase;cursor:pointer}
@@ -43,7 +43,7 @@ footer{padding:22px 18px;border-top:2px solid var(--fg);display:flex;justify-con
   nav{display:none}
   .hero,.split,.hours{grid-template-columns:1fr}
   .hero{min-height:0}
-  .hero img{height:42vh}
+  .hero img,.hero-art{height:42vh}
 }
 @media(prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto}}
 </style>
@@ -58,10 +58,24 @@ footer{padding:22px 18px;border-top:2px solid var(--fg);display:flex;justify-con
     <a href="#menu">Menu</a>
     <a href="#tavolo">Tavolo</a>
     <a href="#orari">Orari</a>
+    <a href="#dove">Dove</a>
   </nav>
 </header>
 <section class="hero">
-  <img alt="Banco di zinco, tazzine e macchia d'olio" src="https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=1600&q=80"/>
+  <svg class="hero-art" viewBox="0 0 640 420" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Banco di zinco, tazzine e macchia d'olio" preserveAspectRatio="xMidYMid slice">
+    <rect width="640" height="420" fill="#6b7a76"/>
+    <rect y="240" width="640" height="180" fill="#3d4f4a"/>
+    <rect y="228" width="640" height="18" fill="#8a9a94"/>
+    <ellipse cx="160" cy="228" rx="70" ry="10" fill="#2a3532"/>
+    <path d="M120 170h80v58h-80z" fill="#1c1712"/>
+    <path d="M132 158h56v14h-56z" fill="#cfc6b6"/>
+    <circle cx="160" cy="186" r="18" fill="#e7dfd1"/>
+    <path d="M210 210c20-30 80-28 90 4" stroke="#1c1712" stroke-width="10" fill="none" opacity=".35"/>
+    <rect x="360" y="150" width="220" height="80" fill="#5a4e42"/>
+    <rect x="380" y="168" width="70" height="44" fill="#cfc6b6"/>
+    <rect x="470" y="168" width="88" height="44" fill="#1c1712"/>
+    <text x="24" y="40" fill="#e7dfd1" font-size="18" font-family="Georgia,serif">via Madama Cristina 41</text>
+  </svg>
   <div class="hero-copy">
     <p>San Salvario · via Madama Cristina 41</p>
     <h1>Macchia sul banco. Espresso al punto.</h1>
@@ -69,9 +83,9 @@ footer{padding:22px 18px;border-top:2px solid var(--fg);display:flex;justify-con
     <a href="#tavolo"><button class="cta" type="button">Un tavolo</button></a>
   </div>
 </section>
-<section class="wrap">
+<section class="wrap" id="menu">
   <div class="split">
-    <article class="board" id="menu">
+    <article class="board">
       <h2>Al banco</h2>
       <div class="item"><b>Espresso</b><span>1,20</span></div>
       <div class="item"><b>Macchiato</b><span>1,30</span></div>
@@ -92,23 +106,55 @@ footer{padding:22px 18px;border-top:2px solid var(--fg);display:flex;justify-con
         <button class="cta solid" type="submit">Segna il tavolo</button>
         <p class="ok" id="ok">Preso. Ti confermiamo al banco, niente SMS.</p>
       </form>
+      <div id="booked"></div>
     </article>
   </div>
-  <div class="hours" id="orari">
+</section>
+<section class="wrap" id="orari">
+  <div class="hours">
     <div><span>Lun–Ven</span><b>6:30–19</b></div>
     <div><span>Sabato</span><b>7–14</b></div>
     <div><span>Domenica</span><b>Chiuso</b></div>
   </div>
+</section>
+<section class="wrap" id="dove">
+  <article class="card">
+    <h2>Dove</h2>
+    <p>Via Madama Cristina 41, San Salvario. Entrata sul zinco, niente vetrina lucida. Paghi al banco.</p>
+  </article>
 </section>
 <footer>
   <span>Caffè Corvo · San Salvario</span>
   <span>banco@caffecorvo.it</span>
 </footer>
 <script>
+  let books = [];
+  function save(){ if (window.Fenix) void window.Fenix.save("state", { books: books }); }
+  function renderBooks(){
+    const box = document.getElementById("booked");
+    box.innerHTML = books.map(function(b){ return "<div class='item'><b>"+b.nome+" · "+b.persone+"</b><span>"+b.ora+"</span></div>"; }).join("");
+  }
   document.getElementById("book").addEventListener("submit", function (e) {
     e.preventDefault();
+    const f = e.target;
+    const nome = (f.nome.value || "").trim();
+    if (!nome) return;
+    books.unshift({ nome: nome, persone: f.persone.value, ora: f.ora.value });
+    save();
+    renderBooks();
     document.getElementById("ok").style.display = "block";
+    f.reset();
   });
+  async function boot(){
+    try {
+      if (window.Fenix && window.Fenix.load) {
+        const r = await window.Fenix.load("state");
+        if (r && Array.isArray(r.books)) books = r.books;
+      }
+    } catch (err) {}
+    renderBooks();
+  }
+  boot();
 </script>
 </body>
 </html>`;

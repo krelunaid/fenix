@@ -92,7 +92,7 @@ export function lookInstruction(audit: PreviewAudit | null, hasShot: boolean) {
     (audit?.mainChars ?? 0) < 80
       ? "HOME VUOTA. Riempi main: metriche, blocco, CTA, lista. Non lasciare il bianco."
       : "Header saluto. Main overflow auto. CTA visibile senza scroll orizzontale.",
-    "Stile iOS: #f5f5f7 #1d1d1f accento #0071e3, aria, tab intere, niente viola neon.",
+    "Palette, font e icona DAL MESTIERE già in pagina. Non ripitturare. --fg su --bg almeno 4.5:1. Vietato #f5f5f7, #0071e3, Manrope, Inter.",
     "META+HTML completo.",
   ].join("\n");
 }

@@ -66,8 +66,12 @@ function previewAuthSecret(): string {
 
 /** Read an env var, treating empty/whitespace as unset. */
 const env = (key: string): string | undefined => {
-  const value = process.env[key]?.trim();
-  return value ? value : undefined;
+  try {
+    const value = globalThis.process?.env?.[key]?.trim();
+    return value ? value : undefined;
+  } catch {
+    return undefined;
+  }
 };
 
 // Explicit off-switch. The deployer sets `VITE_AUTH_ENABLED=true` when it
@@ -102,6 +106,9 @@ const LOCAL_DEV_ORIGINS: string[] = [
   "http://localhost:8080",
   "http://127.0.0.1:8080",
   "http://[::1]:8080",
+  "http://localhost:8081",
+  "http://127.0.0.1:8081",
+  "http://[::1]:8081",
 ];
 const baseURL = explicitBaseURL ?? {
   // Include loopback hosts so dynamic baseURL resolves for local email/password
@@ -110,7 +117,7 @@ const baseURL = explicitBaseURL ?? {
   // `auto` → trust both http:// and https:// expansions of allowedHosts
   // (preview is https; local dev is http).
   protocol: "auto" as const,
-  fallback: "http://localhost:8080",
+  fallback: "http://127.0.0.1:8081",
 };
 
 // Origins Better Auth accepts on credentialed POSTs (sign-up/sign-in, etc.).

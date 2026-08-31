@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, it } from "node:test";
+import { DEMOS } from "./demos.ts";
 import {
   STALE_BUILD_MS,
   RESUME_ERROR,
@@ -67,6 +68,22 @@ describe("recoverPersistedProject", () => {
     const recovered = recoverPersistedProject(seed({ status: "ready" }));
     assert.equal(recovered.status, "ready");
     assert.equal(isPublishable(recovered), true);
+  });
+
+  it("keeps every demo ready after rehydrate", () => {
+    for (const demo of Object.values(DEMOS)) {
+      const recovered = recoverPersistedProject({
+        id: demo.id,
+        status: "ready" as const,
+        html: demo.html,
+        kind: demo.kind,
+        updatedAt: Date.now(),
+        palette: demo.palette,
+        error: undefined,
+      });
+      assert.equal(recovered.status, "ready", `${demo.id}: ${recovered.error || ""}`);
+      assert.equal(isPublishable(recovered), true, demo.id);
+    }
   });
 });
 

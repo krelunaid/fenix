@@ -170,7 +170,9 @@ export default defineConfig(({ command, isPreview }) => ({
     ...(command === "build" || isPreview
       ? [
           nitro({
-            preset: "netlify",
+            // Netlify injects NETLIFY=true. Local `pnpm build` + `pnpm preview`
+            // must use the Node preset so PGLite/WASM and process.env resolve.
+            preset: process.env.NETLIFY ? "netlify" : "node",
             // Auto-registers server/middleware/* (the PWA install page +
             // manifest + head-tag middleware). Nitro v3 defaults serverDir to
             // false, so removing this silently unwires /?install=1 on deploys.

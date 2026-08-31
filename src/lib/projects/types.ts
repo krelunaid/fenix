@@ -40,11 +40,11 @@ export type Project = {
 };
 
 export const DEFAULT_PALETTE: Palette = {
-  bg: "#f5f5f7",
-  surface: "#ffffff",
-  fg: "#1d1d1f",
-  muted: "#6e6e73",
-  accent: "#1d1d1f",
+  bg: "#16110c",
+  surface: "#221c16",
+  fg: "#efe6d4",
+  muted: "#9a8f7a",
+  accent: "#c45c26",
 };
 
 export type ExampleBrief = {

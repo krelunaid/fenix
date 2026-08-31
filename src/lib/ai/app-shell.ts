@@ -1,8 +1,8 @@
-/** Cornice iOS già piena: Grok riempie, non inventa lo scheletro. */
+/** Cornice telefono già piena: Grok riempie testi e mestiere, non inventa lo scheletro. */
 export const APP_SHELL_INSTRUCTION = `Questa è già un'app telefono funzionante.
 SOSTITUISCI testi, numeri, icone SVG, nomi delle tab e i campi col BRIEF.
 NON cancellare sezioni. NON lasciare main vuoto. NON fare un sito.
-Palette unica dal brief (non tutte grigio iPhone). Date in italiano, non ISO.
+Palette unica dal brief (carta e inchiostro del mestiere, mai grigio iPhone). Date in italiano, non ISO.
 Tieni header.fk-top, main, nav.fk-tab, form, liste, Fenix.load/save.
 Ogni tab mostra una vista vera. Form: preventDefault, niente righe vuote.
 Restituisci META + FILE screens/home.html new list stats more + HTML montato.`;
@@ -14,11 +14,12 @@ export const APP_SHELL_HTML = `<!DOCTYPE html>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <meta name="color-scheme" content="light"/>
 <title>App</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path fill='%231d1d1f' d='M12 3l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V7z'/></svg>"/>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;600&display=swap"/>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path fill='%231c1712' d='M12 3l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V7z'/></svg>"/>
 <style>
-:root{--bg:#f5f5f7;--surface:#fff;--fg:#1d1d1f;--muted:#86868b;--accent:#0071e3;--line:#d2d2d7}
+:root{--bg:#efe6d4;--surface:#f7f1e4;--fg:#1c1712;--muted:#5c5348;--accent:#3d4a1f;--line:#c4b49a}
 html,body{height:100%;margin:0}
-body{font:400 16px/1.4 -apple-system,BlinkMacSystemFont,system-ui,sans-serif;background:var(--bg);color:var(--fg);display:flex;flex-direction:column;min-height:100dvh;overflow:hidden}
+body{font:400 16px/1.4 "IBM Plex Sans",system-ui,sans-serif;background:var(--bg);color:var(--fg);display:flex;flex-direction:column;min-height:100dvh;overflow:hidden}
 </style>
 </head>
 <body>
