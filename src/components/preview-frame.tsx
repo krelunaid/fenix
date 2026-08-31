@@ -119,7 +119,7 @@ export function PreviewFrame({
               key={`${name}-${srcDoc.length}`}
               title={`Anteprima ${name}`}
               data-preview={device}
-              sandbox="allow-scripts allow-forms allow-modals allow-same-origin"
+              sandbox="allow-scripts allow-forms allow-modals"
               srcDoc={srcDoc}
               className="h-full min-h-[70vh] w-full border-0 bg-white"
               style={{

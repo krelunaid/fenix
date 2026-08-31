@@ -1,5 +1,8 @@
+import { createHash } from "node:crypto";
 import { mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { scrubCraftMedia } from "../ai/hero-image.ts";
+import { ifMatchSatisfied, parseIfMatch, parseOwnerId } from "./publish-owner.ts";
 import { validatePublishable } from "./validate-html.ts";
 import {
   isPublishedId,
@@ -8,7 +11,9 @@ import {
   PUBLISHED_STORE,
   snapshotHash,
   type PublishedSnapshot,
+  type PublishAccess,
   type PublishInput,
+  type StoredSnapshot,
 } from "./published.ts";
 
 function publishedDir() {
@@ -46,7 +51,7 @@ async function blobsStore(): Promise<BlobStore | null> {
   }
 }
 
-function readFileSnapshot(id: string): PublishedSnapshot | null {
+function readFileSnapshot(id: string): StoredSnapshot | null {
   try {
     const parsed = JSON.parse(readFileSync(filePath(id), "utf8")) as unknown;
     return isPublishedSnapshot(parsed) ? parsed : null;
@@ -55,7 +60,7 @@ function readFileSnapshot(id: string): PublishedSnapshot | null {
   }
 }
 
-function writeFileSnapshot(snap: PublishedSnapshot) {
+function writeFileSnapshot(snap: StoredSnapshot) {
   mkdirSync(publishedDir(), { recursive: true });
   const target = filePath(snap.id);
   const tmp = `${target}.${process.pid}.tmp`;
@@ -63,7 +68,27 @@ function writeFileSnapshot(snap: PublishedSnapshot) {
   renameSync(tmp, target);
 }
 
-export async function readPublished(id: string): Promise<PublishedSnapshot | null> {
+export function hashOwner(ownerId: string): string {
+  return createHash("sha256").update(`fenix-site-owner:${ownerId}`).digest("hex");
+}
+
+export function publicSnapshot(snap: StoredSnapshot): PublishedSnapshot {
+  const html = scrubCraftMedia(snap.html);
+  return {
+    id: snap.id,
+    name: snap.name,
+    tagline: snap.tagline,
+    kind: snap.kind,
+    summary: snap.summary,
+    palette: snap.palette,
+    html,
+    version: snap.version,
+    hash: snap.hash,
+    publishedAt: snap.publishedAt,
+  };
+}
+
+export async function readPublished(id: string): Promise<StoredSnapshot | null> {
   if (!isPublishedId(id)) return null;
   const blobs = await blobsStore();
   if (blobs) {
@@ -78,43 +103,13 @@ export async function readPublished(id: string): Promise<PublishedSnapshot | nul
   return readFileSnapshot(id);
 }
 
-export async function writePublished(
-  id: string,
-  input: PublishInput,
-): Promise<PublishedSnapshot | { error: string; status: number }> {
-  if (!isPublishedId(id)) return { error: "Identità non valida.", status: 400 };
-  const parsed = parsePublishInput(input);
-  if ("error" in parsed) return { error: parsed.error, status: 400 };
-  const report = validatePublishable(parsed.html, {
-    kind: parsed.kind,
-    projectId: id,
-    palette: parsed.palette,
-  });
-  if (!report.ok) {
-    return {
-      error: report.errors[0] || "Il prodotto non è completo, non pubblico.",
-      status: 422,
-    };
-  }
-  const hash = snapshotHash(parsed.html, parsed.kind, parsed.name);
-  const existing = await readPublished(id);
-  if (existing && existing.hash === hash) return existing;
-  const snapshot: PublishedSnapshot = {
-    id,
-    name: parsed.name,
-    tagline: parsed.tagline,
-    kind: parsed.kind,
-    summary: parsed.summary,
-    palette: parsed.palette,
-    html: parsed.html,
-    version: (existing?.version ?? 0) + 1,
-    hash,
-    publishedAt: Date.now(),
-  };
+async function persistSnapshot(
+  snapshot: StoredSnapshot,
+): Promise<StoredSnapshot | { error: string; status: number }> {
   const blobs = await blobsStore();
   if (blobs) {
     try {
-      await blobs.setJSON(id, snapshot);
+      await blobs.setJSON(snapshot.id, snapshot);
     } catch (err) {
       console.error("[fenix] publish blobs set failed", err);
       return { error: "Archivio pubblicazione non disponibile.", status: 503 };
@@ -125,4 +120,65 @@ export async function writePublished(
     writeFileSnapshot(snapshot);
   }
   return snapshot;
+}
+
+export async function writePublished(
+  id: string,
+  input: PublishInput,
+  access?: PublishAccess,
+): Promise<PublishedSnapshot | { error: string; status: number }> {
+  if (!isPublishedId(id)) return { error: "Identità non valida.", status: 400 };
+  const ownerId = parseOwnerId(access?.ownerId);
+  if (!ownerId) return { error: "Identità assente.", status: 401 };
+  const parsed = parsePublishInput(input);
+  if ("error" in parsed) return { error: parsed.error, status: 400 };
+  const html = scrubCraftMedia(parsed.html);
+  const report = validatePublishable(html, {
+    kind: parsed.kind,
+    projectId: id,
+    palette: parsed.palette,
+  });
+  if (!report.ok) {
+    return {
+      error: report.errors[0] || "Il prodotto non è completo, non pubblico.",
+      status: 422,
+    };
+  }
+  const ownerHash = hashOwner(ownerId);
+  const hash = snapshotHash(html, parsed.kind, parsed.name);
+  const existing = await readPublished(id);
+  if (existing?.ownerHash && existing.ownerHash !== ownerHash) {
+    return { error: "Non sei il titolare di questo sito.", status: 403 };
+  }
+  if (existing && existing.hash === hash) {
+    if (!existing.ownerHash) {
+      const claimed = { ...existing, ownerHash };
+      const saved = await persistSnapshot(claimed);
+      if ("error" in saved) return saved;
+      return publicSnapshot(saved);
+    }
+    return publicSnapshot(existing);
+  }
+  if (existing) {
+    const match = parseIfMatch(access?.ifMatch);
+    if (!ifMatchSatisfied(match, existing)) {
+      return { error: "Versione non attuale.", status: 409 };
+    }
+  }
+  const snapshot: StoredSnapshot = {
+    id,
+    name: parsed.name,
+    tagline: parsed.tagline,
+    kind: parsed.kind,
+    summary: parsed.summary,
+    palette: parsed.palette,
+    html,
+    version: (existing?.version ?? 0) + 1,
+    hash,
+    publishedAt: Date.now(),
+    ownerHash,
+  };
+  const saved = await persistSnapshot(snapshot);
+  if ("error" in saved) return saved;
+  return publicSnapshot(saved);
 }

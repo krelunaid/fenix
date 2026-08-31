@@ -37,7 +37,7 @@ export function ProjectCard({
             <iframe
               title={project.name}
               srcDoc={src}
-              sandbox="allow-scripts allow-same-origin"
+              sandbox="allow-scripts"
               tabIndex={-1}
               className="pointer-events-none origin-top-left border-0"
               style={{

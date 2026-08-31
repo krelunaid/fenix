@@ -202,7 +202,7 @@ async function generateHero(apiKey, prompt, aspect) {
       },
       body: JSON.stringify({
         model: "grok-imagine-image-2.0",
-        prompt: `Photorealistic photo, no text, no logo, no watermark. Subject: ${String(prompt).slice(0, 280)}`,
+        prompt: `Photorealistic close-up of the craft itself (clay, kiln, tools, hands, vessels). No text, no logo, no watermark, no website, no UI, no screenshot, no browser chrome, no navbar, no form, no page collage. Subject: ${String(prompt).slice(0, 280)}`,
         aspect_ratio: aspect || "16:9",
         quality: "low",
         n: 1,
@@ -221,15 +221,49 @@ function injectHero(html, url) {
   if (!/^https:\/\//i.test(url) && !/^data:image\//i.test(url)) return html;
   if (/["<>]/.test(url)) return html;
   const phone = /fk-tab|bottom-tab/i.test(html);
+  if (!phone && /^data:image\//i.test(url)) return injectCraftHero(html);
   const img = phone
     ? `<img class="fk-hero" src="${url}" alt="" width="400" height="400" style="width:100%;height:140px;object-fit:cover;border-radius:20px;display:block;margin:8px 0 12px" onerror="this.removeAttribute('src')"/>`
     : `<img class="fk-hero" src="${url}" alt="" width="1600" height="900" style="width:100%;height:min(52vh,560px);min-height:280px;object-fit:cover;display:block" onerror="this.removeAttribute('src')"/>`;
-  let next = html.replace(/^\s*"\s*\/>/m, "").replace(/>\s*"\s*\/>/g, ">");
-  if (/class=["'][^"']*fk-hero/.test(next)) {
-    return next.replace(/<img[^>]*fk-hero[^>]*>/i, img);
+  return placeHeroMarkup(html, img);
+}
+
+const CRAFT_HERO_SRC = "https://images.unsplash.com/photo-1610701596007-11502861dcfa?w=1600";
+const CRAFT_HERO_MARKUP = `<img class="fk-hero fk-hero-craft" src="${CRAFT_HERO_SRC}" alt="Ceramiche in terracotta al tornio" width="1600" height="900" style="width:100%;height:min(52vh,560px);min-height:280px;object-fit:cover;display:block;background:#cbb392" onerror="this.removeAttribute('src')"/>`;
+
+function placeHeroMarkup(html, markup) {
+  let next = String(html || "").replace(/^\s*"\s*\/>/m, "").replace(/>\s*"\s*\/>/g, ">");
+  if (/<svg[^>]*fk-hero[^>]*>[\s\S]*?<\/svg>/i.test(next)) {
+    return next.replace(/<svg[^>]*fk-hero[^>]*>[\s\S]*?<\/svg>/i, markup);
   }
-  if (/<img\b/i.test(next)) return next.replace(/<img\b[^>]*>/i, img);
-  if (/<main\b[^>]*>/i.test(next)) return next.replace(/<main\b[^>]*>/i, (open) => `${open}${img}`);
+  if (/<img[^>]*fk-hero[^>]*>/i.test(next)) {
+    return next.replace(/<img[^>]*fk-hero[^>]*>/i, markup);
+  }
+  if (/<img\b/i.test(next)) return next.replace(/<img\b[^>]*>/i, markup);
+  if (/<main\b[^>]*>/i.test(next)) return next.replace(/<main\b[^>]*>/i, (open) => `${open}${markup}`);
+  return next;
+}
+
+function injectCraftHero(html) {
+  if (!html) return html;
+  return placeHeroMarkup(html, CRAFT_HERO_MARKUP);
+}
+
+function scrubCraftMedia(html) {
+  if (!html) return html;
+  let next = String(html);
+  next = next.replace(
+    /https:\/\/images\.unsplash\.com\/photo-1595878715977-2e8f8df18ea7[^"'\s]*/g,
+    CRAFT_HERO_SRC,
+  );
+  if (/fk-tab|bottom-tab/i.test(next)) return next;
+  next = next.replace(/<img\b([^>]*class=["'][^"']*fk-hero[^"']*["'][^>]*)>/gi, (tag, attrs) => {
+    if (/\bfk-hero-craft\b/.test(tag)) return tag;
+    const src = String(attrs).match(/\bsrc=["']([^"']*)["']/i)?.[1] || "";
+    if (!src || /^data:image\//i.test(src)) return CRAFT_HERO_MARKUP;
+    return tag;
+  });
+  next = next.replace(/<svg[^>]*fk-hero[^>]*>[\s\S]*?<\/svg>/gi, CRAFT_HERO_MARKUP);
   return next;
 }
 
@@ -253,14 +287,18 @@ async function materializeHero(url) {
 }
 
 async function placeHero(html, prompt) {
-  const apiKey = (process.env.XAI_API_KEY || "").trim();
-  if (!apiKey || !html) return { html, log: [] };
+  if (!html) return { html, log: [] };
   const phone = /fk-tab/i.test(html);
-  const remote = await generateHero(apiKey, prompt, phone ? "1:1" : "16:9");
-  if (!remote) return { html, log: [] };
+  if (!phone) {
+    return { html: scrubCraftMedia(injectCraftHero(html)), log: ["Hero mestiere"] };
+  }
+  const apiKey = (process.env.XAI_API_KEY || "").trim();
+  if (!apiKey) return { html: scrubCraftMedia(html), log: [] };
+  const remote = await generateHero(apiKey, prompt, "1:1");
+  if (!remote) return { html: scrubCraftMedia(html), log: [] };
   const durable = await materializeHero(remote);
-  if (!durable) return { html, log: [] };
-  return { html: injectHero(html, durable), log: ["Foto hero"] };
+  if (!durable) return { html: scrubCraftMedia(html), log: [] };
+  return { html: scrubCraftMedia(injectHero(html, durable)), log: ["Foto hero"] };
 }
 
 function stripPhoneChromeFromSite(html) {
@@ -341,27 +379,35 @@ async function generate(prompt, html, instruction) {
       if (comp) fromGrok.push({ path: `src/screens/${comp}.tsx`, content: htmlToJsx(content, comp) });
     }
   }
-  const hero = await generateHero(apiKey, prompt, /fk-tab|bottom-tab/i.test(out) ? "1:1" : "16:9");
-  if (hero) {
-    const durable = await materializeHero(hero);
-    if (durable) out = injectHero(out, durable);
+  let usedHero = false;
+  if (site) {
+    out = injectCraftHero(out);
+    usedHero = true;
+  } else {
+    const hero = await generateHero(apiKey, prompt, /fk-tab|bottom-tab/i.test(out) ? "1:1" : "16:9");
+    if (hero) {
+      const durable = await materializeHero(hero);
+      if (durable) {
+        out = injectHero(out, durable);
+        usedHero = true;
+      }
+    }
   }
   if (!dashboard && site) {
     out = stripPhoneChromeFromSite(out);
   }
+  out = scrubCraftMedia(out);
   const meta = dashboard ? { ...(parsed.meta || {}), kind: "dashboard" } : parsed.meta;
   return {
     html: out,
     meta: site ? { ...(meta || {}), kind: "site" } : meta,
     log: dashboard
-      ? hero
+      ? usedHero
         ? ["Bozza gestionale desktop", "Foto hero"]
         : ["Bozza gestionale desktop"]
       : site
-        ? hero
-          ? ["Bozza sito", "Foto hero"]
-          : ["Bozza sito"]
-        : hero
+        ? ["Bozza sito", "Hero mestiere"]
+        : usedHero
           ? ["Bozza 5 schermate", "Foto hero"]
           : ["Bozza 5 schermate"],
     files: site ? [] : fromGrok,

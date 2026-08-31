@@ -17,6 +17,11 @@ export type PublishedSnapshot = {
   publishedAt: number;
 };
 
+/** Server-only. ownerHash is never returned on public GET. */
+export type StoredSnapshot = PublishedSnapshot & {
+  ownerHash?: string;
+};
+
 export type PublishInput = {
   name?: unknown;
   tagline?: unknown;
@@ -24,6 +29,11 @@ export type PublishInput = {
   summary?: unknown;
   palette?: unknown;
   html?: unknown;
+};
+
+export type PublishAccess = {
+  ownerId: string;
+  ifMatch?: string | null;
 };
 
 const KINDS: ProjectKind[] = ["landing", "app", "dashboard", "tool", "game", "site"];
@@ -86,7 +96,7 @@ export function parsePublishInput(raw: PublishInput): {
   return { name, tagline, kind, summary, palette, html };
 }
 
-export function isPublishedSnapshot(value: unknown): value is PublishedSnapshot {
+export function isPublishedSnapshot(value: unknown): value is StoredSnapshot {
   if (!value || typeof value !== "object") return false;
   const rec = value as Record<string, unknown>;
   return (

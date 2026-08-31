@@ -1,5 +1,6 @@
 import { dashboardCrudScript, discoverAppCollection, shouldRepairDashboard } from "./dashboard-crud.ts";
 import { replaceAppleTabIcons, rewriteIosWidgetHome } from "./craft-icons.ts";
+import { scrubCraftMedia } from "../ai/hero-image.ts";
 
 export function isLightHex(hex: string) {
   const h = hex.replace("#", "").trim();
@@ -143,7 +144,7 @@ input::placeholder,textarea::placeholder{
 .fk-ledger dt{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted,#5c5348)}
 .fk-ledger dd{margin:0;font-size:20px;font-weight:700;letter-spacing:-.03em}
 .fk-last{margin:0 0 16px;font-size:14px;color:var(--fg,#1c1712)}
-.fk-hero{width:100%;height:140px;object-fit:cover;border-radius:0;display:block;margin:8px 0 14px;background:var(--line,#c4b49a)}
+.fk-hero,.fk-hero-craft{width:100%;height:140px;object-fit:cover;border-radius:0;display:block;margin:8px 0 14px;background:var(--line,#c4b49a)}
 .fk-tab,.tabbar,nav[aria-label]{
   flex-shrink:0;display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr))!important;
   height:64px!important;max-height:72px;padding:6px 4px calc(6px + env(safe-area-inset-bottom));
@@ -171,7 +172,8 @@ body{display:block!important;padding:0;overflow:visible!important}
 header,body>header,.site-top{padding:16px 24px;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px 24px;position:sticky;top:0;z-index:5;background:var(--surface,#f7f1e4);border-bottom:1px solid var(--line,#c4b49a)}
 nav,header nav{display:flex!important;flex-wrap:wrap;align-items:center;gap:6px 18px;padding:0;position:static!important;height:auto!important;max-height:none!important;grid-template-columns:none!important;border-top:0!important}
 nav a,nav button{border:0;background:none;color:var(--fg,#1c1712);font:650 15px/1.2 system-ui,sans-serif;padding:8px 10px}
-.fk-hero,header img, .hero img, img.cover, img.fk-hero{width:100%;height:min(52vh,560px)!important;min-height:280px;object-fit:cover;display:block;border-radius:0;margin:0}
+.fk-hero,header img, .hero img, img.cover, img.fk-hero, svg.fk-hero, figure.fk-hero{width:100%;height:min(52vh,560px)!important;min-height:280px;object-fit:cover;display:block;border-radius:0;margin:0}
+svg.fk-hero{height:min(52vh,560px)!important}
 main,body>main{display:block!important;overflow:visible!important;flex:none!important;padding:28px 24px 72px;max-width:1120px;margin:0 auto}
 .hero-text h1, main>section:first-of-type h1, .hero h1{font-size:clamp(2.5rem,6vw,4.6rem);letter-spacing:-.03em;line-height:1.08;margin:0 0 12px}
 h2{font-size:clamp(1.4rem,3vw,2rem);margin:32px 0 12px}
@@ -222,9 +224,30 @@ export function fenixRuntimeScript(projectId: string, kind?: string) {
   var pid = ${JSON.stringify(projectId)};
   var desk = ${kind === "site" || kind === "landing" || kind === "dashboard" ? "true" : "false"};
   var unwrapBoxes = ${kind === "site" || kind === "landing" ? "true" : "false"};
+  var memoryStorage = {};
+  var ls = {
+    getItem: function(key){ return Object.prototype.hasOwnProperty.call(memoryStorage, key) ? memoryStorage[key] : null; },
+    setItem: function(key, value){ memoryStorage[key] = String(value); },
+    removeItem: function(key){ delete memoryStorage[key]; },
+    clear: function(){ memoryStorage = {}; },
+    key: function(index){ return Object.keys(memoryStorage)[index] || null; },
+    get length(){ return Object.keys(memoryStorage).length; }
+  };
+  try {
+    void window.localStorage;
+    ls = window.localStorage;
+  } catch (e) {
+    try {
+      Object.defineProperty(window, "localStorage", { configurable: true, value: ls });
+    } catch (e2) {}
+  }
+  function sandboxNoise(msg){
+    return /allow-same-origin|sandboxed and lacks|The document is sandboxed/i.test(String(msg || ""));
+  }
   function reportBootError(err, kind){
     var msg = "";
     try { msg = err && err.message ? String(err.message) : String(err || "errore"); } catch (e) { msg = "errore"; }
+    if (sandboxNoise(msg)) return;
     try { document.documentElement.setAttribute("data-fenix-boot-error", msg.slice(0, 240)); } catch (e) {}
     try {
       window.parent && window.parent.postMessage({
@@ -255,6 +278,7 @@ export function fenixRuntimeScript(projectId: string, kind?: string) {
   } catch (e) {}
   window.onerror = function(m, _s, _l, _c, err){
     var msg = err && err.message ? String(err.message) : String(m || "");
+    if (sandboxNoise(msg)) return true;
     if (!msg || /^error$/i.test(msg.trim()) || msg === "Script error.") {
       if (!(err && err.message && err.message !== "error" && msg !== "Script error.")) return true;
     }
@@ -275,12 +299,18 @@ export function fenixRuntimeScript(projectId: string, kind?: string) {
     var err = ev && ev.error;
     var msg = err && err.message ? String(err.message) : String((ev && ev.message) || "");
     if (!msg || /^error$/i.test(msg.trim())) return;
+    if (sandboxNoise(msg)) return;
     reportBootError(err || new Error(msg), "error");
     try { ev.preventDefault(); } catch (e) {}
   }, true);
   window.addEventListener("unhandledrejection", function(ev){
     var r = ev.reason;
-    reportBootError(r instanceof Error ? r : new Error(String(r || "unhandledrejection")), "unhandledrejection");
+    var msg = r && r.message ? String(r.message) : String(r || "unhandledrejection");
+    if (sandboxNoise(msg)) {
+      try { ev.preventDefault(); } catch (e) {}
+      return;
+    }
+    reportBootError(r instanceof Error ? r : new Error(msg), "unhandledrejection");
     try { ev.preventDefault(); } catch (e) {}
   });
   try {
@@ -290,29 +320,13 @@ export function fenixRuntimeScript(projectId: string, kind?: string) {
     sc.style.minHeight = "0";
     sc.style.flex = "1 1 0%";
   } catch (e) {}
-  try {
-    void window.localStorage;
-  } catch (e) {
-    var memoryStorage = {};
-    Object.defineProperty(window, "localStorage", {
-      configurable: true,
-      value: {
-        getItem: function(key){ return Object.prototype.hasOwnProperty.call(memoryStorage, key) ? memoryStorage[key] : null; },
-        setItem: function(key, value){ memoryStorage[key] = String(value); },
-        removeItem: function(key){ delete memoryStorage[key]; },
-        clear: function(){ memoryStorage = {}; },
-        key: function(index){ return Object.keys(memoryStorage)[index] || null; },
-        get length(){ return Object.keys(memoryStorage).length; }
-      }
-    });
-  }
   function localKey(col){ return "fenix-db:"+pid+":"+col; }
   function fallbackLoad(col){
-    try { return JSON.parse(localStorage.getItem(localKey(col)) || "null"); }
+    try { return JSON.parse(ls.getItem(localKey(col)) || "null"); }
     catch(e){ return null; }
   }
   function fallbackSave(col, data){
-    try { localStorage.setItem(localKey(col), JSON.stringify(data)); } catch(e){}
+    try { ls.setItem(localKey(col), JSON.stringify(data)); } catch(e){}
     return data;
   }
   function emptyVal(v){
@@ -726,6 +740,7 @@ export function prepareSrcDoc(
   const bg = palette.bg;
   const scheme = isLightHex(bg) ? "light" : "dark";
   let next = sanitizePreviewHtml(html);
+  next = scrubCraftMedia(next);
   next = rewriteIosWidgetHome(replaceAppleTabIcons(next));
   if (!/color-scheme/i.test(next)) {
     const meta = `<meta name="color-scheme" content="${scheme}"/>`;

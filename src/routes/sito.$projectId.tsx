@@ -89,7 +89,7 @@ function LiveSitePage() {
           snap.id,
           snap.kind,
         )}
-        sandbox="allow-scripts allow-forms allow-modals allow-same-origin"
+        sandbox="allow-scripts allow-forms allow-modals"
         className="min-h-0 w-full flex-1 border-0 bg-white"
       />
     </div>

@@ -5,12 +5,14 @@ import { dirname, join } from "node:path";
 import { after, before, describe, it } from "node:test";
 import { fileURLToPath } from "node:url";
 import { ensureFenixAdapter } from "./fenix-adapter.ts";
+import { OWNER_HEADER } from "./publish-owner.ts";
 import {
   isPublishedId,
   parsePublishInput,
   snapshotHash,
 } from "./published.ts";
-import { readPublished, writePublished } from "./published-store.ts";
+import { hashOwner, publicSnapshot, readPublished, writePublished } from "./published-store.ts";
+import { handleSiteRequest } from "./sites-http.ts";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const SITE = readFileSync(join(here, "fixtures/music-site-no-fenix.html"), "utf8");
@@ -23,6 +25,12 @@ const PALETTE = {
   accent: "#e85d4c",
   line: "#3a3048",
 };
+const OWNER_A = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+const OWNER_B = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+
+function access(ownerId: string, ifMatch?: string) {
+  return { ownerId, ifMatch };
+}
 
 describe("published snapshot helpers", () => {
   it("rejects short ids and accepts uuid-like keys", () => {
@@ -50,6 +58,14 @@ describe("published snapshot helpers", () => {
     });
     assert.equal("error" in ok, false);
   });
+
+  it("hashes owner ids without storing the raw capability", () => {
+    const h = hashOwner(OWNER_A);
+    assert.equal(h, hashOwner(OWNER_A));
+    assert.notEqual(h, hashOwner(OWNER_B));
+    assert.equal(h.includes(OWNER_A), false);
+    assert.equal(h.length, 64);
+  });
 });
 
 describe("published store", () => {
@@ -73,17 +89,18 @@ describe("published store", () => {
       kind: "site",
       palette: PALETTE,
       html: ADAPTED,
-    });
+    }, access(OWNER_A));
     assert.equal("error" in first, false);
     if ("error" in first) return;
     assert.equal(first.version, 1);
     assert.equal(first.id, id);
+    assert.equal("ownerHash" in first, false);
     const again = await writePublished(id, {
       name: "Onda",
       kind: "site",
       palette: PALETTE,
       html: ADAPTED,
-    });
+    }, access(OWNER_A));
     assert.equal("error" in again, false);
     if ("error" in again) return;
     assert.equal(again.version, 1);
@@ -93,13 +110,39 @@ describe("published store", () => {
       kind: "site",
       palette: PALETTE,
       html: ADAPTED.replace("Onda", "Onda Live"),
-    });
+    }, access(OWNER_A, `"${again.version}"`));
     assert.equal("error" in bumped, false);
     if ("error" in bumped) return;
     assert.equal(bumped.version, 2);
     const loaded = await readPublished(id);
     assert.equal(loaded?.version, 2);
     assert.match(loaded?.html || "", /Onda Live/);
+    assert.equal(loaded?.ownerHash, hashOwner(OWNER_A));
+    const pub = publicSnapshot(loaded!);
+    assert.equal("ownerHash" in pub, false);
+  });
+
+  it("public snapshot strips page-screenshot heroes, dead piatto photos, and ownerHash", () => {
+    const html = `<html><body><img class="fk-hero" src="data:image/jpeg;base64,AAA" alt=""/><img src="https://images.unsplash.com/photo-1595878715977-2e8f8df18ea7?w=800" alt="Piatto da portata"/></body></html>`;
+    const pub = publicSnapshot({
+      id: "onda-site-09",
+      name: "Bottega",
+      tagline: "",
+      kind: "site",
+      summary: "",
+      palette: PALETTE,
+      html,
+      version: 1,
+      hash: "abc",
+      publishedAt: 1,
+      ownerHash: "deadbeef".repeat(8),
+    });
+    assert.equal("ownerHash" in pub, false);
+    assert.doesNotMatch(pub.html, /data:image\/jpeg/);
+    assert.doesNotMatch(pub.html, /photo-1595878715977/);
+    assert.match(pub.html, /fk-hero-craft/);
+    assert.match(pub.html, /photo-1610701596007/);
+    assert.match(pub.html, /Piatto da portata/);
   });
 
   it("refuses HTML that is not publishable", async () => {
@@ -108,7 +151,153 @@ describe("published store", () => {
       kind: "site",
       palette: PALETTE,
       html: "<html><body>ciao</body></html>",
-    });
+    }, access(OWNER_A));
     assert.equal("error" in result, true);
+  });
+
+  it("rejects missing owner, other owner, and stale If-Match", async () => {
+    const id = "onda-site-03";
+    const missing = await writePublished(id, {
+      name: "Onda",
+      kind: "site",
+      palette: PALETTE,
+      html: ADAPTED,
+    });
+    assert.equal("error" in missing, true);
+    if ("error" in missing) assert.equal(missing.status, 401);
+
+    const created = await writePublished(id, {
+      name: "Onda",
+      kind: "site",
+      palette: PALETTE,
+      html: ADAPTED,
+    }, access(OWNER_A));
+    assert.equal("error" in created, false);
+    if ("error" in created) return;
+
+    const other = await writePublished(id, {
+      name: "Onda",
+      kind: "site",
+      palette: PALETTE,
+      html: ADAPTED.replace("Onda", "Hijack"),
+    }, access(OWNER_B, `"${created.version}"`));
+    assert.equal("error" in other, true);
+    if ("error" in other) assert.equal(other.status, 403);
+
+    const stale = await writePublished(id, {
+      name: "Onda",
+      kind: "site",
+      palette: PALETTE,
+      html: ADAPTED.replace("Onda", "Onda Due"),
+    }, access(OWNER_A, `"0"`));
+    assert.equal("error" in stale, true);
+    if ("error" in stale) assert.equal(stale.status, 409);
+
+    const noMatch = await writePublished(id, {
+      name: "Onda",
+      kind: "site",
+      palette: PALETTE,
+      html: ADAPTED.replace("Onda", "Onda Tre"),
+    }, access(OWNER_A));
+    assert.equal("error" in noMatch, true);
+    if ("error" in noMatch) assert.equal(noMatch.status, 409);
+  });
+});
+
+describe("sites HTTP handler", () => {
+  const prev = process.env.FENIX_PUBLISHED_DIR;
+  const dir = mkdtempSync(join(tmpdir(), "fenix-http-"));
+
+  before(() => {
+    process.env.FENIX_PUBLISHED_DIR = dir;
+    delete process.env.NETLIFY;
+    delete process.env.NETLIFY_BLOBS_CONTEXT;
+  });
+  after(() => {
+    if (prev === undefined) delete process.env.FENIX_PUBLISHED_DIR;
+    else process.env.FENIX_PUBLISHED_DIR = prev;
+  });
+
+  const payload = {
+    name: "Onda",
+    kind: "site",
+    palette: PALETTE,
+    html: ADAPTED,
+  };
+
+  it("anonymous PUT 401, owner create, other 403, GET anon 200, lost update 409", async () => {
+    const id = "onda-http-01";
+    const anon = await handleSiteRequest(
+      new Request(`http://local/api/sites/${id}`, {
+        method: "PUT",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(payload),
+      }),
+      id,
+    );
+    assert.equal(anon.status, 401);
+
+    const created = await handleSiteRequest(
+      new Request(`http://local/api/sites/${id}`, {
+        method: "PUT",
+        headers: { "content-type": "application/json", [OWNER_HEADER]: OWNER_A },
+        body: JSON.stringify(payload),
+      }),
+      id,
+    );
+    assert.equal(created.status, 200);
+    const snap = (await created.json()) as { version: number; ownerHash?: string };
+    assert.equal(snap.version, 1);
+    assert.equal(snap.ownerHash, undefined);
+
+    const get = await handleSiteRequest(new Request(`http://local/api/sites/${id}`), id);
+    assert.equal(get.status, 200);
+    const publicJson = (await get.json()) as { html: string; ownerHash?: string };
+    assert.equal(publicJson.ownerHash, undefined);
+    assert.match(publicJson.html, /Onda/);
+
+    const other = await handleSiteRequest(
+      new Request(`http://local/api/sites/${id}`, {
+        method: "PUT",
+        headers: {
+          "content-type": "application/json",
+          [OWNER_HEADER]: OWNER_B,
+          "if-match": `"1"`,
+        },
+        body: JSON.stringify({ ...payload, html: ADAPTED.replace("Onda", "Hijack") }),
+      }),
+      id,
+    );
+    assert.equal(other.status, 403);
+
+    const lost = await handleSiteRequest(
+      new Request(`http://local/api/sites/${id}`, {
+        method: "PUT",
+        headers: {
+          "content-type": "application/json",
+          [OWNER_HEADER]: OWNER_A,
+          "if-match": `"9"`,
+        },
+        body: JSON.stringify({ ...payload, html: ADAPTED.replace("Onda", "Onda X") }),
+      }),
+      id,
+    );
+    assert.equal(lost.status, 409);
+
+    const ok = await handleSiteRequest(
+      new Request(`http://local/api/sites/${id}`, {
+        method: "PUT",
+        headers: {
+          "content-type": "application/json",
+          [OWNER_HEADER]: OWNER_A,
+          "if-match": `"1"`,
+        },
+        body: JSON.stringify({ ...payload, html: ADAPTED.replace("Onda", "Onda Live") }),
+      }),
+      id,
+    );
+    assert.equal(ok.status, 200);
+    const updated = (await ok.json()) as { version: number };
+    assert.equal(updated.version, 2);
   });
 });

@@ -6,6 +6,7 @@ import { describe, it } from "node:test";
 import { chromium } from "playwright";
 import { requirePreview } from "./ensure-preview.ts";
 import { ensureFenixAdapter } from "./fenix-adapter.ts";
+import { OWNER_HEADER } from "./publish-owner.ts";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const root = join(here, "../../..");
@@ -19,6 +20,8 @@ const PALETTE = {
   accent: "#e85d4c",
   line: "#3a3048",
 };
+const OWNER_A = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+const OWNER_B = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
 
 describe("published site is server-side, not localStorage", () => {
   it("sito route does not read the local project store", () => {
@@ -26,13 +29,75 @@ describe("published site is server-side, not localStorage", () => {
     assert.doesNotMatch(src, /useProjectStore/);
     assert.doesNotMatch(src, /officina-projects/);
     assert.match(src, /loadPublished/);
+    assert.doesNotMatch(src, /allow-same-origin/);
     const client = readFileSync(join(root, "src/lib/projects/publish-client.ts"), "utf8");
     assert.match(client, /\/api\/sites\//);
-    const api = readFileSync(join(root, "src/routes/api/sites.$id.ts"), "utf8");
-    assert.match(api, /writePublished/);
-    assert.match(api, /readPublished/);
+    assert.match(client, /OWNER_HEADER/);
+    assert.match(client, /If-Match/);
+    const api = readFileSync(join(root, "src/routes/api/sites.\$id.ts"), "utf8");
+    assert.match(api, /handleSiteRequest/);
     const panel = readFileSync(join(root, "src/components/publish-panel.tsx"), "utf8");
     assert.match(panel, /publishSnapshot/);
+    const preview = readFileSync(join(root, "src/components/preview-frame.tsx"), "utf8");
+    assert.doesNotMatch(preview, /allow-same-origin/);
+    const card = readFileSync(join(root, "src/components/project-card.tsx"), "utf8");
+    assert.doesNotMatch(card, /allow-same-origin/);
+  });
+
+  it("anonymous PUT is 401 and GET stays public", async () => {
+    const PREVIEW = await requirePreview();
+    const id = "onda-auth-" + Date.now().toString(36);
+    const anon = await fetch(`${PREVIEW}/api/sites/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: "Onda", kind: "site", palette: PALETTE, html: ADAPTED }),
+    });
+    assert.equal(anon.status, 401);
+
+    const put = await fetch(`${PREVIEW}/api/sites/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", [OWNER_HEADER]: OWNER_A },
+      body: JSON.stringify({ name: "Onda", kind: "site", palette: PALETTE, html: ADAPTED }),
+    });
+    assert.equal(put.ok, true, await put.text());
+
+    const other = await fetch(`${PREVIEW}/api/sites/${id}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        [OWNER_HEADER]: OWNER_B,
+        "If-Match": `"1"`,
+      },
+      body: JSON.stringify({
+        name: "Onda",
+        kind: "site",
+        palette: PALETTE,
+        html: ADAPTED.replace("Onda", "Hijack"),
+      }),
+    });
+    assert.equal(other.status, 403);
+
+    const get = await fetch(`${PREVIEW}/api/sites/${id}`, { cache: "no-store" });
+    assert.equal(get.status, 200);
+    const snap = (await get.json()) as { ownerHash?: string; html: string; version?: number };
+    assert.equal(snap.ownerHash, undefined);
+    assert.match(snap.html, /Onda/);
+
+    const lost = await fetch(`${PREVIEW}/api/sites/${id}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        [OWNER_HEADER]: OWNER_A,
+        "If-Match": `"9"`,
+      },
+      body: JSON.stringify({
+        name: "Onda",
+        kind: "site",
+        palette: PALETTE,
+        html: ADAPTED.replace("Onda", "Onda X"),
+      }),
+    });
+    assert.equal(lost.status, 409);
   });
 
   it("PUT snapshot then a clean browser without localStorage sees the published heading", async () => {
@@ -40,7 +105,7 @@ describe("published site is server-side, not localStorage", () => {
     const id = "onda-pub-" + Date.now().toString(36);
     const put = await fetch(`${PREVIEW}/api/sites/${id}`, {
       method: "PUT",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", [OWNER_HEADER]: OWNER_A },
       body: JSON.stringify({
         name: "Onda",
         kind: "site",
@@ -57,30 +122,37 @@ describe("published site is server-side, not localStorage", () => {
     try {
       const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
       await page.addInitScript(() => {
-        localStorage.setItem(
-          "officina-projects",
-          JSON.stringify({
-            state: {
-              projects: [
-                {
-                  id: "onda-wrong",
-                  name: "Sbagliato",
-                  html: "<html><body><h1>Dashboard stantia</h1><nav>Home Nuova Elenco</nav></body></html>",
-                  kind: "dashboard",
-                  status: "ready",
-                },
-              ],
-              creditsRemaining: 46,
-            },
-            version: 2,
-          }),
-        );
+        try {
+          localStorage.setItem(
+            "officina-projects",
+            JSON.stringify({
+              state: {
+                projects: [
+                  {
+                    id: "onda-wrong",
+                    name: "Sbagliato",
+                    html: "<html><body><h1>Dashboard stantia</h1><nav>Home Nuova Elenco</nav></body></html>",
+                    kind: "dashboard",
+                    status: "ready",
+                  },
+                ],
+                creditsRemaining: 46,
+              },
+              version: 2,
+            }),
+          );
+        } catch {
+          /* sandboxed preview iframe */
+        }
       });
       await page.goto(`${PREVIEW}/sito/${id}`, { waitUntil: "domcontentloaded", timeout: 20000 });
       const frame = page.frameLocator("iframe").first();
       await frame.getByRole("heading", { name: "Onda" }).waitFor({ timeout: 15000 });
       assert.equal(await page.getByText("Dashboard stantia").count(), 0);
       assert.equal(await page.getByText("Sito non trovato").count(), 0);
+      const sandbox = await page.locator("iframe").first().getAttribute("sandbox");
+      assert.equal(/(^|\s)allow-same-origin(\s|$)/.test(sandbox || ""), false);
+      assert.match(sandbox || "", /allow-scripts/);
     } finally {
       await browser.close();
     }
@@ -94,23 +166,27 @@ describe("published site is server-side, not localStorage", () => {
       const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
       await page.addInitScript(
         ({ html, pid }: { html: string; pid: string }) => {
-          localStorage.setItem(
-            "officina-projects",
-            JSON.stringify({
-              state: {
-                projects: [
-                  {
-                    id: pid,
-                    name: "Onda locale",
-                    html,
-                    kind: "site",
-                    status: "ready",
-                  },
-                ],
-              },
-              version: 2,
-            }),
-          );
+          try {
+            localStorage.setItem(
+              "officina-projects",
+              JSON.stringify({
+                state: {
+                  projects: [
+                    {
+                      id: pid,
+                      name: "Onda locale",
+                      html,
+                      kind: "site",
+                      status: "ready",
+                    },
+                  ],
+                },
+                version: 2,
+              }),
+            );
+          } catch {
+            /* sandboxed preview iframe */
+          }
         },
         { html: ADAPTED, pid: id },
       );

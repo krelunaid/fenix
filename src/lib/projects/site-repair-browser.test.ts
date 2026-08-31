@@ -18,6 +18,11 @@ const BROKEN_HERO = readFileSync(join(here, "fixtures/broken-hero-site.html"), "
 const PREVIEW = process.env.PREVIEW_URL || "http://127.0.0.1:8081";
 const ADAPTED = ensureFenixAdapter(SITE);
 
+/** Playwright addInitScript runs in every frame, including sandboxed srcdoc. */
+function isSandboxStorageNoise(msg: string) {
+  return /localStorage|sessionStorage|sandboxed and lacks|The document is sandboxed/i.test(msg);
+}
+
 describe("studio repair for a new site project", () => {
   it("adapter preview is not empty, has 3+ views, Pubblica after valid gate", async () => {
     await requirePreview();
@@ -25,42 +30,50 @@ describe("studio repair for a new site project", () => {
     try {
       const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
       const errors: string[] = [];
-      page.on("pageerror", (err) => errors.push(err.message));
+      page.on("pageerror", (err) => {
+        const msg = String(err.message || err);
+        if (isSandboxStorageNoise(msg)) return;
+        errors.push(err.message);
+      });
       await page.addInitScript(
         ({ html, pid }) => {
-          localStorage.setItem(
-            "officina-projects",
-            JSON.stringify({
-              state: {
-                projects: [
-                  {
-                    id: pid,
-                    name: "Nuovo studio",
-                    tagline: "",
-                    prompt: "mi crei un sito di caricamento musicale. kind=site",
-                    kind: "site",
-                    requestedKind: "site",
-                    summary: "",
-                    palette: {
-                      bg: "#120c1c",
-                      surface: "#1c1528",
-                      fg: "#f4efe8",
-                      muted: "#9b93c2",
-                      accent: "#e85d4c",
+          try {
+            localStorage.setItem(
+              "officina-projects",
+              JSON.stringify({
+                state: {
+                  projects: [
+                    {
+                      id: pid,
+                      name: "Nuovo studio",
+                      tagline: "",
+                      prompt: "mi crei un sito di caricamento musicale. kind=site",
+                      kind: "site",
+                      requestedKind: "site",
+                      summary: "",
+                      palette: {
+                        bg: "#120c1c",
+                        surface: "#1c1528",
+                        fg: "#f4efe8",
+                        muted: "#9b93c2",
+                        accent: "#e85d4c",
+                      },
+                      html,
+                      messages: [],
+                      buildLog: ["Adatto Fenix", "Apro l'anteprima"],
+                      status: "ready",
+                      createdAt: Date.now(),
+                      updatedAt: Date.now(),
                     },
-                    html,
-                    messages: [],
-                    buildLog: ["Adatto Fenix", "Apro l'anteprima"],
-                    status: "ready",
-                    createdAt: Date.now(),
-                    updatedAt: Date.now(),
-                  },
-                ],
-                creditsRemaining: 46,
-              },
-              version: 2,
-            }),
-          );
+                  ],
+                  creditsRemaining: 46,
+                },
+                version: 2,
+              }),
+            );
+          } catch {
+            /* sandboxed preview iframe */
+          }
         },
         { html: ADAPTED, pid: "p-onda" },
       );
@@ -85,48 +98,52 @@ describe("studio repair for a new site project", () => {
     try {
       const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
       await page.addInitScript(() => {
-        localStorage.setItem(
-          "officina-projects",
-          JSON.stringify({
-            state: {
-              projects: [
-                {
-                  id: "p-dead",
-                  name: "Nuovo studio",
-                  tagline: "",
-                  prompt: "mi crei un sito di caricamento musicale. kind=site",
-                  kind: "site",
-                  requestedKind: "site",
-                  summary: "",
-                  palette: {
-                    bg: "#120c1c",
-                    surface: "#1c1528",
-                    fg: "#f4efe8",
-                    muted: "#9b93c2",
-                    accent: "#e85d4c",
-                  },
-                  html: "",
-                  messages: [
-                    {
-                      id: "m1",
-                      role: "assistant",
-                      content: "Il prodotto non è completo: Manca window.Fenix.load/save per i dati.",
-                      at: Date.now(),
+        try {
+          localStorage.setItem(
+            "officina-projects",
+            JSON.stringify({
+              state: {
+                projects: [
+                  {
+                    id: "p-dead",
+                    name: "Nuovo studio",
+                    tagline: "",
+                    prompt: "mi crei un sito di caricamento musicale. kind=site",
+                    kind: "site",
+                    requestedKind: "site",
+                    summary: "",
+                    palette: {
+                      bg: "#120c1c",
+                      surface: "#1c1528",
+                      fg: "#f4efe8",
+                      muted: "#9b93c2",
+                      accent: "#e85d4c",
                     },
-                  ],
-                  buildLog: ["Compongo colori, icone, interfaccia", "Riparo il codice"],
-                  status: "error",
-                  error: "Il prodotto non è completo: Manca window.Fenix.load/save per i dati.",
-                  creditRefunded: true,
-                  createdAt: Date.now(),
-                  updatedAt: Date.now(),
-                },
-              ],
-              creditsRemaining: 46,
-            },
-            version: 2,
-          }),
-        );
+                    html: "",
+                    messages: [
+                      {
+                        id: "m1",
+                        role: "assistant",
+                        content: "Il prodotto non è completo: Manca window.Fenix.load/save per i dati.",
+                        at: Date.now(),
+                      },
+                    ],
+                    buildLog: ["Compongo colori, icone, interfaccia", "Riparo il codice"],
+                    status: "error",
+                    error: "Il prodotto non è completo: Manca window.Fenix.load/save per i dati.",
+                    creditRefunded: true,
+                    createdAt: Date.now(),
+                    updatedAt: Date.now(),
+                  },
+                ],
+                creditsRemaining: 46,
+              },
+              version: 2,
+            }),
+          );
+        } catch {
+          /* sandboxed preview iframe */
+        }
       });
       await page.goto(`${PREVIEW}/studio/p-dead`, { waitUntil: "domcontentloaded", timeout: 20000 });
       await page.getByText("Bloccato").first().waitFor({ timeout: 12000 });
@@ -151,41 +168,45 @@ describe("studio repair for a new site project", () => {
         });
       });
       await page.addInitScript(() => {
-        localStorage.setItem(
-          "officina-projects",
-          JSON.stringify({
-            state: {
-              projects: [
-                {
-                  id: "p-ref",
-                  name: "Nuovo studio",
-                  tagline: "",
-                  prompt: "mi crei un sito di caricamento musicale. kind=site",
-                  kind: "site",
-                  requestedKind: "site",
-                  summary: "",
-                  palette: {
-                    bg: "#120c1c",
-                    surface: "#1c1528",
-                    fg: "#f4efe8",
-                    muted: "#9b93c2",
-                    accent: "#e85d4c",
+        try {
+          localStorage.setItem(
+            "officina-projects",
+            JSON.stringify({
+              state: {
+                projects: [
+                  {
+                    id: "p-ref",
+                    name: "Nuovo studio",
+                    tagline: "",
+                    prompt: "mi crei un sito di caricamento musicale. kind=site",
+                    kind: "site",
+                    requestedKind: "site",
+                    summary: "",
+                    palette: {
+                      bg: "#120c1c",
+                      surface: "#1c1528",
+                      fg: "#f4efe8",
+                      muted: "#9b93c2",
+                      accent: "#e85d4c",
+                    },
+                    html: "",
+                    messages: [],
+                    buildLog: [],
+                    status: "error",
+                    error: "Il prodotto non è completo: Manca window.Fenix.load/save per i dati.",
+                    creditRefunded: false,
+                    createdAt: Date.now(),
+                    updatedAt: Date.now(),
                   },
-                  html: "",
-                  messages: [],
-                  buildLog: [],
-                  status: "error",
-                  error: "Il prodotto non è completo: Manca window.Fenix.load/save per i dati.",
-                  creditRefunded: false,
-                  createdAt: Date.now(),
-                  updatedAt: Date.now(),
-                },
-              ],
-              creditsRemaining: 46,
-            },
-            version: 2,
-          }),
-        );
+                ],
+                creditsRemaining: 46,
+              },
+              version: 2,
+            }),
+          );
+        } catch {
+          /* sandboxed preview iframe */
+        }
       });
       await page.goto(`${PREVIEW}/studio/p-ref`, { waitUntil: "domcontentloaded", timeout: 20000 });
       await page.getByRole("button", { name: "Riprova. Lo ricostruisco." }).first().click();
@@ -231,41 +252,45 @@ describe("studio repair for a new site project", () => {
         await route.fulfill({ status: 500, body: "no-worker" });
       });
       await page.addInitScript(() => {
-        localStorage.setItem(
-          "officina-projects",
-          JSON.stringify({
-            state: {
-              projects: [
-                {
-                  id: "p-sse",
-                  name: "Nuovo studio",
-                  tagline: "",
-                  prompt: "mi crei un sito di caricamento musicale. kind=site",
-                  kind: "site",
-                  requestedKind: "site",
-                  summary: "",
-                  palette: {
-                    bg: "#120c1c",
-                    surface: "#1c1528",
-                    fg: "#f4efe8",
-                    muted: "#9b93c2",
-                    accent: "#e85d4c",
+        try {
+          localStorage.setItem(
+            "officina-projects",
+            JSON.stringify({
+              state: {
+                projects: [
+                  {
+                    id: "p-sse",
+                    name: "Nuovo studio",
+                    tagline: "",
+                    prompt: "mi crei un sito di caricamento musicale. kind=site",
+                    kind: "site",
+                    requestedKind: "site",
+                    summary: "",
+                    palette: {
+                      bg: "#120c1c",
+                      surface: "#1c1528",
+                      fg: "#f4efe8",
+                      muted: "#9b93c2",
+                      accent: "#e85d4c",
+                    },
+                    html: "",
+                    messages: [],
+                    buildLog: [],
+                    status: "error",
+                    error: "Il prodotto non è completo: Manca window.Fenix.load/save per i dati.",
+                    creditRefunded: true,
+                    createdAt: Date.now(),
+                    updatedAt: Date.now(),
                   },
-                  html: "",
-                  messages: [],
-                  buildLog: [],
-                  status: "error",
-                  error: "Il prodotto non è completo: Manca window.Fenix.load/save per i dati.",
-                  creditRefunded: true,
-                  createdAt: Date.now(),
-                  updatedAt: Date.now(),
-                },
-              ],
-              creditsRemaining: 46,
-            },
-            version: 2,
-          }),
-        );
+                ],
+                creditsRemaining: 46,
+              },
+              version: 2,
+            }),
+          );
+        } catch {
+          /* sandboxed preview iframe */
+        }
       });
       await page.goto(`${PREVIEW}/studio/p-sse`, { waitUntil: "domcontentloaded", timeout: 20000 });
       await page.getByRole("button", { name: "Riprova. Lo ricostruisco." }).first().click();
@@ -359,41 +384,45 @@ describe("iframe boot error on site null.orders", () => {
         await route.fulfill({ status: 500, body: "no-worker" });
       });
       await page.addInitScript(() => {
-        localStorage.setItem(
-          "officina-projects",
-          JSON.stringify({
-            state: {
-              projects: [
-                {
-                  id: "p-orders",
-                  name: "Bottega del Tornio",
-                  tagline: "",
-                  prompt: "FORMATO: sito web. kind=site. Bottega del Tornio, vetrina artigiana a Grottaglie",
-                  kind: "site",
-                  requestedKind: "site",
-                  summary: "",
-                  palette: {
-                    bg: "#f3eadc",
-                    surface: "#fbf6ee",
-                    fg: "#2b211c",
-                    muted: "#6e5648",
-                    accent: "#b85c38",
+        try {
+          localStorage.setItem(
+            "officina-projects",
+            JSON.stringify({
+              state: {
+                projects: [
+                  {
+                    id: "p-orders",
+                    name: "Bottega del Tornio",
+                    tagline: "",
+                    prompt: "FORMATO: sito web. kind=site. Bottega del Tornio, vetrina artigiana a Grottaglie",
+                    kind: "site",
+                    requestedKind: "site",
+                    summary: "",
+                    palette: {
+                      bg: "#f3eadc",
+                      surface: "#fbf6ee",
+                      fg: "#2b211c",
+                      muted: "#6e5648",
+                      accent: "#b85c38",
+                    },
+                    html: "",
+                    messages: [],
+                    buildLog: [],
+                    status: "error",
+                    error: "Interrotto. Riprova.",
+                    creditRefunded: true,
+                    createdAt: Date.now(),
+                    updatedAt: Date.now(),
                   },
-                  html: "",
-                  messages: [],
-                  buildLog: [],
-                  status: "error",
-                  error: "Interrotto. Riprova.",
-                  creditRefunded: true,
-                  createdAt: Date.now(),
-                  updatedAt: Date.now(),
-                },
-              ],
-              creditsRemaining: 46,
-            },
-            version: 2,
-          }),
-        );
+                ],
+                creditsRemaining: 46,
+              },
+              version: 2,
+            }),
+          );
+        } catch {
+          /* sandboxed preview iframe */
+        }
       });
       await page.goto(`${PREVIEW}/studio/p-orders`, { waitUntil: "domcontentloaded", timeout: 20000 });
       await page.getByRole("button", { name: "Riprova. Lo ricostruisco." }).first().click();
@@ -431,53 +460,57 @@ describe("iframe boot error on site null.orders", () => {
       });
       await page.addInitScript(
         ({ html }: { html: string }) => {
-          if (localStorage.getItem("officina-projects")) return;
-          const now = Date.now();
-          localStorage.setItem(
-            "officina-projects",
-            JSON.stringify({
-              state: {
-                projects: [
-                  {
-                    id: "p-stale-job",
-                    name: "Bottega del Tornio",
-                    tagline: "",
-                    prompt: "FORMATO: sito web. kind=site. Bottega del Tornio, vetrina artigiana a Grottaglie",
-                    kind: "site",
-                    requestedKind: "site",
-                    summary: "",
-                    palette: {
-                      bg: "#f3eadc",
-                      surface: "#fbf6ee",
-                      fg: "#2b211c",
-                      muted: "#6e5648",
-                      accent: "#b85c38",
-                    },
-                    html,
-                    messages: [
-                      {
-                        id: "m1",
-                        role: "assistant",
-                        content: "JOB_STILL_RUNNING",
-                        at: now,
+          try {
+            if (localStorage.getItem("officina-projects")) return;
+            const now = Date.now();
+            localStorage.setItem(
+              "officina-projects",
+              JSON.stringify({
+                state: {
+                  projects: [
+                    {
+                      id: "p-stale-job",
+                      name: "Bottega del Tornio",
+                      tagline: "",
+                      prompt: "FORMATO: sito web. kind=site. Bottega del Tornio, vetrina artigiana a Grottaglie",
+                      kind: "site",
+                      requestedKind: "site",
+                      summary: "",
+                      palette: {
+                        bg: "#f3eadc",
+                        surface: "#fbf6ee",
+                        fg: "#2b211c",
+                        muted: "#6e5648",
+                        accent: "#b85c38",
                       },
-                    ],
-                    buildLog: ["Motore visivo in sottofondo", "Partito", "Partito"],
-                    status: "error",
-                    error: "JOB_STILL_RUNNING",
-                    creditRefunded: true,
-                    visualJobId: "job-ghost",
-                    visualJobStatus: "run",
-                    visualJobStartedAt: now - 21 * 60 * 1000,
-                    createdAt: now,
-                    updatedAt: now,
-                  },
-                ],
-                creditsRemaining: 46,
-              },
-              version: 2,
-            }),
-          );
+                      html,
+                      messages: [
+                        {
+                          id: "m1",
+                          role: "assistant",
+                          content: "JOB_STILL_RUNNING",
+                          at: now,
+                        },
+                      ],
+                      buildLog: ["Motore visivo in sottofondo", "Partito", "Partito"],
+                      status: "error",
+                      error: "JOB_STILL_RUNNING",
+                      creditRefunded: true,
+                      visualJobId: "job-ghost",
+                      visualJobStatus: "run",
+                      visualJobStartedAt: now - 21 * 60 * 1000,
+                      createdAt: now,
+                      updatedAt: now,
+                    },
+                  ],
+                  creditsRemaining: 46,
+                },
+                version: 2,
+              }),
+            );
+          } catch {
+            /* sandboxed preview iframe */
+          }
         },
         { html: BOTTEGA },
       );
