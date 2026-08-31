@@ -223,23 +223,32 @@ describe("studio overlay and resume in browser", () => {
       );
       await page.goto(PREVIEW + "/studio/p-argilla", { waitUntil: "domcontentloaded", timeout: 20000 });
       await page.getByRole("button", { name: "Riprendi rifinitura" }).first().click();
-      await page.waitForFunction(
-        () => {
-          const raw = localStorage.getItem("officina-projects");
-          if (!raw) return false;
-          try {
-            const project = JSON.parse(raw).state.projects.find((p: { id: string }) => p.id === "p-argilla");
-            return project?.visualJobId === "job-argilla-reattach" && project?.status === "building";
-          } catch {
-            return false;
-          }
-        },
-        null,
-        { timeout: 15000 },
-      );
+      const waitUniqueArgilla = async () => {
+        await page.waitForFunction(
+          () => {
+            const raw = localStorage.getItem("officina-projects");
+            if (!raw) return false;
+            try {
+              const project = JSON.parse(raw).state.projects.find((p: { id: string }) => p.id === "p-argilla");
+              const logs: string[] = project?.buildLog ?? [];
+              return (
+                project?.visualJobId === "job-argilla-reattach" &&
+                project?.status === "building" &&
+                logs.filter((s) => s === "Riprendo rifinitura").length === 1 &&
+                logs.filter((s) => s === "In coda").length === 1
+              );
+            } catch {
+              return false;
+            }
+          },
+          null,
+          { timeout: 15000 },
+        );
+      };
+      await waitUniqueArgilla();
       assert.equal(polishPosts, 1, "first resume must POST once");
       await page.reload({ waitUntil: "domcontentloaded" });
-      await new Promise((r) => setTimeout(r, 2500));
+      await waitUniqueArgilla();
       assert.equal(polishPosts, 1, "reload must not start a second polish job");
       const afterReload = await page.evaluate(() => {
         const raw = localStorage.getItem("officina-projects");
@@ -257,6 +266,24 @@ describe("studio overlay and resume in browser", () => {
       assert.equal(afterReload.kind, "dashboard");
       assert.equal(afterReload.requestedKind, "dashboard");
       assert.equal(afterReload.credits, 46);
+      await page.reload({ waitUntil: "domcontentloaded" });
+      await waitUniqueArgilla();
+      assert.equal(polishPosts, 1);
+      const logsTwice = await page.evaluate(() => {
+        const raw = localStorage.getItem("officina-projects");
+        const project = JSON.parse(raw || "{}").state.projects.find((p: { id: string }) => p.id === "p-argilla");
+        const logs: string[] = project?.buildLog ?? [];
+        return {
+          riprendo: logs.filter((s) => s === "Riprendo rifinitura").length,
+          coda: logs.filter((s) => s === "In coda").length,
+          jobId: project?.visualJobId,
+          status: project?.status,
+        };
+      });
+      assert.equal(logsTwice.riprendo, 1, "second reload must not persist another Riprendo");
+      assert.equal(logsTwice.coda, 1);
+      assert.equal(logsTwice.jobId, jobId);
+      assert.equal(logsTwice.status, "building");
       allowComplete = true;
       await page.waitForFunction(
         () => {
@@ -393,23 +420,63 @@ describe("studio overlay and resume in browser", () => {
       );
       assert.equal(await page.getByText("Bloccato").count(), 0);
       assert.equal(polishPosts, 0, "live job must reattach, not POST again");
-      await page.reload({ waitUntil: "domcontentloaded" });
-      await new Promise((r) => setTimeout(r, 2500));
-      assert.equal(polishPosts, 0, "reload must not start a second polish job");
-      assert.equal(await page.getByText("Bloccato").count(), 0);
-      const mid = await page.evaluate(() => {
-        const raw = localStorage.getItem("officina-projects");
-        const state = JSON.parse(raw || "{}").state;
-        const project = state.projects.find((p: { id: string }) => p.id === "p-terra");
-        return {
-          jobId: project?.visualJobId,
-          status: project?.status,
-          credits: state.creditsRemaining,
-        };
-      });
-      assert.equal(mid.jobId, jobId);
-      assert.equal(mid.status, "building");
-      assert.equal(mid.credits, 42);
+      const countPhase = () =>
+        page.evaluate(() => {
+          const raw = localStorage.getItem("officina-projects");
+          const state = JSON.parse(raw || "{}").state;
+          const project = state.projects.find((p: { id: string }) => p.id === "p-terra");
+          const logs: string[] = project?.buildLog ?? [];
+          return {
+            jobId: project?.visualJobId ?? null,
+            status: project?.status,
+            credits: state.creditsRemaining,
+            riprendo: logs.filter((s) => s === "Riprendo rifinitura").length,
+            partito: logs.filter((s) => s === "Partito").length,
+            sottofondo: logs.filter((s) => s === "Motore visivo in sottofondo").length,
+          };
+        });
+      const first = await countPhase();
+      assert.equal(first.jobId, jobId);
+      assert.equal(first.status, "building");
+      assert.equal(first.credits, 42);
+      assert.equal(first.riprendo, 0, "auto-reattach must not log Riprendo");
+      assert.equal(first.partito, 1);
+      assert.equal(first.sottofondo, 1);
+      for (let i = 0; i < 2; i++) {
+        await page.reload({ waitUntil: "domcontentloaded" });
+        await page.waitForFunction(
+          () => {
+            const raw = localStorage.getItem("officina-projects");
+            if (!raw) return false;
+            try {
+              const state = JSON.parse(raw).state;
+              const project = state.projects.find((p: { id: string }) => p.id === "p-terra");
+              const logs: string[] = project?.buildLog ?? [];
+              return (
+                project?.status === "building" &&
+                project?.visualJobId === "job-terra-live" &&
+                state.creditsRemaining === 42 &&
+                logs.filter((s) => s === "Riprendo rifinitura").length === 0 &&
+                logs.filter((s) => s === "Partito").length === 1
+              );
+            } catch {
+              return false;
+            }
+          },
+          null,
+          { timeout: 15000 },
+        );
+        assert.equal(await page.getByText("Bloccato").count(), 0);
+        assert.equal(polishPosts, 0, `reload ${i + 1} must not POST`);
+        const snap = await countPhase();
+        assert.equal(snap.jobId, jobId);
+        assert.equal(snap.status, "building");
+        assert.equal(snap.credits, 42);
+        assert.equal(snap.riprendo, 0);
+        assert.equal(snap.partito, 1);
+        assert.equal(snap.sottofondo, 1);
+        assert.equal(await page.getByRole("button", { name: /pubblica/i }).isDisabled(), true);
+      }
       allowComplete = true;
       await page.waitForFunction(
         () => {

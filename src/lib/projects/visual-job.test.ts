@@ -6,6 +6,7 @@ import {
   dropLiveJobLogs,
   hasActiveVisualJob,
   isJobSentinelError,
+  mergeUniqueLogs,
   visualJobPatch,
 } from "./visual-job.ts";
 
@@ -51,5 +52,16 @@ describe("job sentinel", () => {
     assert.deepEqual(dropLiveJobLogs(["Adatto Fenix", "Partito", "Partito", "Motore visivo in sottofondo"]), [
       "Adatto Fenix",
     ]);
+    assert.deepEqual(
+      mergeUniqueLogs(
+        ["Motore visivo in sottofondo", "Partito"],
+        ["Partito", "Riprendo rifinitura", "Partito"],
+      ),
+      ["Motore visivo in sottofondo", "Partito", "Riprendo rifinitura"],
+    );
+    assert.deepEqual(
+      mergeUniqueLogs(["Riprendo rifinitura", "Partito"], ["Partito"]),
+      ["Riprendo rifinitura", "Partito"],
+    );
   });
 });

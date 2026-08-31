@@ -18,6 +18,7 @@ import {
   hasActiveVisualJob,
   isJobSentinelError,
   JOB_STILL_RUNNING,
+  mergeUniqueLogs,
   VISUAL_JOB_TTL_MS,
   visualJobPatch,
 } from "@/lib/projects/visual-job";
@@ -132,40 +133,41 @@ async function pollWorkerJob(projectId: string, jobId: string): Promise<WorkerJo
   let ticks = 0;
   let misses = 0;
   while (Date.now() < deadline) {
-    await delay(WORKER_POLL_MS);
     ticks += 1;
     const job = await fetchJob(jobId);
     if (!job) {
       misses += 1;
       if (misses >= 8) throw new Error("Job visivo non trovato. Tocca Riprendi rifinitura.");
-      continue;
-    }
-    misses = 0;
-    if (Array.isArray(job.log) && job.log.length) {
-      const current = store.getProject(projectId);
-      const prev = current?.buildLog ?? [];
-      const last = job.log[job.log.length - 1];
-      if (last && prev[prev.length - 1] !== last) {
-        store.updateProject(projectId, { buildLog: [...prev, last] });
+    } else {
+      misses = 0;
+      if (Array.isArray(job.log) && job.log.length) {
+        const current = store.getProject(projectId);
+        const prev = current?.buildLog ?? [];
+        const merged = mergeUniqueLogs(prev, job.log);
+        if (merged.length !== prev.length) {
+          store.updateProject(projectId, { buildLog: merged });
+        }
+      }
+      if (job.status === "ok" && job.html) {
+        return job;
+      }
+      if (job.status === "err") {
+        throw new Error(`${job.error || "Worker visivo fallito"}. Tocca Riprendi rifinitura.`);
+      }
+      if (ticks === WORKER_POLL_MAX || ticks === WORKER_JOB_POLL_MAX) {
+        const current = store.getProject(projectId);
+        const prev = current?.buildLog ?? [];
+        const merged = mergeUniqueLogs(prev, ["Motore visivo ancora in corso"]);
+        if (merged.length !== prev.length) {
+          store.updateProject(projectId, {
+            status: "building",
+            error: undefined,
+            buildLog: merged,
+          });
+        }
       }
     }
-    if (job.status === "ok" && job.html) {
-      return job;
-    }
-    if (job.status === "err") {
-      throw new Error(`${job.error || "Worker visivo fallito"}. Tocca Riprendi rifinitura.`);
-    }
-    if (ticks === WORKER_POLL_MAX || ticks === WORKER_JOB_POLL_MAX) {
-      const current = store.getProject(projectId);
-      const prev = current?.buildLog ?? [];
-      if (prev[prev.length - 1] !== "Motore visivo ancora in corso") {
-        store.updateProject(projectId, {
-          status: "building",
-          error: undefined,
-          buildLog: [...prev, "Motore visivo ancora in corso"],
-        });
-      }
-    }
+    await delay(WORKER_POLL_MS);
   }
   const last = await fetchJob(jobId);
   if (last?.status === "ok" && last.html) return last;
@@ -553,12 +555,13 @@ export async function resumePolish(projectId: string) {
     requested: project.requestedKind,
     prompt: project.prompt,
   });
+  const live = Boolean(hasActiveVisualJob(project) && project.visualJobId);
   store.updateProject(projectId, {
     kind,
     requestedKind: project.requestedKind ?? kind,
     status: "building",
     error: undefined,
-    buildLog: [...(project.buildLog ?? []), "Riprendo rifinitura"],
+    ...(live ? {} : { buildLog: mergeUniqueLogs(project.buildLog ?? [], ["Riprendo rifinitura"]) }),
   });
   try {
     const phoneShell = /\bfk-tab\b/.test(project.html);

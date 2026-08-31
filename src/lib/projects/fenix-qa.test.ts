@@ -30,6 +30,9 @@ describe("focus-visible and worker model", () => {
     assert.match(resume, /finishPolish/);
     assert.match(resume, /abandonVisualJob/);
     assert.match(resume, /if \(message === JOB_STILL_RUNNING\)/);
+    assert.match(resume, /const live = Boolean\(hasActiveVisualJob/);
+    assert.match(resume, /mergeUniqueLogs/);
+    assert.match(src, /mergeUniqueLogs\(prev, job\.log\)/);
     assert.match(src, /if \(refund\) refundBuildCredit\(projectId, refund\)/);
     assert.match(src, /charged = !finishPolish/);
   });

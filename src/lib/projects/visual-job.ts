@@ -28,10 +28,22 @@ export function isJobSentinelError(error?: string): boolean {
 }
 
 const LIVE_JOB_LOG =
-  /^(Partito|In coda|Motore visivo ancora in corso|Motore visivo in sottofondo)$/i;
+  /^(Partito|In coda|Motore visivo ancora in corso|Motore visivo in sottofondo|Riprendo rifinitura)$/i;
 
 export function dropLiveJobLogs(log: string[] = []): string[] {
   return log.filter((s) => !LIVE_JOB_LOG.test(String(s).trim()));
+}
+
+/** Reattach must not persist a second Partito / Riprendo if that phase is already live. */
+export function mergeUniqueLogs(prev: string[] = [], incoming: string[] = []): string[] {
+  const next = [...prev];
+  for (const line of incoming) {
+    const s = String(line || "").trim();
+    if (!s) continue;
+    if (next.includes(s)) continue;
+    next.push(s);
+  }
+  return next;
 }
 
 export function visualJobPatch(
