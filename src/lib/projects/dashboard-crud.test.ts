@@ -94,10 +94,11 @@ describe("dashboard CRUD repair", () => {
   });
 
   it("keeps kiln publishable", () => {
-    const kiln = polishDashboardHtml(DEMOS.kiln.html);
+    const kiln = polishDashboardHtml(DEMOS.kiln.html, "dashboard");
     const report = validateProductHtml(kiln, { kind: "dashboard" });
     assert.equal(report.ok, true, report.errors.join(" · "));
     assert.doesNotMatch(kiln, /data-fenix-craft-desk/);
+    assert.doesNotMatch(kiln, /data-fenix-crud/);
   });
 
   it("click + Nuovo pezzo opens, Annulla closes, Salva adds a row", async () => {

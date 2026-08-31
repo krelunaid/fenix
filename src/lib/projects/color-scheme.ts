@@ -1,4 +1,4 @@
-import { DASHBOARD_CRUD_SCRIPT } from "./dashboard-crud.ts";
+import { DASHBOARD_CRUD_SCRIPT, shouldRepairDashboard } from "./dashboard-crud.ts";
 import { replaceAppleTabIcons, rewriteIosWidgetHome } from "./craft-icons.ts";
 
 export function isLightHex(hex: string) {
@@ -494,7 +494,7 @@ export function prepareSrcDoc(
       ? next.replace(/<head[^>]*>/i, (open) => `${open}${kit}`)
       : `${kit}${next}`;
   }
-  if ((kind === "dashboard" || /nuovo pezzo|inventario/i.test(next)) && !/data-fenix-crud/.test(next)) {
+  if (shouldRepairDashboard(next, kind) && !/data-fenix-crud/.test(next)) {
     next = /<\/body>/i.test(next)
       ? next.replace(/<\/body>/i, `${DASHBOARD_CRUD_SCRIPT}</body>`)
       : `${next}${DASHBOARD_CRUD_SCRIPT}`;

@@ -70,6 +70,22 @@ describe("recoverPersistedProject", () => {
     assert.equal(isPublishable(recovered), true);
   });
 
+  it("does not rewrite building overlay or error-resume HTML", () => {
+    const building = recoverPersistedProject(seed({ status: "building", updatedAt: Date.now() }));
+    assert.equal(building.status, "building");
+    assert.equal(building.html, VALID);
+    assert.equal(building.error, undefined);
+    assert.doesNotMatch(building.html, /data-fenix-crud/);
+
+    const resume = recoverPersistedProject(
+      seed({ status: "error", error: RESUME_ERROR, updatedAt: Date.now() }),
+    );
+    assert.equal(resume.status, "error");
+    assert.equal(resume.error, RESUME_ERROR);
+    assert.equal(resume.html, VALID);
+    assert.equal(needsResume(resume), true);
+  });
+
   it("does not turn building + live visual jobId into a stale resume error", () => {
     const now = Date.now();
     const recovered = recoverPersistedProject(

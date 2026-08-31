@@ -6,7 +6,7 @@ import {
   hasActiveVisualJob,
   type VisualJobStatus,
 } from "./visual-job.ts";
-import { polishDashboardHtml } from "./dashboard-crud.ts";
+import { polishDashboardHtml, shouldRepairDashboard } from "./dashboard-crud.ts";
 import { replaceAppleTabIcons, rewriteIosWidgetHome } from "./craft-icons.ts";
 
 export const STALE_BUILD_MS = 120_000;
@@ -37,11 +37,15 @@ export function recoverPersistedProject<T extends Recoverable>(p: T, now = Date.
   });
   const requestedKind = p.requestedKind ?? kindFromPrompt(p.prompt) ?? kind;
   const migrated = kind !== p.kind;
-  const html = isPhoneKind(kind)
-    ? rewriteIosWidgetHome(replaceAppleTabIcons(p.html))
-    : kind === "dashboard"
-      ? polishDashboardHtml(p.html)
-      : p.html;
+  // Never rewrite building/error HTML: overlay and Riprendi must see the persisted fixture.
+  let html = p.html;
+  if (p.status === "ready" && p.html) {
+    html = isPhoneKind(kind)
+      ? rewriteIosWidgetHome(replaceAppleTabIcons(p.html))
+      : shouldRepairDashboard(p.html, kind)
+        ? polishDashboardHtml(p.html, kind)
+        : p.html;
+  }
   const jobLive = hasActiveVisualJob(p, now);
 
   let status = p.status;

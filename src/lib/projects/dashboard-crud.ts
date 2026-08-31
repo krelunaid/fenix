@@ -172,6 +172,14 @@ export const DASHBOARD_CRUD_SCRIPT = `<script data-fenix-crud>
 })();
 </script>`;
 
+export function shouldRepairDashboard(html: string, kind?: string): boolean {
+  if (kind && kind !== "dashboard") return false;
+  if (!html) return false;
+  if (/\bfk-tab\b/.test(html)) return false;
+  if (/Barlow Condensed/i.test(html) && /#0e0d0b/i.test(html)) return false;
+  return /<table/i.test(html) || /nuovo pezzo/i.test(html) || /inventario/i.test(html);
+}
+
 export function hasDashboardCrud(html: string): boolean {
   return /data-fenix-crud/.test(html);
 }
@@ -215,6 +223,7 @@ export function applyCraftDashboardSkin(html: string): string {
   return next;
 }
 
-export function polishDashboardHtml(html: string): string {
+export function polishDashboardHtml(html: string, kind?: string): string {
+  if (!shouldRepairDashboard(html, kind)) return html;
   return repairDashboardCrud(applyCraftDashboardSkin(html));
 }

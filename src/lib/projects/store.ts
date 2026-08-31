@@ -7,7 +7,7 @@ import { DEMOS } from "./demos";
 import { resolveProjectKind, isPhoneKind } from "./infer";
 import { validatePublishable, type HtmlReport } from "./validate-html";
 import { recoverPersistedProject, STALE_BUILD_MS, RESUME_ERROR } from "./recover";
-import { polishDashboardHtml, scrubTechMessages } from "./dashboard-crud";
+import { polishDashboardHtml, scrubTechMessages, shouldRepairDashboard } from "./dashboard-crud";
 import { replaceAppleTabIcons, rewriteIosWidgetHome } from "./craft-icons";
 import {
   DEFAULT_PALETTE,
@@ -254,8 +254,8 @@ export function applyBuildResult(
   const requestedKind = existing?.requestedKind ?? kind;
   const html = isPhoneKind(kind)
     ? rewriteIosWidgetHome(replaceAppleTabIcons(result.html))
-    : kind === "dashboard"
-      ? polishDashboardHtml(result.html)
+    : shouldRepairDashboard(result.html, kind)
+      ? polishDashboardHtml(result.html, kind)
       : result.html;
   const report = validatePublishable(html, {
     kind,
