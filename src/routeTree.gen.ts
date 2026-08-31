@@ -14,10 +14,10 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as VetrinaRouteImport } from './routes/vetrina'
 import { Route as ApiBuildRouteImport } from './routes/api/build'
 import { Route as ApiPolishRouteImport } from './routes/api/polish'
-import { Route as ApiJobsIdRouteImport } from './routes/api/jobs.$id'
-import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as SitoProjectIdRouteImport } from './routes/sito.$projectId'
 import { Route as StudioProjectIdRouteImport } from './routes/studio.$projectId'
+import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
+import { Route as ApiJobsIdRouteImport } from './routes/api/jobs.$id'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -44,16 +44,6 @@ const ApiPolishRoute = ApiPolishRouteImport.update({
   path: '/api/polish',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiJobsIdRoute = ApiJobsIdRouteImport.update({
-  id: '/api/jobs/$id',
-  path: '/api/jobs/$id',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
-  id: '/api/auth/$',
-  path: '/api/auth/$',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const SitoProjectIdRoute = SitoProjectIdRouteImport.update({
   id: '/sito/$projectId',
   path: '/sito/$projectId',
@@ -64,6 +54,16 @@ const StudioProjectIdRoute = StudioProjectIdRouteImport.update({
   path: '/studio/$projectId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
+  id: '/api/auth/$',
+  path: '/api/auth/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiJobsIdRoute = ApiJobsIdRouteImport.update({
+  id: '/api/jobs/$id',
+  path: '/api/jobs/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -71,10 +71,10 @@ export interface FileRoutesByFullPath {
   '/vetrina': typeof VetrinaRoute
   '/api/build': typeof ApiBuildRoute
   '/api/polish': typeof ApiPolishRoute
-  '/api/jobs/$id': typeof ApiJobsIdRoute
-  '/api/auth/$': typeof ApiAuthSplatRoute
   '/sito/$projectId': typeof SitoProjectIdRoute
   '/studio/$projectId': typeof StudioProjectIdRoute
+  '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/jobs/$id': typeof ApiJobsIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -82,10 +82,10 @@ export interface FileRoutesByTo {
   '/vetrina': typeof VetrinaRoute
   '/api/build': typeof ApiBuildRoute
   '/api/polish': typeof ApiPolishRoute
-  '/api/jobs/$id': typeof ApiJobsIdRoute
-  '/api/auth/$': typeof ApiAuthSplatRoute
   '/sito/$projectId': typeof SitoProjectIdRoute
   '/studio/$projectId': typeof StudioProjectIdRoute
+  '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/jobs/$id': typeof ApiJobsIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -94,18 +94,34 @@ export interface FileRoutesById {
   '/vetrina': typeof VetrinaRoute
   '/api/build': typeof ApiBuildRoute
   '/api/polish': typeof ApiPolishRoute
-  '/api/jobs/$id': typeof ApiJobsIdRoute
-  '/api/auth/$': typeof ApiAuthSplatRoute
   '/sito/$projectId': typeof SitoProjectIdRoute
   '/studio/$projectId': typeof StudioProjectIdRoute
+  '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/jobs/$id': typeof ApiJobsIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    '/' | '/login' | '/vetrina' | '/api/build' | '/api/polish' | '/api/jobs/$id' | '/api/auth/$' | '/sito/$projectId' | '/studio/$projectId'
+    | '/'
+    | '/login'
+    | '/vetrina'
+    | '/api/build'
+    | '/api/polish'
+    | '/sito/$projectId'
+    | '/studio/$projectId'
+    | '/api/auth/$'
+    | '/api/jobs/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
-    '/' | '/login' | '/vetrina' | '/api/build' | '/api/polish' | '/api/jobs/$id' | '/api/auth/$' | '/sito/$projectId' | '/studio/$projectId'
+    | '/'
+    | '/login'
+    | '/vetrina'
+    | '/api/build'
+    | '/api/polish'
+    | '/sito/$projectId'
+    | '/studio/$projectId'
+    | '/api/auth/$'
+    | '/api/jobs/$id'
   id:
     | '__root__'
     | '/'
@@ -113,10 +129,10 @@ export interface FileRouteTypes {
     | '/vetrina'
     | '/api/build'
     | '/api/polish'
-    | '/api/jobs/$id'
-    | '/api/auth/$'
     | '/sito/$projectId'
     | '/studio/$projectId'
+    | '/api/auth/$'
+    | '/api/jobs/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -125,10 +141,10 @@ export interface RootRouteChildren {
   VetrinaRoute: typeof VetrinaRoute
   ApiBuildRoute: typeof ApiBuildRoute
   ApiPolishRoute: typeof ApiPolishRoute
-  ApiJobsIdRoute: typeof ApiJobsIdRoute
-  ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   SitoProjectIdRoute: typeof SitoProjectIdRoute
   StudioProjectIdRoute: typeof StudioProjectIdRoute
+  ApiAuthSplatRoute: typeof ApiAuthSplatRoute
+  ApiJobsIdRoute: typeof ApiJobsIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -168,20 +184,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPolishRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/jobs/$id': {
-      id: '/api/jobs/$id'
-      path: '/api/jobs/$id'
-      fullPath: '/api/jobs/$id'
-      preLoaderRoute: typeof ApiJobsIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/auth/$': {
-      id: '/api/auth/$'
-      path: '/api/auth/$'
-      fullPath: '/api/auth/$'
-      preLoaderRoute: typeof ApiAuthSplatRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/sito/$projectId': {
       id: '/sito/$projectId'
       path: '/sito/$projectId'
@@ -196,6 +198,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StudioProjectIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/auth/$': {
+      id: '/api/auth/$'
+      path: '/api/auth/$'
+      fullPath: '/api/auth/$'
+      preLoaderRoute: typeof ApiAuthSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/jobs/$id': {
+      id: '/api/jobs/$id'
+      path: '/api/jobs/$id'
+      fullPath: '/api/jobs/$id'
+      preLoaderRoute: typeof ApiJobsIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -205,10 +221,10 @@ const rootRouteChildren: RootRouteChildren = {
   VetrinaRoute: VetrinaRoute,
   ApiBuildRoute: ApiBuildRoute,
   ApiPolishRoute: ApiPolishRoute,
-  ApiJobsIdRoute: ApiJobsIdRoute,
-  ApiAuthSplatRoute: ApiAuthSplatRoute,
   SitoProjectIdRoute: SitoProjectIdRoute,
   StudioProjectIdRoute: StudioProjectIdRoute,
+  ApiAuthSplatRoute: ApiAuthSplatRoute,
+  ApiJobsIdRoute: ApiJobsIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

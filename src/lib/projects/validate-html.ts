@@ -1,3 +1,5 @@
+import { prepareSrcDoc } from "./color-scheme.ts";
+
 export type ScriptSyntaxError = {
   index: number;
   error: string;
@@ -159,6 +161,19 @@ export function formatHtmlErrors(report: HtmlReport) {
   return report.errors.slice(0, 6).join(" · ");
 }
 
-export function canPublishHtml(html: string, kind?: string) {
-  return validateProductHtml(html, { kind }).ok;
+export function validatePublishable(
+  html: string,
+  opts?: { kind?: string; projectId?: string; bg?: string },
+): HtmlReport & { srcDoc: string } {
+  const srcDoc = prepareSrcDoc(
+    html,
+    opts?.bg ?? "#ffffff",
+    opts?.projectId ?? "preview",
+    opts?.kind,
+  );
+  return { ...validateProductHtml(srcDoc, { kind: opts?.kind }), srcDoc };
+}
+
+export function canPublishHtml(html: string, kind?: string, projectId = "preview") {
+  return validatePublishable(html, { kind, projectId }).ok;
 }

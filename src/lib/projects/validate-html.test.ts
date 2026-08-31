@@ -8,7 +8,9 @@ import {
   checkScriptSyntax,
   extractInlineScripts,
   validateProductHtml,
+  validatePublishable,
 } from "./validate-html.ts";
+import { fenixRuntimeScript, looksLikeSite, prepareSrcDoc } from "./color-scheme.ts";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const BROKEN = readFileSync(join(here, "fixtures/broken-flusso.html"), "utf8");
@@ -48,5 +50,72 @@ describe("validateProductHtml", () => {
     const report = validateProductHtml(html, { kind: "app" });
     assert.equal(report.ok, false);
     assert.ok(report.errors.some((e) => /localStorage/i.test(e)));
+  });
+});
+
+describe("validatePublishable final srcdoc", () => {
+  it("compiles the prepared srcdoc including runtime and guard", () => {
+    const report = validatePublishable(VALID, { kind: "app", projectId: "fixture" });
+    assert.equal(report.syntaxOk, true, report.errors.join(" · "));
+    assert.equal(report.ok, true, report.errors.join(" · "));
+    assert.match(report.srcDoc, /data-fenix-runtime/);
+    assert.match(report.srcDoc, /data-officina-guard/);
+    const scripts = extractInlineScripts(report.srcDoc);
+    assert.ok(scripts.length >= 2);
+    for (const script of scripts) {
+      const syntax = checkScriptSyntax(script.code);
+      assert.equal(syntax.ok, true, syntax.error);
+    }
+  });
+
+  it("rejects a nested-quote icon selector as invalid JS", () => {
+    const bad = `document.querySelector("link[rel='icon'], link[rel="icon"]")`;
+    const syntax = checkScriptSyntax(bad);
+    assert.equal(syntax.ok, false);
+    assert.match(String(syntax.error), /missing \) after argument list|Unexpected token/i);
+    assert.equal(checkScriptSyntax(`document.querySelector("link[rel=icon]")`).ok, true);
+  });
+
+  it("ships a runtime whose icon selector compiles", () => {
+    const runtime = fenixRuntimeScript("p1");
+    assert.match(runtime, /querySelector\("link\[rel=icon\]"\)/);
+    assert.doesNotMatch(runtime, /rel=\\"icon\\"/);
+    const code = runtime.replace(/^<script[^>]*>/, "").replace(/<\/script>$/, "");
+    assert.equal(checkScriptSyntax(code).ok, true, checkScriptSyntax(code).error);
+  });
+
+  it("does not publish when the final srcdoc is syntactically invalid", () => {
+    assert.equal(canPublishHtml(BROKEN, "app", "broken"), false);
+  });
+});
+
+describe("looksLikeSite kind lock", () => {
+  it("keeps dashboard/site on the desktop kit even if the HTML has data-view", () => {
+    assert.equal(looksLikeSite(VALID, "dashboard"), true);
+    assert.equal(looksLikeSite(VALID, "site"), true);
+    assert.equal(looksLikeSite(VALID, "app"), false);
+    const dash = prepareSrcDoc(VALID, "#ffffff", "dash", "dashboard");
+    assert.match(dash, /data-fenix-site/);
+    assert.doesNotMatch(dash, /data-fenix-phone/);
+    const app = prepareSrcDoc(VALID, "#ffffff", "app", "app");
+    assert.match(app, /data-fenix-phone/);
+    assert.doesNotMatch(app, /data-fenix-site/);
+  });
+
+  it("gives the phone kit overflow-y scroll on main", () => {
+    const app = prepareSrcDoc(VALID, "#ffffff", "app", "app");
+    assert.match(app, /overflow-y:auto/);
+    assert.match(app, /overflowY = "scroll"/);
+  });
+
+  it("gives site/dashboard documents page scroll", () => {
+    const site = prepareSrcDoc(
+      `<!DOCTYPE html><html><head></head><body><nav><a href="#a">a</a></nav><section></section><section></section><section></section><section></section><footer></footer></body></html>`,
+      "#ffffff",
+      "site",
+      "site",
+    );
+    assert.match(site, /data-fenix-site/);
+    assert.match(site, /overflow:auto!important/);
   });
 });

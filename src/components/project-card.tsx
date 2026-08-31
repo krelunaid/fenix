@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { prepareSrcDoc } from "@/lib/projects/color-scheme";
+import { validatePublishable } from "@/lib/projects/validate-html";
 import type { Project } from "@/lib/projects/types";
 import { cn } from "@/lib/utils";
 
@@ -13,9 +13,16 @@ export function ProjectCard({
   project: Project;
   onDelete?: (id: string) => void;
 }) {
-  const src = project.html
-    ? prepareSrcDoc(project.html, project.palette?.bg ?? "#ffffff", project.id, project.kind)
-    : "";
+  const invalid = project.status === "error";
+  const report =
+    project.html && !invalid
+      ? validatePublishable(project.html, {
+          kind: project.kind,
+          projectId: project.id,
+          bg: project.palette?.bg,
+        })
+      : null;
+  const src = report?.syntaxOk ? report.srcDoc : "";
   const frameH = Math.round(844 * SCALE);
 
   return (
@@ -41,7 +48,7 @@ export function ProjectCard({
             />
           ) : (
             <div className="grid h-full place-items-center px-4 text-center text-[11px] text-[#86868b]">
-              Ancora nessuna anteprima
+              {invalid ? "Anteprima non valida" : "Ancora nessuna anteprima"}
             </div>
           )}
         </div>
@@ -53,7 +60,7 @@ export function ProjectCard({
       </p>
 
       <div className="mt-4 flex w-full flex-wrap justify-center gap-2">
-        {project.html ? (
+        {project.html && project.status === "ready" ? (
           <Link
             to="/sito/$projectId"
             params={{ projectId: project.id }}

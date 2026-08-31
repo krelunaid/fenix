@@ -95,10 +95,10 @@ footer{padding:24px 16px;font-size:13px;color:#3a3a3c}
 img[src=""],img:not([src]){display:none!important}
 </style>`;
 
-function looksLikeSite(html: string, kind?: string) {
+export function looksLikeSite(html: string, kind?: string) {
+  if (kind === "dashboard" || kind === "site" || kind === "landing") return true;
+  if (kind === "app") return false;
   if (/fk-tab|data-view=["']home["']|data-view=["']list["']/i.test(html)) return false;
-  if (kind === "app" || kind === "dashboard") return false;
-  if (kind === "site" || kind === "landing") return true;
   return /<footer/i.test(html) || (/<nav/i.test(html) && /href=/i.test(html));
 }
 
@@ -181,7 +181,7 @@ export function fenixRuntimeScript(projectId: string) {
         tabs: tabs,
         forms: document.querySelectorAll("form").length,
         inputs: document.querySelectorAll("input, select, textarea").length,
-        hasIcon: !!document.querySelector("link[rel='icon'], link[rel=\"icon\"]"),
+        hasIcon: !!document.querySelector("link[rel=icon]"),
         title: document.title || "",
         vw: window.innerWidth,
         sw: document.documentElement.scrollWidth,
@@ -363,4 +363,3 @@ export function prepareSrcDoc(html: string, bg: string, projectId = "preview", k
   }
   return next;
 }
-

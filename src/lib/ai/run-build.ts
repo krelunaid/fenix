@@ -1,5 +1,10 @@
 import type { StreamEvent } from "./stages";
-import { applyBuildResult, promoteReady, useProjectStore } from "@/lib/projects/store";
+import {
+  applyBuildResult,
+  promoteReady,
+  RESUME_ERROR,
+  useProjectStore,
+} from "@/lib/projects/store";
 import { parseBuildOutput, type BuildResult } from "./parse";
 import { isWeakPreview, lookInstruction, resetAudit, waitPreviewAudit, waitPreviewShot } from "./look";
 import { APP_SHELL_HTML, APP_SHELL_INSTRUCTION } from "./app-shell";
@@ -8,6 +13,10 @@ import { formatHtmlErrors, validateProductHtml } from "@/lib/projects/validate-h
 import { uid } from "@/lib/utils";
 
 const inflight = new Set<string>();
+
+export const WORKER_POLL_MAX = 30;
+const WORKER_POLL_MS = 2000;
+const GENERATE_POLL_MAX = 90;
 
 function readyCopy(result: BuildResult) {
   const summary = result.summary?.trim();
@@ -46,8 +55,8 @@ async function callWorker(prompt: string, html: string, instruction?: string) {
       if (started.status === 202) {
         const { id } = (await started.json()) as { id?: string };
         if (!id) continue;
-        for (let i = 0; i < 240; i++) {
-          await new Promise((r) => window.setTimeout(r, 2000));
+        for (let i = 0; i < WORKER_POLL_MAX; i++) {
+          await new Promise((r) => window.setTimeout(r, WORKER_POLL_MS));
           const jobRes = await fetch(a.job(id));
           if (!jobRes.ok) continue;
           const job = (await jobRes.json()) as {
@@ -61,7 +70,8 @@ async function callWorker(prompt: string, html: string, instruction?: string) {
           if (job.status === "ok" && job.html) return job;
           if (job.status === "err") throw new Error(job.error || "Worker visivo fallito");
         }
-        throw new Error("Motore visivo in coda troppo a lungo");
+        lastErr = "Motore visivo in coda troppo a lungo";
+        continue;
       }
       if (!started.ok) {
         lastErr = `Worker HTTP ${started.status}`;
@@ -106,8 +116,8 @@ async function consumeViaWorker(
       }
       const { id } = (await started.json()) as { id?: string };
       if (!id) continue;
-      for (let i = 0; i < 90; i++) {
-        await new Promise((r) => window.setTimeout(r, 2000));
+      for (let i = 0; i < GENERATE_POLL_MAX; i++) {
+        await new Promise((r) => window.setTimeout(r, WORKER_POLL_MS));
         const jobRes = await fetch(`${base}/jobs/${id}`);
         if (!jobRes.ok) continue;
         const job = (await jobRes.json()) as {
@@ -220,6 +230,118 @@ async function consumeStream(
   return finished;
 }
 
+async function polishDraft(
+  projectId: string,
+  prompt: string,
+  html: string,
+  instruction?: string,
+) {
+  const store = useProjectStore.getState();
+  let lastValidHtml = html;
+  try {
+    const data = await callWorker(prompt, html, instruction);
+    const fileBlocks = (data?.files ?? [])
+      .map((f) => `<<<FILE path="${f.path}">>>\n${f.content}`)
+      .join("\n");
+    const result =
+      data &&
+      parseBuildOutput(
+        `<<<META>>>\n${JSON.stringify(data.meta ?? {})}\n${fileBlocks}\n<<<HTML>>>\n${data.html ?? ""}\n<<<END>>>`,
+      );
+    if (result?.html) {
+      const report = applyBuildResult(projectId, result, "building");
+      if (report.syntaxOk) {
+        lastValidHtml = result.html;
+        const logs = data?.log ?? [];
+        store.updateProject(projectId, {
+          buildLog: [
+            ...(useProjectStore.getState().getProject(projectId)?.buildLog ?? []),
+            ...logs,
+            "Anteprima rifinita",
+          ],
+        });
+        store.addMessage(projectId, {
+          id: uid(),
+          role: "assistant",
+          content: [
+            `Motore visivo: ${logs.length ? logs.join(" · ") : "icone e rifinitura"}.`,
+            readyCopy(result),
+          ].join("\n\n"),
+        });
+      } else {
+        store.updateProject(projectId, { html: lastValidHtml, status: "building" });
+        store.addMessage(projectId, {
+          id: uid(),
+          role: "assistant",
+          content: `Rifinitura scartata (JS non valido). Resta la bozza valida. ${formatHtmlErrors(report)}`,
+        });
+      }
+    }
+  } catch (err) {
+    const workerError = err instanceof Error ? err.message : "errore";
+    store.addMessage(projectId, {
+      id: uid(),
+      role: "assistant",
+      content: `Motore visivo non ha risposto (${workerError}). Uso gli sguardi in pagina.`,
+    });
+  }
+  return lastValidHtml;
+}
+
+function finishPolish(projectId: string, lastValidHtml: string, refund?: number) {
+  const store = useProjectStore.getState();
+  const promoted = promoteReady(projectId);
+  if (promoted.ok) {
+    store.addMessage(projectId, {
+      id: uid(),
+      role: "assistant",
+      content: "Pronto. Anteprima e Pubblica sono attive.",
+    });
+    return true;
+  }
+  if (refund) store.refundCredit(refund);
+  store.updateProject(projectId, {
+    html: lastValidHtml,
+    status: "error",
+    error: RESUME_ERROR,
+  });
+  store.addMessage(projectId, {
+    id: uid(),
+    role: "assistant",
+    content: refund
+      ? `Non pubblico: ${formatHtmlErrors(promoted)}. Credito rimborsato. ${RESUME_ERROR}`
+      : RESUME_ERROR,
+  });
+  return false;
+}
+
+/** Riprende la rifinitura senza spendere crediti. Overlay e polling restano bounded. */
+export async function resumePolish(projectId: string) {
+  if (inflight.has(projectId)) return;
+  inflight.add(projectId);
+  const store = useProjectStore.getState();
+  const project = store.getProject(projectId);
+  if (!project?.html) {
+    inflight.delete(projectId);
+    return;
+  }
+  store.updateProject(projectId, {
+    status: "building",
+    error: undefined,
+    buildLog: [...(project.buildLog ?? []), "Riprendo rifinitura"],
+  });
+  try {
+    const lastValidHtml = await polishDraft(projectId, project.prompt, project.html);
+    finishPolish(projectId, lastValidHtml);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : RESUME_ERROR;
+    store.updateProject(projectId, { status: "error", error: RESUME_ERROR });
+    store.addMessage(projectId, { id: uid(), role: "assistant", content: message });
+  } finally {
+    inflight.delete(projectId);
+  }
+}
+
 export async function runBuild(projectId: string, instruction?: string) {
   if (inflight.has(projectId)) return;
   inflight.add(projectId);
@@ -314,54 +436,7 @@ export async function runBuild(projectId: string, instruction?: string) {
             ? "Bozza valida in anteprima. Il motore visivo rifinisce (icone, 5–10 min). Pubblica resta chiusa finché non è pronto."
             : "Bozza valida in anteprima. Il motore visivo rifinisce in sottofondo. Pubblica resta chiusa finché non è pronto.",
         });
-        let lastValidHtml = latest.html;
-        try {
-          const data = await callWorker(project.prompt, latest.html, instruction);
-          const fileBlocks = (data?.files ?? [])
-            .map((f) => `<<<FILE path="${f.path}">>>\n${f.content}`)
-            .join("\n");
-          const result =
-            data &&
-            parseBuildOutput(
-              `<<<META>>>\n${JSON.stringify(data.meta ?? {})}\n${fileBlocks}\n<<<HTML>>>\n${data.html ?? ""}\n<<<END>>>`,
-            );
-          if (result?.html) {
-            const report = applyBuildResult(projectId, result, "building");
-            if (report.syntaxOk) {
-              lastValidHtml = result.html;
-              const logs = data?.log ?? [];
-              store.updateProject(projectId, {
-                buildLog: [
-                  ...(useProjectStore.getState().getProject(projectId)?.buildLog ?? []),
-                  ...logs,
-                  "Anteprima rifinita",
-                ],
-              });
-              store.addMessage(projectId, {
-                id: uid(),
-                role: "assistant",
-                content: [
-                  `Motore visivo: ${logs.length ? logs.join(" · ") : "icone e rifinitura"}.`,
-                  readyCopy(result),
-                ].join("\n\n"),
-              });
-            } else {
-              store.updateProject(projectId, { html: lastValidHtml, status: "building" });
-              store.addMessage(projectId, {
-                id: uid(),
-                role: "assistant",
-                content: `Rifinitura scartata (JS non valido). Resta la bozza valida. ${formatHtmlErrors(report)}`,
-              });
-            }
-          }
-        } catch (err) {
-          const workerError = err instanceof Error ? err.message : "errore";
-          store.addMessage(projectId, {
-            id: uid(),
-            role: "assistant",
-            content: `Motore visivo non ha risposto (${workerError}). Uso gli sguardi in pagina.`,
-          });
-        }
+        let lastValidHtml = await polishDraft(projectId, project.prompt, latest.html, instruction);
 
         if (!(instruction || isIOS())) {
           const look = async (label: string) => {
@@ -397,6 +472,7 @@ export async function runBuild(projectId: string, instruction?: string) {
               });
               return false;
             }
+            lastValidHtml = after?.html || lastValidHtml;
             resetAudit();
             return true;
           };
@@ -412,26 +488,7 @@ export async function runBuild(projectId: string, instruction?: string) {
           }
         }
 
-        const promoted = promoteReady(projectId);
-        if (promoted.ok) {
-          store.addMessage(projectId, {
-            id: uid(),
-            role: "assistant",
-            content: "Pronto. Anteprima e Pubblica sono attive.",
-          });
-          return;
-        }
-        store.refundCredit(cost);
-        charged = false;
-        store.updateProject(projectId, {
-          status: "error",
-          error: formatHtmlErrors(promoted) || "Prodotto incompleto",
-        });
-        store.addMessage(projectId, {
-          id: uid(),
-          role: "assistant",
-          content: `Non pubblico: ${formatHtmlErrors(promoted)}. Credito rimborsato.`,
-        });
+        charged = !finishPolish(projectId, lastValidHtml, cost);
         return;
       }
       return;

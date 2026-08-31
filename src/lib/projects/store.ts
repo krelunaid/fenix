@@ -4,7 +4,7 @@ import { uid } from "@/lib/utils";
 import type { ProjectFile } from "./files";
 import { CREDITS_GRANT, CREDIT_COST } from "./credits";
 import { DEMOS } from "./demos";
-import { validateProductHtml, formatHtmlErrors, type HtmlReport } from "./validate-html";
+import { validatePublishable, formatHtmlErrors, type HtmlReport } from "./validate-html";
 import {
   DEFAULT_PALETTE,
   type BuildStatus,
@@ -15,6 +15,8 @@ import {
 } from "./types";
 
 const MAX_PROJECTS = 48;
+export const STALE_BUILD_MS = 120_000;
+export const RESUME_ERROR = "Rifinitura interrotta. Tocca Riprendi rifinitura.";
 
 type NewProjectInput = {
   prompt: string;
@@ -195,16 +197,26 @@ export const useProjectStore = create<ProjectStore>()(
       onRehydrateStorage: () => (state) => {
         if (state) {
           state.projects = state.projects.map((p) => {
-            let status = p.status === "building" && !p.html ? "error" : p.status;
-            let error =
-              p.status === "building" && !p.html
-                ? "Interrotto. Riprova."
-                : p.error;
-            if (p.html && (status === "ready" || status === "building")) {
-              const report = validateProductHtml(p.html, { kind: p.kind });
-              if (!report.ok) {
-                status = report.syntaxOk ? p.status === "ready" ? "error" : "building" : "error";
-                if (status === "error") error = formatHtmlErrors(report);
+            let status = p.status;
+            let error = p.error;
+            if (p.status === "building" && !p.html) {
+              status = "error";
+              error = "Interrotto. Riprova.";
+            } else if (p.html && (p.status === "ready" || p.status === "building")) {
+              const report = validatePublishable(p.html, {
+                kind: p.kind,
+                projectId: p.id,
+                bg: p.palette?.bg,
+              });
+              if (!report.syntaxOk) {
+                status = "error";
+                error = formatHtmlErrors(report);
+              } else if (p.status === "building" && Date.now() - p.updatedAt > STALE_BUILD_MS) {
+                status = report.ok ? "ready" : "error";
+                error = report.ok ? undefined : RESUME_ERROR;
+              } else if (p.status === "ready" && !report.ok) {
+                status = "error";
+                error = formatHtmlErrors(report);
               }
             }
             return {
@@ -239,12 +251,19 @@ export function applyBuildResult(
   },
   status: BuildStatus = "building",
 ): HtmlReport {
-  const report = validateProductHtml(result.html, { kind: result.kind });
+  const existing = useProjectStore.getState().getProject(id);
+  const kind = existing?.kind ?? result.kind;
+  const report = validatePublishable(result.html, {
+    kind,
+    projectId: id,
+    bg: result.palette?.bg ?? existing?.palette.bg,
+  });
   if (!report.syntaxOk) return report;
   const nextStatus: BuildStatus =
     status === "ready" ? (report.complete ? "ready" : "building") : status;
   useProjectStore.getState().updateProject(id, {
     ...result,
+    kind,
     status: nextStatus,
     error: undefined,
   });
@@ -262,7 +281,11 @@ export function promoteReady(id: string): HtmlReport {
       scriptErrors: [],
     };
   }
-  const report = validateProductHtml(project.html, { kind: project.kind });
+  const report = validatePublishable(project.html, {
+    kind: project.kind,
+    projectId: project.id,
+    bg: project.palette.bg,
+  });
   if (!report.ok) return report;
   useProjectStore.getState().updateProject(id, { status: "ready", error: undefined });
   return report;

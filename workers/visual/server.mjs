@@ -1,12 +1,12 @@
 import { createServer } from "node:http";
 
 /**
- * Worker visivo Fenix — 5 giri (una tab ciascuno) Playwright + Grok 4.6.
- * Env: XAI_API_KEY, PORT (8787).
+ * Worker visivo Fenix — 5 giri (una tab ciascuno) Playwright + grok-build-0.1.
+ * Env: XAI_API_KEY, PORT (8787). Tutte le chiamate xAI usano grok-build-0.1, payload Chat Completions senza extra flags.
  * POST /polish  { prompt, html }  →  { html, name, log }
  */
 const PORT = Number(process.env.PORT || 8787);
-const MODEL = "grok-4.6";
+const MODEL = "grok-build-0.1";
 const XAI = "https://api.x.ai/v1/chat/completions";
 const PASSES = 5;
 

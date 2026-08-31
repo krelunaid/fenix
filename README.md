@@ -1,6 +1,6 @@
 # Fenix
 
-Studio visivo Kreluna. Usa il modello premium **Grok 4.6** (`grok-4.6`). Tutte le fasi AI — piano, direzione visiva, build e QA — usano lo stesso modello tramite `https://api.x.ai/v1/chat/completions`.
+Studio visivo Kreluna. Usa **grok-build-0.1** per tutte le chiamate xAI (piano, direzione visiva, build, QA, worker Railway). Niente `reasoningEffort`. Endpoint: `https://api.x.ai/v1/chat/completions`.
 
 Prove pronte: **Fornace Grottaglie**, **Officina Catenaria**.
 
@@ -15,8 +15,8 @@ La chiave è esclusivamente server-side. Mai `VITE_XAI_API_KEY`, mai nel fronten
 | Nome | Dove | Note |
 |---|---|---|
 | `XAI_API_KEY` | server | Tua, creata su [console.x.ai](https://console.x.ai) |
-| `VISUAL_WORKER_URL` | server | Opzionale. Worker Playwright (3 giri telefono). Es. `https://fenix-visual.up.railway.app` |
-| `VITE_AUTH_ENABLED` | build | `false` di default su Netlify: si crea senza account. Per Gmail/email metti `true` e `DATABASE_URL` |
+| `VISUAL_WORKER_URL` | server | Opzionale. Worker Playwright. Es. `https://fenix-production-d9f5.up.railway.app` |
+| `VITE_AUTH_ENABLED` | build | `false` di default in locale. Per Gmail/email metti `true` e `DATABASE_URL` |
 
 ## Configurazione Netlify
 
@@ -28,7 +28,7 @@ La chiave è esclusivamente server-side. Mai `VITE_XAI_API_KEY`, mai nel fronten
 
 Se il secret non è configurato, Fenix risponde chiaramente: `Manca XAI_API_KEY sul server`.
 
-Le app generate (Grottaglie, Catenaria, …) si scaricano da **Pubblica** (ZIP / `index.html`) e si caricano sul sito come HTML statico.
+Le app generate (Grottaglie, Catenaria, …) si scaricano da **Pubblica** (ZIP / `index.html`) e si caricano sul sito come HTML statico. **Pubblica** resta disabilitata finché il documento finale (srcdoc compreso il runtime) non è valido.
 
 ## Locale
 
@@ -36,7 +36,7 @@ Le app generate (Grottaglie, Catenaria, …) si scaricano da **Pubblica** (ZIP /
 
 ## Worker visivo (come Emergent, in piccolo)
 
-Netlify taglia le richieste lunghe. Il motore a 3 giri sta in `workers/visual/`:
+Netlify taglia le richieste lunghe. Il motore a 5 giri sta in `workers/visual/` e parla **grok-build-0.1**:
 
 ```bash
 cd workers/visual
@@ -45,7 +45,6 @@ npx playwright install chromium
 XAI_API_KEY=… npm start
 ```
 
-Su Railway/Fly: stesso comando, porta `PORT`. Poi su Netlify aggiungi `VISUAL_WORKER_URL` = URL del worker, solo server.
+Su Railway/Fly: stesso comando, porta `PORT`. Health: `GET /health` risponde `{ ok, model: "grok-build-0.1" }`. Poi su Netlify aggiungi `VISUAL_WORKER_URL` = URL del worker, solo server.
 
 Senza questa variabile Fenix resta sui due sguardi nell’anteprima (html2canvas).
-

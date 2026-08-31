@@ -16,11 +16,12 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Wordmark } from "@/components/wordmark";
 import { CreditMeter } from "@/components/credit-meter";
-import { runBuild } from "@/lib/ai/run-build";
+import { runBuild, resumePolish } from "@/lib/ai/run-build";
 import { suggestEdits } from "@/lib/ai/suggest";
 import { fenix2Files } from "@/lib/projects/fenix2";
 import { seedFiveScreens } from "@/lib/projects/files";
 import { useProjectStore } from "@/lib/projects/store";
+import { canPublishHtml } from "@/lib/projects/validate-html";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/studio/$projectId")({
@@ -29,13 +30,17 @@ export const Route = createFileRoute("/studio/$projectId")({
 
 type Pane = "preview" | "chat" | "code";
 
+function previewDevice(kind?: string): Device {
+  return kind === "dashboard" || kind === "site" || kind === "landing" ? "desktop" : "mobile";
+}
+
 function StudioPage() {
   const { projectId } = Route.useParams();
   const navigate = useNavigate();
   const hydrated = useProjectStore((s) => s.hydrated);
   const project = useProjectStore((s) => s.projects.find((p) => p.id === projectId));
   const addMessage = useProjectStore((s) => s.addMessage);
-  const [device, setDevice] = useState<Device>("mobile");
+  const [device, setDevice] = useState<Device>(previewDevice(project?.kind));
   const [pane, setPane] = useState<Pane>("preview");
   const [draft, setDraft] = useState("");
   const [publishOpen, setPublishOpen] = useState(false);
@@ -52,6 +57,8 @@ function StudioPage() {
     if (!hydrated || !project) return;
     if (project.status === "building" && !project.html) {
       void runBuild(project.id);
+    } else if (project.status === "building" && project.html) {
+      void resumePolish(project.id);
     }
   }, [hydrated, project?.id, project?.status, project?.html]);
 
@@ -63,10 +70,16 @@ function StudioPage() {
   const creditsRemaining = useProjectStore((s) => s.creditsRemaining);
   const emptyCredits = creditsRemaining < 1;
   const building = project?.status === "building";
+  const canResume = Boolean(project?.html && /riprendi/i.test(project.error || ""));
+  const publishable = Boolean(
+    project?.html &&
+      project.status === "ready" &&
+      canPublishHtml(project.html, project.kind, project.id),
+  );
 
   useEffect(() => {
-    if (building) setDevice("mobile");
-  }, [building]);
+    if (project?.kind) setDevice(previewDevice(project.kind));
+  }, [project?.kind]);
 
   const paletteStrip = useMemo(
     () => (project ? Object.values(project.palette) : []),
@@ -144,7 +157,7 @@ function StudioPage() {
           variant="default"
           size="sm"
           onClick={() => setPublishOpen(true)}
-          disabled={project.status !== "ready" || !project.html}
+          disabled={!publishable}
         >
           <Globe />
           <span className="hidden sm:inline">Pubblica</span>
@@ -167,7 +180,10 @@ function StudioPage() {
                 : []
             }
             onSuggest={handleIterate}
-            onRetry={() => void runBuild(project.id)}
+            onRetry={() =>
+              canResume ? void resumePolish(project.id) : void runBuild(project.id)
+            }
+            retryLabel={canResume ? "Riprendi rifinitura" : "Riprova. Lo ricostruisco."}
             threadRef={threadRef}
             palette={paletteStrip}
             buildLog={project.buildLog ?? []}
@@ -189,13 +205,13 @@ function StudioPage() {
                 html={project.html}
                 files={project.files}
                 name={project.name}
-                device={building ? "mobile" : device}
+                device={device}
                 background={project.palette.bg}
                 projectId={project.id}
                 kind={project.kind}
                 className="h-full"
               />
-              <BuildOverlay active={building} steps={project.buildLog ?? []} />
+              <BuildOverlay active={building && !project.html} steps={project.buildLog ?? []} />
             </>
           )}
         </section>
@@ -216,7 +232,10 @@ function StudioPage() {
                 : []
             }
             onSuggest={handleIterate}
-              onRetry={() => void runBuild(project.id)}
+              onRetry={() =>
+              canResume ? void resumePolish(project.id) : void runBuild(project.id)
+            }
+            retryLabel={canResume ? "Riprendi rifinitura" : "Riprova. Lo ricostruisco."}
               threadRef={threadRef}
               palette={paletteStrip}
               buildLog={project.buildLog ?? []}
@@ -235,13 +254,13 @@ function StudioPage() {
                 html={project.html}
                 files={project.files}
                 name={project.name}
-                device="mobile"
+                device={previewDevice(project.kind)}
                 background={project.palette.bg}
                 projectId={project.id}
                 kind={project.kind}
                 className="h-full"
               />
-              <BuildOverlay active={building} steps={project.buildLog ?? []} />
+              <BuildOverlay active={building && !project.html} steps={project.buildLog ?? []} />
             </>
           )}
         </section>
@@ -293,6 +312,7 @@ function ChatColumn({
   errored,
   onSubmit,
   onRetry,
+  retryLabel = "Riprova. Lo ricostruisco.",
   suggestions = [],
   onSuggest,
   threadRef,
@@ -308,6 +328,7 @@ function ChatColumn({
   errored: boolean;
   onSubmit: () => void;
   onRetry: () => void;
+  retryLabel?: string;
   suggestions?: string[];
   onSuggest?: (text: string) => void;
   threadRef: RefObject<HTMLDivElement | null>;
@@ -374,7 +395,7 @@ function ChatColumn({
             onClick={onRetry}
             className="text-left text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
           >
-            Riprova. Lo ricostruisco.
+            {retryLabel}
           </button>
         ) : null}
         {suggestions.length && !building && !emptyCredits ? (
