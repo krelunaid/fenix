@@ -119,6 +119,8 @@ describe("dashboard CRUD repair", () => {
     assert.match(ARGILLA, /summary-item/);
     assert.match(ARGILLA, /QTÀ/);
     assert.match(ARGILLA, /€42/);
+    assert.match(ARGILLA, /\.modal\{display:none/);
+    assert.doesNotMatch(ARGILLA, /id="modal"[^>]*\bhidden\b/);
     assert.doesNotMatch(ARGILLA, /data-summary/);
   });
 
@@ -136,7 +138,7 @@ describe("dashboard CRUD repair", () => {
       `<script data-fenix-crud>window.__fenixCrud=1;</script></body>`,
     );
     const html = repairDashboardCrud(withV1);
-    assert.match(html, /data-fenix-crud="10"/);
+    assert.match(html, /data-fenix-crud="11"/);
     assert.match(html, /var COL = "argilla_viva"/);
     assert.equal((html.match(/data-fenix-crud/g) || []).length, 1);
     const src = prepareSrcDoc(
@@ -169,6 +171,20 @@ describe("dashboard CRUD repair", () => {
       await loadSrc();
       const frame = page.frameLocator("#f");
       await frame.getByRole("heading", { name: "Inventario" }).waitFor({ timeout: 8000 });
+      const modalCss = await frame.locator("#modal").evaluate((el) => {
+        const cs = window.getComputedStyle(el);
+        return {
+          hiddenProp: (el as HTMLElement).hidden,
+          hiddenAttr: el.hasAttribute("hidden"),
+          openAttr: el.hasAttribute("open"),
+          classes: el.className,
+          display: cs.display,
+        };
+      });
+      assert.equal(modalCss.hiddenProp, false, JSON.stringify(modalCss));
+      assert.equal(modalCss.hiddenAttr, false);
+      assert.equal(modalCss.openAttr, false);
+      assert.equal(modalCss.display, "none");
       await frame.getByRole("button", { name: /inventario/i }).click();
       const rows0 = await frame.locator("table tbody tr").count();
       await frame.getByRole("button", { name: /nuovo pezzo/i }).click();
@@ -193,6 +209,9 @@ describe("dashboard CRUD repair", () => {
       await loadSrc();
       const row2 = frame.locator("tr", { hasText: "Codex Prova Reale" });
       await row2.waitFor({ timeout: 5000 });
+      const bootSrc = JSON.parse((await frame.locator("html").getAttribute("data-fenix-boot")) || "{}");
+      assert.equal(bootSrc.col, "argilla_viva", `srcdoc boot ${JSON.stringify(bootSrc)}`);
+      assert.equal(bootSrc.n, 25);
       assert.equal((await row2.locator("td").nth(3).textContent())?.trim(), "2");
       const sum2 = (await frame.locator(".summary").innerText()).replace(/\s+/g, " ");
       assert.match(sum2, /25 pezzi/);
@@ -326,6 +345,9 @@ describe("dashboard CRUD repair", () => {
 
       const frame2 = page.locator("section.hidden.md\\:block").frameLocator("iframe");
       await frame2.locator("tr", { hasText: "Codex Verifica 1e7b47a" }).waitFor({ timeout: 15000 });
+      const boot = JSON.parse((await frame2.locator("html").getAttribute("data-fenix-boot")) || "{}");
+      assert.equal(boot.col, "argilla_viva", `boot after reload ${JSON.stringify(boot)}`);
+      assert.equal(boot.n, 25);
       const sum2 = (await frame2.locator(".summary").innerText()).replace(/\s+/g, " ");
       assert.match(sum2, /25 pezzi/);
       assert.match(sum2, /104 in stock/);
@@ -361,6 +383,9 @@ describe("dashboard CRUD repair", () => {
       assert.equal(await frame4.locator("tr", { hasText: "Codex Verifica 1e7b47a" }).count(), 0);
       assert.match((await frame4.locator(".summary").innerText()).replace(/\s+/g, " "), /24 pezzi/);
       assert.match((await frame4.locator(".summary").innerText()).replace(/\s+/g, " "), /102 in stock/);
+      const tomb = JSON.parse((await frame4.locator("html").getAttribute("data-fenix-boot")) || "{}");
+      assert.equal(tomb.col, "argilla_viva");
+      assert.equal(tomb.n, 24);
       await page.close();
     } finally {
       await browser.close();

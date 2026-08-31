@@ -527,7 +527,7 @@ export function prepareSrcDoc(
       ? next.replace(/<head[^>]*>/i, (open) => `${open}${kit}`)
       : `${kit}${next}`;
   }
-  if (shouldRepairDashboard(next, kind) && !/data-fenix-crud="10"/.test(next)) {
+  if (shouldRepairDashboard(next, kind) && !/data-fenix-crud="11"/.test(next)) {
     next = next.replace(/<script[^>]*data-fenix-crud[^>]*>[\s\S]*?<\/script>/gi, "");
     const crud = dashboardCrudScript(discoverAppCollection(html));
     next = /<\/body>/i.test(next)

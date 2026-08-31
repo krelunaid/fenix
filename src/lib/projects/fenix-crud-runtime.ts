@@ -1,8 +1,8 @@
 /** Injected into gestionale HTML. %%COL%% is replaced by dashboardCrudScript. */
-const CRUD_TEMPLATE = `<script data-fenix-crud="10">
+const CRUD_TEMPLATE = `<script data-fenix-crud="11">
 (function(){
-  if (window.__fenixCrud >= 10) return;
-  window.__fenixCrud = 10;
+  if (window.__fenixCrud >= 11) return;
+  window.__fenixCrud = 11;
   var COL = "%%COL%%";
   function qsa(s, r){ return Array.prototype.slice.call((r || document).querySelectorAll(s)); }
   function qs(s, r){ return (r || document).querySelector(s); }
@@ -64,6 +64,53 @@ const CRUD_TEMPLATE = `<script data-fenix-crud="10">
     dlg.classList.remove("open", "show", "is-open", "active");
     dlg.style.display = "none";
     editTr = null;
+  }
+  function isComputedHidden(el){
+    if (!el) return true;
+    try {
+      var cs = window.getComputedStyle(el);
+      if (!cs) return !!el.hidden;
+      var d = String(cs.display || "").toLowerCase();
+      var v = String(cs.visibility || "").toLowerCase();
+      if (d === "none" || v === "hidden") return true;
+    } catch (err) {}
+    return false;
+  }
+  function isDlgOpen(el){
+    if (!el) return false;
+    if (el.getAttribute("aria-hidden") === "true") return false;
+    if (isComputedHidden(el)) return false;
+    var w = 0, h = 0;
+    try {
+      var r = el.getBoundingClientRect();
+      w = r.width; h = r.height;
+    } catch (err) {}
+    var flagged =
+      el.hasAttribute("open") ||
+      (typeof el.open === "boolean" && el.open) ||
+      el.classList.contains("open") ||
+      el.classList.contains("show") ||
+      el.classList.contains("is-open") ||
+      el.classList.contains("active");
+    if (flagged) return w > 1 && h > 1;
+    if (el.hidden) return false;
+    return w > 1 && h > 1;
+  }
+  var watchingDlg = false;
+  function watchDlgThenBoot(){
+    if (watchingDlg || paintedFromHost || !dlg) return;
+    watchingDlg = true;
+    function go(){
+      if (paintedFromHost) return;
+      if (isDlgOpen(dlg)) return;
+      watchingDlg = false;
+      boot(0);
+    }
+    dlg.addEventListener("close", go);
+    try {
+      var mo = new MutationObserver(function(){ if (!isDlgOpen(dlg)) go(); });
+      mo.observe(dlg, { attributes: true, attributeFilter: ["hidden", "open", "class", "style", "aria-hidden"] });
+    } catch (err) {}
   }
   function alias(data, keys, fallback){
     for (var i = 0; i < keys.length; i++) {
@@ -395,9 +442,17 @@ const CRUD_TEMPLATE = `<script data-fenix-crud="10">
   function boot(attempt){
     attempt = attempt || 0;
     if (paintedFromHost) return;
-    if (dlg && (dlg.hasAttribute("open") || dlg.classList.contains("open") || !dlg.hidden)) {
-      if (attempt < 12) setTimeout(function(){ boot(attempt + 1); }, 150);
-      return;
+    if (dlg && isDlgOpen(dlg)) {
+      if (attempt < 12) {
+        setTimeout(function(){ boot(attempt + 1); }, 150);
+        return;
+      }
+      if (isComputedHidden(dlg)) {
+        /* CSS-hidden modal without hidden attr: continue boot */
+      } else {
+        watchDlgThenBoot();
+        return;
+      }
     }
     var F = host();
     if (!F || !F.load) {
