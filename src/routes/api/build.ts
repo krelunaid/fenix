@@ -116,7 +116,7 @@ export const Route = createFileRoute("/api/build")({
             "COMPLETO: gestionale desktop con almeno 3 viste, tabella o elenco, form, filtri, numeri. Niente nav.fk-tab, niente tabbar iPhone.",
           );
         } else if (lockKind === "site" || lockKind === "landing") {
-          userParts.push("COMPLETO: sito con sezioni, nav in alto, footer. NON un'app telefono.");
+          userParts.push("COMPLETO: sito con sezioni, nav in alto, footer. NON un'app telefono. NON un gestionale: niente .orders, niente inventario magazzino, niente form Nuovo pezzo. Stato mai null.");
         } else {
           userParts.push(
             "COMPLETO: 5 schermate che si usano (home, nuovo, lista, numeri, altro). Form che salvano. Niente hero da homepage.",

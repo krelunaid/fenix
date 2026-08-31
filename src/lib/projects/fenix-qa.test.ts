@@ -103,10 +103,18 @@ describe("focus-visible and worker model", () => {
     assert.match(scheme, /data-fenix-ready/);
     assert.match(scheme, /ready:\s*function/);
     assert.match(scheme, /data-fenix-desk/);
+    assert.match(scheme, /fenix-boot-error/);
+    assert.match(scheme, /unhandledrejection/);
+    assert.match(scheme, /data-fenix-boot-error/);
+    assert.match(look, /waitPreviewBoot/);
+    assert.match(look, /rememberBootError/);
     const crud = readFileSync(join(root, "src/lib/projects/dashboard-crud.ts"), "utf8");
     assert.match(crud, /data-fenix-crud/);
     assert.match(crud, /b85c38/);
     const runBuild = readFileSync(join(root, "src/lib/ai/run-build.ts"), "utf8");
     assert.doesNotMatch(runBuild, /Fenix 2: Vite \+ React/);
+    assert.match(runBuild, /BOOT_REPAIR_MAX = 2/);
+    assert.match(runBuild, /repairBootFailures/);
+    assert.match(runBuild, /waitPreviewBoot/);
   });
 });

@@ -218,6 +218,51 @@ export function fenixRuntimeScript(projectId: string) {
   return `<script data-fenix-runtime>
 (function(){
   var pid = ${JSON.stringify(projectId)};
+  function reportBootError(err, kind){
+    var msg = "";
+    try { msg = err && err.message ? String(err.message) : String(err || "errore"); } catch (e) { msg = "errore"; }
+    try { document.documentElement.setAttribute("data-fenix-boot-error", msg.slice(0, 240)); } catch (e) {}
+    try {
+      window.parent && window.parent.postMessage({
+        t: "fenix-boot-error",
+        projectId: pid,
+        message: msg.slice(0, 400),
+        stack: err && err.stack ? String(err.stack).slice(0, 800) : "",
+        kind: kind || "error"
+      }, "*");
+    } catch (e) {}
+  }
+  try {
+    var ET = typeof EventTarget !== "undefined" ? EventTarget.prototype : null;
+    if (ET && ET.addEventListener && !ET.__fenixReadyWrap) {
+      ET.__fenixReadyWrap = 1;
+      var origAdd = ET.addEventListener;
+      ET.addEventListener = function(type, fn, opts){
+        if (typeof fn === "function" && (type === "DOMContentLoaded" || (type === "load" && (this === window || this === document)))) {
+          var wrapped = function(ev){
+            try { return fn.call(this, ev); }
+            catch (err) { reportBootError(err, "error"); }
+          };
+          return origAdd.call(this, type, wrapped, opts);
+        }
+        return origAdd.call(this, type, fn, opts);
+      };
+    }
+  } catch (e) {}
+  window.onerror = function(m, _s, _l, _c, err){
+    reportBootError(err || new Error(String(m || "error")), "error");
+    return true;
+  };
+  window.addEventListener("error", function(ev){
+    var err = ev.error || new Error(ev.message || "error");
+    reportBootError(err, "error");
+    try { ev.preventDefault(); } catch (e) {}
+  }, true);
+  window.addEventListener("unhandledrejection", function(ev){
+    var r = ev.reason;
+    reportBootError(r instanceof Error ? r : new Error(String(r || "unhandledrejection")), "unhandledrejection");
+    try { ev.preventDefault(); } catch (e) {}
+  });
   try {
     var sc = document.querySelector("main") || document.getElementById("main") || document.body;
     sc.style.overflowY = "scroll";

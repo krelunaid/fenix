@@ -422,6 +422,40 @@ export function refundBuildCredit(projectId: string, n?: number) {
   return true;
 }
 
+/** Iframe boot TypeError/unhandledrejection. Demotes ready; never kills a live visual job. */
+export function notePreviewBootError(projectId: string, message: string) {
+  const msg = String(message || "").slice(0, 240);
+  if (typeof document !== "undefined") {
+    let prev: Record<string, unknown> = {};
+    try {
+      prev = JSON.parse(document.documentElement.getAttribute("data-fenix-diag") || "{}") as Record<
+        string,
+        unknown
+      >;
+    } catch {
+      prev = {};
+    }
+    document.documentElement.setAttribute(
+      "data-fenix-diag",
+      JSON.stringify({
+        ...prev,
+        pid: String(projectId).slice(0, 8),
+        bootError: msg,
+        epoch: Date.now(),
+      }),
+    );
+  }
+  const store = useProjectStore.getState();
+  const project = store.getProject(projectId);
+  if (!project) return;
+  if (project.status === "ready") {
+    store.updateProject(projectId, {
+      status: "error",
+      error: `Errore in avvio: ${msg}`,
+    });
+  }
+}
+
 export function applyBuildResult(
   id: string,
   result: {

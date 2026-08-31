@@ -30,6 +30,8 @@ describe("kindFromPrompt / resolveProjectKind", () => {
     assert.equal(kindFromPrompt(ARGILLA_PROMPT), "dashboard");
     assert.equal(kindFromPrompt(formatPrefix("dashboard") + "un magazzino"), "dashboard");
     assert.equal(kindFromPrompt(formatPrefix("site") + "una vetrina"), "site");
+    assert.match(formatPrefix("site"), /NON un gestionale/);
+    assert.match(formatPrefix("site"), /orders/);
     assert.equal(kindFromPrompt(formatPrefix("app") + "un'officina"), "app");
     assert.equal(kindFromPrompt("un brief senza formato"), undefined);
   });

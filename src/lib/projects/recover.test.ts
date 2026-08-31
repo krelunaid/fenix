@@ -15,6 +15,7 @@ import {
 const here = dirname(fileURLToPath(import.meta.url));
 const VALID = readFileSync(join(here, "fixtures/valid-app.html"), "utf8");
 const BROKEN = readFileSync(join(here, "fixtures/broken-flusso.html"), "utf8");
+const BOTTEGA = readFileSync(join(here, "fixtures/bottega-orders-crash.html"), "utf8");
 
 function seed(patch: Partial<Parameters<typeof recoverPersistedProject>[0]>) {
   return {
@@ -68,6 +69,21 @@ describe("recoverPersistedProject", () => {
     const recovered = recoverPersistedProject(seed({ status: "ready" }));
     assert.equal(recovered.status, "ready");
     assert.equal(isPublishable(recovered), true);
+  });
+
+  it("demotes a ready site whose HTML throws on null.orders", () => {
+    const recovered = recoverPersistedProject(
+      seed({
+        id: "bottega",
+        status: "ready",
+        html: BOTTEGA,
+        kind: "site",
+        prompt: "FORMATO: sito web. kind=site. Bottega del Tornio",
+      }),
+    );
+    assert.equal(recovered.status, "error");
+    assert.match(String(recovered.error), /gestionale|orders/i);
+    assert.equal(isPublishable(recovered), false);
   });
 
   it("does not rewrite building overlay or error-resume HTML", () => {

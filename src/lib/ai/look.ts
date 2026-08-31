@@ -12,10 +12,12 @@ export type PreviewAudit = {
 
 let lastAudit: PreviewAudit | null = null;
 let lastShot = "";
+let lastBootError: { message: string } | null = null;
 
 export function resetAudit() {
   lastAudit = null;
   lastShot = "";
+  lastBootError = null;
 }
 
 export function rememberAudit(data: PreviewAudit) {
@@ -24,6 +26,54 @@ export function rememberAudit(data: PreviewAudit) {
 
 export function rememberShot(dataUrl: string) {
   if (dataUrl.startsWith("data:image")) lastShot = dataUrl;
+}
+
+export function rememberBootError(message: string) {
+  const msg = String(message || "").slice(0, 400);
+  if (!msg) return;
+  lastBootError = { message: msg };
+}
+
+export function getPreviewBootError() {
+  return lastBootError;
+}
+
+export type PreviewBoot = { error: string | null; message?: string };
+
+/** Resolves on fenix-boot-error immediately, or shortly after fenix-audit. */
+export function waitPreviewBoot(ms = 1800): Promise<PreviewBoot> {
+  if (typeof window === "undefined") {
+    return Promise.resolve({ error: lastBootError?.message ?? null });
+  }
+  if (lastBootError) {
+    return Promise.resolve({ error: lastBootError.message, message: lastBootError.message });
+  }
+  return new Promise((resolve) => {
+    let done = false;
+    let extra: number | undefined;
+    const finish = (error: string | null) => {
+      if (done) return;
+      done = true;
+      window.removeEventListener("message", on);
+      window.clearTimeout(timer);
+      if (extra) window.clearTimeout(extra);
+      resolve({ error, message: error || undefined });
+    };
+    const timer = window.setTimeout(() => finish(lastBootError?.message ?? null), ms);
+    function on(ev: MessageEvent) {
+      const msg = ev.data as { t?: string; message?: string };
+      if (msg?.t === "fenix-boot-error") {
+        const text = String(msg.message || lastBootError?.message || "errore in avvio");
+        rememberBootError(text);
+        finish(text);
+        return;
+      }
+      if (msg?.t === "fenix-audit") {
+        extra = window.setTimeout(() => finish(lastBootError?.message ?? null), 220);
+      }
+    }
+    window.addEventListener("message", on);
+  });
 }
 
 export function waitPreviewAudit(ms = 1800): Promise<PreviewAudit | null> {

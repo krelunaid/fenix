@@ -7,9 +7,11 @@ import { chromium } from "playwright";
 import { requirePreview } from "./ensure-preview.ts";
 import { ensureFenixAdapter } from "./fenix-adapter.ts";
 import { DEFAULT_PALETTE } from "./types.ts";
+import { prepareSrcDoc } from "./color-scheme.ts";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const SITE = readFileSync(join(here, "fixtures/music-site-no-fenix.html"), "utf8");
+const BOTTEGA = readFileSync(join(here, "fixtures/bottega-orders-crash.html"), "utf8");
 const PREVIEW = process.env.PREVIEW_URL || "http://127.0.0.1:8081";
 const ADAPTED = ensureFenixAdapter(SITE);
 
@@ -268,6 +270,147 @@ describe("studio repair for a new site project", () => {
       await frame.getByRole("heading", { name: "Onda" }).waitFor({ timeout: 25000 });
       await page.getByText("Adatto Fenix").first().waitFor({ timeout: 8000 });
       assert.equal(await page.getByText("L'anteprima apparirà qui").count(), 0);
+    } finally {
+      await browser.close();
+    }
+  });
+});
+
+describe("iframe boot error on site null.orders", () => {
+  it("srcdoc reports fenix-boot-error to the parent without SyntaxError", async () => {
+    const src = prepareSrcDoc(
+      BOTTEGA,
+      { bg: "#f3eadc", fg: "#2b211c", accent: "#b85c38" },
+      "bottega-tornio",
+      "site",
+    );
+    const browser = await chromium.launch({ headless: true });
+    try {
+      const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+      const syntax: string[] = [];
+      page.on("pageerror", (err) => {
+        if (/SyntaxError|missing \) after argument list/i.test(String(err))) syntax.push(String(err));
+      });
+      page.on("console", (msg) => {
+        if (msg.type() === "error" && /SyntaxError|missing \) after argument list/i.test(msg.text())) {
+          syntax.push(msg.text());
+        }
+      });
+      await page.setContent(`<!DOCTYPE html><html><body>
+<iframe id="f" style="width:1280px;height:800px;border:0"></iframe>
+<script>
+  window.__boot = null;
+  window.addEventListener("message", function (e) {
+    var m = e.data;
+    if (!m || m.t !== "fenix-boot-error") return;
+    window.__boot = m;
+    document.documentElement.setAttribute("data-fenix-diag", JSON.stringify({ bootError: m.message }));
+  });
+</script>
+</body></html>`);
+      await page.locator("#f").evaluate((el, srcDoc: string) => {
+        (el as HTMLIFrameElement).srcdoc = srcDoc;
+      }, src);
+      await page.waitForFunction(() => Boolean((window as { __boot?: { message?: string } }).__boot?.message), null, {
+        timeout: 8000,
+      });
+      const boot = await page.evaluate(() => (window as { __boot?: { message?: string } }).__boot);
+      assert.match(String(boot?.message), /orders/i);
+      const frame = page.frameLocator("#f");
+      const attr = await frame.locator("html").getAttribute("data-fenix-boot-error");
+      assert.match(String(attr), /orders/i);
+      const diag = JSON.parse((await page.locator("html").getAttribute("data-fenix-diag")) || "{}");
+      assert.match(String(diag.bootError), /orders/i);
+      assert.equal(syntax.join(" | "), "", `srcdoc syntax ${syntax.join(" | ")}`);
+    } finally {
+      await browser.close();
+    }
+  });
+
+  it("/api/build HTML that throws on null.orders stays Bloccato, Pubblica closed, credit refunded", async () => {
+    await requirePreview();
+    const result = {
+      name: "Bottega del Tornio",
+      tagline: "Legno tornito",
+      kind: "site",
+      summary: "Vetrina artigiana",
+      direction: "legno",
+      palette: DEFAULT_PALETTE,
+      html: BOTTEGA,
+      files: [],
+    };
+    const browser = await chromium.launch({ headless: true });
+    try {
+      const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+      await page.route(/\/api\/build/, async (route) => {
+        const body =
+          `data: ${JSON.stringify({ t: "s", s: "Adatto Fenix" })}\n\n` +
+          `data: ${JSON.stringify({ t: "ok", result })}\n\n`;
+        await route.fulfill({
+          status: 200,
+          contentType: "text/event-stream; charset=utf-8",
+          body,
+        });
+      });
+      await page.route(/polish|\/__worker/, async (route) => {
+        await route.fulfill({ status: 500, body: "no-worker" });
+      });
+      await page.addInitScript(() => {
+        localStorage.setItem(
+          "officina-projects",
+          JSON.stringify({
+            state: {
+              projects: [
+                {
+                  id: "p-orders",
+                  name: "Bottega del Tornio",
+                  tagline: "",
+                  prompt: "FORMATO: sito web. kind=site. Bottega del Tornio, vetrina artigiana a Grottaglie",
+                  kind: "site",
+                  requestedKind: "site",
+                  summary: "",
+                  palette: {
+                    bg: "#f3eadc",
+                    surface: "#fbf6ee",
+                    fg: "#2b211c",
+                    muted: "#6e5648",
+                    accent: "#b85c38",
+                  },
+                  html: "",
+                  messages: [],
+                  buildLog: [],
+                  status: "error",
+                  error: "Interrotto. Riprova.",
+                  creditRefunded: true,
+                  createdAt: Date.now(),
+                  updatedAt: Date.now(),
+                },
+              ],
+              creditsRemaining: 46,
+            },
+            version: 2,
+          }),
+        );
+      });
+      await page.goto(`${PREVIEW}/studio/p-orders`, { waitUntil: "domcontentloaded", timeout: 20000 });
+      await page.getByRole("button", { name: "Riprova. Lo ricostruisco." }).first().click();
+      await page.getByText("Bloccato").first().waitFor({ timeout: 25000 });
+      const pub = page.getByRole("button", { name: /pubblica/i });
+      assert.equal(await pub.isDisabled(), true);
+      const overlay = await page.locator("text=/orders|gestionale|avvio/i").first().innerText();
+      assert.match(overlay, /orders|gestionale|avvio/i);
+      const remaining = await page.evaluate(() => {
+        const raw = localStorage.getItem("officina-projects");
+        const parsed = JSON.parse(raw || "{}");
+        return parsed.state?.creditsRemaining;
+      });
+      assert.equal(remaining, 46);
+      const status = await page.evaluate(() => {
+        const raw = localStorage.getItem("officina-projects");
+        const parsed = JSON.parse(raw || "{}");
+        return parsed.state?.projects?.[0]?.status;
+      });
+      assert.equal(status, "error");
     } finally {
       await browser.close();
     }

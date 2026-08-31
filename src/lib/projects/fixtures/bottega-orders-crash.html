@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Bottega del Tornio</title>
+<style>
+:root{--bg:#f3eadc;--fg:#2b211c;--accent:#b85c38}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.5 Georgia,serif}
+nav{display:flex;gap:18px;padding:18px 24px;border-bottom:1px solid #d7c4b0}
+nav a{color:var(--fg);text-decoration:none}
+section{padding:48px 24px;min-height:36vh}
+footer{padding:24px;border-top:1px solid #d7c4b0}
+form{display:flex;gap:8px;margin-top:12px}
+button{background:var(--accent);color:#fff;border:0;padding:10px 16px}
+</style>
+</head>
+<body>
+<nav>
+  <a href="#home" data-view="home">Home</a>
+  <a href="#bottega" data-view="bottega">Bottega</a>
+  <a href="#lavori" data-view="lavori">Lavori</a>
+  <a href="#visita" data-view="visita">Visita</a>
+</nav>
+<section id="home" data-view-panel="home"><h1>Bottega del Tornio</h1><p>Legno tornito a mano a Grottaglie.</p></section>
+<section id="bottega" data-view-panel="bottega"><h2>Bottega</h2><p>Torni, sgorbie, cera d'api. Via del Tornio 8.</p></section>
+<section id="lavori" data-view-panel="lavori"><h2>Lavori</h2><p>Ciotole, lampade, manici.</p></section>
+<section id="visita" data-view-panel="visita"><h2>Visita</h2><form><input name="nome" placeholder="Nome"/><button type="submit">Scrivici</button></form></section>
+<footer>Bottega del Tornio · Grottaglie</footer>
+<script>
+window.Fenix = window.Fenix || {
+  load: function(){ return Promise.resolve(null); },
+  save: function(){ return Promise.resolve(); }
+};
+document.addEventListener("DOMContentLoaded", function(){
+  var state = null;
+  window.Fenix.load("bottega").then(function(s){ state = s; });
+  window.Fenix.save("bottega", { note: "visita" });
+  document.querySelector("[data-view-panel='lavori']").textContent = state.orders.length + " ordini";
+});
+</script>
+</body>
+</html>

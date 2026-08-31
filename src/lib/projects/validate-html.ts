@@ -82,6 +82,18 @@ function productScripts(html: string) {
   });
 }
 
+/** Site/landing must not ship a gestionale data model (null.orders, inventario magazzino). */
+export function looksLikeGestionaleOnSite(html: string, kind?: string): boolean {
+  const k = String(kind || "").toLowerCase();
+  if (k !== "site" && k !== "landing") return false;
+  const js = productScripts(html)
+    .map((s) => s.code)
+    .join("\n");
+  if (/\.orders\b/.test(js)) return true;
+  const h = String(html || "");
+  return /\bnuovo pezzo\b/i.test(h) && /<table/i.test(h) && /inventario/i.test(h);
+}
+
 export function validateProductHtml(
   html: string,
   opts?: { kind?: string },
@@ -167,6 +179,9 @@ export function validateProductHtml(
       errors.push("Al sito servono almeno 4 sezioni o 3 viste.");
     }
     if (!/<nav\b/i.test(text)) errors.push("Manca la navigazione.");
+    if (looksLikeGestionaleOnSite(text, kind)) {
+      errors.push("Un sito o landing non usa lo scaffold gestionale (orders/inventario).");
+    }
   } else if (views.size < 3 && screens < 3) {
     errors.push("Servono almeno 3 viste interattive (data-view o schermate).");
   }

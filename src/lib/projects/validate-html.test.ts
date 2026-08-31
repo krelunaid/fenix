@@ -7,6 +7,7 @@ import {
   canPublishHtml,
   checkScriptSyntax,
   extractInlineScripts,
+  looksLikeGestionaleOnSite,
   validateProductHtml,
   validatePublishable,
 } from "./validate-html.ts";
@@ -17,6 +18,7 @@ import { APP_SHELL_HTML } from "../ai/app-shell.ts";
 const here = dirname(fileURLToPath(import.meta.url));
 const BROKEN = readFileSync(join(here, "fixtures/broken-flusso.html"), "utf8");
 const VALID = readFileSync(join(here, "fixtures/valid-app.html"), "utf8");
+const BOTTEGA = readFileSync(join(here, "fixtures/bottega-orders-crash.html"), "utf8");
 
 describe("validateProductHtml", () => {
   it("extracts inline scripts and reports the exact syntax error", () => {
@@ -71,6 +73,18 @@ describe("validateProductHtml", () => {
     assert.ok(phone.errors.some((e) => /tabbar telefono/i.test(e)));
     const kiln = validateProductHtml(DEMOS.kiln.html, { kind: "dashboard" });
     assert.equal(kiln.ok, true, kiln.errors.join(" · "));
+  });
+
+  it("rejects a site brief that ships gestionale .orders scaffold", () => {
+    assert.equal(looksLikeGestionaleOnSite(BOTTEGA, "site"), true);
+    assert.equal(looksLikeGestionaleOnSite(BOTTEGA, "dashboard"), false);
+    const asSite = validateProductHtml(BOTTEGA, { kind: "site" });
+    assert.equal(asSite.syntaxOk, true, asSite.errors.join(" · "));
+    assert.equal(asSite.ok, false);
+    assert.ok(asSite.errors.some((e) => /gestionale|orders/i.test(e)));
+    assert.equal(canPublishHtml(BOTTEGA, "site", "bottega"), false);
+    const asDash = validateProductHtml(BOTTEGA, { kind: "dashboard" });
+    assert.equal(asDash.ok, true, asDash.errors.join(" · "));
   });
 });
 

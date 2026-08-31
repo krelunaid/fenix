@@ -54,7 +54,7 @@ export function resolveProjectKind(opts: {
 
 export function formatPrefix(kind: ProjectKind) {
   if (kind === "site") {
-    return "FORMATO: sito web. kind=site. Sezioni, nav in alto, footer. NON un'app telefono.\n\n";
+    return "FORMATO: sito web. kind=site. Sezioni, nav in alto, footer. NON un'app telefono. NON un gestionale (niente .orders, inventario, Nuovo pezzo).\n\n";
   }
   if (kind === "dashboard") {
     return "FORMATO: gestionale ufficio. kind=dashboard. Desktop: elenco, filtri, form nuovo, numeri. Tabella che si riempie. NON landing, NON tabbar iPhone.\n\n";

@@ -7,7 +7,7 @@ import {
   useProjectStore,
 } from "@/lib/projects/store";
 import { parseBuildOutput, type BuildResult } from "./parse";
-import { isWeakPreview, lookInstruction, resetAudit, waitPreviewAudit, waitPreviewShot } from "./look";
+import { isWeakPreview, lookInstruction, resetAudit, waitPreviewAudit, waitPreviewShot, waitPreviewBoot, getPreviewBootError } from "./look";
 import { APP_SHELL_HTML, APP_SHELL_INSTRUCTION, DASHBOARD_POLISH_INSTRUCTION } from "./app-shell";
 import { CREATE_COST, ITERATE_COST } from "@/lib/projects/credits";
 import { isPhoneKind, resolveProjectKind } from "@/lib/projects/infer";
@@ -28,6 +28,7 @@ const WORKER_POLL_MS = 2000;
 /** 2s ticks while a persisted job is live. Overlay stays compact. */
 export const WORKER_JOB_POLL_MAX = 180;
 const GENERATE_POLL_MAX = 90;
+export const BOOT_REPAIR_MAX = 2;
 
 function readyCopy(result: BuildResult) {
   const summary = (result.summary ?? "")
@@ -421,10 +422,51 @@ async function polishDraft(
   return lastValidHtml;
 }
 
+async function settlePreviewBoot(projectId: string): Promise<string | null> {
+  const project = useProjectStore.getState().getProject(projectId);
+  if (!project?.html) return "HTML assente.";
+  const report = validateProductHtml(project.html, { kind: project.kind });
+  const staticErr = report.ok ? null : formatHtmlErrors(report);
+  const boot = await waitPreviewBoot(staticErr ? 500 : 1800);
+  return boot.error || staticErr || null;
+}
+
+async function repairBootFailures(projectId: string, prompt: string): Promise<boolean> {
+  const store = useProjectStore.getState();
+  for (let attempt = 0; attempt < BOOT_REPAIR_MAX; attempt++) {
+    const reason = await settlePreviewBoot(projectId);
+    if (!reason) return true;
+    const current = store.getProject(projectId);
+    if (!current?.html) return false;
+    store.updateProject(projectId, {
+      status: "building",
+      error: undefined,
+      buildLog: [...(current.buildLog ?? []), attempt === 0 ? "Riparo il codice" : "Secondo riparo"],
+    });
+    resetAudit();
+    await consumeStream(
+      projectId,
+      {
+        prompt,
+        html: current.html,
+        instruction: [
+          `ERRORE DI AVVIO: ${reason}`,
+          "Non usare .orders su stato nullo. Sito/landing: niente scaffold gestionale (orders, inventario, Nuovo pezzo).",
+          "Stato iniziale = oggetto vuoto, mai null. META+HTML completo.",
+        ].join("\n"),
+      },
+      true,
+    );
+  }
+  const last = await settlePreviewBoot(projectId);
+  return !last;
+}
+
 function finishPolish(projectId: string, lastValidHtml: string, refund?: number) {
   const store = useProjectStore.getState();
+  const boot = getPreviewBootError();
   const promoted = promoteReady(projectId);
-  if (promoted.ok) {
+  if (promoted.ok && !boot) {
     store.updateProject(projectId, { ...clearVisualJobPatch(), status: "ready", error: undefined });
     store.addMessage(projectId, {
       id: uid(),
@@ -434,18 +476,19 @@ function finishPolish(projectId: string, lastValidHtml: string, refund?: number)
     return true;
   }
   if (refund) refundBuildCredit(projectId, refund);
+  const detail = boot?.message || formatHtmlErrors(promoted) || RESUME_ERROR;
   store.updateProject(projectId, {
     html: lastValidHtml,
     status: "error",
-    error: RESUME_ERROR,
+    error: boot ? `Errore in avvio: ${boot.message}` : RESUME_ERROR,
     ...clearVisualJobPatch(),
   });
   store.addMessage(projectId, {
     id: uid(),
     role: "assistant",
     content: refund
-      ? `Non pubblico: ${formatHtmlErrors(promoted)}. Credito rimborsato. ${RESUME_ERROR}`
-      : RESUME_ERROR,
+      ? `Non pubblico: ${detail}. Credito rimborsato.`
+      : detail,
   });
   return false;
 }
@@ -479,6 +522,8 @@ export async function resumePolish(projectId: string) {
     const lastValidHtml = await polishDraft(projectId, project.prompt, project.html, instruction);
     const latest = useProjectStore.getState().getProject(projectId);
     if (hasActiveVisualJob(latest ?? {})) return;
+    resetAudit();
+    await waitPreviewBoot(1200);
     finishPolish(projectId, lastValidHtml);
   } catch (err) {
     const message = err instanceof Error ? err.message : RESUME_ERROR;
@@ -591,9 +636,29 @@ export async function runBuild(projectId: string, instruction?: string) {
           });
           return;
         }
+        const booted = await repairBootFailures(projectId, project.prompt);
+        if (!booted) {
+          refundBuildCredit(projectId, cost);
+          charged = false;
+          const reason =
+            getPreviewBootError()?.message ||
+            formatHtmlErrors(validateProductHtml(latest.html, { kind: latest.kind })) ||
+            "Errore in avvio";
+          store.updateProject(projectId, {
+            status: "error",
+            error: `Errore in avvio: ${reason}`,
+            ...clearVisualJobPatch(),
+          });
+          store.addMessage(projectId, {
+            id: uid(),
+            role: "assistant",
+            content: `Non pubblico: ${reason}. Credito rimborsato.`,
+          });
+          return;
+        }
         store.updateProject(projectId, {
           status: "building",
-          buildLog: [...(latest.buildLog ?? []), "Motore visivo in sottofondo"],
+          buildLog: [...(useProjectStore.getState().getProject(projectId)?.buildLog ?? []), "Motore visivo in sottofondo"],
         });
         store.addMessage(projectId, {
           id: uid(),
@@ -654,6 +719,8 @@ export async function runBuild(projectId: string, instruction?: string) {
           }
         }
 
+        resetAudit();
+        await waitPreviewBoot(1200);
         charged = !finishPolish(projectId, lastValidHtml, cost);
         return;
       }

@@ -15,6 +15,7 @@ import { DEFAULT_PALETTE } from "./types.ts";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const SITE = readFileSync(join(here, "fixtures/music-site-no-fenix.html"), "utf8");
+const BOTTEGA = readFileSync(join(here, "fixtures/bottega-orders-crash.html"), "utf8");
 
 function stub(html: string, kind: BuildResult["kind"] = "site"): BuildResult {
   return {
@@ -108,5 +109,25 @@ describe("Fenix adapter + gate", () => {
     const fail = gated as Extract<GateOutcome, { error: string }>;
     assert.equal(fail.result, undefined);
     assert.match(fail.error, /non valido|troppo corto/i);
+  });
+
+  it("site brief with null.orders is incomplete and repairs twice", async () => {
+    let repairs = 0;
+    const gated = await gateIncompleteHtml({
+      apiKey: "unused",
+      prompt: "FORMATO: sito web. kind=site. Bottega del Tornio, vetrina artigiana",
+      result: stub(BOTTEGA, "site"),
+      repair: async () => {
+        repairs += 1;
+        return stub(BOTTEGA, "site");
+      },
+    });
+    assert.equal(repairs, 2);
+    assert.equal("error" in gated, true);
+    const fail = gated as Extract<GateOutcome, { error: string }>;
+    assert.match(fail.error, /gestionale|orders/i);
+    assert.ok(fail.result?.html);
+    assert.equal(validateProductHtml(BOTTEGA, { kind: "site" }).syntaxOk, true);
+    assert.equal(validateProductHtml(BOTTEGA, { kind: "site" }).ok, false);
   });
 });

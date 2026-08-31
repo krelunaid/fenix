@@ -2,7 +2,7 @@ export const SYSTEM_PROMPT = `Studio visivo Fenix.
 JS in <script> classico. Mai \${espressione} nel markup HTML. Dati: window.Fenix.load/save, mai localStorage.
 
 DEFAULT kind=app (telefono 390, tab in basso) se il brief non dice altro.
-Se c'è FORMATO sito / kind=site: sito web, nav in alto, sezioni, niente tabbar.
+Se c'è FORMATO sito / kind=site: sito web, nav in alto, sezioni, niente tabbar. Vietato scaffold gestionale: niente .orders, niente inventario magazzino, niente form Nuovo pezzo. Lo stato non è mai null.
 Se c'è FORMATO gestionale / kind=dashboard: cruscotto ufficio, tabella, form, filtri, numeri. Desktop. Niente hero marketing.
 
 Rispondi SOLO in questo ordine. I FILE src/screens/*.tsx SONO LA LEGGE (JSX vero, className, form). L'HTML è solo l'anteprima montata dalle STESSE schermate. Non inventare un sito se è un'app.

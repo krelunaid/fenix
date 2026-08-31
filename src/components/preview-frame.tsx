@@ -1,6 +1,7 @@
 import { useEffect, useMemo } from "react";
 import { prepareSrcDoc, type SrcPalette } from "@/lib/projects/color-scheme";
-import { rememberAudit, rememberShot, type PreviewAudit } from "@/lib/ai/look";
+import { rememberAudit, rememberBootError, rememberShot, type PreviewAudit } from "@/lib/ai/look";
+import { notePreviewBootError } from "@/lib/projects/store";
 import { cn } from "@/lib/utils";
 
 export type Device = "desktop" | "tablet" | "mobile";
@@ -56,9 +57,16 @@ export function PreviewFrame({
         vw?: number;
         sw?: number;
         mainChars?: number;
+        message?: string;
       };
       if (msg?.t === "fenix-shot" && typeof msg.data === "string") {
         rememberShot(msg.data);
+        return;
+      }
+      if (msg?.t === "fenix-boot-error") {
+        const text = String(msg.message || "errore in avvio");
+        rememberBootError(text);
+        notePreviewBootError(projectId ?? "preview", text);
         return;
       }
       if (msg?.t === "fenix-audit") {
@@ -78,7 +86,7 @@ export function PreviewFrame({
     }
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
-  }, []);
+  }, [projectId]);
 
   return (
     <div className={cn("flex h-full min-h-0 flex-col", className)}>
