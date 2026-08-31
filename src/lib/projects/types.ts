@@ -26,6 +26,8 @@ export type Project = {
   tagline: string;
   prompt: string;
   kind: ProjectKind;
+  /** User-chosen kind at create time. Worker META cannot overwrite it. */
+  requestedKind?: ProjectKind;
   summary: string;
   direction?: string;
   palette: Palette;

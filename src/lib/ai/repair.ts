@@ -1,6 +1,7 @@
 import { parseBuildOutput, type BuildResult } from "./parse";
 import { FENIX_MODEL, XAI_CHAT_COMPLETIONS_URL } from "./model";
 import { formatHtmlErrors, validateProductHtml, type HtmlReport } from "@/lib/projects/validate-html";
+import { kindFromPrompt } from "@/lib/projects/infer";
 
 export const REPAIR_PROMPT = `Sei il riparatore di Fenix. L'HTML ha JS rotto o markup con \${} stampato.
 
@@ -45,7 +46,7 @@ export async function repairBuild(input: {
     choices?: { message?: { content?: string } }[];
   };
   const text = payload.choices?.[0]?.message?.content ?? "";
-  return parseBuildOutput(text);
+  return parseBuildOutput(text, kindFromPrompt(input.prompt));
 }
 
 export async function gateBuildResult(input: {
@@ -56,6 +57,8 @@ export async function gateBuildResult(input: {
   onStage?: (stage: string) => void;
 }): Promise<{ result: BuildResult; report: HtmlReport } | { error: string; report: HtmlReport }> {
   let current = input.result;
+  const lockKind = kindFromPrompt(input.prompt) ?? input.result.kind;
+  if (lockKind && current.kind !== lockKind) current = { ...current, kind: lockKind };
   let report = validateProductHtml(current.html, { kind: current.kind });
   if (report.ok) return { result: current, report };
 
@@ -74,8 +77,8 @@ export async function gateBuildResult(input: {
         signal: ctl.signal,
       });
       if (!fixed?.html) continue;
-      const next = validateProductHtml(fixed.html, { kind: fixed.kind || current.kind });
-      if (next.syntaxOk) current = fixed;
+      const next = validateProductHtml(fixed.html, { kind: lockKind || fixed.kind || current.kind });
+      if (next.syntaxOk) current = { ...fixed, kind: lockKind || fixed.kind };
       report = next;
       if (next.ok) return { result: current, report };
     } catch {

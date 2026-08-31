@@ -2,6 +2,7 @@ declare const Netlify: { env: { get(name: string): string | undefined } };
 
 import { QA_PROMPT, SYSTEM_PROMPT, VISUAL_PROMPT } from "../../src/lib/ai/prompts.shared.ts";
 import { validateProductHtml } from "../../src/lib/projects/validate-html.ts";
+import { formatPrefix, kindFromPrompt } from "../../src/lib/projects/infer.ts";
 
 const MODEL = "grok-build-0.1";
 const XAI_URL = "https://api.x.ai/v1/chat/completions";
@@ -76,7 +77,7 @@ function hex(value: unknown, fallback: string) {
     : fallback;
 }
 
-function parseResult(output: string) {
+function parseResult(output: string, lockKind?: string) {
   const htmlMatch = output.match(/<!DOCTYPE html[\s\S]*?<\/html>/i) ?? output.match(/<html[\s\S]*?<\/html>/i);
   if (!htmlMatch) return null;
   const html = htmlMatch[0].startsWith("<!DOCTYPE") ? htmlMatch[0] : `<!DOCTYPE html>\n${htmlMatch[0]}`;
@@ -94,7 +95,9 @@ function parseResult(output: string) {
     : {};
   const title = html.match(/<title>([^<]+)<\/title>/i)?.[1]?.trim() || "Studio";
   const kinds = ["landing", "app", "dashboard", "tool", "game", "site"];
-  const kind = typeof meta.kind === "string" && kinds.includes(meta.kind) ? meta.kind : "site";
+  const parsed =
+    typeof meta.kind === "string" && kinds.includes(meta.kind) ? meta.kind : "app";
+  const kind = lockKind && kinds.includes(lockKind) ? lockKind : parsed;
 
   return {
     name: cleanText(meta.name, title, 80),
@@ -235,13 +238,14 @@ async function gateResult(
   send: (event: StreamEvent) => void,
 ) {
   if (!result) return { error: "Risposta incompleta. Riprova." };
-  let current = result;
+  const lockKind = kindFromPrompt(prompt);
+  let current = lockKind && result.kind !== lockKind ? { ...result, kind: lockKind } : result;
   let report = validateProductHtml(current.html, { kind: current.kind });
   if (report.ok) return { result: current };
   for (let i = 0; i < 2; i++) {
     send({ t: "s", s: i === 0 ? "Riparo il codice" : "Secondo riparo" });
     const fixed = await repairPass(apiKey, prompt, current.html, report.errors.join(" · "));
-    const parsed = parseResult(fixed);
+    const parsed = parseResult(fixed, lockKind);
     if (!parsed) continue;
     report = validateProductHtml(parsed.html, { kind: parsed.kind || current.kind });
     if (report.syntaxOk) current = parsed;
@@ -277,8 +281,10 @@ export default async function build(request: Request) {
     typeof body.shot === "string" && body.shot.startsWith("data:image")
       ? body.shot.slice(0, 380000)
       : "";
+  const lockKind = kindFromPrompt(prompt);
   const userParts = [
     `BRIEF:\n${prompt}`,
+    formatPrefix(lockKind ?? "app").trim(),
     "Crea un prodotto completo, specifico e immediatamente utilizzabile.",
     instruction && currentHtml ? `APP ATTUALE:\n${currentHtml}` : "",
     instruction ? `MODIFICA:\n${instruction}\nRestituisci il documento completo.` : "",
@@ -408,18 +414,18 @@ export default async function build(request: Request) {
           if (trimmed.startsWith("data:")) ingest(trimmed.slice(5).trim());
         }
         if (!terminal) {
-          let result = parseResult(output);
+          let result = parseResult(output, lockKind);
           if (result && !instruction && !shot) {
             send({ t: "s", s: "Provo la grafica" });
             const reviewed = await reviewPass(apiKey, prompt, result.html, spec);
-            result = parseResult(reviewed) ?? result;
+            result = parseResult(reviewed, lockKind) ?? result;
           }
           const gated = await gateResult(apiKey, prompt, result, send);
           if ("error" in gated) finish({ t: "err", error: gated.error });
           else finish({ t: "ok", result: gated.result });
         }
       } catch (error) {
-        const salvage = parseResult(output);
+        const salvage = parseResult(output, lockKind);
         if (salvage) {
           const gated = await gateResult(apiKey, prompt, salvage, send);
           if ("error" in gated) {

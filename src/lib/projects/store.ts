@@ -4,6 +4,7 @@ import { uid } from "@/lib/utils";
 import type { ProjectFile } from "./files";
 import { CREDITS_GRANT, CREDIT_COST } from "./credits";
 import { DEMOS } from "./demos";
+import { resolveProjectKind } from "./infer";
 import { validatePublishable, type HtmlReport } from "./validate-html";
 import { recoverPersistedProject, STALE_BUILD_MS, RESUME_ERROR } from "./recover";
 import {
@@ -48,7 +49,7 @@ function trimList(projects: Project[]) {
     .slice(0, MAX_PROJECTS);
 }
 
-function blankProject(prompt: string, kind: ProjectKind = "site"): Project {
+function blankProject(prompt: string, kind: ProjectKind = "app"): Project {
   const now = Date.now();
   return {
     id: uid(),
@@ -56,6 +57,7 @@ function blankProject(prompt: string, kind: ProjectKind = "site"): Project {
     tagline: "",
     prompt,
     kind,
+    requestedKind: kind,
     summary: "",
     palette: DEFAULT_PALETTE,
     html: "",
@@ -125,6 +127,7 @@ export const useProjectStore = create<ProjectStore>()(
               tagline: demo.tagline,
               prompt: `Apri l'esempio ${demo.name}`,
               kind: demo.kind,
+              requestedKind: demo.kind,
               summary: demo.summary,
               palette: demo.palette,
               html: demo.html,
@@ -223,7 +226,13 @@ export function applyBuildResult(
   status: BuildStatus = "building",
 ): HtmlReport {
   const existing = useProjectStore.getState().getProject(id);
-  const kind = existing?.kind ?? result.kind;
+  const kind = resolveProjectKind({
+    stored: existing?.kind,
+    requested: existing?.requestedKind,
+    prompt: existing?.prompt,
+    worker: result.kind,
+  });
+  const requestedKind = existing?.requestedKind ?? kind;
   const report = validatePublishable(result.html, {
     kind,
     projectId: id,
@@ -235,6 +244,7 @@ export function applyBuildResult(
   useProjectStore.getState().updateProject(id, {
     ...result,
     kind,
+    requestedKind,
     status: nextStatus,
     error: undefined,
   });
@@ -252,12 +262,17 @@ export function promoteReady(id: string): HtmlReport {
       scriptErrors: [],
     };
   }
+  const kind = resolveProjectKind({
+    stored: project.kind,
+    requested: project.requestedKind,
+    prompt: project.prompt,
+  });
   const report = validatePublishable(project.html, {
-    kind: project.kind,
+    kind,
     projectId: project.id,
     bg: project.palette.bg,
   });
   if (!report.ok) return report;
-  useProjectStore.getState().updateProject(id, { status: "ready", error: undefined });
+  useProjectStore.getState().updateProject(id, { kind, status: "ready", error: undefined });
   return report;
 }

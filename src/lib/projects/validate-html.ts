@@ -125,6 +125,10 @@ export function validateProductHtml(
   const sections = (text.match(/<section\b/gi) || []).length;
   const hasFenix = /\bFenix\.(load|save)\b/.test(text) || /\bwindow\.Fenix\b/.test(text);
 
+  if (kind === "dashboard" && /\bfk-tab\b/.test(markup)) {
+    errors.push("Un gestionale non usa la tabbar telefono.");
+  }
+
   if (kind === "site" || kind === "landing") {
     if (sections < 4 && views.size < 3) {
       errors.push("Al sito servono almeno 4 sezioni o 3 viste.");

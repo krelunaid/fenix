@@ -1,6 +1,7 @@
 import { parseBuildOutput, type BuildResult } from "./parse";
 import { FENIX_MODEL } from "./model";
 import { QA_PROMPT } from "./prompts.shared";
+import { kindFromPrompt } from "@/lib/projects/infer";
 
 export { QA_PROMPT } from "./prompts.shared";
 
@@ -54,5 +55,5 @@ export async function reviewBuild(input: {
     choices?: { message?: { content?: string } }[];
   };
   const text = payload.choices?.[0]?.message?.content ?? "";
-  return parseBuildOutput(text);
+  return parseBuildOutput(text, kindFromPrompt(input.prompt));
 }

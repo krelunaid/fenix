@@ -7,6 +7,13 @@ Tieni header.fk-top, main, nav.fk-tab, form, liste, Fenix.load/save.
 Ogni tab mostra una vista vera. Form: preventDefault, niente righe vuote.
 Restituisci META + FILE screens/home.html new list stats more + HTML montato.`;
 
+export const DASHBOARD_POLISH_INSTRUCTION = `SOSTITUISCI lo scheletro telefono (nav.fk-tab, header.fk-top, 5 tab iPhone) con un gestionale desktop.
+kind=dashboard. Header in alto o sidebar — MAI tabbar in basso, MAI class fk-tab.
+Elenco/tabella con righe, filtri, form nuovo, numeri. Almeno 3 viste data-view.
+CSS reale (palette, bordi, form, tabella), niente controlli browser nudi.
+Tieni window.Fenix.load/save. Date in italiano.
+Restituisci META kind=dashboard + HTML completo montato.`;
+
 export const APP_SHELL_HTML = `<!DOCTYPE html>
 <html lang="it">
 <head>

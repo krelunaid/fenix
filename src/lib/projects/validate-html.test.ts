@@ -12,6 +12,7 @@ import {
 } from "./validate-html.ts";
 import { fenixRuntimeScript, looksLikeSite, prepareSrcDoc, sanitizePreviewHtml } from "./color-scheme.ts";
 import { DEMOS } from "./demos.ts";
+import { APP_SHELL_HTML } from "../ai/app-shell.ts";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const BROKEN = readFileSync(join(here, "fixtures/broken-flusso.html"), "utf8");
@@ -62,6 +63,14 @@ describe("validateProductHtml", () => {
       assert.equal(report.ok, true, `${demo.id}: ${report.errors.join(" · ")}`);
       assert.equal(canPublishHtml(demo.html, demo.kind, demo.id), true, demo.id);
     }
+  });
+
+  it("rejects a phone fk-tab shell on dashboard and still publishes kiln", () => {
+    const phone = validateProductHtml(APP_SHELL_HTML, { kind: "dashboard" });
+    assert.equal(phone.ok, false);
+    assert.ok(phone.errors.some((e) => /tabbar telefono/i.test(e)));
+    const kiln = validateProductHtml(DEMOS.kiln.html, { kind: "dashboard" });
+    assert.equal(kiln.ok, true, kiln.errors.join(" · "));
   });
 });
 

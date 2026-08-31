@@ -1,7 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
-import { FENIX_MODEL, getXaiApiKey, XAI_CHAT_COMPLETIONS_URL, XAI_MISSING_KEY_ERROR } from "./model";
 import { parseBuildOutput, type BuildResult } from "./parse";
+import { FENIX_MODEL, getXaiApiKey, XAI_CHAT_COMPLETIONS_URL, XAI_MISSING_KEY_ERROR } from "./model";
 import { SYSTEM_PROMPT } from "./prompt";
+import { kindFromPrompt } from "@/lib/projects/infer";
 
 export type GenerateInput = {
   prompt: string;
@@ -85,7 +86,7 @@ export const generateBuild = createServerFn({ method: "POST" })
         choices?: { message?: { content?: string } }[];
       };
       const text = payload.choices?.[0]?.message?.content ?? "";
-      const parsed = parseBuildOutput(text);
+      const parsed = parseBuildOutput(text, kindFromPrompt(data.prompt));
       if (!parsed) {
         return {
           ok: false,

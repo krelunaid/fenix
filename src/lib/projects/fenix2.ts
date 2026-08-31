@@ -1,5 +1,7 @@
-import type { Palette } from "./types";
-import type { ProjectFile } from "./files";
+import type { Palette, ProjectKind } from "./types.ts";
+import type { ProjectFile } from "./files.ts";
+import { seedFiveScreens } from "./files.ts";
+import { isPhoneKind } from "./infer.ts";
 
 const IDS = ["home", "new", "list", "stats", "more"] as const;
 
@@ -273,3 +275,24 @@ root.render(React.createElement(App));
 </body>
 </html>`;
 }
+
+/** Code pane: phone kinds get the 5-tab React tree; desk kinds keep the real HTML. */
+export function codePaneFiles(
+  html: string,
+  files: ProjectFile[] | undefined,
+  opts: { name: string; palette: Palette; kind?: ProjectKind },
+): ProjectFile[] {
+  if (!isPhoneKind(opts.kind)) {
+    if (!html) return files && files.length > 0 ? files : [];
+    return [{ path: "index.html", content: html }];
+  }
+  const base =
+    files && files.length > 0 ? files : html ? [{ path: "index.html", content: html }] : [];
+  if (base.some((f) => f.path === "src/App.tsx")) return base;
+  if (!html) return base;
+  return fenix2Files(seedFiveScreens(base, html, opts.name), {
+    name: opts.name,
+    palette: opts.palette,
+  });
+}
+

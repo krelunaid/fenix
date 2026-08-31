@@ -18,10 +18,10 @@ import { Wordmark } from "@/components/wordmark";
 import { CreditMeter } from "@/components/credit-meter";
 import { runBuild, resumePolish } from "@/lib/ai/run-build";
 import { suggestEdits } from "@/lib/ai/suggest";
-import { fenix2Files } from "@/lib/projects/fenix2";
-import { seedFiveScreens } from "@/lib/projects/files";
+import { codePaneFiles } from "@/lib/projects/fenix2";
 import { useProjectStore } from "@/lib/projects/store";
 import { isPublishable, needsResume } from "@/lib/projects/recover";
+import type { ProjectKind } from "@/lib/projects/types";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/studio/$projectId")({
@@ -194,6 +194,7 @@ function StudioPage() {
               files={project.files}
               name={project.name}
               palette={project.palette}
+              kind={project.kind}
             />
           ) : (
             <>
@@ -248,6 +249,7 @@ function StudioPage() {
               files={project.files}
               name={project.name}
               palette={project.palette}
+              kind={project.kind}
             />
           ) : (
             <>
@@ -463,19 +465,18 @@ function CodePane({
   files,
   name,
   palette,
+  kind,
 }: {
   html: string;
   files?: { path: string; content: string }[];
   name: string;
   palette: { bg: string; surface: string; fg: string; muted: string; accent: string };
+  kind?: string;
 }) {
-  const list = useMemo(() => {
-    const base =
-      files && files.length > 0 ? files : html ? [{ path: "index.html", content: html }] : [];
-    if (base.some((f) => f.path === "src/App.tsx")) return base;
-    if (!html) return base;
-    return fenix2Files(seedFiveScreens(base, html, name), { name, palette });
-  }, [files, html, name, palette]);
+  const list = useMemo(
+    () => codePaneFiles(html, files, { name, palette, kind: kind as ProjectKind | undefined }),
+    [files, html, name, palette, kind],
+  );
   const ordered = useMemo(
     () =>
       [...list].sort((a, b) => {

@@ -7,8 +7,9 @@ import {
 } from "@/lib/projects/store";
 import { parseBuildOutput, type BuildResult } from "./parse";
 import { isWeakPreview, lookInstruction, resetAudit, waitPreviewAudit, waitPreviewShot } from "./look";
-import { APP_SHELL_HTML, APP_SHELL_INSTRUCTION } from "./app-shell";
+import { APP_SHELL_HTML, APP_SHELL_INSTRUCTION, DASHBOARD_POLISH_INSTRUCTION } from "./app-shell";
 import { CREATE_COST, ITERATE_COST } from "@/lib/projects/credits";
+import { isPhoneKind, resolveProjectKind } from "@/lib/projects/infer";
 import { formatHtmlErrors, validateProductHtml } from "@/lib/projects/validate-html";
 import { uid } from "@/lib/utils";
 
@@ -128,8 +129,15 @@ async function consumeViaWorker(
           error?: string;
         };
         if (job.status === "ok" && job.html) {
+          const current = useProjectStore.getState().getProject(projectId);
+          const lockKind = resolveProjectKind({
+            stored: current?.kind,
+            requested: current?.requestedKind,
+            prompt: current?.prompt ?? body.prompt,
+          });
           const result = parseBuildOutput(
             `<<<META>>>\n${JSON.stringify(job.meta ?? {})}\n<<<HTML>>>\n${job.html}\n<<<END>>>`,
+            lockKind,
           );
           if (!result) throw new Error("Risposta non valida");
           const report = applyBuildResult(projectId, result, "building");
@@ -243,10 +251,17 @@ async function polishDraft(
     const fileBlocks = (data?.files ?? [])
       .map((f) => `<<<FILE path="${f.path}">>>\n${f.content}`)
       .join("\n");
+    const existing = useProjectStore.getState().getProject(projectId);
+    const lockKind = resolveProjectKind({
+      stored: existing?.kind,
+      requested: existing?.requestedKind,
+      prompt: existing?.prompt ?? prompt,
+    });
     const result =
       data &&
       parseBuildOutput(
         `<<<META>>>\n${JSON.stringify(data.meta ?? {})}\n${fileBlocks}\n<<<HTML>>>\n${data.html ?? ""}\n<<<END>>>`,
+        lockKind,
       );
     if (result?.html) {
       const report = applyBuildResult(projectId, result, "building");
@@ -325,13 +340,23 @@ export async function resumePolish(projectId: string) {
     inflight.delete(projectId);
     return;
   }
+  const kind = resolveProjectKind({
+    stored: project.kind,
+    requested: project.requestedKind,
+    prompt: project.prompt,
+  });
   store.updateProject(projectId, {
+    kind,
+    requestedKind: project.requestedKind ?? kind,
     status: "building",
     error: undefined,
     buildLog: [...(project.buildLog ?? []), "Riprendo rifinitura"],
   });
   try {
-    const lastValidHtml = await polishDraft(projectId, project.prompt, project.html);
+    const phoneShell = /\bfk-tab\b/.test(project.html);
+    const instruction =
+      kind === "dashboard" && phoneShell ? DASHBOARD_POLISH_INSTRUCTION : undefined;
+    const lastValidHtml = await polishDraft(projectId, project.prompt, project.html, instruction);
     finishPolish(projectId, lastValidHtml);
   } catch (err) {
     const message = err instanceof Error ? err.message : RESUME_ERROR;
@@ -385,10 +410,22 @@ export async function runBuild(projectId: string, instruction?: string) {
   let charged = true;
   try {
     let streamed = false;
+    const kind = resolveProjectKind({
+      stored: project.kind,
+      requested: project.requestedKind,
+      prompt: project.prompt,
+    });
+    const phone = isPhoneKind(kind);
     const payload = {
       prompt: project.prompt,
-      html: instruction ? project.html : APP_SHELL_HTML,
-      instruction: instruction || APP_SHELL_INSTRUCTION,
+      html: instruction ? project.html : phone ? APP_SHELL_HTML : project.html || "",
+      instruction:
+        instruction ||
+        (kind === "dashboard"
+          ? DASHBOARD_POLISH_INSTRUCTION
+          : phone
+            ? APP_SHELL_INSTRUCTION
+            : undefined),
     };
     try {
       streamed = isIOS()

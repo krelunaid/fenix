@@ -1,4 +1,5 @@
 import { DEFAULT_PALETTE, type Palette, type ProjectKind } from "@/lib/projects/types";
+import { isPhoneKind } from "@/lib/projects/infer";
 import { assembleHtml, ensureScreenFiles, parseProjectFiles, seedFiveScreens, type ProjectFile } from "@/lib/projects/files";
 import { fenix2Files } from "@/lib/projects/fenix2";
 
@@ -63,7 +64,7 @@ function parseMeta(raw: string): Omit<BuildResult, "html" | "files"> {
     return {
       name: "Studio",
       tagline: "",
-      kind: "site",
+      kind: "app",
       summary: "",
       direction: "",
       palette: DEFAULT_PALETTE,
@@ -79,7 +80,7 @@ function extractHtml(text: string) {
   return "";
 }
 
-export function parseBuildOutput(text: string): BuildResult | null {
+export function parseBuildOutput(text: string, lockKind?: ProjectKind): BuildResult | null {
   const trimmed = text.trim();
   const metaBlock = trimmed.match(/<<<META>>>\s*([\s\S]*?)(?:<<<HTML>>>|<<<FILE |$)/);
   const htmlBlock = trimmed.match(/<<<HTML>>>\s*([\s\S]*?)(?:<<<FILE |<<<END>>>|$)/);
@@ -92,20 +93,30 @@ export function parseBuildOutput(text: string): BuildResult | null {
   if (!html || html.length < 80) return null;
   if (!/<\/html>/i.test(html)) html = `${html}\n</body>\n</html>`;
 
-  if (!files.some((f) => /(^|\/)index\.html$/i.test(f.path))) {
-    files = [{ path: "index.html", content: html }, ...files];
-  }
-  files = ensureScreenFiles(files, html);
-  files = seedFiveScreens(files, html, metaBlock ? undefined : "App");
-  html = assembleHtml(files, html) || html;
-
   const meta = parseMeta(metaBlock?.[1]?.trim() || "{}");
-  files = seedFiveScreens(files, html, meta.name);
-  html = assembleHtml(files, html) || html;
-  files = fenix2Files(files, { name: meta.name, palette: meta.palette });
+  if (lockKind) meta.kind = lockKind;
   if (meta.name === "Studio") {
     const title = html.match(/<title>([^<]+)<\/title>/i)?.[1]?.trim();
     if (title) meta.name = title.slice(0, 80);
   }
+
+  if (!files.some((f) => /(^|\/)index\.html$/i.test(f.path))) {
+    files = [{ path: "index.html", content: html }, ...files];
+  }
+
+  if (isPhoneKind(meta.kind)) {
+    files = ensureScreenFiles(files, html);
+    files = seedFiveScreens(files, html, metaBlock ? undefined : "App");
+    html = assembleHtml(files, html) || html;
+    files = seedFiveScreens(files, html, meta.name);
+    html = assembleHtml(files, html) || html;
+    files = fenix2Files(files, { name: meta.name, palette: meta.palette });
+  } else {
+    files = [
+      { path: "index.html", content: html },
+      ...files.filter((f) => !/(^|\/)index\.html$/i.test(f.path) && !/^screens\//i.test(f.path)),
+    ];
+  }
+
   return { ...meta, html, files };
 }

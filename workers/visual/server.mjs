@@ -147,6 +147,28 @@ elenco
 <!DOCTYPE html> con header.fk-top, main, nav.fk-tab 5 data-view, template id=t-home t-new t-list t-stats t-more
 <<<END>>>`;
 
+const DASHBOARD_SYSTEM = `Motore Fenix. Generi un GESTIONALE DESKTOP, non un'app telefono, non una landing.
+Italiano. Palette dal mestiere, mai #f5f5f7+#0071e3. Testo contrasto AA 4.5:1.
+Header in alto o sidebar. Tab in alto — MAI nav.fk-tab in basso, MAI class fk-tab.
+Elenco/tabella, filtri, form nuovo, numeri. Almeno 3 viste data-view.
+window.Fenix.load/save, mai localStorage. CSS reale, niente controlli browser nudi.
+Niente Apple, iOS, Grok, Fenix, Inter, Manrope nel prodotto.
+Rispondi SOLO:
+<<<META>>>
+{"name":"","tagline":"","kind":"dashboard","summary":"","palette":{"bg":"#1a1612","surface":"#2a241c","fg":"#e6dcc8","muted":"#9a8f7a","accent":"#c45c26"}}
+<<<HTML>>>
+<!DOCTYPE html> gestionale desktop completo
+<<<END>>>`;
+
+function looksDashboard(prompt, instruction) {
+  const p = `${prompt || ""} ${instruction || ""}`.toLowerCase();
+  return (
+    /\bkind\s*=\s*dashboard\b/.test(p) ||
+    /formato:\s*gestionale/.test(p) ||
+    /\bgestionale desktop\b/.test(p)
+  );
+}
+
 async function generateHero(apiKey, prompt, aspect) {
   try {
     const res = await fetch("https://api.x.ai/v1/images/generations", {
@@ -186,11 +208,14 @@ function injectHero(html, url) {
 async function generate(prompt, html, instruction) {
   const apiKey = (process.env.XAI_API_KEY || "").trim();
   if (!apiKey) throw new Error("Manca XAI_API_KEY");
+  const dashboard = looksDashboard(prompt, instruction);
   const user = [
     `BRIEF:\n${prompt}`,
     html ? `HTML ATTUALE:\n${html.slice(0, 20000)}` : "",
     instruction ? `MODIFICA:\n${instruction}` : "",
-    "META + HTML completo ora.",
+    dashboard
+      ? "META kind=dashboard + HTML gestionale desktop completo ora. Niente nav.fk-tab."
+      : "META + HTML completo ora.",
   ]
     .filter(Boolean)
     .join("\n\n");
@@ -206,7 +231,7 @@ async function generate(prompt, html, instruction) {
       max_tokens: 8000,
       stream: false,
       messages: [
-        { role: "system", content: GENERATE_SYSTEM },
+        { role: "system", content: dashboard ? DASHBOARD_SYSTEM : GENERATE_SYSTEM },
         { role: "user", content: user },
       ],
     }),
@@ -225,7 +250,7 @@ async function generate(prompt, html, instruction) {
     const content = m[2].trim();
     fromGrok.push({ path, content });
     const sm = path.match(/^screens\/(\w+)\.html$/);
-    if (sm) {
+    if (sm && !dashboard) {
       out = spliceScreen(out, sm[1], content);
       const comp = TSX_NAME[sm[1]];
       if (comp) fromGrok.push({ path: `src/screens/${comp}.tsx`, content: htmlToJsx(content, comp) });
@@ -233,10 +258,17 @@ async function generate(prompt, html, instruction) {
   }
   const hero = await generateHero(apiKey, prompt, /fk-tab/i.test(out) ? "1:1" : "16:9");
   if (hero) out = injectHero(out, hero);
+  const meta = dashboard ? { ...(parsed.meta || {}), kind: "dashboard" } : parsed.meta;
   return {
     html: out,
-    meta: parsed.meta,
-    log: hero ? ["Bozza 5 schermate", "Foto hero"] : ["Bozza 5 schermate"],
+    meta,
+    log: dashboard
+      ? hero
+        ? ["Bozza gestionale desktop", "Foto hero"]
+        : ["Bozza gestionale desktop"]
+      : hero
+        ? ["Bozza 5 schermate", "Foto hero"]
+        : ["Bozza 5 schermate"],
     files: fromGrok,
   };
 }
@@ -412,6 +444,17 @@ async function auditTab(page, index) {
 async function polish(prompt, html, instruction) {
   const apiKey = (process.env.XAI_API_KEY || "").trim();
   if (!apiKey) throw new Error("Manca XAI_API_KEY");
+  if (looksDashboard(prompt, instruction)) {
+    const dashInstruction =
+      instruction ||
+      "SOSTITUISCI nav.fk-tab e lo scheletro telefono con un gestionale desktop. Header o sidebar, tabella, filtri, form, numeri. kind=dashboard. Niente tabbar iPhone. Tieni Fenix.load/save. CSS reale.";
+    const result = await generate(prompt, html, dashInstruction);
+    return {
+      ...result,
+      meta: { ...(result.meta || {}), kind: "dashboard" },
+      log: ["Rifinitura gestionale desktop", ...(result.log || [])],
+    };
+  }
   const log = [];
   let current = html;
   let meta = {};

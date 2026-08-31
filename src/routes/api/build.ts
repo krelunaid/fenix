@@ -12,6 +12,7 @@ import {
   XAI_MISSING_KEY_ERROR,
   FENIX_MODEL,
 } from "@/lib/ai/model";
+import { formatPrefix, kindFromPrompt } from "@/lib/projects/infer";
 
 type Body = {
   prompt?: string;
@@ -105,11 +106,22 @@ export const Route = createFileRoute("/api/build")({
             : "";
 
         const seed = Array.from(prompt).reduce((h, c) => ((h << 5) - h + c.charCodeAt(0)) | 0, 0);
+        const lockKind = kindFromPrompt(prompt) ?? "app";
         const userParts = [
           `BRIEF:\n${prompt}`,
-          `FORMATO: app telefono 390×844, kind=app, tab in basso. NON un sito web, NON una landing, a meno che il brief dica sito/vetrina.`,
-          `COMPLETO: 5 schermate che si usano (home, nuovo, lista, numeri, altro). Form che salvano. Niente hero da homepage.`,
+          formatPrefix(lockKind).trim(),
         ];
+        if (lockKind === "dashboard") {
+          userParts.push(
+            "COMPLETO: gestionale desktop con almeno 3 viste, tabella o elenco, form, filtri, numeri. Niente nav.fk-tab, niente tabbar iPhone.",
+          );
+        } else if (lockKind === "site" || lockKind === "landing") {
+          userParts.push("COMPLETO: sito con sezioni, nav in alto, footer. NON un'app telefono.");
+        } else {
+          userParts.push(
+            "COMPLETO: 5 schermate che si usano (home, nuovo, lista, numeri, altro). Form che salvano. Niente hero da homepage.",
+          );
+        }
         if (html && instruction) userParts.push(`APP ATTUALE (HTML):\n${html}`);
         if (instruction) {
           userParts.push(
@@ -280,7 +292,7 @@ export const Route = createFileRoute("/api/build")({
 
               if (emitted) return;
 
-              const parsed = parseBuildOutput(acc);
+              const parsed = parseBuildOutput(acc, lockKind);
               if (!parsed) {
                 finish({
                   t: "err",
@@ -345,7 +357,7 @@ export const Route = createFileRoute("/api/build")({
               }
             } catch (err) {
               const aborted = err instanceof Error && err.name === "AbortError";
-              const salvage = parseBuildOutput(acc);
+              const salvage = parseBuildOutput(acc, lockKind);
               if (salvage) {
                 const gated = await gateBuildResult({
                   apiKey,
@@ -374,7 +386,7 @@ export const Route = createFileRoute("/api/build")({
               clearInterval(heartbeat);
               clearTimeout(timer);
               if (!emitted) {
-                const salvage = parseBuildOutput(acc);
+                const salvage = parseBuildOutput(acc, lockKind);
                 if (salvage) {
                   const gated = await gateBuildResult({
                     apiKey,
