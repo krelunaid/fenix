@@ -19,6 +19,10 @@ export function getOwnerCapability(): string {
   }
 }
 
+export function isLegacyImmutableError(error: string) {
+  return /senza titolare:\s*immutabile/i.test(error);
+}
+
 export async function loadPublished(id: string): Promise<PublishedSnapshot | null> {
   const res = await fetch(`/api/sites/${encodeURIComponent(id)}`, { cache: "no-store" });
   if (res.status === 404) return null;
@@ -36,25 +40,39 @@ export async function publishSnapshot(input: {
   html: string;
 }): Promise<PublishedSnapshot> {
   const owner = getOwnerCapability();
-  const current = await loadPublished(input.id);
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-    [OWNER_HEADER]: owner,
-  };
-  if (current) headers["If-Match"] = `"${current.version}"`;
-  const res = await fetch(`/api/sites/${encodeURIComponent(input.id)}`, {
-    method: "PUT",
-    headers,
-    cache: "no-store",
-    body: JSON.stringify({
-      name: input.name,
-      tagline: input.tagline ?? "",
-      kind: input.kind,
-      summary: input.summary ?? "",
-      palette: input.palette,
-      html: input.html,
-    }),
+  const body = JSON.stringify({
+    name: input.name,
+    tagline: input.tagline ?? "",
+    kind: input.kind,
+    summary: input.summary ?? "",
+    palette: input.palette,
+    html: input.html,
   });
+
+  async function put(id: string, ifMatch?: string) {
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+      [OWNER_HEADER]: owner,
+    };
+    if (ifMatch) headers["If-Match"] = ifMatch;
+    return fetch(`/api/sites/${encodeURIComponent(id)}`, {
+      method: "PUT",
+      headers,
+      cache: "no-store",
+      body,
+    });
+  }
+
+  const current = await loadPublished(input.id);
+  let id = input.id;
+  let res = await put(id, current ? `"${current.version}"` : undefined);
+  if (res.status === 409) {
+    const payload = (await res.clone().json().catch(() => ({}))) as { error?: string };
+    if (isLegacyImmutableError(String(payload.error || ""))) {
+      id = crypto.randomUUID();
+      res = await put(id);
+    }
+  }
   const payload = (await res.json().catch(() => ({}))) as PublishedSnapshot & { error?: string };
   if (!res.ok) {
     throw new Error(payload.error || "Pubblicazione rifiutata.");

@@ -145,11 +145,31 @@ describe("published site is server-side, not localStorage", () => {
       await page.goto(`${PREVIEW}/sito/${id}`, { waitUntil: "domcontentloaded", timeout: 20000 });
       const frame = page.frameLocator("iframe").first();
       await frame.getByRole("heading", { name: "Onda" }).waitFor({ timeout: 15000 });
+      await page.waitForTimeout(400);
       assert.equal(await page.getByText("Dashboard stantia").count(), 0);
       assert.equal(await page.getByText("Sito non trovato").count(), 0);
       const sandbox = await page.locator("iframe").first().getAttribute("sandbox");
       assert.equal(/(^|\s)allow-same-origin(\s|$)/.test(sandbox || ""), false);
       assert.match(sandbox || "", /allow-scripts/);
+      const box = await page.locator("iframe").first().boundingBox();
+      const vp = page.viewportSize();
+      assert.ok(box && vp, "iframe e viewport");
+      assert.ok(box!.width >= vp!.width * 0.95, `iframe width ${box!.width} vs ${vp!.width}`);
+      const child = page.frames().find((f) => f !== page.mainFrame());
+      assert.ok(child);
+      const media = await child!.evaluate(async () => {
+        const imgs = [...document.querySelectorAll("img")];
+        await Promise.all(imgs.map((img) => (img.decode ? img.decode().catch(() => {}) : Promise.resolve())));
+        return imgs.map((img) => ({
+          alt: img.alt,
+          w: img.naturalWidth,
+          src: img.currentSrc || img.src,
+        }));
+      });
+      for (const img of media) {
+        if (!/craft-hero\.jpg/.test(img.src)) continue;
+        assert.ok(img.w > 0, `craft-hero naturalWidth=${img.w}`);
+      }
     } finally {
       await browser.close();
     }

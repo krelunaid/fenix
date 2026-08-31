@@ -56,8 +56,8 @@ function LiveSitePage() {
   }
 
   return (
-    <div className="flex h-dvh flex-col bg-background">
-      <header className="flex h-12 shrink-0 items-center gap-3 border-b border-border px-3">
+    <div className="flex h-dvh w-full max-w-none flex-col bg-background">
+      <header className="flex h-12 w-full shrink-0 items-center gap-3 border-b border-border px-3">
         <Button
           variant="ghost"
           size="icon-sm"
@@ -81,17 +81,19 @@ function LiveSitePage() {
           Scarica
         </Button>
       </header>
-      <iframe
-        title={snap.name}
-        srcDoc={prepareSrcDoc(
-          snap.html,
-          snap.palette ?? { bg: "#ffffff" },
-          snap.id,
-          snap.kind,
-        )}
-        sandbox="allow-scripts allow-forms allow-modals"
-        className="min-h-0 w-full flex-1 border-0 bg-white"
-      />
+      <div className="relative min-h-0 w-full flex-1">
+        <iframe
+          title={snap.name}
+          srcDoc={prepareSrcDoc(
+            snap.html,
+            snap.palette ?? { bg: "#ffffff" },
+            snap.id,
+            snap.kind,
+          )}
+          sandbox="allow-scripts allow-forms allow-modals"
+          className="absolute inset-0 block h-full w-full border-0 bg-white"
+        />
+      </div>
     </div>
   );
 }

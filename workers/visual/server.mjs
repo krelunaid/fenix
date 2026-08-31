@@ -228,8 +228,8 @@ function injectHero(html, url) {
   return placeHeroMarkup(html, img);
 }
 
-const CRAFT_HERO_SRC = "https://images.unsplash.com/photo-1610701596007-11502861dcfa?w=1600";
-const CRAFT_HERO_MARKUP = `<img class="fk-hero fk-hero-craft" src="${CRAFT_HERO_SRC}" alt="Ceramiche in terracotta al tornio" width="1600" height="900" style="width:100%;height:min(52vh,560px);min-height:280px;object-fit:cover;display:block;background:#cbb392" onerror="this.removeAttribute('src')"/>`;
+const CRAFT_HERO_SRC = "/craft-hero.jpg";
+const CRAFT_HERO_MARKUP = `<img class="fk-hero fk-hero-craft" src="${CRAFT_HERO_SRC}" alt="Ceramiche in terracotta al tornio" width="1600" height="900" style="width:100%;height:min(52vh,560px);min-height:280px;object-fit:cover;display:block;background:#cbb392"/>`;
 
 function placeHeroMarkup(html, markup) {
   let next = String(html || "").replace(/^\s*"\s*\/>/m, "").replace(/>\s*"\s*\/>/g, ">");
@@ -256,11 +256,15 @@ function scrubCraftMedia(html) {
     /https:\/\/images\.unsplash\.com\/photo-1595878715977-2e8f8df18ea7[^"'\s]*/g,
     CRAFT_HERO_SRC,
   );
+  next = next.replace(
+    /https:\/\/images\.unsplash\.com\/photo-1610701596007-11502861dcfa[^"'\s]*/g,
+    CRAFT_HERO_SRC,
+  );
   if (/fk-tab|bottom-tab/i.test(next)) return next;
   next = next.replace(/<img\b([^>]*class=["'][^"']*fk-hero[^"']*["'][^>]*)>/gi, (tag, attrs) => {
-    if (/\bfk-hero-craft\b/.test(tag)) return tag;
     const src = String(attrs).match(/\bsrc=["']([^"']*)["']/i)?.[1] || "";
-    if (!src || /^data:image\//i.test(src)) return CRAFT_HERO_MARKUP;
+    if (src === CRAFT_HERO_SRC || /\/craft-hero\.jpg(?:\?|$)/.test(src)) return CRAFT_HERO_MARKUP;
+    if (/\bfk-hero-craft\b/.test(tag) || !src || /^data:image\//i.test(src)) return CRAFT_HERO_MARKUP;
     return tag;
   });
   next = next.replace(/<svg[^>]*fk-hero[^>]*>[\s\S]*?<\/svg>/gi, CRAFT_HERO_MARKUP);

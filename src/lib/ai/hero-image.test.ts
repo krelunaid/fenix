@@ -25,7 +25,8 @@ describe("injectHero / materializeHero", () => {
     assert.match(https, /onerror="this.removeAttribute\('src'\)"/);
     const data = injectHero(html, DATA);
     assert.match(data, /fk-hero-craft/);
-    assert.match(data, /photo-1610701596007/);
+    assert.match(data, /\/craft-hero\.jpg/);
+    assert.doesNotMatch(data, /photo-1610701596007/);
     assert.doesNotMatch(data, /src="data:image\/png;base64,/);
     assert.equal(injectHero(html, "javascript:alert(1)"), html);
     assert.equal(injectHero(html, 'https://x.example/"onclick=alert(1)'), html);
@@ -65,7 +66,7 @@ describe("injectHero / materializeHero", () => {
     const html = `<html><body><img class="fk-hero" src="${DATA}" alt=""/><img src="https://images.unsplash.com/photo-1595878715977-2e8f8df18ea7?w=800" alt="Piatto da portata"/></body></html>`;
     const next = scrubCraftMedia(html);
     assert.match(next, /fk-hero-craft/);
-    assert.match(next, /photo-1610701596007/);
+    assert.match(next, /\/craft-hero\.jpg/);
     assert.doesNotMatch(next, /data:image\/png/);
     assert.doesNotMatch(next, /photo-1595878715977/);
     assert.match(next, /Piatto da portata/);
@@ -73,7 +74,7 @@ describe("injectHero / materializeHero", () => {
     const craft = injectCraftHero("<html><body><main></main></body></html>");
     assert.match(craft, /fk-hero-craft/);
     assert.equal(CRAFT_HERO_MARKUP.includes("Ceramiche in terracotta"), true);
-    assert.equal(CRAFT_HERO_SRC.includes("photo-1610701596007"), true);
+    assert.equal(CRAFT_HERO_SRC, "/craft-hero.jpg");
     const phone = scrubCraftMedia(
       `<html><body><nav class="fk-tab"></nav><img class="fk-hero" src="${DATA}" alt=""/></body></html>`,
     );

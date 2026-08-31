@@ -147,19 +147,16 @@ export async function writePublished(
   const ownerHash = hashOwner(ownerId);
   const hash = snapshotHash(html, parsed.kind, parsed.name);
   const existing = await readPublished(id);
-  if (existing?.ownerHash && existing.ownerHash !== ownerHash) {
-    return { error: "Non sei il titolare di questo sito.", status: 403 };
-  }
-  if (existing && existing.hash === hash) {
-    if (!existing.ownerHash) {
-      const claimed = { ...existing, ownerHash };
-      const saved = await persistSnapshot(claimed);
-      if ("error" in saved) return saved;
-      return publicSnapshot(saved);
-    }
-    return publicSnapshot(existing);
-  }
   if (existing) {
+    if (!existing.ownerHash) {
+      return { error: "Sito pubblico senza titolare: immutabile.", status: 409 };
+    }
+    if (existing.ownerHash !== ownerHash) {
+      return { error: "Non sei il titolare di questo sito.", status: 403 };
+    }
+    if (existing.hash === hash) {
+      return publicSnapshot(existing);
+    }
     const match = parseIfMatch(access?.ifMatch);
     if (!ifMatchSatisfied(match, existing)) {
       return { error: "Versione non attuale.", status: 409 };

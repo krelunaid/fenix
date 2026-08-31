@@ -1,10 +1,11 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, readFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { after, before, describe, it } from "node:test";
 import { fileURLToPath } from "node:url";
 import { ensureFenixAdapter } from "./fenix-adapter.ts";
+import { scrubCraftMedia } from "../ai/hero-image.ts";
 import { OWNER_HEADER } from "./publish-owner.ts";
 import {
   isPublishedId,
@@ -141,8 +142,49 @@ describe("published store", () => {
     assert.doesNotMatch(pub.html, /data:image\/jpeg/);
     assert.doesNotMatch(pub.html, /photo-1595878715977/);
     assert.match(pub.html, /fk-hero-craft/);
-    assert.match(pub.html, /photo-1610701596007/);
+    assert.match(pub.html, /\/craft-hero\.jpg/);
+    assert.doesNotMatch(pub.html, /photo-1610701596007/);
     assert.match(pub.html, /Piatto da portata/);
+  });
+
+  it("legacy ownerless snapshot cannot be claimed by replaying the same body", async () => {
+    const id = "onda-site-legacy";
+    const html = scrubCraftMedia(ADAPTED);
+    const snap = {
+      id,
+      name: "Onda",
+      tagline: "",
+      kind: "site" as const,
+      summary: "",
+      palette: PALETTE,
+      html,
+      version: 1,
+      hash: snapshotHash(html, "site", "Onda"),
+      publishedAt: 1,
+    };
+    const path = join(dir, `${id}.json`);
+    writeFileSync(path, JSON.stringify(snap));
+    const before = readFileSync(path);
+    const claim = await writePublished(
+      id,
+      {
+        name: "Onda",
+        kind: "site",
+        palette: PALETTE,
+        html: ADAPTED,
+      },
+      access(OWNER_B),
+    );
+    assert.equal("error" in claim, true);
+    if ("error" in claim) {
+      assert.equal(claim.status, 409);
+      assert.match(claim.error, /immutabile/);
+    }
+    assert.deepEqual(readFileSync(path), before);
+    const loaded = await readPublished(id);
+    assert.equal(loaded?.ownerHash, undefined);
+    assert.equal(loaded?.html, html);
+    assert.equal(loaded?.hash, snap.hash);
   });
 
   it("refuses HTML that is not publishable", async () => {

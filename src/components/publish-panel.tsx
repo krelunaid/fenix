@@ -105,7 +105,7 @@ export function PublishPanel({
   }
 
   async function copyLink() {
-    const url = `${window.location.origin}/sito/${projectId}`;
+    const url = `${window.location.origin}/sito/${published?.id || projectId}`;
     try {
       await navigator.clipboard.writeText(url);
       toast("Link pubblico copiato.");
@@ -114,7 +114,7 @@ export function PublishPanel({
     }
   }
 
-  const publicPath = `/sito/${projectId}`;
+  const publicPath = `/sito/${published?.id || projectId}`;
 
   return (
     <div
@@ -196,7 +196,13 @@ export function PublishPanel({
           <Button
             variant="ink"
             size="lg"
-            onClick={onOpenSite}
+            onClick={() => {
+              if (published?.id) {
+                window.location.assign(`/sito/${encodeURIComponent(published.id)}`);
+                return;
+              }
+              onOpenSite();
+            }}
             className="w-full"
             disabled={busy || !published}
           >

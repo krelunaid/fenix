@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, it } from "node:test";
@@ -165,7 +165,9 @@ describe("focus-visible and worker model", () => {
     assert.match(scheme, /data-fenix-boot-ok/);
     assert.doesNotMatch(scheme, /sandboxNoise/);
     assert.match(scheme, /memoryStorage/);
-    assert.match(scheme, /defineProperty\(window, "localStorage"/);
+    assert.doesNotMatch(scheme, /void window\.localStorage/);
+    assert.doesNotMatch(scheme, /defineProperty\(window, "localStorage"/);
+    assert.match(scheme, /absolutizeCraftHero/);
     assert.match(look, /waitPreviewBoot/);
     assert.match(look, /rememberBootError/);
     assert.match(look, /rememberBootOk/);
@@ -213,7 +215,16 @@ describe("focus-visible and worker model", () => {
     assert.match(hero, /fk-hero-craft/);
     assert.match(hero, /scrubCraftMedia/);
     assert.match(hero, /injectCraftHero/);
-    assert.match(hero, /photo-1610701596007/);
+    assert.match(hero, /\/craft-hero\.jpg/);
+    assert.match(hero, /CRAFT_HERO_SRC = "\/craft-hero\.jpg"/);
+    assert.equal(existsSync(join(root, "public/craft-hero.jpg")), true);
+    const storeSrc = readFileSync(join(root, "src/lib/projects/published-store.ts"), "utf8");
+    assert.match(storeSrc, /Sito pubblico senza titolare: immutabile/);
+    const publishClient = readFileSync(join(root, "src/lib/projects/publish-client.ts"), "utf8");
+    assert.match(publishClient, /isLegacyImmutableError/);
+    assert.match(publishClient, /randomUUID/);
+    const sitoSrc = readFileSync(join(root, "src/routes/sito.$projectId.tsx"), "utf8");
+    assert.match(sitoSrc, /absolute inset-0/);
     const edge = readFileSync(join(root, "netlify/edge-functions/build.ts"), "utf8");
     assert.match(edge, /SITE_PROMPT/);
     assert.match(edge, /const desk = lockKind === "site"/);

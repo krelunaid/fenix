@@ -115,19 +115,21 @@ export function PreviewFrame({
           style={width === "100%" ? { width: "100%" } : { width, maxWidth: "100%" }}
         >
           {srcDoc ? (
-            <iframe
-              key={`${name}-${srcDoc.length}`}
-              title={`Anteprima ${name}`}
-              data-preview={device}
-              sandbox="allow-scripts allow-forms allow-modals"
-              srcDoc={srcDoc}
-              className="h-full min-h-[70vh] w-full border-0 bg-white"
-              style={{
-                background: background ?? "var(--color-card)",
-                overflow: "auto",
-                WebkitOverflowScrolling: "touch",
-              }}
-            />
+            <div className="relative h-full min-h-[70vh] w-full">
+              <iframe
+                key={`${name}-${srcDoc.length}`}
+                title={`Anteprima ${name}`}
+                data-preview={device}
+                sandbox="allow-scripts allow-forms allow-modals"
+                srcDoc={srcDoc}
+                className="absolute inset-0 h-full w-full border-0 bg-white"
+                style={{
+                  background: background ?? "var(--color-card)",
+                  overflow: "auto",
+                  WebkitOverflowScrolling: "touch",
+                }}
+              />
+            </div>
           ) : (
             <div className="grid h-full place-items-center px-8 text-center">
               <p className="max-w-sm text-sm text-muted-foreground">

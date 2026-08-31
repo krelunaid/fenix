@@ -1,15 +1,18 @@
 const XAI_IMAGES = "https://api.x.ai/v1/images/generations";
 const HERO_MAX_BYTES = 900_000;
 
-/** Real terracotta still-life already used for dead product photos. Never a page screenshot. */
-export const CRAFT_HERO_SRC =
-  "https://images.unsplash.com/photo-1610701596007-11502861dcfa?w=1600";
+/** Versioned ceramic still-life in /public. Never a page screenshot, never a remote CDN. */
+export const CRAFT_HERO_SRC = "/craft-hero.jpg";
 
-export const CRAFT_HERO_MARKUP = `<img class="fk-hero fk-hero-craft" src="${CRAFT_HERO_SRC}" alt="Ceramiche in terracotta al tornio" width="1600" height="900" style="width:100%;height:min(52vh,560px);min-height:280px;object-fit:cover;display:block;background:#cbb392" onerror="this.removeAttribute('src')"/>`;
+export const CRAFT_HERO_MARKUP = `<img class="fk-hero fk-hero-craft" src="${CRAFT_HERO_SRC}" alt="Ceramiche in terracotta al tornio" width="1600" height="900" style="width:100%;height:min(52vh,560px);min-height:280px;object-fit:cover;display:block;background:#cbb392"/>`;
 
 const DEAD_UNSPLASH: Array<[RegExp, string]> = [
   [
     /https:\/\/images\.unsplash\.com\/photo-1595878715977-2e8f8df18ea7[^"'\s]*/g,
+    CRAFT_HERO_SRC,
+  ],
+  [
+    /https:\/\/images\.unsplash\.com\/photo-1610701596007-11502861dcfa[^"'\s]*/g,
     CRAFT_HERO_SRC,
   ],
 ];
@@ -114,9 +117,11 @@ export function scrubCraftMedia(html: string) {
   for (const [re, live] of DEAD_UNSPLASH) next = next.replace(re, live);
   if (isPhoneApp(next)) return next;
   next = next.replace(/<img\b([^>]*class=["'][^"']*fk-hero[^"']*["'][^>]*)>/gi, (tag, attrs: string) => {
-    if (/\bfk-hero-craft\b/.test(tag)) return tag;
     const src = String(attrs).match(/\bsrc=["']([^"']*)["']/i)?.[1] || "";
-    if (!src || isDataImageSrc(src)) return CRAFT_HERO_MARKUP;
+    if (src === CRAFT_HERO_SRC || /\/craft-hero\.jpg(?:\?|$)/.test(src)) return CRAFT_HERO_MARKUP;
+    if (/\bfk-hero-craft\b/.test(tag) || !src || isDataImageSrc(src) || /unsplash\.com\/photo-1610701596007/.test(src)) {
+      return CRAFT_HERO_MARKUP;
+    }
     return tag;
   });
   next = next.replace(/<svg[^>]*fk-hero[^>]*>[\s\S]*?<\/svg>/gi, (tag) => {

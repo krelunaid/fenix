@@ -167,7 +167,7 @@ main,.fk-main,main p,main li,main b,.fk-tile,.fk-tile b,.fk-hello,.fk-lbl{color:
 </style>`;
 
 const SITE_KIT = `<style data-fenix-site data-fenix-desk>
-html,body{height:auto!important;min-height:100%;margin:0;max-width:100%;overflow:auto!important;overflow-x:hidden!important;-webkit-overflow-scrolling:touch;color:var(--fg,#1c1712);background:var(--bg,#efe6d4);font:400 16px/1.5 system-ui,sans-serif}
+html,body{height:auto!important;min-height:100%;width:100%!important;margin:0;max-width:none!important;overflow:auto!important;overflow-x:hidden!important;-webkit-overflow-scrolling:touch;color:var(--fg,#1c1712);background:var(--bg,#efe6d4);font:400 16px/1.5 system-ui,sans-serif}
 body{display:block!important;padding:0;overflow:visible!important}
 header,body>header,.site-top{padding:16px 24px;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px 24px;position:sticky;top:0;z-index:5;background:var(--surface,#f7f1e4);border-bottom:1px solid var(--line,#c4b49a)}
 nav,header nav{display:flex!important;flex-wrap:wrap;align-items:center;gap:6px 18px;padding:0;position:static!important;height:auto!important;max-height:none!important;grid-template-columns:none!important;border-top:0!important}
@@ -233,14 +233,6 @@ export function fenixRuntimeScript(projectId: string, kind?: string) {
     key: function(index){ return Object.keys(memoryStorage)[index] || null; },
     get length(){ return Object.keys(memoryStorage).length; }
   };
-  try {
-    void window.localStorage;
-    ls = window.localStorage;
-  } catch (e) {
-    try {
-      Object.defineProperty(window, "localStorage", { configurable: true, value: ls });
-    } catch (e2) {}
-  }
   function reportBootError(err, kind){
     var msg = "";
     try { msg = err && err.message ? String(err.message) : String(err || "errore"); } catch (e) { msg = "errore"; }
@@ -719,6 +711,25 @@ function scanScriptBody(html: string, start: number): { body: string; closer: st
   return { body, closer: "", end: html.length };
 }
 
+function previewOrigin() {
+  try {
+    if (typeof window !== "undefined" && window.location && window.location.origin !== "null") {
+      return String(window.location.origin || "").replace(/\/$/, "");
+    }
+  } catch {
+    /* opaque frame */
+  }
+  return "";
+}
+
+/** srcdoc has opaque origin: relative /craft-hero.jpg would not load. */
+export function absolutizeCraftHero(html: string, origin = previewOrigin()) {
+  if (!html) return html;
+  const base = String(origin || "").replace(/\/$/, "");
+  if (!base) return html;
+  return html.replace(/(src=["'])\/craft-hero\.jpg/gi, `$1${base}/craft-hero.jpg`);
+}
+
 export function prepareSrcDoc(
   html: string,
   bgOrPalette: string | SrcPalette = "#ffffff",
@@ -773,5 +784,5 @@ export function prepareSrcDoc(
       ? next.replace(/<\/head>/i, `${pal}</head>`)
       : `${pal}${next}`;
   }
-  return escapeEmbeddedScriptEnds(next);
+  return escapeEmbeddedScriptEnds(absolutizeCraftHero(next));
 }
