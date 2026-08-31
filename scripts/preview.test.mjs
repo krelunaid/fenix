@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   hasProcFs,
+  looksLikePreviewChild,
+  looksLikePreviewLeader,
   looksLikePreviewProcess,
   parseListenerInodes,
   parseLsofListenPids,
@@ -333,4 +335,60 @@ test("no-/proc: a verified pidfile is enough when lsof sees nothing", () => {
     cmdlineOf: () => "pnpm preview",
   });
   assert.deepEqual(owners, [50]);
+});
+
+test("looksLikePreviewLeader matches with-app-env and package-manager wrappers", () => {
+  assert.equal(looksLikePreviewLeader("node scripts/with-app-env.mjs vite preview"), true);
+  assert.equal(looksLikePreviewLeader("pnpm preview"), true);
+  assert.equal(looksLikePreviewLeader("node node_modules/.bin/vite preview"), false);
+  assert.equal(looksLikePreviewLeader("Google Chrome"), false);
+});
+
+test("looksLikePreviewChild matches the vite listener", () => {
+  assert.equal(looksLikePreviewChild("node node_modules/.bin/vite preview"), true);
+  assert.equal(looksLikePreviewChild("node scripts/with-app-env.mjs vite preview"), true);
+  assert.equal(looksLikePreviewChild("Google Chrome"), false);
+});
+
+test("no-/proc cross-clone: listener child + preview leader, pidfile absent", () => {
+  const owners = previewOwners({
+    portPids: [31365],
+    pidFilePid: null,
+    requireCmdline: true,
+    cmdlineOf: (pid) => {
+      if (pid === 31365) return "node node_modules/.bin/vite preview";
+      if (pid === 31364) return "node scripts/with-app-env.mjs vite preview";
+      return "";
+    },
+    pgidOf: (pid) => (pid === 31365 || pid === 31364 ? 31364 : null),
+  });
+  assert.deepEqual([...owners].sort((a, b) => a - b), [31364, 31365]);
+});
+
+test("no-/proc cross-clone: stale pidfile ignored, group still expanded from lsof", () => {
+  const owners = previewOwners({
+    portPids: [31365],
+    pidFilePid: 99999,
+    requireCmdline: true,
+    cmdlineOf: (pid) => {
+      if (pid === 31365) return "node node_modules/.bin/vite preview";
+      if (pid === 31364) return "node scripts/with-app-env.mjs vite preview";
+      if (pid === 99999) return "sleep 300";
+      return "";
+    },
+    pgidOf: (pid) => (pid === 31365 || pid === 31364 ? 31364 : null),
+  });
+  assert.deepEqual([...owners].sort((a, b) => a - b), [31364, 31365]);
+  assert.equal(owners.includes(99999), false);
+});
+
+test("no-/proc: unknown listener is not expanded to a process group", () => {
+  const owners = previewOwners({
+    portPids: [99],
+    pidFilePid: null,
+    requireCmdline: true,
+    cmdlineOf: (pid) => (pid === 99 ? "Google Chrome" : "node scripts/with-app-env.mjs vite preview"),
+    pgidOf: () => 88,
+  });
+  assert.deepEqual(owners, []);
 });

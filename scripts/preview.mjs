@@ -116,23 +116,63 @@ export function looksLikePreviewProcess(cmdline) {
   );
 }
 
+export function looksLikePreviewLeader(cmdline) {
+  const argv = String(cmdline ?? "")
+    .split("\0")
+    .filter(Boolean)
+    .join(" ");
+  if (!looksLikePreviewProcess(argv)) return false;
+  return /with-app-env\.mjs/.test(argv) || /\b(?:npm|pnpm|yarn)\b/.test(argv);
+}
+
+export function looksLikePreviewChild(cmdline) {
+  const argv = String(cmdline ?? "")
+    .split("\0")
+    .filter(Boolean)
+    .join(" ");
+  return looksLikePreviewProcess(argv) && /\bvite\b/.test(argv);
+}
+
 /**
  * Pids to signal. Port owners are owners by definition; the pidfile pid is only
  * a claim left by an earlier run — pids are re-used across hibernate/revive, so
  * signal it only when its command line still looks like the preview.
+ *
+ * When `pgidOf` is provided, a verified listener child (vite preview) whose
+ * leader (with-app-env / npm|pnpm preview) is also preview expands to the
+ * group leader so a clone without the pidfile can still SIGTERM the group.
+ * Unknown port holders are never added.
  */
-export function previewOwners({ portPids, pidFilePid, cmdlineOf, requireCmdline = false }) {
+export function previewOwners({
+  portPids,
+  pidFilePid,
+  cmdlineOf,
+  pgidOf,
+  requireCmdline = false,
+}) {
   const owners = new Set();
-  for (const pid of portPids) {
-    if (requireCmdline && !looksLikePreviewProcess(cmdlineOf(pid))) continue;
+
+  const consider = (pid) => {
+    if (pid == null) return;
+    if (requireCmdline && !looksLikePreviewProcess(cmdlineOf(pid))) return;
     owners.add(pid);
-  }
+    if (typeof pgidOf !== "function") return;
+    const cmd = cmdlineOf(pid);
+    const leader = parsePid(String(pgidOf(pid) ?? ""));
+    if (!leader || leader === pid) return;
+    const leaderCmd = cmdlineOf(leader);
+    if (looksLikePreviewChild(cmd) && looksLikePreviewLeader(leaderCmd)) {
+      owners.add(leader);
+    }
+  };
+
+  for (const pid of portPids) consider(pid);
   if (
     pidFilePid !== null &&
     !owners.has(pidFilePid) &&
     looksLikePreviewProcess(cmdlineOf(pidFilePid))
   ) {
-    owners.add(pidFilePid);
+    consider(pidFilePid);
   }
   return [...owners];
 }
@@ -351,6 +391,7 @@ async function stop(announce = true) {
     portPids: scanned.pids,
     pidFilePid: readPidFile(),
     cmdlineOf,
+    pgidOf,
     requireCmdline,
   });
   const { signalled, stubborn } = await terminatePids(owners, { kill: killPid, isAlive, sleep });
