@@ -305,16 +305,19 @@ export function fenixRuntimeScript(projectId: string) {
     if (emptyVal(v) && !emptyVal(local)) return local;
     return emptyVal(v) ? local : v;
   }
+  var inflight = 0;
   function call(op, col, data){
     if (!window.parent || window.parent === window) {
       return Promise.resolve(op === "load" ? fallbackLoad(col) : fallbackSave(col, data));
     }
     var id = Math.random().toString(36).slice(2);
+    inflight += 1;
     return new Promise(function(resolve){
       var done = false;
       function finish(v){
         if (done) return;
         done = true;
+        inflight = Math.max(0, inflight - 1);
         window.removeEventListener("message", on);
         resolve(op === "load" ? pickLoad(v, col) : unwrapSave(v));
       }
@@ -383,6 +386,29 @@ export function fenixRuntimeScript(projectId: string) {
   }
   if (document.readyState === "complete") setTimeout(audit, 40);
   else window.addEventListener("load", function(){ setTimeout(audit, 40); });
+  var okTries = 0;
+  function emitBootOk(){
+    if (document.documentElement.getAttribute("data-fenix-boot-error")) return;
+    if (inflight > 0 && okTries < 100) {
+      okTries += 1;
+      setTimeout(emitBootOk, 50);
+      return;
+    }
+    try { document.documentElement.setAttribute("data-fenix-boot-ok", "1"); } catch (e) {}
+    try {
+      window.parent && window.parent.postMessage({ t: "fenix-boot-ok", projectId: pid }, "*");
+    } catch (e) {}
+  }
+  function armBootOk(){
+    function go(){
+      setTimeout(function(){
+        if (!document.documentElement.getAttribute("data-fenix-boot-error")) emitBootOk();
+      }, 600);
+    }
+    if (document.readyState === "complete") go();
+    else window.addEventListener("load", go);
+  }
+  armBootOk();
   function sendShot(data){
     try { window.parent && window.parent.postMessage({ t: "fenix-shot", data: data || "" }, "*"); } catch (e) {}
   }

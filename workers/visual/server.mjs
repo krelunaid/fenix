@@ -69,16 +69,15 @@ function parseScreen(text) {
 function spliceScreen(html, id, inner) {
   if (!html || !inner) return html;
   const tid = TAB_IDS.includes(id) ? id : "home";
-  let next = html;
   const tRe = new RegExp(`(<template[^>]*\\bid=["']t-${tid}["'][^>]*>)([\\s\\S]*?)(<\\/template>)`, "i");
-  if (tRe.test(next)) {
-    next = next.replace(tRe, `$1${inner}$3`);
-  } else if (/<\/body>/i.test(next)) {
-    next = next.replace(/<\/body>/i, `<template id="t-${tid}">${inner}</template></body>`);
-  } else {
-    next += `<template id="t-${tid}">${inner}</template>`;
+  if (tRe.test(html)) {
+    return html.replace(tRe, `$1${inner}$3`);
   }
-  return next;
+  return html;
+}
+
+function looksPhoneShell(html) {
+  return /fk-tab|id=["']t-home["']|id=["']t-new["']/i.test(String(html || ""));
 }
 
 function restoreHome(html) {
@@ -554,8 +553,9 @@ async function polish(prompt, html, instruction) {
   } catch (err) {
     log.push(`Browser: ${err instanceof Error ? err.message : "errore"}`);
   }
+  const phone = looksPhoneShell(current);
   const focus = instruction ? inferTab(instruction) : -1;
-  const rounds = instruction ? 2 : PASSES;
+  const rounds = !phone ? 0 : instruction ? 2 : PASSES;
   for (let i = 0; i < rounds; i++) {
     const tabIndex = focus >= 0 ? focus : i;
     const tabId = TAB_IDS[tabIndex] || "home";
@@ -577,11 +577,16 @@ async function polish(prompt, html, instruction) {
       const text = await grok(apiKey, prompt, current, shot, tabIndex + 1, instruction, tabId);
       const screen = parseScreen(text);
       if (screen?.inner) {
-        current = spliceScreen(current, screen.id || tabId, screen.inner);
         const id = screen.id || tabId;
-        const comp = TSX_NAME[id] || "Home";
-        tsx[comp] = htmlToJsx(screen.inner, comp);
-        log.push(`Patch solo tab ${id} + src/screens/${comp}.tsx`);
+        const before = current;
+        current = spliceScreen(current, id, screen.inner);
+        if (current === before) {
+          log.push(`Patch ${id} ignorata: nodo assente`);
+        } else {
+          const comp = TSX_NAME[id] || "Home";
+          tsx[comp] = htmlToJsx(screen.inner, comp);
+          log.push(`Patch solo tab ${id} + src/screens/${comp}.tsx`);
+        }
       } else {
         const parsed = parseHtml(text);
         if (parsed?.html) {
@@ -596,7 +601,7 @@ async function polish(prompt, html, instruction) {
       log.push(`Giro ${tabId} saltato: ${err instanceof Error ? err.message : "xAI"}`);
     }
   }
-  if (!instruction && session?.page) {
+  if (!instruction && phone && session?.page) {
     const started = Date.now();
     for (let extra = 0; extra < 5 && Date.now() - started < 7 * 60 * 1000; extra++) {
       try {
@@ -620,11 +625,16 @@ async function polish(prompt, html, instruction) {
         const text = await grok(apiKey, prompt, current, shot, weak + 1, instruction, tabId);
         const screen = parseScreen(text);
         if (screen?.inner) {
-          current = spliceScreen(current, screen.id || tabId, screen.inner);
           const id = screen.id || tabId;
-          const comp = TSX_NAME[id] || "Home";
-          tsx[comp] = htmlToJsx(screen.inner, comp);
-          log.push(`Patch extra ${id} + src/screens/${comp}.tsx`);
+          const before = current;
+          current = spliceScreen(current, id, screen.inner);
+          if (current === before) {
+            log.push(`Patch extra ${id} ignorata: nodo assente`);
+          } else {
+            const comp = TSX_NAME[id] || "Home";
+            tsx[comp] = htmlToJsx(screen.inner, comp);
+            log.push(`Patch extra ${id} + src/screens/${comp}.tsx`);
+          }
         } else {
           log.push(`Extra ${tabId} senza patch`);
         }

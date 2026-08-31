@@ -19,6 +19,8 @@ const here = dirname(fileURLToPath(import.meta.url));
 const BROKEN = readFileSync(join(here, "fixtures/broken-flusso.html"), "utf8");
 const VALID = readFileSync(join(here, "fixtures/valid-app.html"), "utf8");
 const BOTTEGA = readFileSync(join(here, "fixtures/bottega-orders-crash.html"), "utf8");
+const NULL_INNER = readFileSync(join(here, "fixtures/null-innerhtml.html"), "utf8");
+const NULL_FIXED = readFileSync(join(here, "fixtures/null-innerhtml-fixed.html"), "utf8");
 
 describe("validateProductHtml", () => {
   it("extracts inline scripts and reports the exact syntax error", () => {
@@ -85,6 +87,16 @@ describe("validateProductHtml", () => {
     assert.equal(canPublishHtml(BOTTEGA, "site", "bottega"), false);
     const asDash = validateProductHtml(BOTTEGA, { kind: "dashboard" });
     assert.equal(asDash.ok, true, asDash.errors.join(" · "));
+  });
+
+  it("null querySelector.innerHTML still compiles, repaired sibling is complete", () => {
+    const crash = validateProductHtml(NULL_INNER, { kind: "dashboard" });
+    assert.equal(crash.syntaxOk, true, crash.errors.join(" · "));
+    assert.equal(crash.ok, true, crash.errors.join(" · "));
+    const fixed = validateProductHtml(NULL_FIXED, { kind: "dashboard" });
+    assert.equal(fixed.syntaxOk, true, fixed.errors.join(" · "));
+    assert.equal(fixed.ok, true, fixed.errors.join(" · "));
+    assert.match(fenixRuntimeScript("p"), /fenix-boot-ok/);
   });
 });
 

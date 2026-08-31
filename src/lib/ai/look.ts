@@ -13,11 +13,13 @@ export type PreviewAudit = {
 let lastAudit: PreviewAudit | null = null;
 let lastShot = "";
 let lastBootError: { message: string } | null = null;
+let lastBootOk = false;
 
 export function resetAudit() {
   lastAudit = null;
   lastShot = "";
   lastBootError = null;
+  lastBootOk = false;
 }
 
 export function rememberAudit(data: PreviewAudit) {
@@ -32,47 +34,79 @@ export function rememberBootError(message: string) {
   const msg = String(message || "").slice(0, 400);
   if (!msg) return;
   lastBootError = { message: msg };
+  lastBootOk = false;
+}
+
+export function rememberBootOk() {
+  if (lastBootError) return;
+  lastBootOk = true;
 }
 
 export function getPreviewBootError() {
   return lastBootError;
 }
 
-export type PreviewBoot = { error: string | null; message?: string };
+export function getPreviewBootOk() {
+  return lastBootOk && !lastBootError;
+}
 
-/** Resolves on fenix-boot-error immediately, or shortly after fenix-audit. */
-export function waitPreviewBoot(ms = 1800): Promise<PreviewBoot> {
+export type PreviewBoot = { error: string | null; message?: string; ok?: boolean };
+
+const BOOT_CANARY_MS = 5000;
+const BOOT_QUIET_MS = 280;
+
+/** Resolves on fenix-boot-error immediately, or after fenix-boot-ok + quiet. Timeout without a signal is not ready. */
+export function waitPreviewBoot(ms = BOOT_CANARY_MS): Promise<PreviewBoot> {
   if (typeof window === "undefined") {
-    return Promise.resolve({ error: lastBootError?.message ?? null });
+    const err = lastBootError?.message ?? null;
+    return Promise.resolve({ error: err, message: err || undefined, ok: !err && lastBootOk });
   }
   if (lastBootError) {
-    return Promise.resolve({ error: lastBootError.message, message: lastBootError.message });
+    return Promise.resolve({ error: lastBootError.message, message: lastBootError.message, ok: false });
   }
   return new Promise((resolve) => {
     let done = false;
     let extra: number | undefined;
-    const finish = (error: string | null) => {
+    const finish = (error: string | null, ok: boolean) => {
       if (done) return;
       done = true;
       window.removeEventListener("message", on);
       window.clearTimeout(timer);
       if (extra) window.clearTimeout(extra);
-      resolve({ error, message: error || undefined });
+      resolve({ error, message: error || undefined, ok: ok && !error });
     };
-    const timer = window.setTimeout(() => finish(lastBootError?.message ?? null), ms);
+    const timer = window.setTimeout(() => {
+      if (lastBootError) {
+        finish(lastBootError.message, false);
+        return;
+      }
+      if (lastBootOk) {
+        finish(null, true);
+        return;
+      }
+      finish("Avvio senza segnale", false);
+    }, ms);
     function on(ev: MessageEvent) {
       const msg = ev.data as { t?: string; message?: string };
       if (msg?.t === "fenix-boot-error") {
         const text = String(msg.message || lastBootError?.message || "errore in avvio");
         rememberBootError(text);
-        finish(text);
+        finish(text, false);
         return;
       }
-      if (msg?.t === "fenix-audit") {
-        extra = window.setTimeout(() => finish(lastBootError?.message ?? null), 220);
+      if (msg?.t === "fenix-boot-ok") {
+        rememberBootOk();
+        extra = window.setTimeout(() => finish(lastBootError?.message ?? null, !lastBootError), BOOT_QUIET_MS);
+        return;
+      }
+      if (msg?.t === "fenix-audit" && lastBootOk) {
+        extra = window.setTimeout(() => finish(lastBootError?.message ?? null, !lastBootError), BOOT_QUIET_MS);
       }
     }
     window.addEventListener("message", on);
+    if (lastBootOk) {
+      extra = window.setTimeout(() => finish(lastBootError?.message ?? null, !lastBootError), BOOT_QUIET_MS);
+    }
   });
 }
 

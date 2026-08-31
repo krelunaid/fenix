@@ -7,7 +7,7 @@ import {
   useProjectStore,
 } from "@/lib/projects/store";
 import { parseBuildOutput, type BuildResult } from "./parse";
-import { isWeakPreview, lookInstruction, resetAudit, waitPreviewAudit, waitPreviewShot, waitPreviewBoot, getPreviewBootError } from "./look";
+import { isWeakPreview, lookInstruction, resetAudit, waitPreviewAudit, waitPreviewShot, waitPreviewBoot, getPreviewBootError, getPreviewBootOk, rememberBootError } from "./look";
 import { APP_SHELL_HTML, APP_SHELL_INSTRUCTION, DASHBOARD_POLISH_INSTRUCTION } from "./app-shell";
 import { CREATE_COST, ITERATE_COST } from "@/lib/projects/credits";
 import { isPhoneKind, resolveProjectKind } from "@/lib/projects/infer";
@@ -57,23 +57,6 @@ function abandonVisualJob(projectId: string, raw: string) {
   const last = current?.messages[current.messages.length - 1];
   if (last?.role === "assistant" && last.content === human) return;
   store.addMessage(projectId, { id: uid(), role: "assistant", content: human });
-}
-
-function readyCopy(result: BuildResult) {
-  const summary = (result.summary ?? "")
-    .replace(/Fenix 2:\s*Vite \+ React/gi, "")
-    .replace(/Persistenza via\s*,?/gi, "")
-    .replace(/\d+ schermate/gi, "")
-    .replace(/\(\s*\)\.?/g, "")
-    .trim();
-  const useful = summary && !/^[\s.:()]+$/.test(summary) ? summary : "";
-  return [
-    `Pronto. ${result.name} è in anteprima e si usa.`,
-    useful,
-    "Tocca un suggerimento sotto, o scrivi cosa cambiare.",
-  ]
-    .filter(Boolean)
-    .join("\n\n");
 }
 
 const WORKER_POLISH =
@@ -309,13 +292,14 @@ async function consumeViaWorker(
             lockKind,
           );
           if (!result) throw new Error("Risposta non valida");
+          resetAudit();
           const report = applyBuildResult(projectId, result, "building");
           if (!report.syntaxOk) throw new Error(formatHtmlErrors(report) || "HTML non valido");
           if (!quiet) {
             store.addMessage(projectId, {
               id: uid(),
               role: "assistant",
-              content: readyCopy(result),
+              content: `${result.name} ricevuto. Controllo l'avvio. Pubblica resta chiusa.`,
             });
           }
           return true;
@@ -388,7 +372,7 @@ async function consumeStream(
           store.addMessage(projectId, {
             id: uid(),
             role: "assistant",
-            content: readyCopy(result),
+            content: `${result.name} ricevuto. Controllo l'avvio. Pubblica resta chiusa.`,
           });
         }
         finished = true;
@@ -437,6 +421,7 @@ async function polishDraft(
         lockKind,
       );
     if (result?.html) {
+      resetAudit();
       const report = applyBuildResult(projectId, result, "building");
       if (report.syntaxOk) {
         lastValidHtml = result.html;
@@ -454,7 +439,7 @@ async function polishDraft(
           role: "assistant",
           content: [
             `Motore visivo: ${logs.length ? logs.join(" · ") : "icone e rifinitura"}.`,
-            readyCopy(result),
+            "Controllo l'avvio in anteprima. Pubblica resta chiusa.",
           ].join("\n\n"),
         });
       } else {
@@ -497,15 +482,20 @@ async function settlePreviewBoot(projectId: string): Promise<string | null> {
   if (!project?.html) return "HTML assente.";
   const report = validateProductHtml(project.html, { kind: project.kind });
   const staticErr = report.ok ? null : formatHtmlErrors(report);
-  const boot = await waitPreviewBoot(staticErr ? 500 : 1800);
-  return boot.error || staticErr || null;
+  const boot = await waitPreviewBoot(staticErr ? 500 : 5000);
+  if (boot.error) return boot.error;
+  if (staticErr) return staticErr;
+  if (!boot.ok && !getPreviewBootOk()) return "Avvio senza segnale";
+  return null;
 }
 
 async function repairBootFailures(projectId: string, prompt: string): Promise<boolean> {
   const store = useProjectStore.getState();
+  let firstReason: string | null = null;
   for (let attempt = 0; attempt < BOOT_REPAIR_MAX; attempt++) {
     const reason = await settlePreviewBoot(projectId);
     if (!reason) return true;
+    firstReason = firstReason || reason;
     const current = store.getProject(projectId);
     if (!current?.html) return false;
     store.updateProject(projectId, {
@@ -513,6 +503,7 @@ async function repairBootFailures(projectId: string, prompt: string): Promise<bo
       error: undefined,
       buildLog: [...(current.buildLog ?? []), attempt === 0 ? "Riparo il codice" : "Secondo riparo"],
     });
+    const before = current.html;
     resetAudit();
     await consumeStream(
       projectId,
@@ -523,34 +514,47 @@ async function repairBootFailures(projectId: string, prompt: string): Promise<bo
           `ERRORE DI AVVIO: ${reason}`,
           "Non usare .orders su stato nullo. Sito/landing: niente scaffold gestionale (orders, inventario, Nuovo pezzo).",
           "Stato iniziale = oggetto vuoto, mai null. META+HTML completo.",
+          "Non assegnare .innerHTML o .textContent a querySelector/getElementById senza if (el).",
+          "Non patchare template t-home/t-new o tab se quei nodi non esistono nel DOM.",
         ].join("\n"),
       },
       true,
     );
+    const after = store.getProject(projectId)?.html;
+    if (after === before) {
+      rememberBootError(firstReason);
+      return false;
+    }
   }
   const last = await settlePreviewBoot(projectId);
-  return !last;
+  if (!last) return true;
+  rememberBootError(last || firstReason || "Errore in avvio");
+  return false;
 }
 
 function finishPolish(projectId: string, lastValidHtml: string, refund?: number) {
   const store = useProjectStore.getState();
   const boot = getPreviewBootError();
+  const canaryOk = getPreviewBootOk();
   const promoted = promoteReady(projectId);
-  if (promoted.ok && !boot) {
+  if (promoted.ok && !boot && canaryOk) {
+    const current = store.getProject(projectId);
     store.updateProject(projectId, { ...clearVisualJobPatch(), status: "ready", error: undefined });
     store.addMessage(projectId, {
       id: uid(),
       role: "assistant",
-      content: "Pronto. Anteprima e Pubblica sono attive.",
+      content: current?.name
+        ? `Pronto. ${current.name} è in anteprima e si usa.\n\nAnteprima e Pubblica sono attive.`
+        : "Pronto. Anteprima e Pubblica sono attive.",
     });
     return true;
   }
   if (refund) refundBuildCredit(projectId, refund);
-  const detail = boot?.message || formatHtmlErrors(promoted) || RESUME_ERROR;
+  const detail = boot?.message || (!canaryOk ? "Avvio senza segnale" : formatHtmlErrors(promoted) || RESUME_ERROR);
   store.updateProject(projectId, {
     html: lastValidHtml,
     status: "error",
-    error: boot ? `Errore in avvio: ${boot.message}` : RESUME_ERROR,
+    error: boot ? `Errore in avvio: ${boot.message}` : `Errore in avvio: ${detail}`,
     ...clearVisualJobPatch(),
   });
   store.addMessage(projectId, {
@@ -595,8 +599,12 @@ export async function resumePolish(projectId: string) {
     const lastValidHtml = await polishDraft(projectId, project.prompt, project.html, instruction);
     const latest = useProjectStore.getState().getProject(projectId);
     if (hasActiveVisualJob(latest ?? {})) return;
-    resetAudit();
-    await waitPreviewBoot(1200);
+    const booted = await repairBootFailures(projectId, project.prompt);
+    if (!booted) {
+      refundBuildCredit(projectId, CREATE_COST);
+      finishPolish(projectId, lastValidHtml, CREATE_COST);
+      return;
+    }
     finishPolish(projectId, lastValidHtml);
   } catch (err) {
     const message = err instanceof Error ? err.message : RESUME_ERROR;
@@ -793,9 +801,8 @@ export async function runBuild(projectId: string, instruction?: string) {
           }
         }
 
-        resetAudit();
-        await waitPreviewBoot(1200);
-        charged = !finishPolish(projectId, lastValidHtml, cost);
+        const canary = await repairBootFailures(projectId, project.prompt);
+        charged = !finishPolish(projectId, lastValidHtml, canary ? undefined : cost);
         return;
       }
       return;

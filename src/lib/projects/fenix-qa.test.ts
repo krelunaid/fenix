@@ -33,6 +33,7 @@ describe("focus-visible and worker model", () => {
     assert.match(resume, /const live = Boolean\(hasActiveVisualJob/);
     assert.match(resume, /uniqueLogs/);
     assert.match(resume, /refundBuildCredit/);
+    assert.match(resume, /repairBootFailures/);
     assert.match(src, /mergeUniqueLogs\(prev, job\.log\)/);
     assert.match(src, /r\.status === 404/);
     assert.match(src, /fetched\.state === "missing"/);
@@ -80,6 +81,9 @@ describe("focus-visible and worker model", () => {
     assert.doesNotMatch(worker, /card bianche, panel scuro solo se serve un dato, CTA pillola blu/);
     assert.doesNotMatch(worker, /2 colori #1d1d1f \/ #0071e3/);
     assert.match(worker, /function looksDashboard/);
+    assert.match(worker, /function looksPhoneShell/);
+    assert.match(worker, /nodo assente/);
+    assert.doesNotMatch(worker, /<template id="t-\$\{tid\}">/);
     assert.match(worker, /DASHBOARD_SYSTEM/);
     assert.match(worker, /kind=dashboard/);
     assert.match(worker, /function findReusableJob/);
@@ -112,10 +116,15 @@ describe("focus-visible and worker model", () => {
     assert.match(scheme, /ready:\s*function/);
     assert.match(scheme, /data-fenix-desk/);
     assert.match(scheme, /fenix-boot-error/);
+    assert.match(scheme, /fenix-boot-ok/);
     assert.match(scheme, /unhandledrejection/);
     assert.match(scheme, /data-fenix-boot-error/);
+    assert.match(scheme, /data-fenix-boot-ok/);
     assert.match(look, /waitPreviewBoot/);
     assert.match(look, /rememberBootError/);
+    assert.match(look, /rememberBootOk/);
+    assert.match(look, /Avvio senza segnale/);
+    assert.match(look, /fenix-boot-ok/);
     const crud = readFileSync(join(root, "src/lib/projects/dashboard-crud.ts"), "utf8");
     assert.match(crud, /data-fenix-crud/);
     assert.match(crud, /b85c38/);
@@ -124,6 +133,13 @@ describe("focus-visible and worker model", () => {
     assert.match(runBuild, /BOOT_REPAIR_MAX = 2/);
     assert.match(runBuild, /repairBootFailures/);
     assert.match(runBuild, /waitPreviewBoot/);
+    assert.match(runBuild, /getPreviewBootOk/);
+    assert.doesNotMatch(runBuild, /Pronto\. \$\{result\.name\} è in anteprima/);
+    const resume = runBuild.slice(
+      runBuild.indexOf("export async function resumePolish"),
+      runBuild.indexOf("export async function runBuild"),
+    );
+    assert.match(resume, /repairBootFailures/);
     assert.doesNotMatch(runBuild, /JOB_STILL_RUNNING \|\| \/Riprendi rifinitura/);
     assert.match(runBuild, /if \(workerError === JOB_STILL_RUNNING\)/);
   });

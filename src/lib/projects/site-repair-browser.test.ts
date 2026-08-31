@@ -12,6 +12,8 @@ import { prepareSrcDoc } from "./color-scheme.ts";
 const here = dirname(fileURLToPath(import.meta.url));
 const SITE = readFileSync(join(here, "fixtures/music-site-no-fenix.html"), "utf8");
 const BOTTEGA = readFileSync(join(here, "fixtures/bottega-orders-crash.html"), "utf8");
+const NULL_INNER = readFileSync(join(here, "fixtures/null-innerhtml.html"), "utf8");
+const NULL_FIXED = readFileSync(join(here, "fixtures/null-innerhtml-fixed.html"), "utf8");
 const PREVIEW = process.env.PREVIEW_URL || "http://127.0.0.1:8081";
 const ADAPTED = ensureFenixAdapter(SITE);
 
@@ -428,6 +430,7 @@ describe("iframe boot error on site null.orders", () => {
       });
       await page.addInitScript(
         ({ html }: { html: string }) => {
+          if (localStorage.getItem("officina-projects")) return;
           const now = Date.now();
           localStorage.setItem(
             "officina-projects",
@@ -496,7 +499,7 @@ describe("iframe boot error on site null.orders", () => {
           }
         },
         null,
-        { timeout: 15000 },
+        { timeout: 20000 },
       );
       await page.getByText("Bloccato").first().waitFor({ timeout: 8000 });
       assert.equal(await page.getByText("JOB_STILL_RUNNING").count(), 0);
@@ -523,6 +526,86 @@ describe("iframe boot error on site null.orders", () => {
       assert.equal(snap.credits, 46);
       assert.equal(snap.partito, 0);
       assert.equal(polishPosts, 0, "reload must not POST a new visual job");
+    } finally {
+      await browser.close();
+    }
+  });
+});
+
+describe("iframe boot error on null innerHTML", () => {
+  it("srcdoc reports innerHTML TypeError and never emits a clean boot-ok", async () => {
+    const src = prepareSrcDoc(
+      NULL_INNER,
+      { bg: "#f4efe6", fg: "#2a241c", accent: "#b85c38" },
+      "bottega-terra-inner",
+      "dashboard",
+    );
+    const browser = await chromium.launch({ headless: true });
+    try {
+      const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+      await page.setContent(`<!DOCTYPE html><html><body>
+<iframe id="f" style="width:1280px;height:800px;border:0"></iframe>
+<script>
+  window.__boot = null;
+  window.__ok = 0;
+  window.addEventListener("message", function (e) {
+    var m = e.data;
+    if (!m) return;
+    if (m.t === "fenix-boot-error") window.__boot = m;
+    if (m.t === "fenix-boot-ok") window.__ok += 1;
+  });
+</script>
+</body></html>`);
+      await page.locator("#f").evaluate((el, srcDoc: string) => {
+        (el as HTMLIFrameElement).srcdoc = srcDoc;
+      }, src);
+      await page.waitForFunction(() => Boolean((window as { __boot?: { message?: string } }).__boot?.message), null, {
+        timeout: 8000,
+      });
+      const boot = await page.evaluate(() => (window as { __boot?: { message?: string }; __ok?: number }).__boot);
+      const ok = await page.evaluate(() => (window as { __ok?: number }).__ok);
+      assert.match(String(boot?.message), /innerHTML/i);
+      assert.equal(ok, 0, "boot-ok must not fire after innerHTML TypeError");
+      const frame = page.frameLocator("#f");
+      const attr = await frame.locator("html").getAttribute("data-fenix-boot-error");
+      assert.match(String(attr), /innerHTML/i);
+    } finally {
+      await browser.close();
+    }
+  });
+
+  it("repaired innerHTML fixture emits boot-ok without fenix-boot-error", async () => {
+    const src = prepareSrcDoc(
+      NULL_FIXED,
+      { bg: "#f4efe6", fg: "#2a241c", accent: "#b85c38" },
+      "bottega-terra-fixed",
+      "dashboard",
+    );
+    const browser = await chromium.launch({ headless: true });
+    try {
+      const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+      await page.setContent(`<!DOCTYPE html><html><body>
+<iframe id="f" style="width:1280px;height:800px;border:0"></iframe>
+<script>
+  window.__boot = null;
+  window.__ok = 0;
+  window.addEventListener("message", function (e) {
+    var m = e.data;
+    if (!m) return;
+    if (m.t === "fenix-boot-error") window.__boot = m;
+    if (m.t === "fenix-boot-ok") window.__ok += 1;
+  });
+</script>
+</body></html>`);
+      await page.locator("#f").evaluate((el, srcDoc: string) => {
+        (el as HTMLIFrameElement).srcdoc = srcDoc;
+      }, src);
+      await page.waitForFunction(() => (window as { __ok?: number }).__ok === 1, null, { timeout: 8000 });
+      const boot = await page.evaluate(() => (window as { __boot?: { message?: string } }).__boot);
+      assert.equal(boot, null);
+      const frame = page.frameLocator("#f");
+      assert.equal(await frame.locator("html").getAttribute("data-fenix-boot-error"), null);
+      assert.equal(await frame.locator("html").getAttribute("data-fenix-boot-ok"), "1");
     } finally {
       await browser.close();
     }
