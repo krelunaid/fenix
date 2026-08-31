@@ -613,13 +613,14 @@ function json(res, status, body) {
   res.writeHead(status, {
     "Content-Type": "application/json",
     "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Headers": "content-type",
+    "Access-Control-Allow-Headers": "content-type, idempotency-key",
     "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
   });
   res.end(JSON.stringify(body));
 }
 
 const jobs = new Map();
+const activeByProject = new Map();
 let queue = Promise.resolve();
 
 function enqueue(fn) {
@@ -631,10 +632,23 @@ function enqueue(fn) {
   return run;
 }
 
+function findReusableJob(projectId, key) {
+  if (key) {
+    const byKey = jobs.get(key);
+    if (byKey && byKey.status !== "err") return byKey;
+  }
+  if (projectId) {
+    const id = activeByProject.get(projectId);
+    const job = id ? jobs.get(id) : null;
+    if (job && job.status === "run") return job;
+  }
+  return null;
+}
+
 function cors(res) {
   res.writeHead(204, {
     "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Headers": "content-type",
+    "Access-Control-Allow-Headers": "content-type, idempotency-key",
     "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
   });
   res.end();
@@ -676,14 +690,32 @@ const server = createServer(async (req, res) => {
   const prompt = String(body.prompt || "").slice(0, 2500);
   const html = String(body.html || "").slice(0, 120000);
   const instruction = String(body.instruction || "").slice(0, 2500);
+  const projectId = String(body.projectId || "").slice(0, 80);
+  const idempotencyKey = String(
+    body.jobId || body.idempotencyKey || req.headers["idempotency-key"] || "",
+  ).slice(0, 80);
   const isBuild = url.startsWith("/build");
   if (prompt.length < 3 || (!isBuild && html.length < 80)) {
     json(res, 400, { error: isBuild ? "Serve un brief." : "Servono brief e HTML." });
     return;
   }
+  const reusable = findReusableJob(projectId, idempotencyKey);
+  if (reusable) {
+    json(res, 202, { id: reusable.id, status: reusable.status || "run", reused: true });
+    return;
+  }
   const id = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
-  const job = { id, status: "run", log: ["In coda"], html: null, meta: {}, error: null };
+  const job = {
+    id,
+    projectId: projectId || null,
+    status: "run",
+    log: ["In coda"],
+    html: null,
+    meta: {},
+    error: null,
+  };
   jobs.set(id, job);
+  if (projectId) activeByProject.set(projectId, id);
   enqueue(async () => {
     job.log = ["Partito"];
     try {
@@ -696,6 +728,7 @@ const server = createServer(async (req, res) => {
           job.status = "err";
           job.error = `HTML non valido: ${broken}`;
           job.log = [...result.log, job.error];
+          if (projectId && activeByProject.get(projectId) === id) activeByProject.delete(projectId);
           return;
         }
         job.status = "ok";
@@ -714,8 +747,12 @@ const server = createServer(async (req, res) => {
       job.status = "err";
       job.error = err instanceof Error ? err.message : "Worker visivo fallito";
       job.log = [...job.log, job.error];
+      if (projectId && activeByProject.get(projectId) === id) activeByProject.delete(projectId);
     }
-    setTimeout(() => jobs.delete(id), 30 * 60 * 1000);
+    setTimeout(() => {
+      jobs.delete(id);
+      if (projectId && activeByProject.get(projectId) === id) activeByProject.delete(projectId);
+    }, 30 * 60 * 1000);
   });
   json(res, 202, { id, status: "run" });
 });

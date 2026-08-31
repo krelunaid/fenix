@@ -19,6 +19,9 @@ describe("focus-visible and worker model", () => {
     assert.match(src, /WORKER_POLL_MAX = 30/);
     assert.doesNotMatch(src, /for \(let i = 0; i < 240;/);
     assert.match(src, /export async function resumePolish/);
+    assert.match(src, /hasActiveVisualJob/);
+    assert.match(src, /visualJobPatch/);
+    assert.match(src, /Idempotency-Key/);
     const resume = src.slice(
       src.indexOf("export async function resumePolish"),
       src.indexOf("export async function runBuild"),
@@ -71,6 +74,10 @@ describe("focus-visible and worker model", () => {
     assert.match(worker, /function looksDashboard/);
     assert.match(worker, /DASHBOARD_SYSTEM/);
     assert.match(worker, /kind=dashboard/);
+    assert.match(worker, /function findReusableJob/);
+    assert.match(worker, /activeByProject/);
+    assert.match(worker, /idempotency-key/);
+    assert.match(worker, /reused: true/);
   });
 
   it("drops iOS template fallbacks from look, shell, types and cards", () => {

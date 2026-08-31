@@ -40,6 +40,10 @@ export type Project = {
   createdAt: number;
   updatedAt: number;
   demoId?: string;
+  /** Railway/visual worker job. Survives reload so polling can reattach. */
+  visualJobId?: string;
+  visualJobStatus?: "run" | "ok" | "err";
+  visualJobStartedAt?: number;
 };
 
 export const DEFAULT_PALETTE: Palette = {

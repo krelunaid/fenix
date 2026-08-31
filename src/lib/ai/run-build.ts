@@ -11,12 +11,21 @@ import { APP_SHELL_HTML, APP_SHELL_INSTRUCTION, DASHBOARD_POLISH_INSTRUCTION } f
 import { CREATE_COST, ITERATE_COST } from "@/lib/projects/credits";
 import { isPhoneKind, resolveProjectKind } from "@/lib/projects/infer";
 import { formatHtmlErrors, validateProductHtml } from "@/lib/projects/validate-html";
+import {
+  clearVisualJobPatch,
+  hasActiveVisualJob,
+  JOB_STILL_RUNNING,
+  VISUAL_JOB_TTL_MS,
+  visualJobPatch,
+} from "@/lib/projects/visual-job";
 import { uid } from "@/lib/utils";
 
 const inflight = new Set<string>();
 
 export const WORKER_POLL_MAX = 30;
 const WORKER_POLL_MS = 2000;
+/** 2s ticks while a persisted job is live. Overlay stays compact. */
+export const WORKER_JOB_POLL_MAX = 180;
 const GENERATE_POLL_MAX = 90;
 
 function readyCopy(result: BuildResult) {
@@ -35,59 +44,149 @@ const WORKER_POLISH =
     (import.meta as { env?: { VITE_VISUAL_WORKER_URL?: string } }).env?.VITE_VISUAL_WORKER_URL?.replace(/\/$/, "")) ||
   "https://fenix-production-d9f5.up.railway.app";
 
-async function callWorker(prompt: string, html: string, instruction?: string) {
-  const attempts: { polish: string; job: (id: string) => string }[] = [
-    { polish: "/__worker/polish", job: (id) => `/__worker/jobs/${id}` },
-    {
-      polish: `${WORKER_POLISH.replace(/\/$/, "")}/polish`,
-      job: (id) => `${WORKER_POLISH.replace(/\/$/, "")}/jobs/${id}`,
-    },
-    { polish: "/api/polish", job: (id) => `/api/jobs/${id}` },
-  ];
-  let lastErr = "Load failed";
-  const body = JSON.stringify({ prompt, html, instruction: instruction || undefined });
-  for (const a of attempts) {
+async function delay(ms: number) {
+  await new Promise((r) => {
+    if (typeof window !== "undefined") window.setTimeout(r, ms);
+    else setTimeout(r, ms);
+  });
+}
+
+type WorkerJob = {
+  id?: string;
+  status?: string;
+  html?: string;
+  meta?: Record<string, unknown>;
+  log?: string[];
+  files?: { path: string; content: string }[];
+  error?: string;
+};
+
+function polishUrls() {
+  const base = WORKER_POLISH.replace(/\/$/, "");
+  return [`/__worker/polish`, `${base}/polish`, `/api/polish`];
+}
+
+function jobUrls(id: string) {
+  const base = WORKER_POLISH.replace(/\/$/, "");
+  return [`/__worker/jobs/${id}`, `${base}/jobs/${id}`, `/api/jobs/${id}`];
+}
+
+async function fetchJob(id: string): Promise<WorkerJob | null> {
+  for (const url of jobUrls(id)) {
     try {
-      const started = await fetch(a.polish, {
+      const r = await fetch(url, { cache: "no-store" });
+      if (!r.ok) continue;
+      return (await r.json()) as WorkerJob;
+    } catch {
+      /* next endpoint */
+    }
+  }
+  return null;
+}
+
+async function pollWorkerJob(projectId: string, jobId: string): Promise<WorkerJob> {
+  const store = useProjectStore.getState();
+  const existing = store.getProject(projectId);
+  const started = existing?.visualJobStartedAt ?? Date.now();
+  store.updateProject(projectId, {
+    ...visualJobPatch(jobId, "run", started),
+    status: "building",
+    error: undefined,
+  });
+  const deadline = started + VISUAL_JOB_TTL_MS;
+  let ticks = 0;
+  let misses = 0;
+  while (Date.now() < deadline) {
+    await delay(WORKER_POLL_MS);
+    ticks += 1;
+    const job = await fetchJob(jobId);
+    if (!job) {
+      misses += 1;
+      if (misses >= 8) throw new Error("Job visivo non trovato. Tocca Riprendi rifinitura.");
+      continue;
+    }
+    misses = 0;
+    if (Array.isArray(job.log) && job.log.length) {
+      const current = store.getProject(projectId);
+      const prev = current?.buildLog ?? [];
+      const last = job.log[job.log.length - 1];
+      if (last && prev[prev.length - 1] !== last) {
+        store.updateProject(projectId, { buildLog: [...prev, last] });
+      }
+    }
+    if (job.status === "ok" && job.html) {
+      return job;
+    }
+    if (job.status === "err") {
+      throw new Error(`${job.error || "Worker visivo fallito"}. Tocca Riprendi rifinitura.`);
+    }
+    if (ticks >= WORKER_JOB_POLL_MAX) throw new Error(JOB_STILL_RUNNING);
+    if (ticks === WORKER_POLL_MAX) {
+      const current = store.getProject(projectId);
+      store.updateProject(projectId, {
+        buildLog: [...(current?.buildLog ?? []), "Motore visivo ancora in corso"],
+      });
+    }
+  }
+  throw new Error("Tempo scaduto sul motore visivo. Tocca Riprendi rifinitura.");
+}
+
+async function startPolishJob(
+  projectId: string,
+  prompt: string,
+  html: string,
+  instruction?: string,
+): Promise<WorkerJob> {
+  const store = useProjectStore.getState();
+  const project = store.getProject(projectId);
+  if (project && hasActiveVisualJob(project) && project.visualJobId) {
+    return pollWorkerJob(projectId, project.visualJobId);
+  }
+
+  const body = JSON.stringify({
+    prompt,
+    html,
+    instruction: instruction || undefined,
+    projectId,
+    jobId: project?.visualJobId,
+    idempotencyKey: project?.visualJobId || projectId,
+  });
+  let lastErr = "Load failed";
+  let jobId: string | undefined;
+  for (const url of polishUrls()) {
+    try {
+      const started = await fetch(url, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Idempotency-Key": projectId,
+        },
         body,
       });
       if (started.status === 202) {
-        const { id } = (await started.json()) as { id?: string };
-        if (!id) continue;
-        for (let i = 0; i < WORKER_POLL_MAX; i++) {
-          await new Promise((r) => window.setTimeout(r, WORKER_POLL_MS));
-          const jobRes = await fetch(a.job(id));
-          if (!jobRes.ok) continue;
-          const job = (await jobRes.json()) as {
-            status?: string;
-            html?: string;
-            meta?: Record<string, unknown>;
-            log?: string[];
-            files?: { path: string; content: string }[];
-            error?: string;
-          };
-          if (job.status === "ok" && job.html) return job;
-          if (job.status === "err") throw new Error(job.error || "Worker visivo fallito");
+        const payload = (await started.json()) as { id?: string };
+        if (!payload.id) {
+          lastErr = "Worker senza job id";
+          continue;
         }
-        lastErr = "Motore visivo in coda troppo a lungo";
-        continue;
+        jobId = payload.id;
+        store.updateProject(projectId, {
+          ...visualJobPatch(jobId, "run"),
+          status: "building",
+          error: undefined,
+        });
+        break;
       }
       if (!started.ok) {
         lastErr = `Worker HTTP ${started.status}`;
         continue;
       }
-      return (await started.json()) as {
-        html?: string;
-        meta?: Record<string, unknown>;
-        log?: string[];
-        files?: { path: string; content: string }[];
-      };
+      return (await started.json()) as WorkerJob;
     } catch (err) {
       lastErr = err instanceof Error ? err.message : "Load failed";
     }
   }
+  if (jobId) return pollWorkerJob(projectId, jobId);
   throw new Error(lastErr);
 }
 
@@ -109,7 +208,7 @@ async function consumeViaWorker(
       const started = await fetch(`${base}/build`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
+        body: JSON.stringify({ ...body, projectId }),
       });
       if (started.status !== 202) {
         lastErr = `Build HTTP ${started.status}`;
@@ -247,7 +346,7 @@ async function polishDraft(
   const store = useProjectStore.getState();
   let lastValidHtml = html;
   try {
-    const data = await callWorker(prompt, html, instruction);
+    const data = await startPolishJob(projectId, prompt, html, instruction);
     const fileBlocks = (data?.files ?? [])
       .map((f) => `<<<FILE path="${f.path}">>>\n${f.content}`)
       .join("\n");
@@ -269,6 +368,7 @@ async function polishDraft(
         lastValidHtml = result.html;
         const logs = data?.log ?? [];
         store.updateProject(projectId, {
+          ...clearVisualJobPatch(),
           buildLog: [
             ...(useProjectStore.getState().getProject(projectId)?.buildLog ?? []),
             ...logs,
@@ -284,7 +384,11 @@ async function polishDraft(
           ].join("\n\n"),
         });
       } else {
-        store.updateProject(projectId, { html: lastValidHtml, status: "building" });
+        store.updateProject(projectId, {
+          html: lastValidHtml,
+          status: "building",
+          ...clearVisualJobPatch(),
+        });
         store.addMessage(projectId, {
           id: uid(),
           role: "assistant",
@@ -294,6 +398,9 @@ async function polishDraft(
     }
   } catch (err) {
     const workerError = err instanceof Error ? err.message : "errore";
+    if (workerError === JOB_STILL_RUNNING || /Riprendi rifinitura/i.test(workerError)) {
+      throw err instanceof Error ? err : new Error(workerError);
+    }
     store.addMessage(projectId, {
       id: uid(),
       role: "assistant",
@@ -307,6 +414,7 @@ function finishPolish(projectId: string, lastValidHtml: string, refund?: number)
   const store = useProjectStore.getState();
   const promoted = promoteReady(projectId);
   if (promoted.ok) {
+    store.updateProject(projectId, { ...clearVisualJobPatch(), status: "ready", error: undefined });
     store.addMessage(projectId, {
       id: uid(),
       role: "assistant",
@@ -319,6 +427,7 @@ function finishPolish(projectId: string, lastValidHtml: string, refund?: number)
     html: lastValidHtml,
     status: "error",
     error: RESUME_ERROR,
+    ...clearVisualJobPatch(),
   });
   store.addMessage(projectId, {
     id: uid(),
@@ -357,11 +466,19 @@ export async function resumePolish(projectId: string) {
     const instruction =
       kind === "dashboard" && phoneShell ? DASHBOARD_POLISH_INSTRUCTION : undefined;
     const lastValidHtml = await polishDraft(projectId, project.prompt, project.html, instruction);
+    const latest = useProjectStore.getState().getProject(projectId);
+    if (hasActiveVisualJob(latest ?? {})) return;
     finishPolish(projectId, lastValidHtml);
   } catch (err) {
     const message = err instanceof Error ? err.message : RESUME_ERROR;
-    store.updateProject(projectId, { status: "error", error: RESUME_ERROR });
-    store.addMessage(projectId, { id: uid(), role: "assistant", content: message });
+    if (message === JOB_STILL_RUNNING) return;
+    const storeNow = useProjectStore.getState();
+    storeNow.updateProject(projectId, {
+      status: "error",
+      error: /riprendi/i.test(message) ? message : `${message}. ${RESUME_ERROR}`,
+      ...clearVisualJobPatch(),
+    });
+    storeNow.addMessage(projectId, { id: uid(), role: "assistant", content: message });
   } finally {
     inflight.delete(projectId);
   }

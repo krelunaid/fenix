@@ -7,6 +7,7 @@ import { chromium } from "playwright";
 import { DEMOS } from "./demos.ts";
 import { prepareSrcDoc } from "./color-scheme.ts";
 import { RESUME_ERROR } from "./recover.ts";
+import { APP_SHELL_HTML } from "../ai/app-shell.ts";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const VALID = readFileSync(join(here, "fixtures/valid-app.html"), "utf8");
@@ -132,6 +133,167 @@ describe("studio overlay and resume in browser", () => {
       assert.equal(await full.count(), 0);
       await page.goto(PREVIEW + "/studio/p-resume", { waitUntil: "domcontentloaded", timeout: 20000 });
       await page.getByRole("button", { name: "Riprendi rifinitura" }).first().waitFor({ timeout: 12000 });
+    } finally {
+      await browser?.close();
+    }
+  });
+
+  it("reattaches resume polling after reload without a second POST", async (t) => {
+    let browser;
+    try {
+      const health = await fetch(PREVIEW + "/", { signal: AbortSignal.timeout(1200) });
+      if (!health.ok) {
+        t.skip("preview non in ascolto");
+        return;
+      }
+    } catch {
+      t.skip("preview non in ascolto");
+      return;
+    }
+    const ARGILLA_PROMPT =
+      "FORMATO: gestionale ufficio. kind=dashboard. Desktop: elenco, filtri, form nuovo, numeri. Tabella che si riempie. NON landing, NON tabbar iPhone.\n\nArgilla Viva — magazzino e ordini.";
+    const jobId = "job-argilla-reattach";
+    const readyHtml = DEMOS.kiln.html;
+    let polishPosts = 0;
+    let allowComplete = false;
+    browser = await launch();
+    try {
+      const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+      await page.route(/\/api\/build/, async (route) => {
+        await route.fulfill({
+          status: 204,
+          body: "",
+        });
+      });
+      await page.route(/polish/, async (route) => {
+        if (route.request().method() === "POST") {
+          polishPosts += 1;
+          const posted = route.request().postDataJSON() as { projectId?: string };
+          assert.equal(posted?.projectId, "p-argilla");
+          await route.fulfill({
+            status: 202,
+            contentType: "application/json",
+            body: JSON.stringify({ id: jobId, status: "run" }),
+          });
+          return;
+        }
+        await route.continue();
+      });
+      await page.route(/\/jobs\//, async (route) => {
+        const payload = allowComplete
+          ? {
+              id: jobId,
+              status: "ok",
+              html: readyHtml,
+              meta: { kind: "dashboard", name: "Argilla Viva" },
+              log: ["Rifinitura gestionale desktop"],
+              files: [],
+            }
+          : { id: jobId, status: "run", log: ["In coda"], html: null };
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify(payload),
+        });
+      });
+      await page.addInitScript(
+        ({ html, resumeError, prompt }: { html: string; resumeError: string; prompt: string }) => {
+          if (localStorage.getItem("officina-projects")) return;
+          const now = Date.now();
+          localStorage.setItem(
+            "officina-projects",
+            JSON.stringify({
+              state: {
+                projects: [
+                  {
+                    id: "p-argilla",
+                    name: "Argilla Viva",
+                    tagline: "",
+                    prompt,
+                    kind: "dashboard",
+                    requestedKind: "dashboard",
+                    summary: "",
+                    palette: {
+                      bg: "#f4efe6",
+                      surface: "#fffaf3",
+                      fg: "#2a241c",
+                      muted: "#6f675c",
+                      accent: "#b85c38",
+                    },
+                    html,
+                    messages: [],
+                    buildLog: ["Rifinitura interrotta"],
+                    status: "error",
+                    error: resumeError,
+                    createdAt: now,
+                    updatedAt: now,
+                  },
+                ],
+                creditsRemaining: 46,
+                appDb: {},
+              },
+              version: 2,
+            }),
+          );
+        },
+        { html: APP_SHELL_HTML, resumeError: RESUME_ERROR, prompt: ARGILLA_PROMPT },
+      );
+      await page.goto(PREVIEW + "/studio/p-argilla", { waitUntil: "domcontentloaded", timeout: 20000 });
+      await page.getByRole("button", { name: "Riprendi rifinitura" }).first().click();
+      await page.waitForFunction(
+        () => {
+          const raw = localStorage.getItem("officina-projects");
+          if (!raw) return false;
+          try {
+            const project = JSON.parse(raw).state.projects.find((p: { id: string }) => p.id === "p-argilla");
+            return project?.visualJobId === "job-argilla-reattach" && project?.status === "building";
+          } catch {
+            return false;
+          }
+        },
+        null,
+        { timeout: 15000 },
+      );
+      assert.equal(polishPosts, 1, "first resume must POST once");
+      await page.reload({ waitUntil: "domcontentloaded" });
+      await new Promise((r) => setTimeout(r, 2500));
+      assert.equal(polishPosts, 1, "reload must not start a second polish job");
+      const afterReload = await page.evaluate(() => {
+        const raw = localStorage.getItem("officina-projects");
+        const project = JSON.parse(raw || "{}").state.projects.find((p: { id: string }) => p.id === "p-argilla");
+        return {
+          jobId: project?.visualJobId,
+          status: project?.status,
+          kind: project?.kind,
+          requestedKind: project?.requestedKind,
+          credits: JSON.parse(raw || "{}").state.creditsRemaining,
+        };
+      });
+      assert.equal(afterReload.jobId, jobId);
+      assert.equal(afterReload.status, "building");
+      assert.equal(afterReload.kind, "dashboard");
+      assert.equal(afterReload.requestedKind, "dashboard");
+      assert.equal(afterReload.credits, 46);
+      allowComplete = true;
+      await page.waitForFunction(
+        () => {
+          const raw = localStorage.getItem("officina-projects");
+          if (!raw) return false;
+          try {
+            const state = JSON.parse(raw).state;
+            const project = state.projects.find((p: { id: string }) => p.id === "p-argilla");
+            return project?.status === "ready" && !project?.visualJobId && state.creditsRemaining === 46;
+          } catch {
+            return false;
+          }
+        },
+        null,
+        { timeout: 20000 },
+      );
+      assert.equal(polishPosts, 1);
+      const publish = page.getByRole("button", { name: /Pubblica/ }).first();
+      await publish.waitFor({ timeout: 8000 });
+      assert.equal(await publish.isDisabled(), false);
     } finally {
       await browser?.close();
     }

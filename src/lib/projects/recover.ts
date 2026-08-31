@@ -1,6 +1,11 @@
 import { canPublishHtml, formatHtmlErrors, validatePublishable } from "./validate-html.ts";
 import { kindFromPrompt, resolveProjectKind } from "./infer.ts";
 import type { BuildStatus, Palette, ProjectKind } from "./types.ts";
+import {
+  clearVisualJobPatch,
+  hasActiveVisualJob,
+  type VisualJobStatus,
+} from "./visual-job.ts";
 
 export const STALE_BUILD_MS = 120_000;
 export const RESUME_ERROR = "Rifinitura interrotta. Tocca Riprendi rifinitura.";
@@ -16,6 +21,9 @@ export type Recoverable = {
   palette?: Palette;
   prompt?: string;
   requestedKind?: ProjectKind;
+  visualJobId?: string;
+  visualJobStatus?: VisualJobStatus;
+  visualJobStartedAt?: number;
 };
 
 /** Solo resumePolish/runBuild (finishPolish) possono promuovere a ready. Mai lo stale. */
@@ -27,15 +35,28 @@ export function recoverPersistedProject<T extends Recoverable>(p: T, now = Date.
   });
   const requestedKind = p.requestedKind ?? kindFromPrompt(p.prompt) ?? kind;
   const migrated = kind !== p.kind;
+  const jobLive = hasActiveVisualJob(p, now);
 
   let status = p.status;
   let error = p.error;
+  let visualJobId = p.visualJobId;
+  let visualJobStatus = p.visualJobStatus;
+  let visualJobStartedAt = p.visualJobStartedAt;
+
+  const dropJob = () => {
+    visualJobId = undefined;
+    visualJobStatus = undefined;
+    visualJobStartedAt = undefined;
+  };
+
   if (p.status === "building" && !p.html) {
     status = "error";
     error = "Interrotto. Riprova.";
+    dropJob();
   } else if (p.status === "ready" && !p.html) {
     status = "error";
     error = "HTML assente.";
+    dropJob();
   } else if (p.html && (p.status === "ready" || p.status === "building")) {
     const report = validatePublishable(p.html, {
       kind,
@@ -45,17 +66,30 @@ export function recoverPersistedProject<T extends Recoverable>(p: T, now = Date.
     if (!report.syntaxOk) {
       status = "error";
       error = formatHtmlErrors(report);
+      dropJob();
+    } else if (p.status === "building" && jobLive) {
+      status = "building";
+      error = undefined;
+    } else if (p.status === "building" && p.visualJobId && !jobLive) {
+      status = "error";
+      error = RESUME_ERROR;
+      dropJob();
     } else if (p.status === "building" && now - p.updatedAt > STALE_BUILD_MS) {
       status = "error";
       error = RESUME_ERROR;
+      dropJob();
     } else if (p.status === "ready" && !report.ok) {
       status = "error";
       error = migrated ? RESUME_ERROR : formatHtmlErrors(report);
+      dropJob();
     } else if (migrated && !report.ok) {
       status = "error";
       error = RESUME_ERROR;
+      dropJob();
     }
   }
+
+  const cleared = status !== "building" ? clearVisualJobPatch() : {};
   return {
     ...p,
     kind,
@@ -63,6 +97,9 @@ export function recoverPersistedProject<T extends Recoverable>(p: T, now = Date.
     buildLog: p.buildLog ?? [],
     status,
     error,
+    visualJobId: status === "building" ? visualJobId : cleared.visualJobId,
+    visualJobStatus: status === "building" ? visualJobStatus : cleared.visualJobStatus,
+    visualJobStartedAt: status === "building" ? visualJobStartedAt : cleared.visualJobStartedAt,
   };
 }
 

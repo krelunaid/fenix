@@ -9,9 +9,13 @@ export const Route = createFileRoute("/api/polish")({
     handlers: {
       POST: async ({ request }) => {
         const body = await request.text();
+        const headers: Record<string, string> = { "Content-Type": "application/json" };
+        const key =
+          request.headers.get("Idempotency-Key") || request.headers.get("idempotency-key");
+        if (key) headers["Idempotency-Key"] = key;
         const r = await fetch(`${WORKER}/polish`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers,
           body,
         });
         const text = await r.text();

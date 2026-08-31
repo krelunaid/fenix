@@ -70,6 +70,41 @@ describe("recoverPersistedProject", () => {
     assert.equal(isPublishable(recovered), true);
   });
 
+  it("does not turn building + live visual jobId into a stale resume error", () => {
+    const now = Date.now();
+    const recovered = recoverPersistedProject(
+      seed({
+        updatedAt: now - STALE_BUILD_MS - 5_000,
+        visualJobId: "job-live",
+        visualJobStatus: "run",
+        visualJobStartedAt: now - 8_000,
+      }),
+      now,
+    );
+    assert.equal(recovered.status, "building");
+    assert.equal(recovered.visualJobId, "job-live");
+    assert.equal(recovered.error, undefined);
+    assert.equal(isPublishable(recovered), false);
+    assert.equal(needsResume(recovered), false);
+  });
+
+  it("expires a visual job past TTL and asks to resume", () => {
+    const now = Date.now();
+    const recovered = recoverPersistedProject(
+      seed({
+        updatedAt: now - STALE_BUILD_MS - 5_000,
+        visualJobId: "job-old",
+        visualJobStatus: "run",
+        visualJobStartedAt: now - 21 * 60 * 1000,
+      }),
+      now,
+    );
+    assert.equal(recovered.status, "error");
+    assert.equal(recovered.error, RESUME_ERROR);
+    assert.equal(recovered.visualJobId, undefined);
+    assert.equal(needsResume(recovered), true);
+  });
+
   it("keeps every demo ready after rehydrate", () => {
     for (const demo of Object.values(DEMOS)) {
       const recovered = recoverPersistedProject({
