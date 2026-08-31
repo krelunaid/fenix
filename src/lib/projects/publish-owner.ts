@@ -2,6 +2,8 @@
 
 export const OWNER_HEADER = "x-fenix-owner";
 export const OWNER_STORAGE_KEY = "fenix.owner-id";
+/** originalProjectId → publishedId. Same origin as the owner capability; never in the URL. */
+export const PUBLISHED_MAP_KEY = "fenix.published-ids";
 export const OWNER_ID_RE = /^[a-f0-9]{32,64}$/i;
 
 export function parseOwnerId(raw: string | null | undefined): string | null {

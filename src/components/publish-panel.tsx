@@ -6,7 +6,7 @@ import { downloadBytes, downloadTextFile, slugify } from "@/lib/utils";
 import { zipFiles } from "@/lib/projects/zip";
 import type { ProjectFile } from "@/lib/projects/files";
 import type { Palette, ProjectKind } from "@/lib/projects/types";
-import { publishSnapshot } from "@/lib/projects/publish-client";
+import { publishSnapshot, readPublishedId } from "@/lib/projects/publish-client";
 import type { PublishedSnapshot } from "@/lib/projects/published";
 
 export function PublishPanel({
@@ -78,6 +78,9 @@ export function PublishPanel({
 
   if (!open) return null;
 
+  const publicId = published?.id || readPublishedId(projectId);
+  const publicPath = `/sito/${publicId || projectId}`;
+
   function downloadSite() {
     downloadTextFile("index.html", html, "text/html;charset=utf-8");
     toast(`index.html scaricato · ${slugify(name)}`);
@@ -105,7 +108,7 @@ export function PublishPanel({
   }
 
   async function copyLink() {
-    const url = `${window.location.origin}/sito/${published?.id || projectId}`;
+    const url = `${window.location.origin}/sito/${publicId || projectId}`;
     try {
       await navigator.clipboard.writeText(url);
       toast("Link pubblico copiato.");
@@ -113,8 +116,6 @@ export function PublishPanel({
       toast(url);
     }
   }
-
-  const publicPath = `/sito/${published?.id || projectId}`;
 
   return (
     <div
@@ -157,10 +158,10 @@ export function PublishPanel({
           <p className="mt-3 text-sm text-destructive">{error}</p>
         ) : null}
 
-        {published ? (
+        {publicId ? (
           <p className="mt-4 break-all rounded-md border border-border bg-raised px-3 py-2 font-mono text-xs">
             {publicPath}
-            {published.version > 1 ? ` · v${published.version}` : ""}
+            {published && published.version > 1 ? ` · v${published.version}` : ""}
           </p>
         ) : null}
 
@@ -197,14 +198,14 @@ export function PublishPanel({
             variant="ink"
             size="lg"
             onClick={() => {
-              if (published?.id) {
-                window.location.assign(`/sito/${encodeURIComponent(published.id)}`);
+              if (publicId) {
+                window.location.assign(`/sito/${encodeURIComponent(publicId)}`);
                 return;
               }
               onOpenSite();
             }}
             className="w-full"
-            disabled={busy || !published}
+            disabled={busy || !publicId}
           >
             <Globe />
             Apri il sito pubblicato

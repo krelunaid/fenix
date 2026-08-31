@@ -101,6 +101,7 @@ describe("focus-visible and worker model", () => {
     assert.match(publishedStore, /validatePublishable/);
     const panel = readFileSync(join(root, "src/components/publish-panel.tsx"), "utf8");
     assert.match(panel, /publishSnapshot/);
+    assert.match(panel, /readPublishedId/);
     const overlay = readFileSync(join(root, "src/components/build-overlay.tsx"), "utf8");
     assert.match(overlay, /compact = false/);
     assert.match(overlay, /z-20/);
@@ -223,6 +224,9 @@ describe("focus-visible and worker model", () => {
     const publishClient = readFileSync(join(root, "src/lib/projects/publish-client.ts"), "utf8");
     assert.match(publishClient, /isLegacyImmutableError/);
     assert.match(publishClient, /randomUUID/);
+    assert.match(publishClient, /rememberPublishedId/);
+    assert.match(publishClient, /readPublishedId/);
+    assert.match(publishClient, /PUBLISHED_MAP_KEY/);
     const sitoSrc = readFileSync(join(root, "src/routes/sito.$projectId.tsx"), "utf8");
     assert.match(sitoSrc, /absolute inset-0/);
     const edge = readFileSync(join(root, "netlify/edge-functions/build.ts"), "utf8");

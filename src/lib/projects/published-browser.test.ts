@@ -1,12 +1,14 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, it } from "node:test";
 import { chromium } from "playwright";
 import { requirePreview } from "./ensure-preview.ts";
 import { ensureFenixAdapter } from "./fenix-adapter.ts";
-import { OWNER_HEADER } from "./publish-owner.ts";
+import { OWNER_HEADER, OWNER_STORAGE_KEY, PUBLISHED_MAP_KEY } from "./publish-owner.ts";
+import { snapshotHash } from "./published.ts";
+import { scrubCraftMedia } from "../ai/hero-image.ts";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const root = join(here, "../../..");
@@ -34,10 +36,16 @@ describe("published site is server-side, not localStorage", () => {
     assert.match(client, /\/api\/sites\//);
     assert.match(client, /OWNER_HEADER/);
     assert.match(client, /If-Match/);
+    assert.match(client, /rememberPublishedId/);
+    assert.match(client, /readPublishedId/);
+    assert.match(client, /PUBLISHED_MAP_KEY/);
+    const owner = readFileSync(join(root, "src/lib/projects/publish-owner.ts"), "utf8");
+    assert.match(owner, /fenix\.published-ids/);
     const api = readFileSync(join(root, "src/routes/api/sites.\$id.ts"), "utf8");
     assert.match(api, /handleSiteRequest/);
     const panel = readFileSync(join(root, "src/components/publish-panel.tsx"), "utf8");
     assert.match(panel, /publishSnapshot/);
+    assert.match(panel, /readPublishedId/);
     const preview = readFileSync(join(root, "src/components/preview-frame.tsx"), "utf8");
     assert.doesNotMatch(preview, /allow-same-origin/);
     const card = readFileSync(join(root, "src/components/project-card.tsx"), "utf8");
@@ -207,6 +215,140 @@ describe("published site is server-side, not localStorage", () => {
       await page.goto(`${PREVIEW}/sito/${id}`, { waitUntil: "domcontentloaded", timeout: 20000 });
       await page.getByText("Sito non trovato").first().waitFor({ timeout: 12000 });
       assert.equal(await page.locator("iframe").count(), 0);
+    } finally {
+      await browser.close();
+    }
+  });
+
+  it("legacy publish persists original→published id across remount and rejects the other owner", async () => {
+    const PREVIEW = await requirePreview();
+    const originalId = "legacy-mig-" + Date.now().toString(36);
+    const html = scrubCraftMedia(ADAPTED);
+    const snap = {
+      id: originalId,
+      name: "Bottega Terra",
+      tagline: "",
+      kind: "site" as const,
+      summary: "",
+      palette: PALETTE,
+      html,
+      version: 1,
+      hash: snapshotHash(html, "site", "Bottega Terra"),
+      publishedAt: 1,
+    };
+    const dir = join(root, ".grok/published");
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(join(dir, `${originalId}.json`), JSON.stringify(snap));
+
+    const puts: string[] = [];
+    const browser = await chromium.launch({ headless: true });
+    try {
+      const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+      page.on("request", (req) => {
+        if (req.method() === "PUT" && /\/api\/sites\//.test(req.url())) {
+          puts.push(req.url());
+        }
+      });
+      await page.addInitScript(
+        ({ html: siteHtml, pid, owner, palette }: {
+          html: string;
+          pid: string;
+          owner: string;
+          palette: typeof PALETTE;
+        }) => {
+          if (window !== window.parent) return;
+          if (!localStorage.getItem("fenix.owner-id")) {
+            localStorage.setItem("fenix.owner-id", owner);
+          }
+          const now = Date.now();
+          localStorage.setItem(
+            "officina-projects",
+            JSON.stringify({
+              state: {
+                projects: [
+                  {
+                    id: pid,
+                    name: "Bottega Terra",
+                    tagline: "",
+                    prompt: "FORMATO: sito web. kind=site. Bottega Terra ceramiche.",
+                    kind: "site",
+                    requestedKind: "site",
+                    summary: "",
+                    palette,
+                    html: siteHtml,
+                    messages: [],
+                    buildLog: ["Pronto"],
+                    status: "ready",
+                    createdAt: now,
+                    updatedAt: now,
+                  },
+                ],
+                creditsRemaining: 46,
+                appDb: {},
+              },
+              version: 2,
+            }),
+          );
+        },
+        { html: ADAPTED, pid: originalId, owner: OWNER_A, palette: PALETTE },
+      );
+      await page.goto(`${PREVIEW}/studio/${originalId}`, {
+        waitUntil: "domcontentloaded",
+        timeout: 20000,
+      });
+      await page.getByRole("button", { name: /Pubblica/ }).first().click();
+      await page.getByRole("heading", { name: "È online." }).waitFor({ timeout: 20000 });
+      const firstPath = (await page.locator("p.font-mono").filter({ hasText: "/sito/" }).innerText()).trim();
+      assert.match(firstPath, /^\/sito\/[0-9a-f-]{36}/i);
+      assert.equal(firstPath.includes(originalId), false);
+      const publishedId = firstPath.replace(/^\/sito\//, "").split(/\s/)[0];
+      const firstPutIds = puts.map((u) => decodeURIComponent(u.split("/api/sites/")[1] || "").split("?")[0]);
+      assert.equal(firstPutIds.includes(originalId), true);
+      assert.equal(firstPutIds.includes(publishedId), true);
+      assert.equal(new Set(firstPutIds.filter((id) => id !== originalId)).size, 1);
+
+      const stored = await page.evaluate(
+        ({ mapKey, orig }: { mapKey: string; orig: string }) => {
+          const raw = localStorage.getItem(mapKey);
+          const map = raw ? (JSON.parse(raw) as Record<string, string>) : {};
+          return { mapped: map[orig] || null, owner: localStorage.getItem("fenix.owner-id") };
+        },
+        { mapKey: PUBLISHED_MAP_KEY, orig: originalId },
+      );
+      assert.equal(stored.mapped, publishedId);
+      assert.equal(stored.owner, OWNER_A);
+
+      puts.length = 0;
+      await page.getByRole("button", { name: "Chiudi" }).click();
+      await page.reload({ waitUntil: "domcontentloaded" });
+      await page.getByRole("button", { name: /Pubblica/ }).first().click();
+      await page.getByRole("heading", { name: "È online." }).waitFor({ timeout: 20000 });
+      const secondPath = (await page.locator("p.font-mono").filter({ hasText: "/sito/" }).innerText()).trim();
+      assert.equal(secondPath.split("·")[0].trim(), firstPath.split("·")[0].trim());
+      const remountPuts = puts.map((u) => decodeURIComponent(u.split("/api/sites/")[1] || "").split("?")[0]);
+      assert.equal(remountPuts.includes(originalId), false);
+      assert.ok(remountPuts.length >= 1);
+      assert.equal(new Set(remountPuts).size, 1);
+      assert.equal(remountPuts[0], publishedId);
+
+      await page.getByRole("button", { name: "Copia link" }).click();
+      const copied = await page.evaluate(() => navigator.clipboard.readText()).catch(() => "");
+      if (copied) assert.match(copied, new RegExp(`/sito/${publishedId}`));
+
+      await page.getByRole("button", { name: "Chiudi" }).click();
+      await page.evaluate(
+        ({ owner, key }: { owner: string; key: string }) => {
+          localStorage.setItem(key, owner);
+        },
+        { owner: OWNER_B, key: OWNER_STORAGE_KEY },
+      );
+      puts.length = 0;
+      await page.reload({ waitUntil: "domcontentloaded" });
+      await page.getByRole("button", { name: /Pubblica/ }).first().click();
+      await page.getByText(/titolare/i).first().waitFor({ timeout: 15000 });
+      const otherPuts = puts.map((u) => decodeURIComponent(u.split("/api/sites/")[1] || "").split("?")[0]);
+      assert.equal(otherPuts.includes(publishedId), true);
+      assert.equal(otherPuts.some((id) => id !== originalId && id !== publishedId), false);
     } finally {
       await browser.close();
     }
