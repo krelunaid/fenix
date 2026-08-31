@@ -12,6 +12,7 @@ test("pnpm-only environments can run the production build without npm", () => {
   assert.equal(typeof pkg.scripts.build, "string");
   assert.doesNotMatch(pkg.scripts.build, /npm\s+run/);
   assert.match(pkg.scripts.build, /node scripts\/with-app-env\.mjs vite build/);
+  assert.match(pkg.scripts.build, /node scripts\/copy-pglite-assets\.mjs/);
   assert.match(pkg.scripts.build, /node scripts\/migrate\.mjs/);
   assert.match(netlify, /node scripts\/migrate\.mjs/);
   assert.doesNotMatch(netlify, /npm run db:migrate/);
