@@ -117,6 +117,7 @@ describe("focus-visible and worker model", () => {
     assert.match(scheme, /data-fenix-desk/);
     assert.match(scheme, /fenix-boot-error/);
     assert.match(scheme, /fenix-boot-ok/);
+    assert.match(scheme, /ev\.target !== window/);
     assert.match(scheme, /unhandledrejection/);
     assert.match(scheme, /data-fenix-boot-error/);
     assert.match(scheme, /data-fenix-boot-ok/);

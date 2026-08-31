@@ -250,12 +250,19 @@ export function fenixRuntimeScript(projectId: string) {
     }
   } catch (e) {}
   window.onerror = function(m, _s, _l, _c, err){
-    reportBootError(err || new Error(String(m || "error")), "error");
+    var msg = err && err.message ? String(err.message) : String(m || "");
+    if (!msg || /^error$/i.test(msg.trim()) || msg === "Script error.") {
+      if (!(err && err.message && err.message !== "error" && msg !== "Script error.")) return true;
+    }
+    reportBootError(err || new Error(msg || "errore in avvio"), "error");
     return true;
   };
   window.addEventListener("error", function(ev){
-    var err = ev.error || new Error(ev.message || "error");
-    reportBootError(err, "error");
+    if (ev && ev.target && ev.target !== window && ev.target.nodeType === 1) return;
+    var err = ev && ev.error;
+    var msg = err && err.message ? String(err.message) : String((ev && ev.message) || "");
+    if (!msg || /^error$/i.test(msg.trim())) return;
+    reportBootError(err || new Error(msg), "error");
     try { ev.preventDefault(); } catch (e) {}
   }, true);
   window.addEventListener("unhandledrejection", function(ev){

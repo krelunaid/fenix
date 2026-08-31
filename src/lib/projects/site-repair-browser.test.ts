@@ -14,6 +14,7 @@ const SITE = readFileSync(join(here, "fixtures/music-site-no-fenix.html"), "utf8
 const BOTTEGA = readFileSync(join(here, "fixtures/bottega-orders-crash.html"), "utf8");
 const NULL_INNER = readFileSync(join(here, "fixtures/null-innerhtml.html"), "utf8");
 const NULL_FIXED = readFileSync(join(here, "fixtures/null-innerhtml-fixed.html"), "utf8");
+const BROKEN_HERO = readFileSync(join(here, "fixtures/broken-hero-site.html"), "utf8");
 const PREVIEW = process.env.PREVIEW_URL || "http://127.0.0.1:8081";
 const ADAPTED = ensureFenixAdapter(SITE);
 
@@ -569,6 +570,43 @@ describe("iframe boot error on null innerHTML", () => {
       const frame = page.frameLocator("#f");
       const attr = await frame.locator("html").getAttribute("data-fenix-boot-error");
       assert.match(String(attr), /innerHTML/i);
+    } finally {
+      await browser.close();
+    }
+  });
+
+  it("broken hero image does not count as a JS boot error", async () => {
+    const src = prepareSrcDoc(
+      BROKEN_HERO,
+      { bg: "#f4efe6", fg: "#2a241c", accent: "#b85c38" },
+      "bottega-terra-hero",
+      "site",
+    );
+    const browser = await chromium.launch({ headless: true });
+    try {
+      const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+      await page.setContent(`<!DOCTYPE html><html><body>
+<iframe id="f" style="width:1280px;height:800px;border:0"></iframe>
+<script>
+  window.__boot = null;
+  window.__ok = 0;
+  window.addEventListener("message", function (e) {
+    var m = e.data;
+    if (!m) return;
+    if (m.t === "fenix-boot-error") window.__boot = m;
+    if (m.t === "fenix-boot-ok") window.__ok += 1;
+  });
+</script>
+</body></html>`);
+      await page.locator("#f").evaluate((el, srcDoc: string) => {
+        (el as HTMLIFrameElement).srcdoc = srcDoc;
+      }, src);
+      await page.waitForFunction(() => (window as { __ok?: number }).__ok === 1, null, { timeout: 8000 });
+      const boot = await page.evaluate(() => (window as { __boot?: { message?: string } }).__boot);
+      assert.equal(boot, null, "img 404 must not emit fenix-boot-error");
+      const frame = page.frameLocator("#f");
+      assert.equal(await frame.locator("html").getAttribute("data-fenix-boot-error"), null);
+      assert.equal(await frame.locator("html").getAttribute("data-fenix-boot-ok"), "1");
     } finally {
       await browser.close();
     }

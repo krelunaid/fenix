@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Bottega Terra</title>
+<style>
+:root{--bg:#f4efe6;--fg:#2a241c;--accent:#b85c38}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.5 Georgia,serif}
+nav{display:flex;gap:16px;padding:16px 24px}
+nav a{color:var(--fg)}
+section{padding:40px 24px}
+footer{padding:24px;border-top:1px solid #d7c4b0}
+</style>
+</head>
+<body>
+<nav>
+  <a href="#home" data-view="home">Home</a>
+  <a href="#bottega" data-view="bottega">Bottega</a>
+  <a href="#lavori" data-view="lavori">Lavori</a>
+  <a href="#visita" data-view="visita">Visita</a>
+</nav>
+<section id="home"><h1>Bottega Terra</h1><p>Ceramica a Grottaglie.</p>
+<img src="https://example.invalid/hero.jpg" alt="fornace" width="1200" height="400"/>
+</section>
+<section id="bottega"><h2>La bottega</h2><p>Via delle Fornaci 8, Grottaglie. Mar–Sab 9–18.</p></section>
+<section id="lavori"><h2>I lavori</h2><p>Ciotole, brocche, piatti. 18–90 euro.</p></section>
+<section id="visita"><h2>Visita</h2><form><input name="nome" placeholder="Nome"/><button type="submit">Scrivici</button></form></section>
+<footer>Bottega Terra · Grottaglie</footer>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  window.Fenix.load("state").then(function (st) {
+    window.Fenix.save("state", st && typeof st === "object" ? st : { notes: [] });
+  });
+});
+</script>
+</body>
+</html>
