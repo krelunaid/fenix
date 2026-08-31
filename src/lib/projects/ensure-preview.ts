@@ -6,6 +6,8 @@ import { promisify } from "node:util";
 const execFileAsync = promisify(execFile);
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "../../..");
 
+export const PREVIEW_RESTART_ARGV = ["scripts/preview.mjs", "restart"] as const;
+
 async function isUp(url: string): Promise<boolean> {
   try {
     const health = await fetch(`${url.replace(/\/$/, "")}/`, { signal: AbortSignal.timeout(1500) });
@@ -19,7 +21,7 @@ async function isUp(url: string): Promise<boolean> {
 export async function requirePreview(): Promise<string> {
   const url = process.env.PREVIEW_URL || "http://127.0.0.1:8081";
   if (await isUp(url)) return url;
-  await execFileAsync("npm", ["run", "preview:restart"], {
+  await execFileAsync(process.execPath, [...PREVIEW_RESTART_ARGV], {
     cwd: ROOT,
     timeout: 90000,
   });

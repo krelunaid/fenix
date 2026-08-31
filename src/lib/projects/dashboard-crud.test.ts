@@ -16,7 +16,7 @@ import {
 import { recoverPersistedProject } from "./recover.ts";
 import { DEMOS } from "./demos.ts";
 import { validateProductHtml } from "./validate-html.ts";
-import { requirePreview } from "./ensure-preview.ts";
+import { requirePreview, PREVIEW_RESTART_ARGV } from "./ensure-preview.ts";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const ARGILLA = readFileSync(join(here, "fixtures/argilla-viva.html"), "utf8");
@@ -59,6 +59,10 @@ const BROKEN = `<!DOCTYPE html><html lang="it"><head><meta charset="utf-8"/><tit
 
 
 describe("dashboard CRUD repair", () => {
+  it("restarts preview via node scripts/preview.mjs, not npm", () => {
+    assert.deepEqual([...PREVIEW_RESTART_ARGV], ["scripts/preview.mjs", "restart"]);
+  });
+
   it("strips fake Studio copy", () => {
     const cleaned = stripFakeStudioCopy(
       "Pronto. Argilla Viva è in anteprima: 1 schermate (Fenix 2: Vite + React).",

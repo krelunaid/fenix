@@ -1,11 +1,14 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
+  hasProcFs,
   looksLikePreviewProcess,
   parseListenerInodes,
+  parseLsofListenPids,
   parsePgid,
   parsePid,
   parsePreviewArgs,
+  parsePsPgid,
   previewOwners,
   stopOutcome,
   terminatePids,
@@ -90,6 +93,10 @@ test("looksLikePreviewProcess matches the npm wrapper and its vite child", () =>
   const npmRun = cmdline("node", "/usr/lib/node_modules/npm/bin/npm-cli.js", "run", "preview");
   assert.equal(looksLikePreviewProcess(npmRun), true);
   assert.equal(looksLikePreviewProcess(cmdline("npm", "run", "preview")), true);
+  assert.equal(looksLikePreviewProcess(cmdline("pnpm", "preview")), true);
+  assert.equal(looksLikePreviewProcess(cmdline("pnpm", "run", "preview")), true);
+  assert.equal(looksLikePreviewProcess("pnpm preview"), true);
+  assert.equal(looksLikePreviewProcess("node /ws/scripts/with-app-env.mjs vite preview"), true);
   assert.equal(
     looksLikePreviewProcess(cmdline("node", "/ws/node_modules/.bin/vite", "preview")),
     true,
@@ -113,6 +120,8 @@ test("looksLikePreviewProcess spares the sibling scripts and re-used pids", () =
   assert.equal(looksLikePreviewProcess(cmdline("node", npmCli, "run", "preview:stop")), false);
   assert.equal(looksLikePreviewProcess(cmdline("node", npmCli, "run", "preview:restart")), false);
   assert.equal(looksLikePreviewProcess(cmdline("npm", "run", "preview:stop")), false);
+  assert.equal(looksLikePreviewProcess("pnpm run preview:restart"), false);
+  assert.equal(looksLikePreviewProcess("pnpm preview:restart"), false);
   const viteBuild = cmdline("vite", "build", "--outDir", "preview-dist");
   assert.equal(looksLikePreviewProcess(viteBuild), false);
   assert.equal(looksLikePreviewProcess(cmdline("/usr/bin/preview-tool", "--x")), false);
@@ -254,4 +263,74 @@ test("terminatePids on a free port signals nothing", async () => {
   const result = await terminatePids([], fake);
   assert.deepEqual(result, { signalled: [], killed: [], stubborn: [] });
   assert.deepEqual(fake.signals, []);
+});
+
+test("hasProcFs is false when /proc/self is absent", () => {
+  assert.equal(hasProcFs(() => false), false);
+  assert.equal(hasProcFs((p) => p === "/proc/self"), true);
+});
+
+test("parsePsPgid reads macOS ps -o pgid= output", () => {
+  assert.equal(parsePsPgid(" 43210\n"), 43210);
+  assert.equal(parsePsPgid("1"), 1);
+  assert.equal(parsePsPgid(""), null);
+  assert.equal(parsePsPgid("pgid"), null);
+});
+
+test("parseLsofListenPids reads macOS lsof -nP LISTEN rows", () => {
+  const out = [
+    "COMMAND   PID USER   FD   TYPE DEVICE SIZE/OFF NODE NAME",
+    "node    43210 alice   23u  IPv4 0xabc      0t0  TCP 127.0.0.1:8081 (LISTEN)",
+    "node    43210 alice   24u  IPv6 0xdef      0t0  TCP [::1]:8081 (LISTEN)",
+    "node        1 root    12u  IPv4 0xeee      0t0  TCP *:8081 (LISTEN)",
+    "",
+  ].join("\n");
+  assert.deepEqual(parseLsofListenPids(out), [43210]);
+  assert.deepEqual(parseLsofListenPids(""), []);
+  assert.deepEqual(parseLsofListenPids(undefined), []);
+});
+
+test("no-/proc: previewOwners only signals verified preview pids", () => {
+  const owners = previewOwners({
+    portPids: [80, 81],
+    pidFilePid: 50,
+    requireCmdline: true,
+    cmdlineOf: (pid) => {
+      if (pid === 50) return "node scripts/with-app-env.mjs vite preview";
+      if (pid === 80) return "Google Chrome";
+      if (pid === 81) return "node node_modules/.bin/vite preview";
+      return "";
+    },
+  });
+  assert.deepEqual(owners, [81, 50]);
+});
+
+test("no-/proc: unknown port holder is not killed", () => {
+  const owners = previewOwners({
+    portPids: [99],
+    pidFilePid: null,
+    requireCmdline: true,
+    cmdlineOf: () => "Google Chrome Helper",
+  });
+  assert.deepEqual(owners, []);
+});
+
+test("no-/proc: stale pidfile is ignored even if the port is held", () => {
+  const owners = previewOwners({
+    portPids: [99],
+    pidFilePid: 50,
+    requireCmdline: true,
+    cmdlineOf: (pid) => (pid === 50 ? "sleep 300" : "Google Chrome"),
+  });
+  assert.deepEqual(owners, []);
+});
+
+test("no-/proc: a verified pidfile is enough when lsof sees nothing", () => {
+  const owners = previewOwners({
+    portPids: [],
+    pidFilePid: 50,
+    requireCmdline: true,
+    cmdlineOf: () => "pnpm preview",
+  });
+  assert.deepEqual(owners, [50]);
 });

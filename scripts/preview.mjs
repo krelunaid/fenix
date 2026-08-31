@@ -2,14 +2,16 @@
 /**
  * Owns :8081, the built-output QA preview.
  *
- * `vite preview` is strictPort, so a preview left over from an earlier turn
- * both fails the next start and keeps serving the previous build's output.
- * Every restart therefore kills the current port owner first, whoever started
- * it. Owners come from /proc, so this runs only inside the Linux sandbox.
+ * `vite preview` is strictPort, so a leftover server both fails the next start
+ * and keeps serving a stale build. Restart kills only a verified preview
+ * (pidfile whose cmdline still matches, plus attributed :8081 listeners).
+ *
+ * Linux uses /proc. macOS / CI without /proc uses `lsof` + `ps` and never
+ * SIGKILLs an unattributed process.
  *
  *   node scripts/preview.mjs stop|restart
  */
-import { spawn } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
 import {
   existsSync,
   mkdirSync,
@@ -20,7 +22,8 @@ import {
   rmSync,
   writeFileSync,
 } from "node:fs";
-import { dirname, join } from "node:path";
+import net from "node:net";
+import { delimiter, dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const PREVIEW_PORT = 8081;
@@ -41,6 +44,10 @@ export function parsePreviewArgs(argv) {
     return { error: `unknown action: ${action} (expected stop or restart)` };
   }
   return { action };
+}
+
+export function hasProcFs(exists = existsSync) {
+  return exists("/proc/self");
 }
 
 export function parsePid(text) {
@@ -74,6 +81,24 @@ export function parseListenerInodes(procNetTcp, port) {
   return inodes;
 }
 
+export function parsePsPgid(text) {
+  const n = Number.parseInt(String(text ?? "").trim(), 10);
+  return Number.isInteger(n) && n > 0 ? n : null;
+}
+
+/** Pids in `lsof -nP -iTCP:<port> -sTCP:LISTEN` output (macOS / BSD). */
+export function parseLsofListenPids(text) {
+  const pids = [];
+  for (const line of String(text ?? "").split("\n")) {
+    if (!line.trim() || /^COMMAND\b/i.test(line)) continue;
+    const cols = line.trim().split(/\s+/);
+    if (cols.length < 2) continue;
+    const pid = parsePid(cols[1]);
+    if (pid !== null) pids.push(pid);
+  }
+  return [...new Set(pids)];
+}
+
 export function looksLikePreviewProcess(cmdline) {
   // /proc/<pid>/cmdline is NUL-separated.
   const argv = String(cmdline ?? "")
@@ -83,11 +108,12 @@ export function looksLikePreviewProcess(cmdline) {
   // The sandbox service runs scripts/preview-thumbnail.mjs in this box, and
   // this script can be running concurrently: neither is ever a target.
   if (/\bpreview[\w-]*\.mjs\b/.test(argv)) return false;
-  // The `npm run preview` wrapper (`npm-cli.js run preview`) and its vite child.
-  // `preview` must be the whole script name: `run preview:stop`/`preview:restart`
-  // are this tooling's own wrappers, and `vite build --outDir preview-dist` is
-  // not a server.
-  return /\brun\s+preview(?:\s|$)/.test(argv) || /\bvite\b\s+preview\b/.test(argv);
+  if (/\b(?:npm|pnpm|yarn)\b.*\brun\s+preview:(?:stop|restart)\b/.test(argv)) return false;
+  return (
+    /\brun\s+preview(?:\s|$)/.test(argv) ||
+    /\b(?:npm|pnpm|yarn)\s+preview(?:\s|$)/.test(argv) ||
+    /\bvite\b\s+preview\b/.test(argv)
+  );
 }
 
 /**
@@ -95,8 +121,12 @@ export function looksLikePreviewProcess(cmdline) {
  * a claim left by an earlier run — pids are re-used across hibernate/revive, so
  * signal it only when its command line still looks like the preview.
  */
-export function previewOwners({ portPids, pidFilePid, cmdlineOf }) {
-  const owners = new Set(portPids);
+export function previewOwners({ portPids, pidFilePid, cmdlineOf, requireCmdline = false }) {
+  const owners = new Set();
+  for (const pid of portPids) {
+    if (requireCmdline && !looksLikePreviewProcess(cmdlineOf(pid))) continue;
+    owners.add(pid);
+  }
   if (
     pidFilePid !== null &&
     !owners.has(pidFilePid) &&
@@ -168,8 +198,20 @@ function isAlive(pid) {
 }
 
 function pgidOf(pid) {
+  if (hasProcFs()) {
+    try {
+      return parsePgid(readFileSync(`/proc/${pid}/stat`, "utf8"));
+    } catch {
+      return null;
+    }
+  }
   try {
-    return parsePgid(readFileSync(`/proc/${pid}/stat`, "utf8"));
+    const out = execFileSync("ps", ["-o", "pgid=", "-p", String(pid)], {
+      encoding: "utf8",
+      timeout: 2000,
+      stdio: ["ignore", "pipe", "ignore"],
+    });
+    return parsePsPgid(out);
   } catch {
     return null;
   }
@@ -195,10 +237,20 @@ function killPid(pid, signal) {
 }
 
 function cmdlineOf(pid) {
+  if (hasProcFs()) {
+    try {
+      return readFileSync(`/proc/${pid}/cmdline`, "utf8");
+    } catch {
+      return "";
+    }
+  }
   try {
-    return readFileSync(`/proc/${pid}/cmdline`, "utf8");
+    return execFileSync("ps", ["-o", "command=", "-p", String(pid)], {
+      encoding: "utf8",
+      timeout: 2000,
+      stdio: ["ignore", "pipe", "ignore"],
+    });
   } catch {
-    // Usually a dead pid — the stale pidfile this corroboration exists for.
     return "";
   }
 }
@@ -238,18 +290,13 @@ function pidsForSocketInodes(inodes) {
   return pids;
 }
 
-/**
- * `{ pids, unattributed }` — `unattributed: true` when the port has a listener
- * whose owning pid could not be resolved (an fd dir we may not read).
- */
-function portOwners() {
+function readProcPortOwners() {
   const inodes = new Set();
   for (const file of ["/proc/net/tcp", "/proc/net/tcp6"]) {
     let dump;
     try {
       dump = readFileSync(file, "utf8");
     } catch {
-      // tcp6 is absent when the box has no IPv6.
       continue;
     }
     for (const inode of parseListenerInodes(dump, PREVIEW_PORT)) inodes.add(inode);
@@ -258,18 +305,64 @@ function portOwners() {
   return { pids, unattributed: inodes.size > 0 && pids.length === 0 };
 }
 
+function readLsofPortOwners() {
+  try {
+    const out = execFileSync("lsof", ["-nP", `-iTCP:${PREVIEW_PORT}`, "-sTCP:LISTEN"], {
+      encoding: "utf8",
+      timeout: 3000,
+      stdio: ["ignore", "pipe", "ignore"],
+    });
+    return { pids: parseLsofListenPids(out), unattributed: false };
+  } catch (err) {
+    // lsof exits 1 when nothing matches — the port is free.
+    if (err && (err.status === 1 || err.code === 1)) return { pids: [], unattributed: false };
+    return { pids: [], unattributed: null };
+  }
+}
+
+/**
+ * `{ pids, unattributed }` — `unattributed: true` when the port has a listener
+ * whose owning pid could not be resolved. `null` means the scanner itself failed.
+ */
+function portOwners() {
+  if (hasProcFs()) return readProcPortOwners();
+  return readLsofPortOwners();
+}
+
+export function probePort(port = PREVIEW_PORT, host = "127.0.0.1", timeoutMs = 400) {
+  return new Promise((resolve) => {
+    const socket = net.connect({ port, host });
+    const done = (held) => {
+      socket.removeAllListeners();
+      socket.destroy();
+      resolve(held);
+    };
+    socket.setTimeout(timeoutMs);
+    socket.once("connect", () => done(true));
+    socket.once("timeout", () => done(true));
+    socket.once("error", () => done(false));
+  });
+}
+
 async function stop(announce = true) {
+  const requireCmdline = !hasProcFs();
+  const scanned = portOwners();
   const owners = previewOwners({
-    portPids: portOwners().pids,
+    portPids: scanned.pids,
     pidFilePid: readPidFile(),
     cmdlineOf,
+    requireCmdline,
   });
   const { signalled, stubborn } = await terminatePids(owners, { kill: killPid, isAlive, sleep });
 
-  const outcome = stopOutcome({ signalled, stubborn, after: portOwners() });
+  const after = portOwners();
+  let unattributed = after.unattributed === true;
+  if (after.unattributed === null || (requireCmdline && after.pids.length === 0)) {
+    const held = await probePort();
+    if (held && after.pids.length === 0) unattributed = true;
+  }
+  const outcome = stopOutcome({ signalled, stubborn, after: { pids: after.pids, unattributed } });
   if (!outcome.ok) {
-    // Keep the pidfile: a survivor the port scan cannot attribute leaves it as
-    // the only record a retry could use.
     console.error(`[preview] ${outcome.error}`);
     return false;
   }
@@ -297,9 +390,11 @@ async function restart() {
 
   mkdirSync(dirname(LOG_FILE), { recursive: true });
   const log = openSync(LOG_FILE, "a");
-  const child = spawn("npm", ["run", "preview"], {
+  const bin = join(ROOT, "node_modules", ".bin");
+  const child = spawn(process.execPath, [join(ROOT, "scripts/with-app-env.mjs"), "vite", "preview"], {
     cwd: ROOT,
     detached: true,
+    env: { ...process.env, PATH: `${bin}${delimiter}${process.env.PATH || ""}` },
     stdio: ["ignore", log, log],
   });
   child.unref();
@@ -307,10 +402,10 @@ async function restart() {
 
   let failure = null;
   child.on("error", (err) => {
-    failure = `npm run preview could not be spawned: ${err.message}`;
+    failure = `vite preview could not be spawned: ${err.message}`;
   });
   child.on("exit", (code, signal) => {
-    failure = `npm run preview exited early (${signal ?? `code ${code}`})`;
+    failure = `vite preview exited early (${signal ?? `code ${code}`})`;
   });
 
   if (!(await waitForReady(() => failure))) {
@@ -333,10 +428,6 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   const args = parsePreviewArgs(process.argv.slice(2));
   if (args.error) {
     console.error(`[preview] ${args.error}`);
-    process.exit(1);
-  }
-  if (!existsSync("/proc/self")) {
-    console.error("[preview] no /proc — this script only runs inside the sandbox");
     process.exit(1);
   }
   process.exitCode = args.action === "stop" ? ((await stop()) ? 0 : 1) : await restart();
