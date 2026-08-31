@@ -1,4 +1,5 @@
 import { DASHBOARD_CRUD_SCRIPT } from "./dashboard-crud.ts";
+import { replaceAppleTabIcons, rewriteIosWidgetHome } from "./craft-icons.ts";
 
 export function isLightHex(hex: string) {
   const h = hex.replace("#", "").trim();
@@ -122,8 +123,18 @@ body{display:flex!important;flex-direction:column!important;min-height:100dvh;ma
 .fk-btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;border:0;border-radius:2px;padding:14px 16px;font:700 15px/1 inherit;background:var(--accent,#3d4a1f);color:#fff;letter-spacing:.02em}
 .fk-chiprow{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 14px}
 .fk-chip{border:1px solid var(--line,#c4b49a);border-radius:2px;padding:8px 10px;font:650 13px/1 inherit;background:transparent;color:var(--fg,#1c1712)}
-.fk-field{display:flex;align-items:center;gap:10px;background:var(--surface,#f7f1e4);border:1px solid var(--line,#c4b49a);border-radius:2px;padding:12px 14px;margin:6px 0 14px;color:var(--fg,#1c1712)}
-.fk-field input,.fk-field select,.fk-field textarea{flex:1;border:0;background:none;font:inherit;color:var(--fg,#1c1712);outline:none;min-width:0}
+.fk-field{display:flex;align-items:center;gap:10px;background:#fbf6ee!important;border:1px solid var(--line,#c4b49a);border-radius:2px;padding:12px 14px;margin:6px 0 14px;color:#1c1712!important}
+.fk-field input,.fk-field select,.fk-field textarea,
+input:not([type=hidden]):not([type=checkbox]):not([type=radio]):not([type=submit]):not([type=button]),
+textarea,select{
+  flex:1;border:0;background:#fbf6ee!important;font:400 16px/1.4 "IBM Plex Sans",system-ui,sans-serif!important;
+  color:#1c1712!important;-webkit-text-fill-color:#1c1712!important;caret-color:#1c1712!important;
+  outline:none;min-width:0;color-scheme:light!important;opacity:1!important
+}
+.fk-field input::placeholder,.fk-field textarea::placeholder,
+input::placeholder,textarea::placeholder{
+  color:#6e5648!important;-webkit-text-fill-color:#6e5648!important;opacity:1!important
+}
 .fk-lbl{display:block;font-size:11px;font-weight:650;margin:10px 0 0;color:var(--muted,#5c5348);letter-spacing:.08em;text-transform:uppercase}
 .fk-sheet{padding:4px 0 8px}
 .fk-kicker{margin:0 0 6px;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted,#5c5348)}
@@ -187,6 +198,12 @@ th{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--mute
 .card,.fk-tile{background:var(--surface,#fbf6ee);border-radius:4px;padding:16px;margin:0 0 12px;border:1px solid var(--line,#d7c4b0);color:var(--fg,#2b211c)}
 button,.cta{border-radius:2px}
 dialog,[role=dialog],.modal{background:var(--surface,#fbf6ee);color:var(--fg,#2b211c);border:1px solid var(--line,#d7c4b0);padding:20px 22px}
+input:not([type=hidden]):not([type=checkbox]):not([type=radio]):not([type=submit]):not([type=button]),
+textarea,select{
+  background:#fbf6ee!important;color:#1c1712!important;-webkit-text-fill-color:#1c1712!important;
+  caret-color:#1c1712!important;color-scheme:light!important;font-size:16px!important;opacity:1!important
+}
+input::placeholder,textarea::placeholder{color:#6e5648!important;-webkit-text-fill-color:#6e5648!important;opacity:1!important}
 img[src=""],img:not([src]){display:none!important}
 </style>`;
 
@@ -453,6 +470,7 @@ export function prepareSrcDoc(
   const bg = palette.bg;
   const scheme = isLightHex(bg) ? "light" : "dark";
   let next = sanitizePreviewHtml(html);
+  next = rewriteIosWidgetHome(replaceAppleTabIcons(next));
   if (!/color-scheme/i.test(next)) {
     const meta = `<meta name="color-scheme" content="${scheme}"/>`;
     next = /<head[^>]*>/i.test(next)

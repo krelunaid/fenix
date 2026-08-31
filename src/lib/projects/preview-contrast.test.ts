@@ -457,4 +457,59 @@ describe("phone chrome is workshop, not iPhone", () => {
       await browser.close();
     }
   });
+
+  it("keeps typed ink visible on cream fields even when the app ground is dark", async () => {
+    const src = prepareSrcDoc(TACCUINO_OLD, {
+      bg: "#1a1612",
+      surface: "#241e18",
+      fg: "#efe6d4",
+      muted: "#9a8f7a",
+      accent: "#c45c26",
+    }, "taccuino-ink", "app");
+    assert.equal(looksLikeAppleTabIcons(src), false, "preview must rewrite Apple tabs without waiting recover");
+    const browser = await launch();
+    try {
+      const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+      await page.setContent(src, { waitUntil: "domcontentloaded", timeout: 15000 });
+      await waitForFenixReady(page, 8000);
+      await page.locator("[data-view=new]").click();
+      const field = page.locator("input, textarea").first();
+      await field.waitFor({ timeout: 4000 });
+      await field.fill("Andre");
+      const measured = await field.evaluate((el) => {
+        const cs = getComputedStyle(el);
+        const parse = (c: string) => {
+          const m = c.match(/rgba?\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)/i);
+          return m ? { r: +m[1], g: +m[2], b: +m[3] } : null;
+        };
+        const fg = parse(cs.webkitTextFillColor && cs.webkitTextFillColor !== "none" ? cs.webkitTextFillColor : cs.color);
+        const bg = parse(cs.backgroundColor);
+        const lum = (c: { r: number; g: number; b: number }) => {
+          const to = (v: number) => {
+            v /= 255;
+            return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+          };
+          return 0.2126 * to(c.r) + 0.7152 * to(c.g) + 0.0722 * to(c.b);
+        };
+        const contrast = fg && bg ? (Math.max(lum(fg), lum(bg)) + 0.05) / (Math.min(lum(fg), lum(bg)) + 0.05) : 0;
+        return {
+          color: cs.color,
+          fill: cs.webkitTextFillColor,
+          bg: cs.backgroundColor,
+          value: (el as HTMLInputElement).value,
+          contrast,
+          inkSum: fg ? fg.r + fg.g + fg.b : 0,
+        };
+      });
+      assert.equal(measured.value, "Andre");
+      assert.ok(measured.inkSum < 200, `typed text too light: ${measured.color} fill=${measured.fill}`);
+      assert.ok(
+        measured.contrast >= 4.5,
+        `field contrast ${measured.contrast.toFixed(2)} (${measured.color} on ${measured.bg})`,
+      );
+      await page.close();
+    } finally {
+      await browser.close();
+    }
+  });
 });
