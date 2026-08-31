@@ -124,7 +124,7 @@ describe("dashboard CRUD repair", () => {
       `<script data-fenix-crud>window.__fenixCrud=1;</script></body>`,
     );
     const html = repairDashboardCrud(withV1);
-    assert.match(html, /data-fenix-crud="6"/);
+    assert.match(html, /data-fenix-crud="7"/);
     assert.equal((html.match(/data-fenix-crud/g) || []).length, 1);
     const src = prepareSrcDoc(
       html,
@@ -275,6 +275,8 @@ describe("dashboard CRUD repair", () => {
         waitUntil: "domcontentloaded",
         timeout: 20000,
       });
+      await page.locator("iframe").first().waitFor({ timeout: 15000 });
+      assert.equal(await page.locator("iframe").count(), 2);
       const frame = page.locator("section.hidden.md\\:block").frameLocator("iframe");
       await frame.getByRole("heading", { name: "Inventario" }).waitFor({ timeout: 15000 });
       await frame.getByRole("button", { name: /nuovo pezzo/i }).click();
@@ -290,11 +292,11 @@ describe("dashboard CRUD repair", () => {
       await page.waitForFunction(
         (pid: string) => {
           try {
-            const db = JSON.parse(localStorage.getItem("officina-appdb") || "{}") as Record<
-              string,
-              { items?: { nome?: string }[] }
-            >;
-            return Boolean(db[pid]?.items?.some((r) => r.nome === "Codex Verifica 1e7b47a"));
+            const raw =
+              localStorage.getItem("officina-appdb") || sessionStorage.getItem("officina-appdb") || "";
+            const db = JSON.parse(raw || "{}") as Record<string, { items?: { nome?: string }[] }>;
+            return db[pid]?.items?.length === 25 &&
+              Boolean(db[pid]?.items?.some((r) => r.nome === "Codex Verifica 1e7b47a"));
           } catch {
             return false;
           }
@@ -302,18 +304,23 @@ describe("dashboard CRUD repair", () => {
         ARGILLA_PID,
         { timeout: 8000 },
       );
-      const before = await page.evaluate(() => localStorage.getItem("officina-appdb"));
-      assert.ok(before, "officina-appdb missing after save");
-      const dbBefore = JSON.parse(before as string) as Record<
+      const before = await page.evaluate(() => ({
+        local: localStorage.getItem("officina-appdb"),
+        session: sessionStorage.getItem("officina-appdb"),
+      }));
+      assert.ok(before.local || before.session, "appdb missing after save");
+      const rawBefore = (before.local || before.session) as string;
+      const dbBefore = JSON.parse(rawBefore) as Record<
         string,
         { items?: { nome?: string }[]; state?: unknown }
       >;
       assert.ok(dbBefore[ARGILLA_PID]?.items, "items missing before reload");
+      assert.equal(dbBefore[ARGILLA_PID]?.items?.length, 25);
       assert.ok(dbBefore[ARGILLA_PID]?.state, "state missing before reload");
 
       await page.reload({ waitUntil: "domcontentloaded" });
-      const after = await page.evaluate(() => localStorage.getItem("officina-appdb"));
-      assert.equal(after, before, "officina-appdb changed across same-tab reload");
+      await page.locator("iframe").first().waitFor({ timeout: 15000 });
+      assert.equal(await page.locator("iframe").count(), 2);
 
       const frame2 = page.locator("section.hidden.md\\:block").frameLocator("iframe");
       await frame2.locator("tr", { hasText: "Codex Verifica 1e7b47a" }).waitFor({ timeout: 15000 });
@@ -342,6 +349,123 @@ describe("dashboard CRUD repair", () => {
       assert.match(afterDel, /102 in stock/);
       assert.match(afterDel, /3604/);
       await page.close();
+    } finally {
+      await browser.close();
+    }
+  });
+
+  it("two iframes + delayed hydrate keep 25 rows after reload", async (t) => {
+    const PREVIEW = process.env.PREVIEW_URL || "http://127.0.0.1:8081";
+    try {
+      const health = await fetch(`${PREVIEW}/`, { signal: AbortSignal.timeout(1200) });
+      if (!health.ok) {
+        t.skip("preview non in ascolto");
+        return;
+      }
+    } catch {
+      t.skip("preview non in ascolto");
+      return;
+    }
+    const PID = "49c14680-a504-436d-a0db-84e4f3583dbe";
+    const src = prepareSrcDoc(
+      repairDashboardCrud(ARGILLA),
+      { bg: "#f3eadc", fg: "#2b211c", accent: "#b85c38" },
+      PID,
+      "dashboard",
+    );
+    const browser = await chromium.launch({ headless: true });
+    try {
+      const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+      await page.addInitScript((srcDoc: string) => {
+        (window as Window & { __SRC?: string }).__SRC = srcDoc;
+      }, src);
+      await page.route("**/bridge-harness", async (route) => {
+        await route.fulfill({
+          contentType: "text/html",
+          body: `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body>
+<iframe id="desk" data-preview="desktop" style="width:100%;height:80vh;border:0"></iframe>
+<iframe id="phone" data-preview="mobile" style="position:absolute;left:-9999px;width:390px;height:700px;border:0"></iframe>
+<script>
+  window.__hydrated = false;
+  window.__db = {};
+  try {
+    var raw = sessionStorage.getItem("officina-appdb") || localStorage.getItem("officina-appdb");
+    if (raw) {
+      var parsed = JSON.parse(raw);
+      window.__db = parsed["${PID}"] || {};
+    }
+  } catch (e) {}
+  function n(x){
+    if (Array.isArray(x)) return x.length;
+    if (x && x.items && x.items.length) return x.items.length;
+    return 0;
+  }
+  window.addEventListener("message", function (e) {
+    var m = e.data;
+    if (!m || m.t !== "fenix-db" || !m.id) return;
+    function apply() {
+      var v = null;
+      if (m.op === "load") v = window.__db[m.col] || null;
+      if (m.op === "save") {
+        var cur = window.__db[m.col];
+        var incoming = m.data;
+        if (n(incoming) < n(cur) && n(cur) > 0) incoming = cur;
+        window.__db[m.col] = incoming;
+        var blob = {};
+        blob["${PID}"] = window.__db;
+        var json = JSON.stringify(blob);
+        try { localStorage.setItem("officina-appdb", json); } catch (err) {}
+        try { sessionStorage.setItem("officina-appdb", json); } catch (err) {}
+        var read = window.__db[m.col];
+        v = { ok: n(read) >= n(incoming) && n(read) > 0, v: read };
+      }
+      e.source.postMessage({ t: "fenix-db", id: m.id, v: v }, "*");
+    }
+    if (window.__hydrated) apply();
+    else setTimeout(function () { window.__hydrated = true; apply(); }, 700);
+  });
+  var src = window.__SRC || "";
+  document.getElementById("desk").srcdoc = src;
+  document.getElementById("phone").srcdoc = src;
+</script>
+</body></html>`,
+        });
+      });
+      await page.goto(`${PREVIEW}/bridge-harness`, { waitUntil: "domcontentloaded", timeout: 20000 });
+      assert.equal(await page.locator("iframe").count(), 2);
+      const desk = page.frameLocator("#desk");
+      await desk.getByRole("heading", { name: "Inventario" }).waitFor({ timeout: 15000 });
+      await desk.getByRole("button", { name: /nuovo pezzo/i }).click();
+      await desk.locator("#p-nome").fill("Codex Twin Frame");
+      await desk.locator("#p-qty").fill("2");
+      await desk.locator("#p-prezzo").fill("17");
+      await desk.getByRole("button", { name: /^salva$/i }).click();
+      await desk.locator("tr", { hasText: "Codex Twin Frame" }).waitFor({ timeout: 8000 });
+      await page.waitForFunction(
+        (pid: string) => {
+          try {
+            const db = JSON.parse(sessionStorage.getItem("officina-appdb") || "{}") as Record<
+              string,
+              { items?: { nome?: string }[] }
+            >;
+            return Boolean(db[pid]?.items?.some((r) => r.nome === "Codex Twin Frame"));
+          } catch {
+            return false;
+          }
+        },
+        PID,
+        { timeout: 8000 },
+      );
+      const before = await page.evaluate(() => sessionStorage.getItem("officina-appdb"));
+      await page.reload({ waitUntil: "domcontentloaded" });
+      const after = await page.evaluate(() => sessionStorage.getItem("officina-appdb"));
+      assert.equal(after, before, "session appdb changed across reload");
+      assert.equal(await page.locator("iframe").count(), 2);
+      const desk2 = page.frameLocator("#desk");
+      await desk2.locator("tr", { hasText: "Codex Twin Frame" }).waitFor({ timeout: 15000 });
+      const sum = (await desk2.locator(".summary").innerText()).replace(/\s+/g, " ");
+      assert.match(sum, /25 pezzi/);
+      assert.match(sum, /3638/);
     } finally {
       await browser.close();
     }

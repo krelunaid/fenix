@@ -1,7 +1,6 @@
 import { useEffect, useMemo } from "react";
 import { prepareSrcDoc, type SrcPalette } from "@/lib/projects/color-scheme";
 import { rememberAudit, rememberShot, type PreviewAudit } from "@/lib/ai/look";
-import { useProjectStore } from "@/lib/projects/store";
 import { cn } from "@/lib/utils";
 
 export type Device = "desktop" | "tablet" | "mobile";
@@ -76,37 +75,10 @@ export function PreviewFrame({
         } satisfies PreviewAudit);
         return;
       }
-      if (!msg || msg.t !== "fenix-db" || !msg.id || !msg.col) return;
-      const id = msg.projectId || projectId;
-      const col = msg.col;
-      if (!id) return;
-      const reply = (value: unknown) => {
-        const source = event.source as Window | null;
-        source?.postMessage({ t: "fenix-db", id: msg.id, v: value }, "*");
-      };
-      const apply = () => {
-        const store = useProjectStore.getState();
-        let value: unknown = null;
-        if (msg.op === "load") value = store.loadAppData(id, col);
-        if (msg.op === "save") {
-          store.saveAppData(id, col, msg.data);
-          value = msg.data;
-        }
-        reply(value);
-      };
-      if (useProjectStore.getState().hydrated) {
-        apply();
-        return;
-      }
-      const unsub = useProjectStore.subscribe((s) => {
-        if (!s.hydrated) return;
-        unsub();
-        apply();
-      });
     }
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
-  }, [projectId]);
+  }, []);
 
   return (
     <div className={cn("flex h-full min-h-0 flex-col", className)}>
@@ -134,6 +106,7 @@ export function PreviewFrame({
             <iframe
               key={`${name}-${srcDoc.length}`}
               title={`Anteprima ${name}`}
+              data-preview={device}
               sandbox="allow-scripts allow-forms allow-modals allow-same-origin"
               srcDoc={srcDoc}
               className="h-full min-h-[70vh] w-full border-0 bg-white"

@@ -1,8 +1,8 @@
 /** Injected into gestionale HTML. No ${} — product JS, not a template. */
-export const DASHBOARD_CRUD_SCRIPT = `<script data-fenix-crud="6">
+export const DASHBOARD_CRUD_SCRIPT = `<script data-fenix-crud="7">
 (function(){
-  if (window.__fenixCrud >= 6) return;
-  window.__fenixCrud = 6;
+  if (window.__fenixCrud >= 7) return;
+  window.__fenixCrud = 7;
   function qsa(s, r){ return Array.prototype.slice.call((r || document).querySelectorAll(s)); }
   function qs(s, r){ return (r || document).querySelector(s); }
   function txt(el){ return ((el && (el.textContent || (el.getAttribute && el.getAttribute("aria-label")))) || "").replace(/\\s+/g, " ").trim(); }
@@ -99,11 +99,21 @@ export const DASHBOARD_CRUD_SCRIPT = `<script data-fenix-crud="6">
   function host(){ return window.__fenixHost || window.Fenix; }
   function persist(rows){
     var F = host();
-    if (!F || !F.save) return Promise.resolve();
+    if (!F || !F.save) return Promise.resolve(false);
+    function ackOk(v){
+      if (v === false || v == null) return false;
+      if (v && v.ok === false) return false;
+      var data = v && typeof v === "object" && "ok" in v ? v.v : v;
+      var n = Array.isArray(data) ? data.length : (data && Array.isArray(data.items) ? data.items.length : -1);
+      if (n >= 0) return n >= rows.length;
+      return true;
+    }
     return Promise.all([
       Promise.resolve(F.save("items", rows)),
       Promise.resolve(F.save("state", { items: rows, rows: rows }))
-    ]);
+    ]).then(function(pair){
+      return ackOk(pair[0]) && ackOk(pair[1]);
+    }).catch(function(){ return false; });
   }
   function asRow(r){
     if (!r || typeof r !== "object") return { nome: String(r || ""), qty: "1", prezzo: "0", categoria: "", stato: "" };
@@ -278,10 +288,12 @@ export const DASHBOARD_CRUD_SCRIPT = `<script data-fenix-crud="6">
     var saved = addOrUpdate(data);
     if (!saved) return false;
     var f = root.tagName === "FORM" ? root : qs("form", dlg);
-    Promise.race([
-      Promise.resolve(saved),
-      new Promise(function(res){ setTimeout(res, 2000); })
-    ]).then(function(){
+    Promise.resolve(saved).then(function(ok){
+      if (ok === false) {
+        dlg.setAttribute("data-fenix-save-error", "1");
+        return;
+      }
+      dlg.removeAttribute("data-fenix-save-error");
       if (f) try { f.reset(); } catch (err) {}
       closeDlg();
     });

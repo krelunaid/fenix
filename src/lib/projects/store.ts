@@ -22,29 +22,70 @@ const MAX_PROJECTS = 48;
 export { STALE_BUILD_MS, RESUME_ERROR };
 export const APP_DB_KEY = "officina-appdb";
 
-function readDiskAppDb(): Record<string, Record<string, unknown>> {
-  if (typeof localStorage === "undefined") return {};
+function writeDiskAppDb(db: Record<string, Record<string, unknown>>) {
+  if (typeof localStorage === "undefined") return;
+  const json = JSON.stringify(db);
   try {
-    const raw = localStorage.getItem(APP_DB_KEY);
+    localStorage.setItem(APP_DB_KEY, json);
+  } catch {
+    /* quota */
+  }
+  try {
+    sessionStorage.setItem(APP_DB_KEY, json);
+  } catch {
+    /* quota */
+  }
+}
+
+function parseStore(store: Storage | undefined): Record<string, Record<string, unknown>> {
+  if (!store) return {};
+  try {
+    const raw = store.getItem(APP_DB_KEY);
     return raw ? (JSON.parse(raw) as Record<string, Record<string, unknown>>) : {};
   } catch {
     return {};
   }
 }
 
-function writeDiskAppDb(db: Record<string, Record<string, unknown>>) {
-  if (typeof localStorage === "undefined") return;
-  try {
-    localStorage.setItem(APP_DB_KEY, JSON.stringify(db));
-  } catch {
-    /* quota */
+function richer(a: unknown, b: unknown): unknown {
+  return countItems(b) > countItems(a) ? b : a ?? b;
+}
+
+function mergeAppDb(
+  a: Record<string, Record<string, unknown>>,
+  b: Record<string, Record<string, unknown>>,
+): Record<string, Record<string, unknown>> {
+  const out: Record<string, Record<string, unknown>> = { ...a };
+  for (const pid of new Set([...Object.keys(a), ...Object.keys(b)])) {
+    const ac = a[pid] ?? {};
+    const bc = b[pid] ?? {};
+    const cols = new Set([...Object.keys(ac), ...Object.keys(bc)]);
+    out[pid] = {};
+    for (const col of cols) out[pid][col] = richer(ac[col], bc[col]);
   }
+  return out;
+}
+
+function readDiskAppDb(): Record<string, Record<string, unknown>> {
+  const local = typeof localStorage !== "undefined" ? parseStore(localStorage) : {};
+  const session = typeof sessionStorage !== "undefined" ? parseStore(sessionStorage) : {};
+  return mergeAppDb(local, session);
 }
 
 function isEmptyVal(v: unknown): boolean {
   if (v == null || v === "") return true;
   if (Array.isArray(v)) return v.length === 0;
   return false;
+}
+
+function countItems(v: unknown): number {
+  if (Array.isArray(v)) return v.length;
+  if (v && typeof v === "object") {
+    const o = v as { items?: unknown; rows?: unknown };
+    if (Array.isArray(o.items)) return o.items.length;
+    if (Array.isArray(o.rows)) return o.rows.length;
+  }
+  return 0;
 }
 
 function loadCollection(
@@ -83,7 +124,7 @@ type ProjectStore = {
   spendCredit: (n?: number) => boolean;
   refundCredit: (n?: number) => void;
   loadAppData: (projectId: string, collection: string) => unknown;
-  saveAppData: (projectId: string, collection: string, data: unknown) => void;
+  saveAppData: (projectId: string, collection: string, data: unknown) => { ok: boolean; v: unknown };
 };
 
 function trimList(projects: Project[]) {
@@ -145,27 +186,33 @@ export const useProjectStore = create<ProjectStore>()(
         return loadCollection(projectId, collection, get().appDb, get().projects);
       },
       saveAppData: (projectId, collection, data) => {
+        const existing = loadCollection(projectId, collection, get().appDb, get().projects);
+        const toWrite =
+          countItems(data) < countItems(existing) && countItems(existing) > 0 ? existing : data;
         const disk = readDiskAppDb();
-        disk[projectId] = { ...(disk[projectId] ?? {}), [collection]: data };
+        disk[projectId] = { ...(disk[projectId] ?? {}), [collection]: toWrite };
         writeDiskAppDb(disk);
         set((s) => ({
           appDb: {
             ...s.appDb,
             [projectId]: {
               ...(s.appDb[projectId] ?? {}),
-              [collection]: data,
+              [collection]: toWrite,
             },
           },
           projects: s.projects.map((p) =>
             p.id === projectId
               ? {
                   ...p,
-                  appData: { ...(p.appData ?? {}), [collection]: data },
+                  appData: { ...(p.appData ?? {}), [collection]: toWrite },
                   updatedAt: Date.now(),
                 }
               : p,
           ),
         }));
+        const read = loadCollection(projectId, collection, get().appDb, get().projects);
+        const ok = countItems(toWrite) <= countItems(read) && (isEmptyVal(toWrite) || !isEmptyVal(read));
+        return { ok, v: read };
       },
       createFromBrief: ({ prompt, kind }) => {
         const project = blankProject(prompt.trim(), kind ?? "app");
@@ -294,7 +341,8 @@ export const useProjectStore = create<ProjectStore>()(
   ),
 );
 
-if (typeof window !== "undefined") {
+if (typeof window !== "undefined" && !(window as Window & { __fenixDbBound?: boolean }).__fenixDbBound) {
+  (window as Window & { __fenixDbBound?: boolean }).__fenixDbBound = true;
   window.addEventListener("message", (event: MessageEvent) => {
     const msg = event.data as {
       t?: string;
@@ -314,8 +362,7 @@ if (typeof window !== "undefined") {
       let value: unknown = null;
       if (msg.op === "load") value = store.loadAppData(msg.projectId!, msg.col!);
       if (msg.op === "save") {
-        store.saveAppData(msg.projectId!, msg.col!, msg.data);
-        value = msg.data;
+        value = store.saveAppData(msg.projectId!, msg.col!, msg.data);
       }
       reply(value);
     };

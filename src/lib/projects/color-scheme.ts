@@ -271,7 +271,11 @@ export function fenixRuntimeScript(projectId: string) {
         if (done) return;
         done = true;
         window.removeEventListener("message", on);
-        resolve(op === "load" ? pickLoad(v, col) : v);
+        resolve(op === "load" ? pickLoad(v, col) : unwrapSave(v));
+      }
+      function unwrapSave(v){
+        if (v && typeof v === "object" && "ok" in v) return v.ok ? (v.v != null ? v.v : true) : false;
+        return v;
       }
       function on(e){
         var m = e.data;
@@ -520,7 +524,7 @@ export function prepareSrcDoc(
       ? next.replace(/<head[^>]*>/i, (open) => `${open}${kit}`)
       : `${kit}${next}`;
   }
-  if (shouldRepairDashboard(next, kind) && !/data-fenix-crud="6"/.test(next)) {
+  if (shouldRepairDashboard(next, kind) && !/data-fenix-crud="7"/.test(next)) {
     next = next.replace(/<script[^>]*data-fenix-crud[^>]*>[\s\S]*?<\/script>/gi, "");
     next = /<\/body>/i.test(next)
       ? next.replace(/<\/body>/i, `${DASHBOARD_CRUD_SCRIPT}</body>`)
