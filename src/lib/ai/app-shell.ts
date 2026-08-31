@@ -44,7 +44,7 @@ body{font:400 16px/1.4 "IBM Plex Sans",system-ui,sans-serif;background:var(--bg)
   var S={items:[], limit:100, team:[]};
   function load(){
     var p=window.Fenix&&window.Fenix.load?window.Fenix.load("state"):null;
-    Promise.resolve(p).then(function(v){ if(v&&typeof v==="object") S=Object.assign(S,v); show(current); });
+    Promise.resolve(p).then(function(v){ if(v&&typeof v==="object") S=Object.assign(S,v); show(current); document.documentElement.setAttribute("data-fenix-ready","1"); });
   }
   function save(){ if(window.Fenix&&window.Fenix.save) window.Fenix.save("state", S); }
   var current="home";

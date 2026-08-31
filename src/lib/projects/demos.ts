@@ -183,6 +183,7 @@ export const DEMOS: Record<string, DemoSeed> = {
     }
     render();
   });
+  function markReady(){document.documentElement.setAttribute("data-fenix-ready","1")}
   async function boot(){
     try {
       if (window.Fenix && window.Fenix.load) {
@@ -194,6 +195,7 @@ export const DEMOS: Record<string, DemoSeed> = {
       }
     } catch (err) {}
     render();
+    markReady();
   }
   boot();
 </script>
@@ -307,6 +309,7 @@ export const DEMOS: Record<string, DemoSeed> = {
     state.costs.push({ t: title, n: who, a: amount });
     save(); render();
   });
+  function markReady(){document.documentElement.setAttribute("data-fenix-ready","1")}
   async function boot(){
     try {
       if (window.Fenix && window.Fenix.load) {
@@ -317,6 +320,7 @@ export const DEMOS: Record<string, DemoSeed> = {
       }
     } catch (err) {}
     render();
+    markReady();
   }
   boot();
 </script>
@@ -431,6 +435,7 @@ export const DEMOS: Record<string, DemoSeed> = {
     document.getElementById("ok").style.display = "block";
     f.reset();
   });
+  function markReady(){document.documentElement.setAttribute("data-fenix-ready","1")}
   async function boot(){
     try {
       if (window.Fenix && window.Fenix.load) {
@@ -438,6 +443,7 @@ export const DEMOS: Record<string, DemoSeed> = {
         if (r && Array.isArray(r.notes)) notes = r.notes;
       }
     } catch (err) {}
+    markReady();
   }
   boot();
 </script>
@@ -551,6 +557,7 @@ export const DEMOS: Record<string, DemoSeed> = {
     }
     render();
   });
+  function markReady(){document.documentElement.setAttribute("data-fenix-ready","1")}
   async function boot(){
     try {
       if (window.Fenix && window.Fenix.load) {
@@ -559,6 +566,7 @@ export const DEMOS: Record<string, DemoSeed> = {
       }
     } catch (err) {}
     deal();
+    markReady();
   }
   boot();
   setInterval(() => { if (state.view==="gioco" && state.deck.length && !state.deck.every(c=>c.ok)) render(); }, 1000);

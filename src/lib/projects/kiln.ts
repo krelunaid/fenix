@@ -164,7 +164,8 @@ label{display:block;font-size:10px;color:var(--muted);letter-spacing:.08em;text-
       save(); render();
     }
   });
-  async function boot(){
+  function markReady(){document.documentElement.setAttribute("data-fenix-ready","1")}
+async function boot(){
     try {
       if (window.Fenix && window.Fenix.load) {
         const r = await window.Fenix.load("state");
@@ -172,6 +173,7 @@ label{display:block;font-size:10px;color:var(--muted);letter-spacing:.08em;text-
       }
     } catch (e) {}
     render();
+    markReady();
   }
   boot();
 </script>

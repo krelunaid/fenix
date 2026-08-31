@@ -145,7 +145,8 @@ footer{padding:22px 18px;border-top:2px solid var(--fg);display:flex;justify-con
     document.getElementById("ok").style.display = "block";
     f.reset();
   });
-  async function boot(){
+  function markReady(){document.documentElement.setAttribute("data-fenix-ready","1")}
+async function boot(){
     try {
       if (window.Fenix && window.Fenix.load) {
         const r = await window.Fenix.load("state");
@@ -153,6 +154,7 @@ footer{padding:22px 18px;border-top:2px solid var(--fg);display:flex;justify-con
       }
     } catch (err) {}
     renderBooks();
+    markReady();
   }
   boot();
 </script>

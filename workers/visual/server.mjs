@@ -363,7 +363,11 @@ async function openPage(html) {
   const browser = await chromium.launch({ args: ["--no-sandbox", "--disable-dev-shm-usage"] });
   const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
   await page.setContent(html, { waitUntil: "domcontentloaded", timeout: 12000 });
-  await new Promise((r) => setTimeout(r, 280));
+  try {
+    await page.waitForSelector("[data-fenix-ready]", { timeout: 4000, state: "attached" });
+  } catch {
+    await new Promise((r) => setTimeout(r, 280));
+  }
   return { browser, page };
 }
 

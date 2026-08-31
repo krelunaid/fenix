@@ -170,7 +170,8 @@ export function fenixRuntimeScript(projectId: string) {
   window.Fenix = {
     projectId: pid,
     load: function(col){ return call("load", col); },
-    save: function(col, data){ fallbackSave(col, data); return call("save", col, data); }
+    save: function(col, data){ fallbackSave(col, data); return call("save", col, data); },
+    ready: function(){ document.documentElement.setAttribute("data-fenix-ready","1"); }
   };
   function audit(){
     try {
@@ -210,9 +211,20 @@ export function fenixRuntimeScript(projectId: string) {
       }).catch(function(){ sendShot(""); });
     } catch (e) { sendShot(""); }
   }
+  function waitReady(cb){
+    if (document.documentElement.getAttribute("data-fenix-ready")) { cb(); return; }
+    var n = 0;
+    var t = setInterval(function(){
+      n += 1;
+      if (document.documentElement.getAttribute("data-fenix-ready") || n > 40) {
+        clearInterval(t);
+        cb();
+      }
+    }, 50);
+  }
   var hs = document.createElement("script");
   hs.src = "https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js";
-  hs.onload = function(){ setTimeout(shoot, 80); };
+  hs.onload = function(){ waitReady(function(){ shoot(); }); };
   hs.onerror = function(){ sendShot(""); };
   document.head.appendChild(hs);
   document.querySelectorAll("nav button, .fk-tab button, .tabbar button").forEach(function(b){
@@ -327,11 +339,12 @@ export function fenixRuntimeScript(projectId: string) {
 }
 
 export function sanitizePreviewHtml(html: string) {
+  // Strip leaked `" />` tokens from broken LLM markup, never attribute
+  // closers on SVG/void tags (`stroke-width="2.2"/>`).
   return html
     .replace(/(<body[^>]*>)\s*"\s*\/>/i, "$1")
     .replace(/^\s*"\s*\/>/gm, "")
-    .replace(/>\s*"\s*\/>/g, ">")
-    .replace(/"\s*\/>/g, "");
+    .replace(/>\s*"\s*\/>/g, ">");
 }
 
 export function prepareSrcDoc(html: string, bg: string, projectId = "preview", kind?: string) {

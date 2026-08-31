@@ -10,7 +10,7 @@ import {
   validateProductHtml,
   validatePublishable,
 } from "./validate-html.ts";
-import { fenixRuntimeScript, looksLikeSite, prepareSrcDoc } from "./color-scheme.ts";
+import { fenixRuntimeScript, looksLikeSite, prepareSrcDoc, sanitizePreviewHtml } from "./color-scheme.ts";
 import { DEMOS } from "./demos.ts";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -98,6 +98,16 @@ describe("validatePublishable final srcdoc", () => {
 
   it("does not publish when the final srcdoc is syntactically invalid", () => {
     assert.equal(canPublishHtml(BROKEN, "app", "broken"), false);
+  });
+
+  it("keeps SVG self-closing attributes instead of stripping leaked quotes", () => {
+    const svg = `<circle cx="16" cy="16" r="9" stroke-width="2.2"/><path d="M1 1"/>`;
+    const kept = sanitizePreviewHtml(`<body>${svg}</body>`);
+    assert.match(kept, /stroke-width="2.2"\/>/);
+    assert.match(kept, /d="M1 1"\/>/);
+    const leaked = sanitizePreviewHtml(`<body>\n" />\n<main>ok</main></body>`);
+    assert.doesNotMatch(leaked, /^\s*"\s*\/>/m);
+    assert.match(leaked, /<main>ok<\/main>/);
   });
 });
 

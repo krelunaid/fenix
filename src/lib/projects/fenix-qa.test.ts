@@ -82,5 +82,7 @@ describe("focus-visible and worker model", () => {
     const scheme = readFileSync(join(root, "src/lib/projects/color-scheme.ts"), "utf8");
     assert.doesNotMatch(scheme, /#f5f5f7/);
     assert.doesNotMatch(scheme, /#0071e3/);
+    assert.match(scheme, /data-fenix-ready/);
+    assert.match(scheme, /ready:\s*function/);
   });
 });

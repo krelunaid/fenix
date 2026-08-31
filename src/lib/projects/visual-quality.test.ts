@@ -38,6 +38,12 @@ describe("auditCraft fixtures", () => {
       assert.equal(report.ok, true, `${id}: ${report.notes.join(" · ")}`);
       assert.ok(report.contrast >= 4.5, `${id} contrast ${report.contrast}`);
       assert.doesNotMatch(demo.html, /\bManrope\b|#f5f5f7|#0071e3|unsplash|localStorage/);
+      assert.match(
+        demo.html,
+        /data-fenix-ready/,
+        `${id} must mark ready after hydration`,
+      );
+      assert.match(demo.html, /function markReady\(/, `${id} markReady helper`);
       bgs.add(demo.palette.bg.toLowerCase());
       fonts.add(expected.fontHint);
     }
