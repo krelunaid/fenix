@@ -70,7 +70,7 @@ function LiveSitePage() {
         title={project.name}
         srcDoc={prepareSrcDoc(
           project.html,
-          project.palette?.bg ?? "#ffffff",
+          project.palette ?? { bg: "#ffffff" },
           project.id,
           project.kind,
         )}

@@ -203,6 +203,7 @@ function StudioPage() {
                 name={project.name}
                 device={device}
                 background={project.palette.bg}
+                palette={project.palette}
                 projectId={project.id}
                 kind={project.kind}
                 className="h-full"
@@ -256,6 +257,7 @@ function StudioPage() {
                 name={project.name}
                 device={previewDevice(project.kind)}
                 background={project.palette.bg}
+                palette={project.palette}
                 projectId={project.id}
                 kind={project.kind}
                 className="h-full"

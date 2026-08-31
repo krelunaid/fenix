@@ -38,7 +38,7 @@ try {
   for (const [id, width, height] of FRAMES) {
     const demo = DEMOS[id];
     if (!demo) throw new Error(`unknown demo ${id}`);
-    const src = prepareSrcDoc(demo.html, demo.palette.bg, id, demo.kind);
+    const src = prepareSrcDoc(demo.html, demo.palette, id, demo.kind);
     const page = await browser.newPage({ viewport: { width, height } });
     await page.setContent(src, { waitUntil: "domcontentloaded", timeout: 15000 });
     const file = join(outDir, `${id}-${width}.png`);

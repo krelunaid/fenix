@@ -20,7 +20,7 @@ describe("Fenix bridge in browser", () => {
   it("persists Split via window.Fenix.load/save across iframe reload", async () => {
     const html = DEMOS.split.html;
     assert.doesNotMatch(html, /\blocalStorage\b/);
-    const src = prepareSrcDoc(html, DEMOS.split.palette.bg, "split-demo", DEMOS.split.kind);
+    const src = prepareSrcDoc(html, DEMOS.split.palette, "split-demo", DEMOS.split.kind);
     const browser = await launch();
     try {
       const page = await browser.newPage();

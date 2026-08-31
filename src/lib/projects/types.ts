@@ -8,6 +8,7 @@ export type Palette = {
   fg: string;
   muted: string;
   accent: string;
+  line?: string;
 };
 
 export type ChatMessage = {
@@ -45,6 +46,7 @@ export const DEFAULT_PALETTE: Palette = {
   fg: "#efe6d4",
   muted: "#9a8f7a",
   accent: "#c45c26",
+  line: "#3d3428",
 };
 
 export type ExampleBrief = {

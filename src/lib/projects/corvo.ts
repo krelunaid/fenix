@@ -15,17 +15,18 @@ html{color-scheme:light;scroll-behavior:smooth}
 body{background:var(--bg);color:var(--fg);font:400 16px/1.45 "IBM Plex Sans",system-ui,sans-serif}
 a{color:inherit;text-decoration:none}
 h1,h2{font-family:Newsreader,Georgia,serif;font-weight:700;letter-spacing:-.03em}
-header{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;border-bottom:2px solid var(--fg);background:var(--surface)}
+header{display:flex;justify-content:space-between;align-items:center;padding:14px max(18px, env(safe-area-inset-right)) 14px max(18px, env(safe-area-inset-left));border-bottom:2px solid var(--fg);background:var(--surface)}
 .mark{display:flex;align-items:center;gap:10px;font-family:Newsreader,serif;font-size:1.35rem}
 .mark svg{width:28px;height:28px}
 nav{display:flex;gap:18px;font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:.08em}
 .hero{display:grid;grid-template-columns:1.1fr .9fr;min-height:62vh;border-bottom:2px solid var(--fg)}
-.hero img,.hero-art{width:100%;height:100%;object-fit:cover;min-height:280px;display:block;background:#3d4f4a}
-.hero-copy{padding:36px 28px;background:var(--fg);color:var(--bg);display:flex;flex-direction:column;justify-content:flex-end;gap:14px}
+.hero img,.hero-art{width:100%;height:100%;object-fit:cover;min-height:280px;display:block;background:#3d4f4a;overflow:visible}
+.hero-copy{padding:36px max(28px, env(safe-area-inset-right)) 36px max(28px, env(safe-area-inset-left));background:var(--fg);color:var(--bg);display:flex;flex-direction:column;justify-content:flex-end;gap:14px}
+.hero-copy h1{color:inherit}
 .hero-copy p{max-width:28rem;color:#d4cbb8}
 .cta{align-self:flex-start;height:44px;padding:0 18px;border:1px solid var(--bg);background:transparent;color:var(--bg);font:600 13px/1 "IBM Plex Sans",sans-serif;letter-spacing:.08em;text-transform:uppercase;cursor:pointer}
 .cta.solid{background:var(--accent);border-color:var(--accent);color:#f3ece0}
-.wrap{max-width:960px;margin:0 auto;padding:48px 18px 72px}
+.wrap{max-width:960px;margin:0 auto;padding:48px max(18px, env(safe-area-inset-right)) 72px max(18px, env(safe-area-inset-left))}
 .split{display:grid;grid-template-columns:1.1fr .9fr;gap:28px}
 .board{background:var(--fg);color:var(--bg);padding:28px;border:2px solid var(--fg)}
 .board h2{margin-bottom:16px}
@@ -37,13 +38,14 @@ input,select{width:100%;height:42px;border:1px solid var(--line);background:#f4e
 .hours{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:36px}
 .hours div{border:1px solid var(--line);padding:18px;background:var(--surface)}
 .hours b{display:block;margin-top:6px;font-family:Newsreader,serif;font-size:1.5rem}
-footer{padding:22px 18px;border-top:2px solid var(--fg);display:flex;justify-content:space-between;font-size:12px;color:var(--muted)}
+footer{padding:22px max(18px, env(safe-area-inset-right)) 22px max(18px, env(safe-area-inset-left));border-top:2px solid var(--fg);display:flex;justify-content:space-between;gap:12px;font-size:12px;color:var(--muted)}
 .ok{display:none;margin-top:12px;font-size:14px}
 @media(max-width:800px){
   nav{display:none}
   .hero,.split,.hours{grid-template-columns:1fr}
   .hero{min-height:0}
-  .hero img,.hero-art{height:42vh}
+  .hero img,.hero-art{height:42vh;min-height:180px}
+  header .mark{min-width:0}
 }
 @media(prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto}}
 </style>
@@ -74,7 +76,8 @@ footer{padding:22px 18px;border-top:2px solid var(--fg);display:flex;justify-con
     <rect x="360" y="150" width="220" height="80" fill="#5a4e42"/>
     <rect x="380" y="168" width="70" height="44" fill="#cfc6b6"/>
     <rect x="470" y="168" width="88" height="44" fill="#1c1712"/>
-    <text x="24" y="40" fill="#e7dfd1" font-size="18" font-family="Georgia,serif">via Madama Cristina 41</text>
+    <rect x="196" y="22" width="248" height="32" rx="2" fill="#2a3532"/>
+    <text x="320" y="44" text-anchor="middle" fill="#e7dfd1" font-size="18" font-family="Georgia,serif">via Madama Cristina 41</text>
   </svg>
   <div class="hero-copy">
     <p>San Salvario · via Madama Cristina 41</p>

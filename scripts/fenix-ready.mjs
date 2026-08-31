@@ -17,6 +17,8 @@ export const MARK_READY_JS = `function markReady(){${FENIX_READY_SNIPPET}}`;
 /**
  * Wait until the product has hydrated and painted. Throws if the marker
  * never appears — callers must not fall back to a blind timeout screenshot.
+ * @param {import("playwright").Page} page
+ * @param {number} [timeout]
  */
 export async function waitForFenixReady(page, timeout = 8000) {
   const found = await page.$(FENIX_READY_SELECTOR);
@@ -31,7 +33,12 @@ export async function waitForFenixReady(page, timeout = 8000) {
   }
 }
 
-/** Screenshot only after the ready marker. Never call page.screenshot first. */
+/**
+ * Screenshot only after the ready marker. Never call page.screenshot first.
+ * @param {import("playwright").Page} page
+ * @param {string} path
+ * @param {number} [timeout]
+ */
 export async function screenshotWhenReady(page, path, timeout = 8000) {
   await waitForFenixReady(page, timeout);
   try {

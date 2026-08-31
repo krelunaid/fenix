@@ -1,5 +1,5 @@
 import { useEffect, useMemo } from "react";
-import { prepareSrcDoc } from "@/lib/projects/color-scheme";
+import { prepareSrcDoc, type SrcPalette } from "@/lib/projects/color-scheme";
 import { rememberAudit, rememberShot, type PreviewAudit } from "@/lib/ai/look";
 import { useProjectStore } from "@/lib/projects/store";
 import { cn } from "@/lib/utils";
@@ -18,6 +18,7 @@ export function PreviewFrame({
   name,
   device,
   background,
+  palette,
   projectId,
   kind,
   className,
@@ -27,14 +28,16 @@ export function PreviewFrame({
   name: string;
   device: Device;
   background?: string;
+  palette?: SrcPalette;
   projectId?: string;
   kind?: string;
   className?: string;
 }) {
   const width = WIDTH[device];
   const srcDoc = useMemo(() => {
-    return html ? prepareSrcDoc(html, background ?? "#ffffff", projectId ?? "preview", kind) : "";
-  }, [html, background, projectId, kind]);
+    const tokens = palette ?? { bg: background ?? "#ffffff" };
+    return html ? prepareSrcDoc(html, tokens, projectId ?? "preview", kind) : "";
+  }, [html, background, palette, projectId, kind]);
 
   useEffect(() => {
     function onMessage(event: MessageEvent) {

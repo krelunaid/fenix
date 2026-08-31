@@ -1,4 +1,4 @@
-import { prepareSrcDoc } from "./color-scheme.ts";
+import { prepareSrcDoc, type SrcPalette } from "./color-scheme.ts";
 
 export type ScriptSyntaxError = {
   index: number;
@@ -163,11 +163,11 @@ export function formatHtmlErrors(report: HtmlReport) {
 
 export function validatePublishable(
   html: string,
-  opts?: { kind?: string; projectId?: string; bg?: string },
+  opts?: { kind?: string; projectId?: string; bg?: string; palette?: SrcPalette },
 ): HtmlReport & { srcDoc: string } {
   const srcDoc = prepareSrcDoc(
     html,
-    opts?.bg ?? "#ffffff",
+    opts?.palette ?? { bg: opts?.bg ?? "#ffffff" },
     opts?.projectId ?? "preview",
     opts?.kind,
   );

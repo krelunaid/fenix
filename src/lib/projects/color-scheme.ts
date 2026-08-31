@@ -8,6 +8,69 @@ export function isLightHex(hex: string) {
   return 0.299 * r + 0.587 * g + 0.114 * b > 150;
 }
 
+export type SrcPalette = {
+  bg?: string;
+  surface?: string;
+  fg?: string;
+  muted?: string;
+  accent?: string;
+  line?: string;
+};
+
+function hexToRgb(hex: string): [number, number, number] | null {
+  const h = hex.replace("#", "").trim();
+  if (h.length === 3) {
+    return [
+      parseInt(h[0] + h[0], 16),
+      parseInt(h[1] + h[1], 16),
+      parseInt(h[2] + h[2], 16),
+    ];
+  }
+  if (h.length >= 6) {
+    return [
+      parseInt(h.slice(0, 2), 16),
+      parseInt(h.slice(2, 4), 16),
+      parseInt(h.slice(4, 6), 16),
+    ];
+  }
+  return null;
+}
+
+function mixHex(a: string, b: string, t: number): string {
+  const A = hexToRgb(a);
+  const B = hexToRgb(b);
+  if (!A || !B) return a;
+  const m = (i: number) => Math.round(A[i] * (1 - t) + B[i] * t);
+  return (
+    "#" +
+    [m(0), m(1), m(2)]
+      .map((n) => n.toString(16).padStart(2, "0"))
+      .join("")
+  );
+}
+
+/** Fill missing tokens from bg luminance so PHONE_KIT never paints dark ink on dark paper. */
+export function resolvePalette(input?: string | SrcPalette): Required<SrcPalette> {
+  const raw: SrcPalette =
+    typeof input === "string" || !input
+      ? { bg: typeof input === "string" && input ? input : "#efe6d4" }
+      : { ...input };
+  const bg = raw.bg || "#efe6d4";
+  const light = isLightHex(bg);
+  const fg = raw.fg || (light ? "#1c1712" : "#efe6d4");
+  const surface =
+    raw.surface || (light ? mixHex(bg, "#ffffff", 0.4) : mixHex(bg, "#ffffff", 0.08));
+  const muted = raw.muted || (light ? "#5c5348" : "#9a8f7a");
+  const accent = raw.accent || "#c45c26";
+  const line = raw.line || mixHex(bg, fg, 0.22);
+  return { bg, surface, fg, muted, accent, line };
+}
+
+export function paletteRootStyle(palette: Required<SrcPalette>): string {
+  const p = palette;
+  return `<style data-fenix-palette>:root{--bg:${p.bg};--surface:${p.surface};--fg:${p.fg};--muted:${p.muted};--accent:${p.accent};--line:${p.line}}</style>`;
+}
+
 const NAV_GUARD = `<script data-officina-guard>
 document.addEventListener("click", function (e) {
   var n = e.target;
@@ -86,9 +149,9 @@ nav{display:flex;flex-wrap:wrap;gap:4px 2px;padding:0 12px 8px}
 nav a,nav button{border:0;background:none;color:var(--fg,#1c1712);font:650 14px/1.2 system-ui,sans-serif;padding:8px 10px}
 .fk-hero,header img, .hero img, img.cover{width:100%;height:200px;object-fit:cover;display:block;border-radius:0}
 main,body>main{display:block!important;overflow:visible!important;flex:none!important;padding:20px 16px 32px;max-width:40rem;margin:0 auto}
-h1{font-size:28px;letter-spacing:-.03em;line-height:1.15;margin:0 0 10px;color:var(--fg,#1c1712)}
-h2{font-size:20px;margin:28px 0 10px;color:var(--fg,#1c1712)}
-p,li{color:var(--fg,#1c1712);opacity:1}
+h1{font-size:28px;letter-spacing:-.03em;line-height:1.15;margin:0 0 10px}
+h2{font-size:20px;margin:28px 0 10px}
+p,li{opacity:1}
 section{margin:0 0 28px}
 .card,.fk-tile{background:var(--surface,#f7f1e4);border-radius:16px;padding:16px;margin:0 0 12px;border:1px solid var(--line,#c4b49a);color:var(--fg,#1c1712)}
 footer{padding:24px 16px;font-size:13px;color:var(--muted,#5c5348)}
@@ -347,8 +410,15 @@ export function sanitizePreviewHtml(html: string) {
     .replace(/>\s*"\s*\/>/g, ">");
 }
 
-export function prepareSrcDoc(html: string, bg: string, projectId = "preview", kind?: string) {
+export function prepareSrcDoc(
+  html: string,
+  bgOrPalette: string | SrcPalette = "#ffffff",
+  projectId = "preview",
+  kind?: string,
+) {
   if (!html) return "";
+  const palette = resolvePalette(bgOrPalette);
+  const bg = palette.bg;
   const scheme = isLightHex(bg) ? "light" : "dark";
   let next = sanitizePreviewHtml(html);
   if (!/color-scheme/i.test(next)) {
@@ -373,6 +443,14 @@ export function prepareSrcDoc(html: string, bg: string, projectId = "preview", k
     next = /<head[^>]*>/i.test(next)
       ? next.replace(/<head[^>]*>/i, (open) => `${open}${kit}`)
       : `${kit}${next}`;
+  }
+  // Last :root in <head> so the kit's var(--fg,#1c1712) resolves to the
+  // project ink, not the phone-kit paper default, after authored CSS.
+  if (!/data-fenix-palette/.test(next)) {
+    const pal = paletteRootStyle(palette);
+    next = /<\/head>/i.test(next)
+      ? next.replace(/<\/head>/i, `${pal}</head>`)
+      : `${pal}${next}`;
   }
   return next;
 }

@@ -140,4 +140,34 @@ describe("looksLikeSite kind lock", () => {
     assert.match(site, /data-fenix-site/);
     assert.match(site, /overflow:auto!important/);
   });
+
+  it("injects the full palette so the phone kit does not paint dark ink on dark paper", () => {
+    const src = prepareSrcDoc(
+      DEMOS.catenaria.html,
+      DEMOS.catenaria.palette,
+      "catenaria",
+      DEMOS.catenaria.kind,
+    );
+    assert.match(src, /data-fenix-palette/);
+    assert.match(src, /--bg:#1a1612/);
+    assert.match(src, /--surface:#2a241c/);
+    assert.match(src, /--fg:#e6dcc8/);
+    assert.match(src, /--muted:#9a8f7a/);
+    assert.match(src, /--accent:#c45c26/);
+    assert.match(src, /--line:/);
+    const lastRoot = [...src.matchAll(/:root\{([^}]+)\}/g)].at(-1)?.[1] ?? "";
+    assert.match(lastRoot, /--fg:#e6dcc8/);
+  });
+
+  it("infers light ink when only a dark bg is passed", () => {
+    const src = prepareSrcDoc(
+      `<!DOCTYPE html><html><head></head><body><main><p>x</p></main></body></html>`,
+      "#1a1612",
+      "dark-only",
+      "app",
+    );
+    assert.match(src, /data-fenix-palette/);
+    assert.match(src, /--fg:#efe6d4/);
+    assert.match(src, /--bg:#1a1612/);
+  });
 });
