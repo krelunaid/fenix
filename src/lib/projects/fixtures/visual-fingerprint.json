@@ -1,0 +1,12 @@
+{
+  "identities": {
+    "grottaglie": { "bg": "#e8dcc8", "fg": "#3b2a22", "accent": "#b85c38", "fontHint": "Fraunces" },
+    "catenaria": { "bg": "#1a1612", "fg": "#e6dcc8", "accent": "#c45c26", "fontHint": "Bebas" },
+    "corvo": { "bg": "#cfc6b6", "fg": "#1c1712", "accent": "#3d4f4a", "fontHint": "Newsreader" },
+    "kiln": { "bg": "#0e0d0b", "fg": "#e8e0d0", "accent": "#d4782a", "fontHint": "Barlow Condensed" },
+    "vesper": { "bg": "#08070c", "fg": "#e6dcc4", "accent": "#c9b896", "fontHint": "Cormorant" },
+    "split": { "bg": "#efe6d4", "fg": "#1c1814", "accent": "#3d4a1f", "fontHint": "IBM Plex Mono" },
+    "folio": { "bg": "#000000", "fg": "#e8e0d4", "accent": "#e8e0d4", "fontHint": "Instrument Serif" },
+    "memory": { "bg": "#1a1410", "fg": "#ead9b2", "accent": "#d4782a", "fontHint": "Playfair Display" }
+  }
+}

@@ -1,6 +1,8 @@
-import type { Palette, ProjectKind } from "./types";
-import { CATENARIA_HTML } from "./catenaria";
-import { GROTTAGLIE_HTML } from "./grottaglie";
+import type { Palette, ProjectKind } from "./types.ts";
+import { CATENARIA_HTML } from "./catenaria.ts";
+import { GROTTAGLIE_HTML } from "./grottaglie.ts";
+import { CORVO_HTML } from "./corvo.ts";
+import { KILN_HTML } from "./kiln.ts";
 
 export type DemoSeed = {
   id: string;
@@ -48,202 +50,30 @@ export const DEMOS: Record<string, DemoSeed> = {
     name: "Caffè Corvo",
     tagline: "L'espresso, al punto.",
     kind: "landing",
-    summary: "Pagina prodotto: foto, menu, prenotazione tavolo.",
+    summary: "Banco di zinco a San Salvario: menu corto, prenotazione tavolo.",
     palette: {
-      bg: "#f5f5f7",
-      surface: "#ffffff",
-      fg: "#1d1d1f",
-      muted: "#6e6e73",
-      accent: "#1d1d1f",
+      bg: "#cfc6b6",
+      surface: "#e7dfd1",
+      fg: "#1c1712",
+      muted: "#5a4e42",
+      accent: "#3d4f4a",
     },
-    html: `<!DOCTYPE html>
-<html lang="it">
-<head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1"/>
-<meta name="color-scheme" content="light"/>
-<title>Caffè Corvo</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600&display=swap"/>
-<style>
-  :root { --bg:#f5f5f7; --ink:#1d1d1f; --muted:#6e6e73; --line:rgba(0,0,0,.08); --card:#fff; }
-  * { box-sizing:border-box; margin:0; }
-  html { color-scheme:light; scroll-behavior:smooth; }
-  body { background:var(--bg); color:var(--ink); font-family:Manrope,ui-sans-serif,system-ui,sans-serif; }
-  a { color:inherit; text-decoration:none; }
-  header { position:sticky; top:0; z-index:4; display:flex; justify-content:space-between; align-items:center; height:52px; padding:0 28px; background:rgba(245,245,247,.72); backdrop-filter:saturate(180%) blur(20px); }
-  .mark { font-weight:600; letter-spacing:-.03em; }
-  nav { display:flex; gap:22px; font-size:12px; color:var(--muted); }
-  .hero { text-align:center; padding:28px 24px 8px; }
-  .hero img { width:min(920px,100%); height:min(62vh,560px); object-fit:cover; border-radius:28px; display:block; margin:0 auto; }
-  .hero h1 { margin-top:36px; font-size:clamp(2.6rem,8vw,4.4rem); font-weight:600; letter-spacing:-.045em; line-height:1.04; }
-  .hero p { margin:12px auto 0; max-width:28rem; color:var(--muted); font-size:19px; line-height:1.45; }
-  .cta { margin-top:28px; height:44px; padding:0 22px; border:0; border-radius:980px; background:var(--ink); color:#fff; font:600 14px Manrope,sans-serif; cursor:pointer; }
-  .cta:active { transform:scale(.98); }
-  .ghost { background:transparent; color:var(--ink); border:1px solid var(--line); }
-  .wrap { max-width:920px; margin:0 auto; padding:72px 24px 96px; }
-  .split { display:grid; grid-template-columns:1.1fr .9fr; gap:28px; }
-  .card { background:var(--card); border-radius:24px; padding:28px; }
-  h2 { font-size:28px; letter-spacing:-.03em; font-weight:600; margin-bottom:18px; }
-  .item { display:flex; justify-content:space-between; padding:14px 0; border-top:1px solid var(--line); font-size:15px; }
-  .item span { color:var(--muted); }
-  label { display:block; font-size:12px; color:var(--muted); margin:14px 0 6px; }
-  input, select { width:100%; height:44px; border:1px solid var(--line); background:#f5f5f7; border-radius:12px; padding:0 12px; font:15px Manrope,sans-serif; color:var(--ink); }
-  .ok { display:none; margin-top:14px; font-size:14px; }
-  .hours { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-top:28px; }
-  .hours div { background:var(--card); border-radius:20px; padding:22px; }
-  .hours b { display:block; margin-top:8px; font-size:22px; letter-spacing:-.03em; }
-  footer { padding:28px; color:var(--muted); font-size:12px; display:flex; justify-content:space-between; }
-  @media (max-width:800px) {
-    nav { display:none; }
-    .split, .hours { grid-template-columns:1fr; }
-    .hero img { height:48vh; border-radius:20px; }
-  }
-</style>
-</head>
-<body>
-<header>
-  <div class="mark">Caffè Corvo</div>
-  <nav>
-    <a href="#menu">Menu</a>
-    <a href="#tavolo">Tavolo</a>
-    <a href="#orari">Orari</a>
-  </nav>
-</header>
-<section class="hero">
-  <img alt="Espresso" src="https://images.unsplash.com/photo-1511920170033-f8396924c348?auto=format&fit=crop&w=1800&q=80"/>
-  <h1>L'espresso. Al punto.</h1>
-  <p>Via Mazzini 18, Torino. Tostatura propria, banco di marmo, niente fretta.</p>
-  <a href="#tavolo"><button class="cta">Prenota un tavolo</button></a>
-</section>
-<section class="wrap">
-  <div class="split">
-    <article class="card" id="menu">
-      <h2>Al banco</h2>
-      <div class="item"><b>Espresso</b><span>1,40</span></div>
-      <div class="item"><b>Macchiato</b><span>1,50</span></div>
-      <div class="item"><b>Cappuccino</b><span>1,80</span></div>
-      <div class="item"><b>Cornetto al pistacchio</b><span>1,90</span></div>
-    </article>
-    <article class="card" id="tavolo">
-      <h2>Un tavolo</h2>
-      <form id="book">
-        <label>Nome</label>
-        <input name="nome" required placeholder="Anna Rossi"/>
-        <label>Persone</label>
-        <select name="persone"><option>2</option><option>3</option><option>4</option></select>
-        <label>Ora</label>
-        <select name="ora"><option>08:30</option><option>09:00</option><option>11:00</option></select>
-        <div style="height:18px"></div>
-        <button class="cta" type="submit">Richiedi</button>
-        <p class="ok" id="ok">Richiesta presa. Ti confermiamo al banco.</p>
-      </form>
-    </article>
-  </div>
-  <div class="hours" id="orari">
-    <div><span style="color:var(--muted);font-size:12px">Settimana</span><b>7–19</b></div>
-    <div><span style="color:var(--muted);font-size:12px">Sabato</span><b>8–14</b></div>
-    <div><span style="color:var(--muted);font-size:12px">Domenica</span><b>Chiuso</b></div>
-  </div>
-</section>
-<footer>
-  <span>Caffè Corvo</span>
-  <span>torino@caffecorvo.it</span>
-</footer>
-<script>
-  document.getElementById("book").addEventListener("submit", function (e) {
-    e.preventDefault();
-    document.getElementById("ok").style.display = "block";
-  });
-</script>
-</body>
-</html>`,
+    html: CORVO_HTML,
   },
   kiln: {
     id: "kiln",
     name: "Kiln",
-    tagline: "Delivery, in chiaro.",
+    tagline: "Colata, in chiaro.",
     kind: "dashboard",
-    summary: "KPI enormi, sprint, rischi.",
+    summary: "Cruscotto forno: temperatura, colate, rischi.",
     palette: {
-      bg: "#f5f5f7",
-      surface: "#ffffff",
-      fg: "#1d1d1f",
-      muted: "#6e6e73",
-      accent: "#1d1d1f",
+      bg: "#0e0d0b",
+      surface: "#1c1a16",
+      fg: "#e8e0d0",
+      muted: "#8a8274",
+      accent: "#d4782a",
     },
-    html: `<!DOCTYPE html>
-<html lang="it">
-<head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1"/>
-<meta name="color-scheme" content="light"/>
-<title>Kiln</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600&display=swap"/>
-<style>
-  :root { --bg:#f5f5f7; --ink:#1d1d1f; --muted:#6e6e73; --line:rgba(0,0,0,.08); --card:#fff; }
-  * { box-sizing:border-box; margin:0; }
-  html { color-scheme:light; }
-  body { background:var(--bg); color:var(--ink); font-family:Manrope,ui-sans-serif,system-ui,sans-serif; min-height:100vh; }
-  header { height:52px; display:flex; align-items:center; justify-content:space-between; padding:0 24px; }
-  .mark { font-weight:600; letter-spacing:-.03em; }
-  .tabs button { height:32px; padding:0 12px; border:0; background:transparent; color:var(--muted); font:500 13px Manrope,sans-serif; border-radius:980px; cursor:pointer; }
-  .tabs button.on { background:#fff; color:var(--ink); }
-  main { max-width:980px; margin:0 auto; padding:12px 24px 64px; }
-  h1 { font-size:clamp(2.2rem,6vw,3.2rem); letter-spacing:-.04em; font-weight:600; }
-  .sub { color:var(--muted); margin-top:6px; font-size:15px; }
-  .kpis { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin:32px 0; }
-  .kpi { background:var(--card); border-radius:22px; padding:22px; }
-  .kpi span { font-size:12px; color:var(--muted); }
-  .kpi b { display:block; margin-top:8px; font-size:40px; letter-spacing:-.04em; font-variant-numeric:tabular-nums; font-weight:600; }
-  .list { background:var(--card); border-radius:22px; overflow:hidden; }
-  .row { display:grid; grid-template-columns:1.4fr .6fr 1fr auto; gap:12px; align-items:center; padding:16px 22px; border-top:1px solid var(--line); font-size:14px; }
-  .bar { height:4px; background:#ececee; border-radius:99px; overflow:hidden; }
-  .bar i { display:block; height:100%; background:var(--ink); }
-  .chip { font-size:12px; color:var(--muted); }
-  [hidden] { display:none !important; }
-  @media (max-width:700px) {
-    .kpis { grid-template-columns:1fr; }
-    .row { grid-template-columns:1fr 1fr; }
-  }
-</style>
-</head>
-<body>
-<header>
-  <div class="mark">Kiln</div>
-  <div class="tabs">
-    <button class="on" data-act="view" data-view="board">Board</button>
-    <button data-act="view" data-view="risk">Rischi</button>
-  </div>
-</header>
-<main id="app"></main>
-<script>
-  const state = { view: "board" };
-  const sprints = [
-    { name: "Intake v3", owner: "Lea", bar: 82, risk: "ok" },
-    { name: "Billing EU", owner: "Omar", bar: 54, risk: "hold" },
-    { name: "Mobile share", owner: "Nia", bar: 91, risk: "ok" },
-    { name: "Audit log", owner: "Pia", bar: 28, risk: "hold" },
-  ];
-  function render() {
-    document.querySelectorAll(".tabs button").forEach((b) => b.classList.toggle("on", b.dataset.view === state.view));
-    const el = document.getElementById("app");
-    const rows = (state.view === "risk" ? sprints.filter(s => s.risk !== "ok") : sprints)
-      .map(s => "<div class='row'><b>"+s.name+"</b><span>"+s.owner+"</span><div class='bar'><i style='width:"+s.bar+"%'></i></div><span class='chip'>"+(s.risk==="ok"?"In linea":"Rischio")+"</span></div>")
-      .join("");
-    el.innerHTML = "<h1>"+(state.view==="risk"?"Rischi":"Delivery")+"</h1><p class='sub'>8 persone · sprint in corso</p>" +
-      (state.view==="board" ? "<div class='kpis'><div class='kpi'><span>Ciclo</span><b>5.4g</b></div><div class='kpi'><span>Throughput</span><b>52</b></div><div class='kpi'><span>Rischi</span><b>2</b></div></div>" : "") +
-      "<div class='list'>"+rows+"</div>";
-  }
-  document.addEventListener("click", (e) => {
-    const t = e.target.closest("[data-act]");
-    if (!t) return;
-    if (t.dataset.act === "view") state.view = t.dataset.view;
-    render();
-  });
-  render();
-</script>
-</body>
-</html>`,
+    html: KILN_HTML,
   },
   vesper: {
     id: "vesper",
@@ -252,11 +82,11 @@ export const DEMOS: Record<string, DemoSeed> = {
     kind: "app",
     summary: "Timer 4-4-4, tre programmi, diario.",
     palette: {
-      bg: "#000000",
-      surface: "#111111",
-      fg: "#f5f5f7",
-      muted: "#86868b",
-      accent: "#f5f5f7",
+      bg: "#08070c",
+      surface: "#14121a",
+      fg: "#e6dcc4",
+      muted: "#8a8170",
+      accent: "#c9b896",
     },
     html: `<!DOCTYPE html>
 <html lang="it">
@@ -265,28 +95,28 @@ export const DEMOS: Record<string, DemoSeed> = {
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <meta name="color-scheme" content="dark"/>
 <title>Vesper</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600&display=swap"/>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=IBM+Plex+Sans:wght@400;500&display=swap"/>
 <style>
-  :root { --bg:#000; --fg:#f5f5f7; --muted:#86868b; }
+  :root { --bg:#08070c; --fg:#e6dcc4; --muted:#8a8170; }
   * { box-sizing:border-box; margin:0; }
   html,body { min-height:100%; color-scheme:dark; }
-  body { background:var(--bg); color:var(--fg); font-family:Manrope,ui-sans-serif,system-ui,sans-serif; min-height:100svh; display:flex; flex-direction:column; }
+  body { background:var(--bg); color:var(--fg); font-family:"IBM Plex Sans",system-ui,sans-serif; min-height:100svh; display:flex; flex-direction:column; }
   header { height:52px; display:flex; align-items:center; justify-content:space-between; padding:0 22px; }
-  .mark { font-weight:600; letter-spacing:-.03em; }
-  .nav { background:transparent; border:0; color:var(--muted); font:500 13px Manrope,sans-serif; cursor:pointer; }
+  .mark { font-family:"Cormorant Garamond",serif; font-weight:600; letter-spacing:-.03em; font-size:1.4rem; }
+  .nav { background:transparent; border:0; color:var(--muted); font:500 13px "IBM Plex Sans",sans-serif; cursor:pointer; }
   .nav.on { color:var(--fg); }
   main { flex:1; display:grid; place-items:center; padding:12px 24px 48px; }
   .stage { text-align:center; }
-  .circle { width:min(260px,68vw); height:min(260px,68vw); margin:0 auto 28px; border-radius:50%; border:1px solid rgba(255,255,255,.14); display:grid; place-items:center; transition:transform 4s cubic-bezier(.22,1,.36,1); }
+  .circle { width:min(260px,68vw); height:min(260px,68vw); margin:0 auto 28px; border-radius:50%; border:1px solid rgba(201,184,150,.28); display:grid; place-items:center; transition:transform 4s cubic-bezier(.22,1,.36,1); }
   .circle.in { transform:scale(1.08); }
-  .n { font-size:72px; font-weight:600; letter-spacing:-.05em; font-variant-numeric:tabular-nums; }
-  .phase { font-size:13px; color:var(--muted); margin-bottom:10px; letter-spacing:-.01em; }
-  .btn { margin-top:28px; height:44px; padding:0 26px; border:0; border-radius:980px; background:var(--fg); color:#000; font:600 14px Manrope,sans-serif; cursor:pointer; }
+  .n { font-family:"Cormorant Garamond",serif; font-size:72px; font-weight:600; letter-spacing:-.05em; font-variant-numeric:tabular-nums; }
+  .phase { font-size:13px; color:var(--muted); margin-bottom:10px; letter-spacing:.12em; text-transform:uppercase; }
+  .btn { margin-top:28px; height:44px; padding:0 26px; border:1px solid var(--fg); border-radius:2px; background:transparent; color:var(--fg); font:600 13px "IBM Plex Sans",sans-serif; letter-spacing:.08em; text-transform:uppercase; cursor:pointer; }
   .progs { display:flex; gap:8px; justify-content:center; margin-top:22px; }
-  .chip { height:34px; padding:0 14px; border-radius:980px; border:1px solid rgba(255,255,255,.14); background:transparent; color:var(--muted); font:500 13px Manrope,sans-serif; cursor:pointer; }
+  .chip { height:34px; padding:0 14px; border-radius:2px; border:1px solid rgba(201,184,150,.28); background:transparent; color:var(--muted); font:500 13px "IBM Plex Sans",sans-serif; cursor:pointer; }
   .chip.on { color:var(--fg); border-color:var(--fg); }
   .log { width:min(360px,92vw); }
-  .log li { display:flex; justify-content:space-between; padding:14px 0; border-bottom:1px solid rgba(255,255,255,.08); color:var(--muted); font-size:14px; }
+  .log li { display:flex; justify-content:space-between; padding:14px 0; border-bottom:1px solid rgba(201,184,150,.14); color:var(--muted); font-size:14px; }
   @media (prefers-reduced-motion:reduce) { .circle { transition:none; } }
 </style>
 </head>
@@ -355,11 +185,11 @@ export const DEMOS: Record<string, DemoSeed> = {
     kind: "tool",
     summary: "Dividi le spese. Saldi corretti.",
     palette: {
-      bg: "#f5f5f7",
-      surface: "#ffffff",
-      fg: "#1d1d1f",
-      muted: "#6e6e73",
-      accent: "#1d1d1f",
+      bg: "#efe6d4",
+      surface: "#f7f1e4",
+      fg: "#1c1814",
+      muted: "#5c5348",
+      accent: "#3d4a1f",
     },
     html: `<!DOCTYPE html>
 <html lang="it">
@@ -368,19 +198,19 @@ export const DEMOS: Record<string, DemoSeed> = {
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <meta name="color-scheme" content="light"/>
 <title>Split</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600&display=swap"/>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&display=swap"/>
 <style>
-  :root { --bg:#f5f5f7; --ink:#1d1d1f; --muted:#6e6e73; --line:rgba(0,0,0,.08); }
+  :root { --bg:#efe6d4; --ink:#1c1814; --muted:#5c5348; --line:#c4b49a; }
   * { box-sizing:border-box; margin:0; }
-  body { background:var(--bg); color:var(--ink); font-family:Manrope,ui-sans-serif,system-ui,sans-serif; min-height:100svh; }
+  body { background:var(--bg); color:var(--ink); font-family:"IBM Plex Mono",ui-monospace,monospace; min-height:100svh; }
   main { max-width:420px; margin:0 auto; padding:28px 20px 64px; }
-  h1 { font-size:40px; letter-spacing:-.04em; font-weight:600; }
+  h1 { font-size:32px; letter-spacing:-.04em; font-weight:600; }
   .sub { color:var(--muted); margin:6px 0 28px; }
-  .card { background:#fff; border-radius:22px; padding:18px; margin-bottom:12px; }
+  .card { background:#f7f1e4; border:1px solid var(--line); border-radius:2px; padding:18px; margin-bottom:12px; }
   label { display:block; font-size:12px; color:var(--muted); margin-bottom:6px; }
-  input { width:100%; height:44px; border:1px solid var(--line); background:#f5f5f7; border-radius:12px; padding:0 12px; font:16px Manrope,sans-serif; }
+  input { width:100%; height:44px; border:1px solid var(--line); background:#efe6d4; border-radius:2px; padding:0 12px; font:16px "IBM Plex Mono",monospace; }
   .row { display:grid; grid-template-columns:1fr 110px; gap:8px; }
-  .cta { margin-top:12px; width:100%; height:44px; border:0; border-radius:980px; background:var(--ink); color:#fff; font:600 14px Manrope,sans-serif; cursor:pointer; }
+  .cta { margin-top:12px; width:100%; height:44px; border:1px solid var(--ink); border-radius:2px; background:var(--ink); color:#efe6d4; font:600 13px "IBM Plex Mono",monospace; cursor:pointer; }
   .item { display:flex; justify-content:space-between; padding:10px 0; border-top:1px solid var(--line); font-size:14px; }
   .bal b { font-size:28px; letter-spacing:-.04em; font-variant-numeric:tabular-nums; }
   .muted { color:var(--muted); }
@@ -405,7 +235,7 @@ export const DEMOS: Record<string, DemoSeed> = {
     document.getElementById("app").innerHTML =
       "<h1>Split</h1><p class='sub'>Quattro amici. I conti tornano.</p>" +
       "<div class='card'><label>Nuova spesa</label><div class='row'><input id='t' placeholder='Cosa'/><input id='a' type='number' placeholder='Euro'/></div>" +
-      "<select id='n' style='margin-top:8px;width:100%;height:44px;border-radius:12px;border:1px solid var(--line);padding:0 12px;font:16px Manrope,sans-serif'>" +
+      "<select id='n' style='margin-top:8px;width:100%;height:44px;border-radius:2px;border:1px solid var(--line);padding:0 12px;font:inherit'>" +
       state.people.map(p=>"<option>"+p+"</option>").join("") + "</select>" +
       "<button class='cta' data-act='add'>Aggiungi</button></div>" +
       "<div class='card'>" + state.costs.map(c=>"<div class='item'><span>"+c.t+" · "+c.n+"</span><b>"+c.a.toFixed(2)+" €</b></div>").join("") + "</div>" +
@@ -436,9 +266,9 @@ export const DEMOS: Record<string, DemoSeed> = {
     palette: {
       bg: "#000000",
       surface: "#111111",
-      fg: "#f5f5f7",
-      muted: "#86868b",
-      accent: "#f5f5f7",
+      fg: "#e8e0d4",
+      muted: "#8a8274",
+      accent: "#e8e0d4",
     },
     html: `<!DOCTYPE html>
 <html lang="it">
@@ -447,23 +277,24 @@ export const DEMOS: Record<string, DemoSeed> = {
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <meta name="color-scheme" content="dark"/>
 <title>Giulia Neri</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600&display=swap"/>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=IBM+Plex+Sans:wght@400;500&display=swap"/>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23000000'/%3E%3Cpath d='M6 26V8h4l6 12 6-12h4v18h-4V14l-6 12-6-12v12H6z' fill='%23e8e0d4'/%3E%3C/svg%3E"/>
 <style>
-  :root { --fg:#f5f5f7; --muted:#86868b; }
+  :root { --bg:#000000; --fg:#e8e0d4; --muted:#8a8274; }
   * { box-sizing:border-box; margin:0; }
   html { color-scheme:dark; scroll-behavior:smooth; }
-  body { background:#000; color:var(--fg); font-family:Manrope,ui-sans-serif,system-ui,sans-serif; }
-  header { position:fixed; inset:0 0 auto; z-index:2; display:flex; justify-content:space-between; padding:18px 24px; font-size:13px; }
-  nav a { color:var(--muted); margin-left:16px; text-decoration:none; }
+  body { background:var(--bg); color:var(--fg); font-family:"IBM Plex Sans",system-ui,sans-serif; }
+  header { position:fixed; inset:0 0 auto; z-index:2; display:flex; justify-content:space-between; padding:18px 24px; font-size:13px; font-family:"Instrument Serif",serif; }
+  nav a { color:var(--muted); margin-left:16px; text-decoration:none; font-family:"IBM Plex Sans",sans-serif; }
   .shot { min-height:100svh; position:relative; }
-  .shot img { width:100%; height:100svh; object-fit:cover; display:block; }
+  .shot img { width:100%; height:100svh; object-fit:cover; display:block; filter:grayscale(.35) contrast(1.08); }
   .cap { position:absolute; left:24px; bottom:28px; }
-  .cap b { display:block; font-size:22px; letter-spacing:-.03em; }
+  .cap b { display:block; font-family:"Instrument Serif",serif; font-size:22px; letter-spacing:-.03em; }
   .cap span { color:var(--muted); font-size:13px; }
   #about { padding:80px 24px; max-width:560px; }
-  h1 { font-size:40px; letter-spacing:-.04em; font-weight:600; }
+  h1 { font-family:"Instrument Serif",serif; font-size:40px; letter-spacing:-.04em; font-weight:400; }
   p { margin-top:14px; color:var(--muted); line-height:1.55; }
-  .cta { display:inline-flex; margin-top:24px; height:44px; align-items:center; padding:0 20px; border-radius:980px; background:var(--fg); color:#000; text-decoration:none; font-weight:600; font-size:14px; }
+  .cta { display:inline-flex; margin-top:24px; height:44px; align-items:center; padding:0 20px; border:1px solid var(--fg); border-radius:0; background:transparent; color:var(--fg); text-decoration:none; font-weight:600; font-size:12px; letter-spacing:.12em; text-transform:uppercase; }
 </style>
 </head>
 <body>
@@ -498,33 +329,34 @@ export const DEMOS: Record<string, DemoSeed> = {
     kind: "game",
     summary: "Memory giocabile: flip, mosse, vittoria.",
     palette: {
-      bg: "#f5f5f7",
-      surface: "#ffffff",
-      fg: "#1d1d1f",
-      muted: "#6e6e73",
-      accent: "#1d1d1f",
+      bg: "#1a1410",
+      surface: "#2a2118",
+      fg: "#ead9b2",
+      muted: "#9a8468",
+      accent: "#d4782a",
     },
     html: `<!DOCTYPE html>
 <html lang="it">
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<meta name="color-scheme" content="light"/>
+<meta name="color-scheme" content="dark"/>
 <title>Memory</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600&display=swap"/>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600&family=IBM+Plex+Mono:wght@400;600&display=swap"/>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%231a1410'/%3E%3Crect x='8' y='7' width='16' height='18' fill='none' stroke='%23d4782a' stroke-width='1.6'/%3E%3Ccircle cx='16' cy='16' r='3' fill='%23ead9b2'/%3E%3C/svg%3E"/>
 <style>
-  :root { --bg:#f5f5f7; --ink:#1d1d1f; --muted:#6e6e73; }
+  :root { --bg:#1a1410; --ink:#ead9b2; --muted:#9a8468; --accent:#d4782a; --plate:#2a2118; }
   * { box-sizing:border-box; margin:0; }
-  body { background:var(--bg); color:var(--ink); font-family:Manrope,ui-sans-serif,system-ui,sans-serif; min-height:100svh; }
+  body { background:var(--bg); color:var(--ink); font-family:"IBM Plex Mono",ui-monospace,monospace; min-height:100svh; color-scheme:dark; }
   main { max-width:420px; margin:0 auto; padding:28px 16px 48px; text-align:center; }
-  h1 { font-size:40px; letter-spacing:-.04em; font-weight:600; }
-  .bar { display:flex; justify-content:space-between; color:var(--muted); font-size:13px; margin:12px 0 20px; font-variant-numeric:tabular-nums; }
+  h1 { font-family:"Playfair Display",serif; font-size:40px; letter-spacing:-.04em; font-weight:600; }
+  .bar { display:flex; justify-content:space-between; color:var(--muted); font-size:12px; margin:12px 0 20px; font-variant-numeric:tabular-nums; letter-spacing:.08em; text-transform:uppercase; }
   .grid { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; }
-  .card { height:86px; border:0; border-radius:16px; background:#fff; box-shadow:0 8px 24px -18px #000; cursor:pointer; font-size:22px; font-weight:600; color:transparent; }
+  .card { height:86px; border:1px solid #3a2e22; border-radius:2px; background:var(--plate); cursor:pointer; font-size:22px; font-weight:600; color:transparent; }
   .card.on, .card.ok { color:var(--ink); }
-  .card.ok { background:#ececee; }
-  .cta { margin-top:22px; height:44px; padding:0 22px; border:0; border-radius:980px; background:var(--ink); color:#fff; font:600 14px Manrope,sans-serif; cursor:pointer; }
-  .win { margin-top:18px; font-size:18px; }
+  .card.ok { background:#3a2a1c; border-color:var(--accent); color:var(--accent); }
+  .cta { margin-top:22px; height:44px; padding:0 22px; border:1px solid var(--ink); border-radius:0; background:transparent; color:var(--ink); font:600 12px "IBM Plex Mono",monospace; letter-spacing:.12em; text-transform:uppercase; cursor:pointer; }
+  .win { margin-top:18px; font-family:"Playfair Display",serif; font-size:18px; }
 </style>
 </head>
 <body>

@@ -1,17 +1,94 @@
-import { Check } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Check, Volume2, VolumeX } from "lucide-react";
 import { useTalkingKit } from "@/lib/kit-voice";
+import { BUILD_STAGES, inferStage } from "@/lib/projects/build-stages";
 import { cn } from "@/lib/utils";
+
+const MUTE_KEY = "fenix-kit-muted";
 
 export function BuildOverlay({
   active,
+  compact = false,
   steps,
 }: {
   active: boolean;
+  compact?: boolean;
   steps: string[];
 }) {
-  const levels = useTalkingKit(active);
+  const [muted, setMuted] = useState(() => {
+    try {
+      return sessionStorage.getItem(MUTE_KEY) === "1";
+    } catch {
+      return false;
+    }
+  });
+  const levels = useTalkingKit(active && !muted);
+  const stage = inferStage(steps);
+  const current = steps[steps.length - 1] ?? BUILD_STAGES[stage];
+
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(MUTE_KEY, muted ? "1" : "0");
+    } catch {
+      /* private mode */
+    }
+  }, [muted]);
+
   if (!active) return null;
-  const current = steps[steps.length - 1] ?? "Fenix sta lavorando";
+
+  const leds = (
+    <div className="kit-leds flex h-7 items-end gap-[2px]" aria-hidden>
+      {levels.map((n, i) => (
+        <span
+          key={i}
+          className="kit-led w-[5px] rounded-sm"
+          style={{ height: `${6 + n * 18}px` }}
+        />
+      ))}
+    </div>
+  );
+
+  const muteBtn = (
+    <button
+      type="button"
+      onClick={() => setMuted((m) => !m)}
+      className="grid size-8 place-items-center rounded-full text-[#9b93c2] hover:text-white"
+      aria-label={muted ? "Riattiva audio kit" : "Silenzia kit"}
+      title={muted ? "Riattiva" : "Silenzia"}
+    >
+      {muted ? <VolumeX className="size-3.5" /> : <Volume2 className="size-3.5" />}
+    </button>
+  );
+
+  if (compact) {
+    return (
+      <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex justify-center p-3">
+        <div className="pointer-events-auto flex max-w-[min(100%,36rem)] items-center gap-3 rounded-2xl border border-white/12 bg-[#120c28]/92 px-3 py-2 shadow-soft backdrop-blur-md">
+          <img src="/fenix-orb.png" alt="" className="kit-orb h-8 w-auto" />
+          {leds}
+          <div className="min-w-0 flex-1">
+            <ol className="flex flex-wrap gap-x-2 gap-y-0.5 text-[10px] tracking-[0.12em] uppercase">
+              {BUILD_STAGES.map((label, i) => (
+                <li
+                  key={label}
+                  className={cn(
+                    i < stage && "text-[#6e6794]",
+                    i === stage && "text-white",
+                    i > stage && "text-[#6e6794]/70",
+                  )}
+                >
+                  {label}
+                </li>
+              ))}
+            </ol>
+            <p className="truncate text-xs text-[#cfc8ea]">{current}</p>
+          </div>
+          {muteBtn}
+        </div>
+      </div>
+    );
+  }
+
   const done = steps.slice(0, -1);
 
   return (
@@ -33,9 +110,13 @@ export function BuildOverlay({
             ))}
           </div>
         </div>
-        <p className="mt-5 text-center text-[13px] font-medium tracking-tight text-[#9b93c2]">
-          Fenix sta costruendo
-        </p>
+        <ol className="mt-5 flex flex-wrap justify-center gap-x-3 gap-y-1 text-[10px] tracking-[0.14em] text-[#9b93c2] uppercase">
+          {BUILD_STAGES.map((label, i) => (
+            <li key={label} className={cn(i === stage && "text-white")}>
+              {label}
+            </li>
+          ))}
+        </ol>
         <p className={cn("mt-2 text-center text-xl font-semibold tracking-tight", "shimmer-text")}>
           {current}
         </p>
@@ -52,9 +133,12 @@ export function BuildOverlay({
             ))}
           </ul>
         ) : null}
-        <p className="mt-4 text-center text-[11px] text-[#6e6794]">
-          Puoi aprire Chat o Codice. Se dopo 10 minuti è fermo, ricarica: spesso l'app sotto c'è già.
-        </p>
+        <div className="mt-4 flex items-center justify-center gap-2">
+          {muteBtn}
+          <p className="text-center text-[11px] text-[#6e6794]">
+            Se dopo 10 minuti è fermo, ricarica. La bozza resta sotto.
+          </p>
+        </div>
       </div>
     </div>
   );

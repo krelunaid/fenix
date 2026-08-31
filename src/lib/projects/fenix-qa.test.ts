@@ -19,6 +19,14 @@ describe("focus-visible and worker model", () => {
     assert.match(src, /WORKER_POLL_MAX = 30/);
     assert.doesNotMatch(src, /for \(let i = 0; i < 240;/);
     assert.match(src, /export async function resumePolish/);
+    const resume = src.slice(
+      src.indexOf("export async function resumePolish"),
+      src.indexOf("export async function runBuild"),
+    );
+    assert.doesNotMatch(resume, /spendCredit/);
+    assert.match(resume, /finishPolish/);
+    assert.match(src, /if \(refund\) store\.refundCredit\(refund\)/);
+    assert.match(src, /charged = !finishPolish/);
   });
 
   it("uses grok-build-0.1 on the visual worker with no reasoningEffort", () => {
@@ -39,9 +47,22 @@ describe("focus-visible and worker model", () => {
     assert.match(card, /status === "error"/);
     assert.match(card, /validatePublishable/);
     assert.match(card, /report\?\.syntaxOk/);
+    const recover = readFileSync(join(root, "src/lib/projects/recover.ts"), "utf8");
+    assert.match(recover, /STALE_BUILD_MS = 120_000/);
+    assert.doesNotMatch(recover, /status = "ready"/);
     const store = readFileSync(join(root, "src/lib/projects/store.ts"), "utf8");
     assert.match(store, /const kind = existing\?\.kind \?\? result\.kind/);
-    assert.match(store, /STALE_BUILD_MS = 120_000/);
+    assert.match(store, /recoverPersistedProject/);
     assert.match(store, /MAX_PROJECTS = 48/);
+    const studio = readFileSync(join(root, "src/routes/studio.$projectId.tsx"), "utf8");
+    assert.match(studio, /isPublishable/);
+    assert.match(studio, /compact=\{Boolean\(project\.html\)\}/);
+    const overlay = readFileSync(join(root, "src/components/build-overlay.tsx"), "utf8");
+    assert.match(overlay, /compact = false/);
+    assert.match(overlay, /z-20/);
+    assert.doesNotMatch(overlay, /z-12/);
+    const worker = readFileSync(join(root, "workers/visual/server.mjs"), "utf8");
+    assert.doesNotMatch(worker, /card bianche, panel scuro solo se serve un dato, CTA pillola blu/);
+    assert.doesNotMatch(worker, /2 colori #1d1d1f \/ #0071e3/);
   });
 });

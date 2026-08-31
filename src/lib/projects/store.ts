@@ -4,7 +4,8 @@ import { uid } from "@/lib/utils";
 import type { ProjectFile } from "./files";
 import { CREDITS_GRANT, CREDIT_COST } from "./credits";
 import { DEMOS } from "./demos";
-import { validatePublishable, formatHtmlErrors, type HtmlReport } from "./validate-html";
+import { validatePublishable, type HtmlReport } from "./validate-html";
+import { recoverPersistedProject, STALE_BUILD_MS, RESUME_ERROR } from "./recover";
 import {
   DEFAULT_PALETTE,
   type BuildStatus,
@@ -15,8 +16,7 @@ import {
 } from "./types";
 
 const MAX_PROJECTS = 48;
-export const STALE_BUILD_MS = 120_000;
-export const RESUME_ERROR = "Rifinitura interrotta. Tocca Riprendi rifinitura.";
+export { STALE_BUILD_MS, RESUME_ERROR };
 
 type NewProjectInput = {
   prompt: string;
@@ -196,36 +196,7 @@ export const useProjectStore = create<ProjectStore>()(
       }),
       onRehydrateStorage: () => (state) => {
         if (state) {
-          state.projects = state.projects.map((p) => {
-            let status = p.status;
-            let error = p.error;
-            if (p.status === "building" && !p.html) {
-              status = "error";
-              error = "Interrotto. Riprova.";
-            } else if (p.html && (p.status === "ready" || p.status === "building")) {
-              const report = validatePublishable(p.html, {
-                kind: p.kind,
-                projectId: p.id,
-                bg: p.palette?.bg,
-              });
-              if (!report.syntaxOk) {
-                status = "error";
-                error = formatHtmlErrors(report);
-              } else if (p.status === "building" && Date.now() - p.updatedAt > STALE_BUILD_MS) {
-                status = report.ok ? "ready" : "error";
-                error = report.ok ? undefined : RESUME_ERROR;
-              } else if (p.status === "ready" && !report.ok) {
-                status = "error";
-                error = formatHtmlErrors(report);
-              }
-            }
-            return {
-              ...p,
-              buildLog: p.buildLog ?? [],
-              status,
-              error,
-            };
-          });
+          state.projects = state.projects.map((p) => recoverPersistedProject(p));
           if (typeof state.creditsRemaining !== "number") {
             state.creditsRemaining = CREDITS_GRANT;
           }

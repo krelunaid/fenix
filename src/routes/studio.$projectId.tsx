@@ -21,7 +21,7 @@ import { suggestEdits } from "@/lib/ai/suggest";
 import { fenix2Files } from "@/lib/projects/fenix2";
 import { seedFiveScreens } from "@/lib/projects/files";
 import { useProjectStore } from "@/lib/projects/store";
-import { canPublishHtml } from "@/lib/projects/validate-html";
+import { isPublishable, needsResume } from "@/lib/projects/recover";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/studio/$projectId")({
@@ -70,12 +70,8 @@ function StudioPage() {
   const creditsRemaining = useProjectStore((s) => s.creditsRemaining);
   const emptyCredits = creditsRemaining < 1;
   const building = project?.status === "building";
-  const canResume = Boolean(project?.html && /riprendi/i.test(project.error || ""));
-  const publishable = Boolean(
-    project?.html &&
-      project.status === "ready" &&
-      canPublishHtml(project.html, project.kind, project.id),
-  );
+  const canResume = needsResume(project ?? {});
+  const publishable = Boolean(project && isPublishable(project));
 
   useEffect(() => {
     if (project?.kind) setDevice(previewDevice(project.kind));
@@ -211,7 +207,11 @@ function StudioPage() {
                 kind={project.kind}
                 className="h-full"
               />
-              <BuildOverlay active={building && !project.html} steps={project.buildLog ?? []} />
+              <BuildOverlay
+                active={Boolean(building)}
+                compact={Boolean(project.html)}
+                steps={project.buildLog ?? []}
+              />
             </>
           )}
         </section>
@@ -260,7 +260,11 @@ function StudioPage() {
                 kind={project.kind}
                 className="h-full"
               />
-              <BuildOverlay active={building && !project.html} steps={project.buildLog ?? []} />
+              <BuildOverlay
+                active={Boolean(building)}
+                compact={Boolean(project.html)}
+                steps={project.buildLog ?? []}
+              />
             </>
           )}
         </section>

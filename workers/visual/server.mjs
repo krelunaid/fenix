@@ -11,16 +11,15 @@ const XAI = "https://api.x.ai/v1/chat/completions";
 const PASSES = 5;
 
 const SYSTEM = `Sei il motore visivo di Fenix. Vedi uno screenshot TELEFONO 390×844 e l'HTML.
-Legge grafica: app telefono, tab in basso, tanta aria. Palette DAL MESTIERE, non sempre grigio iPhone.
-Barbiere: crema + inchiostro + ruggine. Luna park: giallo + inchiostro. Acqua: cloro + terracotta.
+Legge grafica: chrome da prodotto (tab in basso se app), identità DAL MESTIERE.
+Barbiere: crema + inchiostro + ruggine. Luna park: giallo + inchiostro. Acqua: cloro + terracotta. Espresso: zinco + carta.
 Testo --fg su --bg contrasto 4.5:1. Niente grigio su grigio. Niente parole Apple/iOS nel prodotto.
-- font: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui (niente Inter Manrope viola neon)
-- tanta aria, titoli grandi tracking stretto, raggio 12–16, tab bar 5 colonne in basso
-- card bianche, panel scuro solo se serve un dato, CTA pillola blu
+- font dalla direzione visiva (serif manifesto + sans/mono bottega). Vietato Inter, Manrope, -apple-system, SF Pro come default.
+- raggio, aria e CTA dal brief. Vietato card bianche + CTA pillola blu + coppia #f5f5f7+#0071e3.
 ICONE (giro dedicato, non opzionale):
 - Ridisegna TUTTE le SVG: pittogramma del mestiere, path originali, viewBox 0 0 24 24, stroke 1.8 round, fill none tranne .on
 - 5 tab = 5 silhouette diverse, si capiscono senza label. Vietato cerchio+lettera, emoji, icone clonate
-- Icona app 52px rx 13 in header + rel=icon, 2 colori #1d1d1f / #0071e3
+- Icona app 52px rx 13 in header + rel=icon, 2 colori DELLA PALETTE (mai #1d1d1f / #0071e3 di default)
 Correggi chrome/CSS/icone. Se lo screenshot è BIANCO o main vuoto, RIEMPI la home: metriche, oggetto del mestiere, CTA, form. Non lasciare una pagina bianca.
 Copia i tag <script> identici se il JS già fa add/save. Se non c'è contenuto visibile, puoi aggiungere HTML in main.
 Canvas: body colonna 100dvh, header.fk-top, main.fk-main, nav.fk-tab.
@@ -130,12 +129,12 @@ function inferTab(instruction) {
 }
 
 const GENERATE_SYSTEM = `Motore Fenix. Generi APP a 5 schermate, non un sito, salvo brief "sito web".
-Italiano. Palette dal mestiere. Testo #1d1d1f su chiaro.
+Italiano. Palette dal mestiere, mai #f5f5f7+#0071e3. Testo contrasto AA 4.5:1.
 Ogni schermata PIENA (numeri, form o lista). Form che salvano.
-Niente Apple, iOS, Grok, Fenix nel prodotto.
+Niente Apple, iOS, Grok, Fenix, Inter, Manrope nel prodotto.
 Rispondi SOLO:
 <<<META>>>
-{"name":"","tagline":"","kind":"app","summary":"","palette":{"bg":"#f5f5f7","surface":"#ffffff","fg":"#1d1d1f","muted":"#3a3a3c","accent":"#0071e3"}}
+{"name":"","tagline":"","kind":"app","summary":"","palette":{"bg":"#1a1612","surface":"#2a241c","fg":"#e6dcc8","muted":"#9a8f7a","accent":"#c45c26"}}
 <<<FILE path="screens/home.html">>>
 inner della home
 <<<FILE path="screens/new.html">>>
@@ -297,9 +296,9 @@ async function designIcons(apiKey, prompt) {
       messages: [
         {
           role: "system",
-          content: `Disegni pittogrammi iOS. SOLO JSON, niente markdown:
-{"app":"<svg viewBox='0 0 24 24' fill='none' stroke='#1d1d1f' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'>...</svg>","tabs":[{"id":"home","label":"max8","svg":"<svg viewBox='0 0 24 24' fill='none' stroke='#1d1d1f' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'>...</svg>"},{"id":"new","label":"","svg":""},{"id":"list","label":"","svg":""},{"id":"stats","label":"","svg":""},{"id":"more","label":"","svg":""}]}
-Oggetto del brief. 5 silhouette diverse, leggibili a 24px. Niente lettera, emoji, Lucide copiato.`,
+          content: `Disegni pittogrammi del mestiere. SOLO JSON, niente markdown:
+{"app":"<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'>...</svg>","tabs":[{"id":"home","label":"max8","svg":"<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'>...</svg>"},{"id":"new","label":"","svg":""},{"id":"list","label":"","svg":""},{"id":"stats","label":"","svg":""},{"id":"more","label":"","svg":""}]}
+Oggetto del brief. 5 silhouette diverse, leggibili a 24px. Niente lettera, emoji, Lucide copiato. Stroke currentColor, mai #1d1d1f/#0071e3.`,
         },
         { role: "user", content: `BRIEF:\n${prompt}\n\nJSON icone.` },
       ],
@@ -328,7 +327,7 @@ function injectIcons(html, pack) {
   } else if (/<head[^>]*>/i.test(next)) {
     next = next.replace(/<head[^>]*>/i, (open) => `${open}${fav}`);
   }
-  const mark = `<span class="fk-appicon" aria-hidden="true" style="width:36px;height:36px;border-radius:9px;background:#1d1d1f;display:inline-grid;place-items:center;flex-shrink:0">${String(pack.app).replace("<svg", "<svg width='20' height='20'")}</span>`;
+  const mark = `<span class="fk-appicon" aria-hidden="true" style="width:36px;height:36px;border-radius:9px;background:var(--fg,#1c1712);display:inline-grid;place-items:center;flex-shrink:0">${String(pack.app).replace("<svg", "<svg width='20' height='20'")}</span>`;
   if (!next.includes("fk-appicon")) {
     if (/class="[^"]*fk-hello/.test(next)) {
       next = next.replace(/<h1([^>]*fk-hello[^>]*)>/i, `${mark}<h1$1>`);
