@@ -18,90 +18,23 @@ import {
   type ProjectKind,
 } from "./types";
 
+import {
+  APP_DB_KEY,
+  countItems,
+  embedAppDataInProjectsBlob,
+  isEmptyVal,
+  mergeAppDb,
+  readAllDurable,
+  readIndexedDb,
+  readWebStorage,
+  verifyDurableBytes,
+  writeDurable,
+  type AppDb,
+} from "./durable-db";
+
 const MAX_PROJECTS = 48;
 export { STALE_BUILD_MS, RESUME_ERROR };
-export const APP_DB_KEY = "officina-appdb";
-
-function writeDiskAppDb(db: Record<string, Record<string, unknown>>) {
-  if (typeof localStorage === "undefined") return;
-  const json = JSON.stringify(db);
-  try {
-    localStorage.setItem(APP_DB_KEY, json);
-  } catch {
-    /* quota */
-  }
-  try {
-    sessionStorage.setItem(APP_DB_KEY, json);
-  } catch {
-    /* quota */
-  }
-}
-
-function parseStore(store: Storage | undefined): Record<string, Record<string, unknown>> {
-  if (!store) return {};
-  try {
-    const raw = store.getItem(APP_DB_KEY);
-    return raw ? (JSON.parse(raw) as Record<string, Record<string, unknown>>) : {};
-  } catch {
-    return {};
-  }
-}
-
-function richer(a: unknown, b: unknown): unknown {
-  return countItems(b) > countItems(a) ? b : a ?? b;
-}
-
-function mergeAppDb(
-  a: Record<string, Record<string, unknown>>,
-  b: Record<string, Record<string, unknown>>,
-): Record<string, Record<string, unknown>> {
-  const out: Record<string, Record<string, unknown>> = { ...a };
-  for (const pid of new Set([...Object.keys(a), ...Object.keys(b)])) {
-    const ac = a[pid] ?? {};
-    const bc = b[pid] ?? {};
-    const cols = new Set([...Object.keys(ac), ...Object.keys(bc)]);
-    out[pid] = {};
-    for (const col of cols) out[pid][col] = richer(ac[col], bc[col]);
-  }
-  return out;
-}
-
-function readDiskAppDb(): Record<string, Record<string, unknown>> {
-  const local = typeof localStorage !== "undefined" ? parseStore(localStorage) : {};
-  const session = typeof sessionStorage !== "undefined" ? parseStore(sessionStorage) : {};
-  return mergeAppDb(local, session);
-}
-
-function isEmptyVal(v: unknown): boolean {
-  if (v == null || v === "") return true;
-  if (Array.isArray(v)) return v.length === 0;
-  return false;
-}
-
-function countItems(v: unknown): number {
-  if (Array.isArray(v)) return v.length;
-  if (v && typeof v === "object") {
-    const o = v as { items?: unknown; rows?: unknown };
-    if (Array.isArray(o.items)) return o.items.length;
-    if (Array.isArray(o.rows)) return o.rows.length;
-  }
-  return 0;
-}
-
-function loadCollection(
-  projectId: string,
-  collection: string,
-  appDb: Record<string, Record<string, unknown>>,
-  projects: Project[],
-): unknown {
-  const diskVal = readDiskAppDb()[projectId]?.[collection];
-  if (!isEmptyVal(diskVal)) return diskVal;
-  const mem = appDb[projectId]?.[collection];
-  if (!isEmptyVal(mem)) return mem;
-  const embedded = projects.find((p) => p.id === projectId)?.appData?.[collection];
-  if (!isEmptyVal(embedded)) return embedded;
-  return diskVal ?? mem ?? embedded ?? null;
-}
+export { APP_DB_KEY };
 
 type NewProjectInput = {
   prompt: string;
@@ -124,8 +57,29 @@ type ProjectStore = {
   spendCredit: (n?: number) => boolean;
   refundCredit: (n?: number) => void;
   loadAppData: (projectId: string, collection: string) => unknown;
-  saveAppData: (projectId: string, collection: string, data: unknown) => { ok: boolean; v: unknown };
+  saveAppData: (
+    projectId: string,
+    collection: string,
+    data: unknown,
+  ) => Promise<{ ok: boolean; v: unknown; durable: number }>;
 };
+
+let idbSnap: AppDb = {};
+
+function loadCollection(
+  projectId: string,
+  collection: string,
+  appDb: AppDb,
+  projects: Project[],
+): unknown {
+  const durable = mergeAppDb(idbSnap, readWebStorage())[projectId]?.[collection];
+  if (!isEmptyVal(durable)) return durable;
+  const mem = appDb[projectId]?.[collection];
+  if (!isEmptyVal(mem)) return mem;
+  const embedded = projects.find((p) => p.id === projectId)?.appData?.[collection];
+  if (!isEmptyVal(embedded)) return embedded;
+  return durable ?? mem ?? embedded ?? null;
+}
 
 function trimList(projects: Project[]) {
   return [...projects]
@@ -185,13 +139,15 @@ export const useProjectStore = create<ProjectStore>()(
       loadAppData: (projectId, collection) => {
         return loadCollection(projectId, collection, get().appDb, get().projects);
       },
-      saveAppData: (projectId, collection, data) => {
+      saveAppData: async (projectId, collection, data) => {
         const existing = loadCollection(projectId, collection, get().appDb, get().projects);
         const toWrite =
           countItems(data) < countItems(existing) && countItems(existing) > 0 ? existing : data;
-        const disk = readDiskAppDb();
-        disk[projectId] = { ...(disk[projectId] ?? {}), [collection]: toWrite };
-        writeDiskAppDb(disk);
+        const current = await readAllDurable();
+        current[projectId] = { ...(current[projectId] ?? {}), [collection]: toWrite };
+        await writeDurable(current);
+        idbSnap = mergeAppDb(idbSnap, current);
+        embedAppDataInProjectsBlob(projectId, collection, toWrite);
         set((s) => ({
           appDb: {
             ...s.appDb,
@@ -210,9 +166,8 @@ export const useProjectStore = create<ProjectStore>()(
               : p,
           ),
         }));
-        const read = loadCollection(projectId, collection, get().appDb, get().projects);
-        const ok = countItems(toWrite) <= countItems(read) && (isEmptyVal(toWrite) || !isEmptyVal(read));
-        return { ok, v: read };
+        const proof = await verifyDurableBytes(projectId, collection, countItems(toWrite));
+        return { ok: proof.ok, v: proof.ok ? toWrite : null, durable: proof.durable };
       },
       createFromBrief: ({ prompt, kind }) => {
         const project = blankProject(prompt.trim(), kind ?? "app");
@@ -297,45 +252,52 @@ export const useProjectStore = create<ProjectStore>()(
       partialize: (s) => ({
         projects: s.projects,
         creditsRemaining: s.creditsRemaining,
-        appDb: s.appDb,
       }),
       onRehydrateStorage: () => (state) => {
-        if (state) {
-          state.projects = state.projects.map((p) => {
-            const recovered = recoverPersistedProject(p);
-            return {
-              ...recovered,
-              messages: scrubTechMessages(p.messages),
-              palette:
-                recovered.kind === "dashboard" && /argilla|ceram|viva/i.test(`${p.name} ${p.prompt}`)
-                  ? {
-                      bg: "#f3eadc",
-                      surface: "#fbf6ee",
-                      fg: "#2b211c",
-                      muted: "#6e5648",
-                      accent: "#b85c38",
-                      line: "#d7c4b0",
-                    }
-                  : recovered.palette ?? p.palette,
-            };
-          });
-          if (typeof state.creditsRemaining !== "number") {
-            state.creditsRemaining = CREDITS_GRANT;
-          }
-          if (!state.appDb) state.appDb = {};
-          const disk = readDiskAppDb();
-          const merged: Record<string, Record<string, unknown>> = { ...state.appDb };
-          for (const p of state.projects) {
-            if (p.appData) {
-              merged[p.id] = { ...(merged[p.id] ?? {}), ...p.appData };
+        void (async () => {
+          const idb = await Promise.race([
+            readIndexedDb(),
+            new Promise<AppDb>((resolve) => setTimeout(() => resolve({}), 800)),
+          ]);
+          idbSnap = idb;
+          if (state) {
+            state.projects = state.projects.map((p) => {
+              const recovered = recoverPersistedProject(p);
+              return {
+                ...recovered,
+                messages: scrubTechMessages(p.messages),
+                palette:
+                  recovered.kind === "dashboard" && /argilla|ceram|viva/i.test(`${p.name} ${p.prompt}`)
+                    ? {
+                        bg: "#f3eadc",
+                        surface: "#fbf6ee",
+                        fg: "#2b211c",
+                        muted: "#6e5648",
+                        accent: "#b85c38",
+                        line: "#d7c4b0",
+                      }
+                    : recovered.palette ?? p.palette,
+              };
+            });
+            if (typeof state.creditsRemaining !== "number") {
+              state.creditsRemaining = CREDITS_GRANT;
             }
+            const disk = readWebStorage();
+            const merged: AppDb = mergeAppDb(idb, disk);
+            for (const p of state.projects) {
+              if (p.appData) merged[p.id] = { ...(merged[p.id] ?? {}), ...p.appData };
+            }
+            state.appDb = merged;
+            useProjectStore.setState({
+              projects: state.projects,
+              appDb: merged,
+              creditsRemaining: state.creditsRemaining,
+              hydrated: true,
+            });
+          } else {
+            useProjectStore.getState().setHydrated();
           }
-          for (const [pid, cols] of Object.entries({ ...disk, ...merged })) {
-            merged[pid] = { ...(merged[pid] ?? {}), ...(disk[pid] ?? {}) };
-          }
-          state.appDb = merged;
-        }
-        state?.setHydrated();
+        })();
       },
     },
   ),
@@ -357,23 +319,26 @@ if (typeof window !== "undefined" && !(window as Window & { __fenixDbBound?: boo
       const source = event.source as Window | null;
       source?.postMessage({ t: "fenix-db", id: msg.id, v: value }, "*");
     };
-    const apply = () => {
+    const apply = async () => {
       const store = useProjectStore.getState();
       let value: unknown = null;
-      if (msg.op === "load") value = store.loadAppData(msg.projectId!, msg.col!);
+      if (msg.op === "load") {
+        idbSnap = mergeAppDb(idbSnap, await readIndexedDb());
+        value = store.loadAppData(msg.projectId!, msg.col!);
+      }
       if (msg.op === "save") {
-        value = store.saveAppData(msg.projectId!, msg.col!, msg.data);
+        value = await store.saveAppData(msg.projectId!, msg.col!, msg.data);
       }
       reply(value);
     };
     if (useProjectStore.getState().hydrated) {
-      apply();
+      void apply();
       return;
     }
     const unsub = useProjectStore.subscribe((s) => {
       if (!s.hydrated) return;
       unsub();
-      apply();
+      void apply();
     });
   });
 }

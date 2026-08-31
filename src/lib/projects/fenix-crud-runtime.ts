@@ -1,8 +1,8 @@
 /** Injected into gestionale HTML. No ${} — product JS, not a template. */
-export const DASHBOARD_CRUD_SCRIPT = `<script data-fenix-crud="7">
+export const DASHBOARD_CRUD_SCRIPT = `<script data-fenix-crud="8">
 (function(){
-  if (window.__fenixCrud >= 7) return;
-  window.__fenixCrud = 7;
+  if (window.__fenixCrud >= 8) return;
+  window.__fenixCrud = 8;
   function qsa(s, r){ return Array.prototype.slice.call((r || document).querySelectorAll(s)); }
   function qs(s, r){ return (r || document).querySelector(s); }
   function txt(el){ return ((el && (el.textContent || (el.getAttribute && el.getAttribute("aria-label")))) || "").replace(/\\s+/g, " ").trim(); }
@@ -101,18 +101,17 @@ export const DASHBOARD_CRUD_SCRIPT = `<script data-fenix-crud="7">
     var F = host();
     if (!F || !F.save) return Promise.resolve(false);
     function ackOk(v){
-      if (v === false || v == null) return false;
-      if (v && v.ok === false) return false;
-      var data = v && typeof v === "object" && "ok" in v ? v.v : v;
-      var n = Array.isArray(data) ? data.length : (data && Array.isArray(data.items) ? data.items.length : -1);
-      if (n >= 0) return n >= rows.length;
-      return true;
+      if (!v || v === false) return 0;
+      if (typeof v === "object" && "ok" in v) return v.ok ? (v.durable || (Array.isArray(v.v) ? v.v.length : rows.length)) : 0;
+      var n = Array.isArray(v) ? v.length : (v && Array.isArray(v.items) ? v.items.length : -1);
+      return n >= rows.length ? n : 0;
     }
     return Promise.all([
       Promise.resolve(F.save("items", rows)),
       Promise.resolve(F.save("state", { items: rows, rows: rows }))
     ]).then(function(pair){
-      return ackOk(pair[0]) && ackOk(pair[1]);
+      var a = ackOk(pair[0]), b = ackOk(pair[1]);
+      return a && b ? Math.max(a, b) : false;
     }).catch(function(){ return false; });
   }
   function asRow(r){
@@ -289,15 +288,20 @@ export const DASHBOARD_CRUD_SCRIPT = `<script data-fenix-crud="7">
     if (!saved) return false;
     var f = root.tagName === "FORM" ? root : qs("form", dlg);
     Promise.resolve(saved).then(function(ok){
-      if (ok === false) {
+      if (ok === false || ok === 0) {
         dlg.setAttribute("data-fenix-save-error", "1");
+        dlg.setAttribute("data-fenix-durable", "0");
         return;
       }
       dlg.removeAttribute("data-fenix-save-error");
+      dlg.setAttribute("data-fenix-durable", String(ok === true ? rowsHint() : ok));
       if (f) try { f.reset(); } catch (err) {}
       closeDlg();
     });
     return true;
+  }
+  function rowsHint(){
+    try { return readRows().length; } catch (e) { return 1; }
   }
   document.addEventListener("click", function(e){
     var t = e.target && e.target.closest ? e.target.closest("button, a, [role=button], input[type=submit]") : null;

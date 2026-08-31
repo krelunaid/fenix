@@ -274,8 +274,9 @@ export function fenixRuntimeScript(projectId: string) {
         resolve(op === "load" ? pickLoad(v, col) : unwrapSave(v));
       }
       function unwrapSave(v){
-        if (v && typeof v === "object" && "ok" in v) return v.ok ? (v.v != null ? v.v : true) : false;
-        return v;
+        if (v && typeof v === "object" && "ok" in v) return v;
+        if (v === false || v == null) return { ok: false, v: null, durable: 0 };
+        return { ok: true, v: v, durable: Array.isArray(v) ? v.length : 0 };
       }
       function on(e){
         var m = e.data;
@@ -295,7 +296,9 @@ export function fenixRuntimeScript(projectId: string) {
         } catch(err) {}
       }, 400);
       setTimeout(function(){
-        finish(op === "load" ? fallbackLoad(col) : fallbackSave(col, data));
+        if (done) return;
+        if (op === "load") finish(fallbackLoad(col));
+        else finish({ ok: false, v: null, durable: 0 });
       }, 2500);
     });
   }
@@ -524,7 +527,7 @@ export function prepareSrcDoc(
       ? next.replace(/<head[^>]*>/i, (open) => `${open}${kit}`)
       : `${kit}${next}`;
   }
-  if (shouldRepairDashboard(next, kind) && !/data-fenix-crud="7"/.test(next)) {
+  if (shouldRepairDashboard(next, kind) && !/data-fenix-crud="8"/.test(next)) {
     next = next.replace(/<script[^>]*data-fenix-crud[^>]*>[\s\S]*?<\/script>/gi, "");
     next = /<\/body>/i.test(next)
       ? next.replace(/<\/body>/i, `${DASHBOARD_CRUD_SCRIPT}</body>`)

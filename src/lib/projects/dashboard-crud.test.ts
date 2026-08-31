@@ -124,7 +124,7 @@ describe("dashboard CRUD repair", () => {
       `<script data-fenix-crud>window.__fenixCrud=1;</script></body>`,
     );
     const html = repairDashboardCrud(withV1);
-    assert.match(html, /data-fenix-crud="7"/);
+    assert.match(html, /data-fenix-crud="8"/);
     assert.equal((html.match(/data-fenix-crud/g) || []).length, 1);
     const src = prepareSrcDoc(
       html,
@@ -225,49 +225,62 @@ describe("dashboard CRUD repair", () => {
       const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
       await page.addInitScript(
         ({ seeded, pid }: { seeded: string; pid: string }) => {
+          const orig = Storage.prototype.setItem;
           try {
-            if (sessionStorage.getItem("fenix-seed-" + pid)) return;
-            sessionStorage.setItem("fenix-seed-" + pid, "1");
+            if (!sessionStorage.getItem("fenix-seed-" + pid)) {
+              sessionStorage.setItem("fenix-seed-" + pid, "1");
+              const now = Date.now();
+              orig.call(
+                localStorage,
+                "officina-projects",
+                JSON.stringify({
+                  state: {
+                    projects: [
+                      {
+                        id: pid,
+                        name: "Argilla Viva",
+                        tagline: "",
+                        prompt: "FORMATO: gestionale ufficio. kind=dashboard",
+                        kind: "dashboard",
+                        requestedKind: "dashboard",
+                        summary: "",
+                        palette: {
+                          bg: "#f3eadc",
+                          surface: "#fbf6ee",
+                          fg: "#2b211c",
+                          muted: "#6e5648",
+                          accent: "#b85c38",
+                          line: "#d7c4b0",
+                        },
+                        html: seeded,
+                        messages: [],
+                        buildLog: [],
+                        status: "ready",
+                        createdAt: now,
+                        updatedAt: now,
+                      },
+                    ],
+                    creditsRemaining: 46,
+                    appDb: {},
+                  },
+                  version: 2,
+                }),
+              );
+              try {
+                localStorage.removeItem("officina-appdb");
+              } catch {
+                /* ignore */
+              }
+            }
           } catch {
             /* ignore */
           }
-          const now = Date.now();
-          localStorage.setItem(
-            "officina-projects",
-            JSON.stringify({
-              state: {
-                projects: [
-                  {
-                    id: pid,
-                    name: "Argilla Viva",
-                    tagline: "",
-                    prompt: "FORMATO: gestionale ufficio. kind=dashboard",
-                    kind: "dashboard",
-                    requestedKind: "dashboard",
-                    summary: "",
-                    palette: {
-                      bg: "#f3eadc",
-                      surface: "#fbf6ee",
-                      fg: "#2b211c",
-                      muted: "#6e5648",
-                      accent: "#b85c38",
-                      line: "#d7c4b0",
-                    },
-                    html: seeded,
-                    messages: [],
-                    buildLog: [],
-                    status: "ready",
-                    createdAt: now,
-                    updatedAt: now,
-                  },
-                ],
-                creditsRemaining: 46,
-                appDb: {},
-              },
-              version: 2,
-            }),
-          );
-          localStorage.removeItem("officina-appdb");
+          Storage.prototype.setItem = function (k, v) {
+            if (this === localStorage && (k === "officina-appdb" || k === "officina-projects")) {
+              throw new DOMException("The quota has been exceeded.", "QuotaExceededError");
+            }
+            return orig.call(this, k, v);
+          };
         },
         { seeded: html, pid: ARGILLA_PID },
       );
@@ -292,11 +305,12 @@ describe("dashboard CRUD repair", () => {
       await page.waitForFunction(
         (pid: string) => {
           try {
-            const raw =
-              localStorage.getItem("officina-appdb") || sessionStorage.getItem("officina-appdb") || "";
+            const raw = sessionStorage.getItem("officina-appdb") || "";
             const db = JSON.parse(raw || "{}") as Record<string, { items?: { nome?: string }[] }>;
-            return db[pid]?.items?.length === 25 &&
-              Boolean(db[pid]?.items?.some((r) => r.nome === "Codex Verifica 1e7b47a"));
+            return (
+              db[pid]?.items?.length === 25 &&
+              Boolean(db[pid]?.items?.some((r) => r.nome === "Codex Verifica 1e7b47a"))
+            );
           } catch {
             return false;
           }
@@ -308,9 +322,8 @@ describe("dashboard CRUD repair", () => {
         local: localStorage.getItem("officina-appdb"),
         session: sessionStorage.getItem("officina-appdb"),
       }));
-      assert.ok(before.local || before.session, "appdb missing after save");
-      const rawBefore = (before.local || before.session) as string;
-      const dbBefore = JSON.parse(rawBefore) as Record<
+      assert.ok(before.session, "sessionStorage officina-appdb missing after save");
+      const dbBefore = JSON.parse(before.session as string) as Record<
         string,
         { items?: { nome?: string }[]; state?: unknown }
       >;
@@ -386,6 +399,13 @@ describe("dashboard CRUD repair", () => {
 <iframe id="desk" data-preview="desktop" style="width:100%;height:80vh;border:0"></iframe>
 <iframe id="phone" data-preview="mobile" style="position:absolute;left:-9999px;width:390px;height:700px;border:0"></iframe>
 <script>
+  var origSet = Storage.prototype.setItem;
+  Storage.prototype.setItem = function (k, v) {
+    if (this === localStorage && (k === "officina-appdb" || k === "officina-projects")) {
+      throw new DOMException("The quota has been exceeded.", "QuotaExceededError");
+    }
+    return origSet.call(this, k, v);
+  };
   window.__hydrated = false;
   window.__db = {};
   try {
@@ -414,10 +434,23 @@ describe("dashboard CRUD repair", () => {
         var blob = {};
         blob["${PID}"] = window.__db;
         var json = JSON.stringify(blob);
-        try { localStorage.setItem("officina-appdb", json); } catch (err) {}
         try { sessionStorage.setItem("officina-appdb", json); } catch (err) {}
-        var read = window.__db[m.col];
-        v = { ok: n(read) >= n(incoming) && n(read) > 0, v: read };
+        try {
+          var req = indexedDB.open("officina-durable", 1);
+          req.onupgradeneeded = function () {
+            if (!req.result.objectStoreNames.contains("kv")) req.result.createObjectStore("kv");
+          };
+          req.onsuccess = function () {
+            req.result.transaction("kv", "readwrite").objectStore("kv").put(blob, "officina-appdb");
+          };
+        } catch (err) {}
+        var raw = sessionStorage.getItem("officina-appdb");
+        var durable = 0;
+        try {
+          var parsed = JSON.parse(raw || "{}");
+          durable = n(parsed["${PID}"] && parsed["${PID}"][m.col]);
+        } catch (err) {}
+        v = { ok: durable >= n(incoming) && durable > 0, v: incoming, durable: durable };
       }
       e.source.postMessage({ t: "fenix-db", id: m.id, v: v }, "*");
     }
