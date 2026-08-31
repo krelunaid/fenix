@@ -5,8 +5,10 @@ import {
   countAppleTabIcons,
   looksLikeAppleTabIcons,
   looksLikeIosWidgetHome,
+  looksLikeSitePhoneChrome,
   replaceAppleTabIcons,
   rewriteIosWidgetHome,
+  stripPhoneChromeFromSite,
 } from "./craft-icons.ts";
 import { recoverPersistedProject } from "./recover.ts";
 import { validateProductHtml } from "./validate-html.ts";
@@ -83,5 +85,48 @@ var views={
     });
     assert.match(recovered.html, /fk-ledger/);
     assert.equal(looksLikeIosWidgetHome(recovered.html), false);
+  });
+
+  it("strips bottom-tab phone chrome from a site/landing without touching the form", () => {
+    const site = `<!DOCTYPE html><html lang="it"><head><style>
+html, body { height: 100dvh; margin: 0; display: flex; flex-direction: column; font-family: Georgia, serif; }
+main { flex: 1; overflow: auto; padding: 1rem; }
+.bottom-tab { display: flex; background: #111; }
+</style></head><body>
+<header><span class="fk-appicon" aria-hidden="true"><svg></svg></span>
+<nav><a href="#bottega">La Bottega</a></nav></header>
+<main>
+<section id="home"><h1>Bottega Terra</h1></section>
+<section id="bottega"><h2>La Bottega</h2></section>
+<section id="lavori"><h2>I Lavori</h2></section>
+<section id="visita"><h2>Visita</h2>
+<form id="contact-form"><input id="name"><button type="submit">Invia</button></form>
+</section>
+<script>window.Fenix={load:function(){return Promise.resolve([])},save:function(){return Promise.resolve()}}</script>
+</main>
+<nav class="bottom-tab">
+<button data-section="home"><span>Home</span></button>
+<button data-section="bottega"><span>Bottega</span></button>
+</nav>
+</body></html>`;
+    assert.equal(looksLikeSitePhoneChrome(site), true);
+    const next = stripPhoneChromeFromSite(site);
+    assert.doesNotMatch(next, /bottom-tab/);
+    assert.doesNotMatch(next, /fk-appicon/);
+    assert.doesNotMatch(next, /100dvh/);
+    assert.match(next, /contact-form/);
+    assert.match(next, /Bottega Terra/);
+    const recovered = recoverPersistedProject({
+      id: "8b04fd98-106c-46f5-ac9a-1e929028c476",
+      status: "ready",
+      html: site,
+      kind: "site",
+      requestedKind: "site",
+      prompt: "FORMATO: sito web. kind=site. Bottega Terra",
+      updatedAt: Date.now(),
+    });
+    assert.doesNotMatch(recovered.html, /bottom-tab/);
+    assert.doesNotMatch(recovered.html, /fk-appicon/);
+    assert.equal(recovered.status, "ready");
   });
 });

@@ -10,7 +10,7 @@ import {
   type VisualJobStatus,
 } from "./visual-job.ts";
 import { polishDashboardHtml, shouldRepairDashboard } from "./dashboard-crud.ts";
-import { replaceAppleTabIcons, rewriteIosWidgetHome } from "./craft-icons.ts";
+import { replaceAppleTabIcons, rewriteIosWidgetHome, stripPhoneChromeFromSite } from "./craft-icons.ts";
 
 export const STALE_BUILD_MS = 120_000;
 export const RESUME_ERROR = "Rifinitura interrotta. Tocca Riprendi rifinitura.";
@@ -58,7 +58,9 @@ export function recoverPersistedProject<T extends Recoverable>(p: T, now = Date.
       ? rewriteIosWidgetHome(replaceAppleTabIcons(p.html))
       : shouldRepairDashboard(p.html, kind)
         ? polishDashboardHtml(p.html, kind)
-        : p.html;
+        : kind === "site" || kind === "landing"
+          ? stripPhoneChromeFromSite(p.html)
+          : p.html;
   }
   const jobLive = hasActiveVisualJob(p, now);
 

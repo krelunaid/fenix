@@ -8,7 +8,7 @@ import { resolveProjectKind, isPhoneKind } from "./infer";
 import { validatePublishable, type HtmlReport } from "./validate-html";
 import { recoverPersistedProject, STALE_BUILD_MS, RESUME_ERROR } from "./recover";
 import { polishDashboardHtml, scrubTechMessages, shouldRepairDashboard } from "./dashboard-crud";
-import { replaceAppleTabIcons, rewriteIosWidgetHome } from "./craft-icons";
+import { replaceAppleTabIcons, rewriteIosWidgetHome, stripPhoneChromeFromSite } from "./craft-icons";
 import {
   DEFAULT_PALETTE,
   type BuildStatus,
@@ -495,7 +495,9 @@ export function applyBuildResult(
     ? rewriteIosWidgetHome(replaceAppleTabIcons(result.html))
     : shouldRepairDashboard(result.html, kind)
       ? polishDashboardHtml(result.html, kind)
-      : result.html;
+      : kind === "site" || kind === "landing"
+        ? stripPhoneChromeFromSite(result.html)
+        : result.html;
   const report = validatePublishable(html, {
     kind,
     projectId: id,

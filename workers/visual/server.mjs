@@ -169,6 +169,16 @@ function looksDashboard(prompt, instruction) {
   );
 }
 
+function looksSite(prompt, instruction) {
+  const p = `${prompt || ""} ${instruction || ""}`.toLowerCase();
+  return (
+    /\bkind\s*=\s*site\b/.test(p) ||
+    /\bkind\s*=\s*landing\b/.test(p) ||
+    /formato:\s*sito/.test(p) ||
+    /\bsito web\b/.test(p)
+  );
+}
+
 async function generateHero(apiKey, prompt, aspect) {
   try {
     const res = await fetch("https://api.x.ai/v1/images/generations", {
@@ -195,13 +205,71 @@ async function generateHero(apiKey, prompt, aspect) {
 
 function injectHero(html, url) {
   if (!html || !url) return html;
+  if (!/^https:\/\//i.test(url) && !/^data:image\//i.test(url)) return html;
+  if (/["<>]/.test(url)) return html;
   const phone = /fk-tab|data-view=["']home["']/i.test(html);
   const img = phone
-    ? `<img class="fk-hero" src="${url}" alt="" width="400" height="400" style="width:100%;height:140px;object-fit:cover;border-radius:20px;display:block;margin:8px 0 12px"/>`
-    : `<img class="fk-hero" src="${url}" alt="" width="1200" height="675" style="width:100%;height:220px;object-fit:cover;border-radius:18px;display:block;margin:0 0 16px"/>`;
+    ? `<img class="fk-hero" src="${url}" alt="" width="400" height="400" style="width:100%;height:140px;object-fit:cover;border-radius:20px;display:block;margin:8px 0 12px" onerror="this.removeAttribute('src')"/>`
+    : `<img class="fk-hero" src="${url}" alt="" width="1200" height="675" style="width:100%;height:220px;object-fit:cover;border-radius:18px;display:block;margin:0 0 16px" onerror="this.removeAttribute('src')"/>`;
   let next = html.replace(/^\s*"\s*\/>/m, "").replace(/>\s*"\s*\/>/g, ">");
+  if (/class=["'][^"']*fk-hero/.test(next)) {
+    return next.replace(/<img[^>]*fk-hero[^>]*>/i, img);
+  }
   if (/<img\b/i.test(next)) return next.replace(/<img\b[^>]*>/i, img);
   if (/<main\b[^>]*>/i.test(next)) return next.replace(/<main\b[^>]*>/i, (open) => `${open}${img}`);
+  return next;
+}
+
+const HERO_MAX_BYTES = 900_000;
+
+async function materializeHero(url) {
+  const src = String(url || "").trim();
+  if (/^data:image\/(jpeg|jpg|png|webp|gif|avif)/i.test(src)) return src;
+  if (!/^https:\/\//i.test(src)) return null;
+  try {
+    const res = await fetch(src, { redirect: "follow" });
+    if (!res.ok) return null;
+    const type = (res.headers.get("content-type") || "").split(";")[0].trim().toLowerCase();
+    if (!/^image\/(jpeg|jpg|png|webp|gif|avif)$/.test(type)) return null;
+    const buf = Buffer.from(await res.arrayBuffer());
+    if (!buf.length || buf.length > HERO_MAX_BYTES) return null;
+    return `data:${type};base64,${buf.toString("base64")}`;
+  } catch {
+    return null;
+  }
+}
+
+async function placeHero(html, prompt) {
+  const apiKey = (process.env.XAI_API_KEY || "").trim();
+  if (!apiKey || !html) return { html, log: [] };
+  const phone = /fk-tab/i.test(html);
+  const remote = await generateHero(apiKey, prompt, phone ? "1:1" : "16:9");
+  if (!remote) return { html, log: [] };
+  const durable = (await materializeHero(remote)) || remote;
+  return { html: injectHero(html, durable), log: ["Foto hero"] };
+}
+
+function stripPhoneChromeFromSite(html) {
+  if (!html) return html;
+  let next = html;
+  next = next.replace(/<nav[^>]*class=["'][^"']*bottom-tab[^"']*["'][^>]*>[\s\S]*?<\/nav>/gi, "");
+  next = next.replace(/<nav[^>]*class=["'][^"']*fk-tab[^"']*["'][^>]*>[\s\S]*?<\/nav>/gi, "");
+  next = next.replace(/<span[^>]*class=["'][^"']*fk-appicon[^"']*["'][^>]*>[\s\S]*?<\/span>/gi, "");
+  next = next.replace(/\.bottom-tab[^{]*\{[^}]*\}/g, "");
+  next = next.replace(/html,\s*body\s*\{([^}]*)\}/i, (_m, body) => {
+    const cleaned = String(body)
+      .replace(/height:\s*100dvh\s*;?/i, "")
+      .replace(/display:\s*flex\s*;?/i, "")
+      .replace(/flex-direction:\s*column\s*;?/i, "");
+    return `html, body {${cleaned}}`;
+  });
+  next = next.replace(/main\s*\{([^}]*)\}/i, (m, body) => {
+    if (!/flex:\s*1/.test(body)) return m;
+    const cleaned = String(body)
+      .replace(/flex:\s*1\s*;?/i, "")
+      .replace(/overflow:\s*auto\s*;?/i, "");
+    return `main {${cleaned}}`;
+  });
   return next;
 }
 
@@ -257,19 +325,30 @@ async function generate(prompt, html, instruction) {
     }
   }
   const hero = await generateHero(apiKey, prompt, /fk-tab/i.test(out) ? "1:1" : "16:9");
-  if (hero) out = injectHero(out, hero);
+  if (hero) {
+    const durable = (await materializeHero(hero)) || hero;
+    out = injectHero(out, durable);
+  }
+  if (!dashboard && looksSite(prompt, instruction)) {
+    out = stripPhoneChromeFromSite(out);
+  }
   const meta = dashboard ? { ...(parsed.meta || {}), kind: "dashboard" } : parsed.meta;
+  const site = looksSite(prompt, instruction);
   return {
     html: out,
-    meta,
+    meta: site ? { ...(meta || {}), kind: "site" } : meta,
     log: dashboard
       ? hero
         ? ["Bozza gestionale desktop", "Foto hero"]
         : ["Bozza gestionale desktop"]
-      : hero
-        ? ["Bozza 5 schermate", "Foto hero"]
-        : ["Bozza 5 schermate"],
-    files: fromGrok,
+      : site
+        ? hero
+          ? ["Bozza sito", "Foto hero"]
+          : ["Bozza sito"]
+        : hero
+          ? ["Bozza 5 schermate", "Foto hero"]
+          : ["Bozza 5 schermate"],
+    files: site ? [] : fromGrok,
   };
 }
 
@@ -527,6 +606,19 @@ async function polish(prompt, html, instruction) {
       log: ["Rifinitura gestionale desktop", ...(result.log || [])],
     };
   }
+  if (looksSite(prompt, instruction)) {
+    const log = ["Rifinitura sito (nav in alto, niente tabbar)"];
+    let current = stripPhoneChromeFromSite(html);
+    try {
+      const placed = await placeHero(current, prompt);
+      current = placed.html;
+      log.push(...placed.log);
+    } catch {
+      /* senza foto */
+    }
+    current = stripPhoneChromeFromSite(current);
+    return { html: current, meta: { kind: "site" }, log, files: [] };
+  }
   const log = [];
   let current = html;
   let meta = {};
@@ -652,14 +744,9 @@ async function polish(prompt, html, instruction) {
   }
   current = restoreHome(current);
   try {
-    const apiKey = (process.env.XAI_API_KEY || "").trim();
-    const hero = apiKey
-      ? await generateHero(apiKey, prompt, /fk-tab/i.test(current) ? "1:1" : "16:9")
-      : null;
-    if (hero) {
-      current = injectHero(current, hero);
-      log.push("Foto hero");
-    }
+    const placed = await placeHero(current, prompt);
+    current = placed.html;
+    log.push(...placed.log);
   } catch {
     /* senza foto */
   }
@@ -703,6 +790,7 @@ function json(res, status, body) {
 }
 
 const jobs = new Map();
+const jobsByKey = new Map();
 const activeByProject = new Map();
 let queue = Promise.resolve();
 
@@ -717,8 +805,8 @@ function enqueue(fn) {
 
 function findReusableJob(projectId, key) {
   if (key) {
-    const byKey = jobs.get(key);
-    if (byKey && byKey.status !== "err") return byKey;
+    const byKey = jobsByKey.get(key);
+    if (byKey && byKey.status === "run") return byKey;
   }
   if (projectId) {
     const id = activeByProject.get(projectId);
@@ -744,7 +832,12 @@ const server = createServer(async (req, res) => {
   }
   const url = req.url || "/";
   if (req.method === "GET" && (url === "/" || url === "/health")) {
-    json(res, 200, { ok: true, model: MODEL, passes: PASSES, jobs: jobs.size });
+    json(res, 200, {
+      ok: true,
+      model: MODEL,
+      passes: PASSES,
+      jobs: [...jobs.values()].filter((j) => j.status === "run").length,
+    });
     return;
   }
   if (req.method === "GET" && url.startsWith("/jobs/")) {
@@ -798,6 +891,7 @@ const server = createServer(async (req, res) => {
     error: null,
   };
   jobs.set(id, job);
+  if (idempotencyKey) jobsByKey.set(idempotencyKey, job);
   if (projectId) activeByProject.set(projectId, id);
   enqueue(async () => {
     job.log = ["Partito"];

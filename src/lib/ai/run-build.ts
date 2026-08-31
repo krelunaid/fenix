@@ -26,6 +26,8 @@ import {
 import { uid } from "@/lib/utils";
 
 const inflight = new Set<string>();
+/** A successful polishDraft for this project in the current runBuild. Blocks a second POST. */
+const polishedOnce = new Set<string>();
 
 export const WORKER_POLL_MAX = 30;
 const WORKER_POLL_MS = 2000;
@@ -194,6 +196,14 @@ async function startPolishJob(
   const project = store.getProject(projectId);
   if (project && hasActiveVisualJob(project) && project.visualJobId) {
     return pollWorkerJob(projectId, project.visualJobId);
+  }
+  if (polishedOnce.has(projectId) && !instruction && project?.html) {
+    return {
+      status: "ok",
+      html: project.html,
+      log: ["Anteprima già rifinita"],
+      files: project.files,
+    };
   }
 
   const body = JSON.stringify({
@@ -434,6 +444,7 @@ async function polishDraft(
             "Anteprima rifinita",
           ]),
         });
+        polishedOnce.add(projectId);
         store.addMessage(projectId, {
           id: uid(),
           role: "assistant",
@@ -534,12 +545,18 @@ async function repairBootFailures(projectId: string, prompt: string): Promise<bo
 
 function finishPolish(projectId: string, lastValidHtml: string, refund?: number) {
   const store = useProjectStore.getState();
+  const existing = store.getProject(projectId);
+  const alreadyReady = existing?.status === "ready";
+  const alreadyPronto = Boolean(
+    existing?.messages?.some((m) => /^Pronto\./.test(String(m.content || ""))),
+  );
   const boot = getPreviewBootError();
   const canaryOk = getPreviewBootOk();
   const promoted = promoteReady(projectId);
   if (promoted.ok && !boot && canaryOk) {
-    const current = store.getProject(projectId);
     store.updateProject(projectId, { ...clearVisualJobPatch(), status: "ready", error: undefined });
+    if (alreadyReady && alreadyPronto) return true;
+    const current = store.getProject(projectId);
     store.addMessage(projectId, {
       id: uid(),
       role: "assistant",
@@ -574,6 +591,10 @@ export async function resumePolish(projectId: string) {
   const store = useProjectStore.getState();
   const project = store.getProject(projectId);
   if (!project?.html) {
+    inflight.delete(projectId);
+    return;
+  }
+  if (project.status === "ready") {
     inflight.delete(projectId);
     return;
   }
@@ -625,6 +646,7 @@ export async function resumePolish(projectId: string) {
 export async function runBuild(projectId: string, instruction?: string) {
   if (inflight.has(projectId)) return;
   inflight.add(projectId);
+  polishedOnce.delete(projectId);
 
   const store = useProjectStore.getState();
   const project = store.getProject(projectId);

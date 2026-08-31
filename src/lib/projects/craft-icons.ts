@@ -102,3 +102,38 @@ export function rewriteIosWidgetHome(html: string): string {
   }
   return html;
 }
+
+/** Sito/landing: toglie tabbar iPhone, 100dvh colonna e icona app iniettata dal worker. */
+export function looksLikeSitePhoneChrome(html: string): boolean {
+  const s = String(html || "");
+  return (
+    /class=["'][^"']*bottom-tab/.test(s) ||
+    /<nav[^>]*class=["'][^"']*fk-tab/.test(s) ||
+    /class=["']fk-appicon["']/.test(s) ||
+    /html,\s*body\s*\{[^}]*height:\s*100dvh/i.test(s)
+  );
+}
+
+export function stripPhoneChromeFromSite(html: string): string {
+  if (!html || !looksLikeSitePhoneChrome(html)) return html;
+  let next = html;
+  next = next.replace(/<nav[^>]*class=["'][^"']*bottom-tab[^"']*["'][^>]*>[\s\S]*?<\/nav>/gi, "");
+  next = next.replace(/<nav[^>]*class=["'][^"']*fk-tab[^"']*["'][^>]*>[\s\S]*?<\/nav>/gi, "");
+  next = next.replace(/<span[^>]*class=["'][^"']*fk-appicon[^"']*["'][^>]*>[\s\S]*?<\/span>/gi, "");
+  next = next.replace(/\.bottom-tab[^{]*\{[^}]*\}/g, "");
+  next = next.replace(/html,\s*body\s*\{([^}]*)\}/i, (_m, body: string) => {
+    const cleaned = String(body)
+      .replace(/height:\s*100dvh\s*;?/i, "")
+      .replace(/display:\s*flex\s*;?/i, "")
+      .replace(/flex-direction:\s*column\s*;?/i, "");
+    return `html, body {${cleaned}}`;
+  });
+  next = next.replace(/main\s*\{([^}]*)\}/i, (m, body: string) => {
+    if (!/flex:\s*1/.test(body)) return m;
+    const cleaned = String(body)
+      .replace(/flex:\s*1\s*;?/i, "")
+      .replace(/overflow:\s*auto\s*;?/i, "");
+    return `main {${cleaned}}`;
+  });
+  return next;
+}
