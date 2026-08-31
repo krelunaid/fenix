@@ -1,4 +1,4 @@
-import { DASHBOARD_CRUD_SCRIPT, shouldRepairDashboard } from "./dashboard-crud.ts";
+import { dashboardCrudScript, discoverAppCollection, shouldRepairDashboard } from "./dashboard-crud.ts";
 import { replaceAppleTabIcons, rewriteIosWidgetHome } from "./craft-icons.ts";
 
 export function isLightHex(hex: string) {
@@ -527,11 +527,12 @@ export function prepareSrcDoc(
       ? next.replace(/<head[^>]*>/i, (open) => `${open}${kit}`)
       : `${kit}${next}`;
   }
-  if (shouldRepairDashboard(next, kind) && !/data-fenix-crud="9"/.test(next)) {
+  if (shouldRepairDashboard(next, kind) && !/data-fenix-crud="10"/.test(next)) {
     next = next.replace(/<script[^>]*data-fenix-crud[^>]*>[\s\S]*?<\/script>/gi, "");
+    const crud = dashboardCrudScript(discoverAppCollection(html));
     next = /<\/body>/i.test(next)
-      ? next.replace(/<\/body>/i, `${DASHBOARD_CRUD_SCRIPT}</body>`)
-      : `${next}${DASHBOARD_CRUD_SCRIPT}`;
+      ? next.replace(/<\/body>/i, `${crud}</body>`)
+      : `${next}${crud}`;
   }
   // Last :root in <head> so the kit's var(--fg,#1c1712) resolves to the
   // project ink, not the phone-kit paper default, after authored CSS.

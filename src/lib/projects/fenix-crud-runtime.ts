@@ -1,8 +1,9 @@
-/** Injected into gestionale HTML. No ${} — product JS, not a template. */
-export const DASHBOARD_CRUD_SCRIPT = `<script data-fenix-crud="9">
+/** Injected into gestionale HTML. %%COL%% is replaced by dashboardCrudScript. */
+const CRUD_TEMPLATE = `<script data-fenix-crud="10">
 (function(){
-  if (window.__fenixCrud >= 9) return;
-  window.__fenixCrud = 9;
+  if (window.__fenixCrud >= 10) return;
+  window.__fenixCrud = 10;
+  var COL = "%%COL%%";
   function qsa(s, r){ return Array.prototype.slice.call((r || document).querySelectorAll(s)); }
   function qs(s, r){ return (r || document).querySelector(s); }
   function txt(el){ return ((el && (el.textContent || (el.getAttribute && el.getAttribute("aria-label")))) || "").replace(/\\s+/g, " ").trim(); }
@@ -114,6 +115,7 @@ export const DASHBOARD_CRUD_SCRIPT = `<script data-fenix-crud="9">
     try {
       var payload = {
         pid: String((host() && host().projectId) || "").slice(0, 8),
+        col: COL,
         writer: writer,
         rev: localRev,
         rows: readRows().length,
@@ -134,13 +136,10 @@ export const DASHBOARD_CRUD_SCRIPT = `<script data-fenix-crud="9">
       var n = Array.isArray(v) ? v.length : (v && Array.isArray(v.items) ? v.items.length : -1);
       return n >= 0 ? n : 0;
     }
-    return Promise.all([
-      Promise.resolve(F.save("items", box)),
-      Promise.resolve(F.save("state", box))
-    ]).then(function(pair){
-      var a = ackOk(pair[0]), b = ackOk(pair[1]);
-      markBoot({ save: 1, durable: Math.max(a, b) });
-      return a && b ? Math.max(a, b) : false;
+    return Promise.resolve(F.save(COL, box)).then(function(ack){
+      var n = ackOk(ack);
+      markBoot({ save: 1, durable: n, col: COL });
+      return n ? n : false;
     }).catch(function(){ return false; });
   }
   function asRow(r){
@@ -406,14 +405,19 @@ export const DASHBOARD_CRUD_SCRIPT = `<script data-fenix-crud="9">
       else { hideSaved(); refreshSummary(); }
       return;
     }
-    Promise.all([F.load("items"), F.load("state")]).then(function(pair){
+    Promise.resolve(F.load(COL)).then(function(a){
       if (paintedFromHost) return;
-      var a = pair[0], st = pair[1];
-      var box = boxOf(a) || boxOf(st);
+      var box = boxOf(a);
       if (box && box.rev) localRev = Math.max(localRev, box.rev);
-      var rows = itemsOf(a) || itemsOf(st);
+      var rows = itemsOf(a) || [];
       hideSaved();
-      markBoot({ boot: 1, n: rows ? rows.length : 0 });
+      markBoot({ boot: 1, n: rows.length, col: COL, rev: localRev });
+      if (box && box.rev > 0) {
+        paint(rows);
+        paintedFromHost = true;
+        refreshSummary();
+        return;
+      }
       if (Array.isArray(rows) && rows.length) {
         var current = readRows();
         if (current.length > rows.length) {
@@ -439,3 +443,10 @@ export const DASHBOARD_CRUD_SCRIPT = `<script data-fenix-crud="9">
   setTimeout(function(){ boot(0); }, 0);
 })();
 </script>`;
+
+export function dashboardCrudScript(collection = "items"): string {
+  const col = String(collection || "items").replace(/[^a-zA-Z0-9_-]/g, "") || "items";
+  return CRUD_TEMPLATE.replace(/%%COL%%/g, col);
+}
+
+export const DASHBOARD_CRUD_SCRIPT = dashboardCrudScript("items");

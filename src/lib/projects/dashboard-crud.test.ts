@@ -10,6 +10,7 @@ import {
   parseEuro,
   polishDashboardHtml,
   repairDashboardCrud,
+  discoverAppCollection,
   scrubTechMessages,
   stripFakeStudioCopy,
 } from "./dashboard-crud.ts";
@@ -61,6 +62,12 @@ const BROKEN = `<!DOCTYPE html><html lang="it"><head><meta charset="utf-8"/><tit
 describe("dashboard CRUD repair", () => {
   it("restarts preview via node scripts/preview.mjs, not npm", () => {
     assert.deepEqual([...PREVIEW_RESTART_ARGV], ["scripts/preview.mjs", "restart"]);
+  });
+
+  it("discovers argilla_viva from product Fenix.load/save", () => {
+    assert.equal(discoverAppCollection(ARGILLA), "argilla_viva");
+    assert.equal(discoverAppCollection(`window.Fenix.save("items", [])`), "items");
+    assert.equal(discoverAppCollection(`Fenix.load('state')`), "state");
   });
 
   it("strips fake Studio copy", () => {
@@ -129,7 +136,8 @@ describe("dashboard CRUD repair", () => {
       `<script data-fenix-crud>window.__fenixCrud=1;</script></body>`,
     );
     const html = repairDashboardCrud(withV1);
-    assert.match(html, /data-fenix-crud="9"/);
+    assert.match(html, /data-fenix-crud="10"/);
+    assert.match(html, /var COL = "argilla_viva"/);
     assert.equal((html.match(/data-fenix-crud/g) || []).length, 1);
     const src = prepareSrcDoc(
       html,
@@ -286,12 +294,16 @@ describe("dashboard CRUD repair", () => {
       await page.waitForFunction(() => {
         try {
           const d = JSON.parse(document.documentElement.getAttribute("data-fenix-diag") || "{}");
-          return Number(d.idb) >= 25 || Number(d.session) >= 25 || Number(d.local) >= 25;
+          return (
+            d.col === "argilla_viva" &&
+            (Number(d.idb) >= 25 || Number(d.session) >= 25 || Number(d.local) >= 25)
+          );
         } catch {
           return false;
         }
       }, null, { timeout: 8000 });
       const beforeDiag = JSON.parse((await page.locator("html").getAttribute("data-fenix-diag")) || "{}");
+      assert.equal(beforeDiag.col, "argilla_viva");
       assert.ok(
         beforeDiag.idb >= 25 || beforeDiag.session >= 25 || beforeDiag.local >= 25,
         `diag before reload ${JSON.stringify(beforeDiag)}`,
@@ -303,7 +315,10 @@ describe("dashboard CRUD repair", () => {
       await page.waitForFunction(() => {
         try {
           const d = JSON.parse(document.documentElement.getAttribute("data-fenix-diag") || "{}");
-          return Number(d.idb) >= 25 || Number(d.session) >= 25 || Number(d.local) >= 25;
+          return (
+            d.col === "argilla_viva" &&
+            (Number(d.idb) >= 25 || Number(d.session) >= 25 || Number(d.local) >= 25 || Number(d.n) >= 25)
+          );
         } catch {
           return false;
         }

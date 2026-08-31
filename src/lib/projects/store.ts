@@ -69,19 +69,39 @@ type ProjectStore = {
 
 let idbSnap: AppDb = {};
 
+function aliasKeys(projectId: string, requested: string, db: AppDb): string[] {
+  const keys = new Set(["items", "state", requested]);
+  for (const k of Object.keys(db[projectId] ?? {})) keys.add(k);
+  return [...keys];
+}
+
+function pickAliased(
+  projectId: string,
+  collection: string,
+  sources: (AppDb | Record<string, Record<string, unknown>> | undefined)[],
+): unknown {
+  let best: unknown = null;
+  for (const src of sources) {
+    if (!src) continue;
+    const bag = (src[projectId] ?? {}) as Record<string, unknown>;
+    const keys = new Set([...Object.keys(bag), collection, "items", "state"]);
+    for (const k of keys) best = pickNewer(best, bag[k]);
+  }
+  return best;
+}
+
 function loadCollection(
   projectId: string,
   collection: string,
   appDb: AppDb,
   projects: Project[],
 ): unknown {
-  const durable = mergeAppDb(idbSnap, readWebStorage())[projectId]?.[collection];
-  if (!isEmptyVal(unwrapItems(durable))) return durable;
-  const mem = appDb[projectId]?.[collection];
-  if (!isEmptyVal(unwrapItems(mem))) return mem;
-  const embedded = projects.find((p) => p.id === projectId)?.appData?.[collection];
-  if (!isEmptyVal(unwrapItems(embedded))) return embedded;
-  return durable ?? mem ?? embedded ?? null;
+  const durableDb = mergeAppDb(idbSnap, readWebStorage());
+  const embedded = projects.find((p) => p.id === projectId)?.appData;
+  const best = pickAliased(projectId, collection, [durableDb, appDb, embedded ? { [projectId]: embedded } : undefined]);
+  if (asBox(best)?.rev) return best;
+  if (!isEmptyVal(unwrapItems(best))) return best;
+  return best ?? null;
 }
 
 function publishDiag(
@@ -165,9 +185,20 @@ export const useProjectStore = create<ProjectStore>()(
         return loadCollection(projectId, collection, get().appDb, get().projects);
       },
       saveAppData: async (projectId, collection, data) => {
-        const existingRaw = mergeAppDb(idbSnap, await readAllDurable())[projectId]?.[collection];
+        const current = await readAllDurable();
+        const keys = aliasKeys(projectId, collection, current);
+        const existingRaw = keys.reduce(
+          (acc, k) => pickNewer(acc, current[projectId]?.[k]),
+          pickNewer(null, get().appDb[projectId]?.[collection]),
+        );
         const existing = asBox(existingRaw);
-        const incoming = asBox(data) ?? {
+        const boxed = asBox(data);
+        if (!boxed && !Array.isArray(data)) {
+          const proof = await verifyDurableBytes(projectId, collection, countItems(existingRaw));
+          publishDiag(projectId, collection, { save: 1, keep: 1, durable: proof.durable });
+          return { ok: proof.ok || countItems(existingRaw) > 0, v: existingRaw, durable: proof.durable };
+        }
+        const incoming = boxed ?? {
           rev: (existing?.rev ?? 0) + 1,
           items: Array.isArray(data) ? data : [],
           writer: "",
@@ -185,17 +216,17 @@ export const useProjectStore = create<ProjectStore>()(
         const chosen = stale
           ? existingRaw
           : { _fenix: 1 as const, rev: incoming.rev, items: incoming.items, writer: incoming.writer, at: incoming.at };
-        const current = await readAllDurable();
-        current[projectId] = { ...(current[projectId] ?? {}), [collection]: chosen };
+        current[projectId] = { ...(current[projectId] ?? {}) };
+        for (const k of keys) current[projectId][k] = chosen;
         await writeDurable(current);
         idbSnap = mergeAppDb(idbSnap, current);
-        embedAppDataInProjectsBlob(projectId, collection, chosen);
+        for (const k of keys) embedAppDataInProjectsBlob(projectId, k, chosen);
         set((s) => ({
           appDb: {
             ...s.appDb,
             [projectId]: {
               ...(s.appDb[projectId] ?? {}),
-              [collection]: chosen,
+              ...Object.fromEntries(keys.map((k) => [k, chosen])),
             },
           },
         }));

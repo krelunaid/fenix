@@ -1,5 +1,5 @@
-import { DASHBOARD_CRUD_SCRIPT } from "./fenix-crud-runtime.ts";
-export { DASHBOARD_CRUD_SCRIPT };
+import { DASHBOARD_CRUD_SCRIPT, dashboardCrudScript } from "./fenix-crud-runtime.ts";
+export { DASHBOARD_CRUD_SCRIPT, dashboardCrudScript };
 
 /** Repair gestionali: modal Nuovo/Annulla/Salva + pelle terracotta/cobalto/avorio. */
 
@@ -70,12 +70,26 @@ export function hasDashboardCrud(html: string): boolean {
   return /data-fenix-crud/.test(html);
 }
 
+export function discoverAppCollection(html: string): string {
+  const found: string[] = [];
+  const re = /(?:window\.)?Fenix\.(?:load|save)\(\s*['"]([^'"]+)['"]/g;
+  let m: RegExpExecArray | null;
+  const src = String(html || "");
+  while ((m = re.exec(src))) found.push(m[1]);
+  const named = found.find((n) => n !== "items" && n !== "state");
+  if (named) return named;
+  if (found.includes("state")) return "state";
+  if (found.includes("items")) return "items";
+  return "items";
+}
+
 export function repairDashboardCrud(html: string): string {
   if (!html) return html;
   let next = html.replace(FAKE_COPY, "");
   next = next.replace(/<script[^>]*data-fenix-crud[^>]*>[\s\S]*?<\/script>/gi, "");
-  if (/<\/body>/i.test(next)) return next.replace(/<\/body>/i, `${DASHBOARD_CRUD_SCRIPT}</body>`);
-  return next + DASHBOARD_CRUD_SCRIPT;
+  const script = dashboardCrudScript(discoverAppCollection(html));
+  if (/<\/body>/i.test(next)) return next.replace(/<\/body>/i, `${script}</body>`);
+  return next + script;
 }
 
 const CRAFT_DESK_CSS = `<style data-fenix-craft-desk>
