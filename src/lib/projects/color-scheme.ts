@@ -141,7 +141,7 @@ body{display:flex!important;flex-direction:column!important;min-height:100dvh;ma
 .fk-tab button,.tabbar button,nav[aria-label] button{
   min-width:0;max-height:56px;display:flex;flex-direction:column;align-items:center;justify-content:center;
   gap:3px;margin:0;padding:0 2px!important;border:0;background:none!important;color:inherit;
-  font:600 10px/1.1 inherit!important;letter-spacing:.04em;text-transform:uppercase;transform:none!important;
+  font:600 10px/1.1 inherit!important;letter-spacing:.02em;transform:none!important;
 }
 .fk-tab button.on,.tabbar button.on,nav[aria-label] button.on{color:var(--accent,#3d4a1f)!important;background:none!important;box-shadow:none!important}
 .fk-tab svg,.tabbar svg,nav[aria-label] svg,.fk-tab button svg{width:24px!important;height:24px!important;flex:0 0 24px!important;transform:none!important}

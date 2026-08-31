@@ -5,6 +5,9 @@ import { DEMOS } from "./demos.ts";
 import { prepareSrcDoc } from "./color-scheme.ts";
 import { waitForFenixReady } from "../../../scripts/fenix-ready.mjs";
 import { parseCssColor, type CssRgb } from "./visual-quality.ts";
+import { APP_SHELL_HTML } from "../ai/app-shell.ts";
+import { recoverPersistedProject } from "./recover.ts";
+import { looksLikeAppleTabIcons, looksLikeIosWidgetHome } from "./craft-icons.ts";
 
 const CRAFT = ["catenaria", "grottaglie", "corvo", "kiln"] as const;
 
@@ -309,6 +312,147 @@ describe("Corvo clipping", () => {
         );
         await page.close();
       }
+    } finally {
+      await browser.close();
+    }
+  });
+});
+
+const TACCUINO_OLD = `<!DOCTYPE html><html lang="it"><head><meta charset="utf-8"/><title>Taccuino</title>
+<style>:root{--bg:#1a1612;--surface:#241e18;--fg:#efe6d4;--muted:#9a8f7a;--accent:#c45c26;--line:#3a3228}</style>
+</head><body>
+<header class="fk-top"><div><h1 class="fk-hello">Buongiorno</h1><p class="fk-role">Artigiano</p></div>
+<button type="button" class="fk-chip">Condividi</button></header>
+<p class="fk-date">lunedì 31 agosto</p>
+<main class="fk-main" id="main"></main>
+<nav class="fk-tab" aria-label="Navigazione">
+<button type="button" data-view="home" class="on"><svg viewBox="0 0 24 24"><path d="M4 10.5 12 4l8 6.5V20H4z"/></svg><span>Oggi</span></button>
+<button type="button" data-view="new"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 8v8M8 12h8"/></svg><span>Nuovo</span></button>
+<button type="button" data-view="list"><svg viewBox="0 0 24 24"><path d="M5 7h14M5 12h14M5 17h10"/></svg><span>Elenco</span></button>
+<button type="button" data-view="stats"><svg viewBox="0 0 24 24"><path d="M5 20V10M12 20V4M19 20v-7"/></svg><span>Stat</span></button>
+<button type="button" data-view="more"><svg viewBox="0 0 24 24"><circle cx="12" cy="7" r="3"/><path d="M5 20c1.5-4 12.5-4 14 0"/></svg><span>Squadra</span></button>
+</nav>
+<script>
+(function(){
+  var S={items:[],limit:100,team:[]};
+  var current="home";
+  var views={
+    home:function(){
+      return '<div class="fk-panel"><h3>Oggi</h3><div class="fk-grid2"><div class="fk-stat"><b>0</b><span>attivita</span></div><div class="fk-stat"><b>4.5</b><span>ore</span></div><div class="fk-stat"><b>0</b><span>pezzi</span></div><div class="fk-stat"><b>65</b><span>%</span></div></div></div><div class="fk-grid2"><div class="fk-tile"><span>Ultimo</span><b>—</b></div><div class="fk-tile"><span>Stato</span><b>In corso</b></div></div><button type="button" class="fk-btn" data-go="new">Nuova attivita</button>';
+    },
+    new:function(){ return '<form class="fk-field" id="fnew"><input name="v" required/><button class="fk-btn" type="submit">Salva</button></form>'; },
+    list:function(){ return '<p>vuoto</p>'; }
+  };
+  function show(id){
+    current=id;
+    document.getElementById("main").innerHTML=views[id]?views[id]():"";
+    document.querySelectorAll(".fk-tab button").forEach(function(b){ b.classList.toggle("on", b.getAttribute("data-view")===id); });
+  }
+  document.addEventListener("click", function(e){
+    var t=e.target.closest("[data-view],[data-go]");
+    if(t && (t.dataset.view||t.dataset.go)) show(t.dataset.view||t.dataset.go);
+  });
+  show("home");
+  document.documentElement.setAttribute("data-fenix-ready","1");
+})();
+</script>
+</body></html>`;
+
+function chromeProbe() {
+  function rad(sel: string) {
+    const el = document.querySelector(sel);
+    if (!el) return -1;
+    return parseFloat(getComputedStyle(el).borderRadius) || 0;
+  }
+  const svgs = [...document.querySelectorAll(".fk-tab svg")].map(
+    (s) => s.innerHTML.replace(/\s+/g, " ").trim(),
+  );
+  const unique = new Set(svgs);
+  const btn = document.querySelector(".fk-btn");
+  const br = btn ? btn.getBoundingClientRect() : null;
+  return {
+    ready: document.documentElement.getAttribute("data-fenix-ready"),
+    ledger: Boolean(document.querySelector(".fk-ledger")),
+    stats: document.querySelectorAll(".fk-stat").length,
+    appleHouse: document.body.innerHTML.includes("M4 10.5"),
+    notebook: document.body.innerHTML.includes("M6 3.5h11.5v17H6z"),
+    tabCount: svgs.length,
+    uniqueTabs: unique.size,
+    btnRadius: rad(".fk-btn"),
+    hello: (document.querySelector(".fk-hello") as HTMLElement | null)?.innerText || "",
+    btnText: (btn as HTMLElement | null)?.innerText || "",
+    btnW: br ? Math.round(br.width) : 0,
+    vw: window.innerWidth,
+  };
+}
+
+describe("phone chrome is workshop, not iPhone", () => {
+  it("renders APP_SHELL as a ledger with craft icons at 390", async () => {
+    assert.equal(looksLikeAppleTabIcons(APP_SHELL_HTML), false);
+    assert.equal(looksLikeIosWidgetHome(APP_SHELL_HTML), false);
+    const browser = await launch();
+    try {
+      const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+      const src = prepareSrcDoc(APP_SHELL_HTML, undefined, "shell", "app");
+      await page.setContent(src, { waitUntil: "domcontentloaded", timeout: 15000 });
+      await waitForFenixReady(page, 8000);
+      const chrome = await page.evaluate(chromeProbe);
+      assert.equal(chrome.ready, "1");
+      assert.equal(chrome.ledger, true, "home must be a ledger");
+      assert.ok(chrome.stats < 4, `widget stats still on screen: ${chrome.stats}`);
+      assert.equal(chrome.appleHouse, false, "house icon still in DOM");
+      assert.equal(chrome.notebook, true, "notebook pictogram missing");
+      assert.equal(chrome.tabCount, 5);
+      assert.equal(chrome.uniqueTabs, 5, "tabs must be 5 different silhouettes");
+      assert.ok(chrome.btnRadius <= 6, `CTA still iOS-round ${chrome.btnRadius}`);
+      assert.ok(chrome.btnW > 200, "CTA should span the sheet");
+      await page.screenshot({ path: "/tmp/fenix-shell-390.png", fullPage: false });
+      await page.close();
+    } finally {
+      await browser.close();
+    }
+  });
+
+  it("recover of Taccuino-like Apple+widget HTML paints ledger and craft tabs", async () => {
+    assert.equal(looksLikeAppleTabIcons(TACCUINO_OLD), true);
+    assert.equal(looksLikeIosWidgetHome(TACCUINO_OLD), true);
+    const recovered = recoverPersistedProject({
+      id: "taccuino",
+      status: "ready",
+      html: TACCUINO_OLD,
+      kind: "app",
+      updatedAt: Date.now(),
+      palette: {
+        bg: "#1a1612",
+        surface: "#241e18",
+        fg: "#efe6d4",
+        muted: "#9a8f7a",
+        accent: "#c45c26",
+      },
+    });
+    assert.equal(looksLikeAppleTabIcons(recovered.html), false);
+    assert.equal(looksLikeIosWidgetHome(recovered.html), false);
+    const browser = await launch();
+    try {
+      const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+      const src = prepareSrcDoc(recovered.html, recovered.palette, "taccuino", "app");
+      await page.setContent(src, { waitUntil: "domcontentloaded", timeout: 15000 });
+      await waitForFenixReady(page, 8000);
+      const chrome = await page.evaluate(chromeProbe);
+      assert.equal(chrome.ready, "1");
+      assert.equal(chrome.ledger, true, "Taccuino home still 4 widgets");
+      assert.equal(chrome.appleHouse, false);
+      assert.equal(chrome.notebook, true);
+      assert.equal(chrome.uniqueTabs, 5);
+      assert.ok(chrome.btnRadius <= 6, `Taccuino CTA radius ${chrome.btnRadius}`);
+      const hello = await page.evaluate(() => {
+        const el = document.querySelector(".fk-hello");
+        if (!el) return null;
+        return { color: getComputedStyle(el).color, text: (el as HTMLElement).innerText };
+      });
+      assert.ok(hello && /Buongiorno/i.test(hello.text));
+      await page.screenshot({ path: "/tmp/fenix-taccuino-390.png", fullPage: false });
+      await page.close();
     } finally {
       await browser.close();
     }
