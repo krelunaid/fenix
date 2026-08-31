@@ -114,7 +114,7 @@ describe("dashboard CRUD repair", () => {
       `<script data-fenix-crud>window.__fenixCrud=1;</script></body>`,
     );
     const html = repairDashboardCrud(withV1);
-    assert.match(html, /data-fenix-crud="4"/);
+    assert.match(html, /data-fenix-crud="5"/);
     assert.equal((html.match(/data-fenix-crud/g) || []).length, 1);
     const src = prepareSrcDoc(
       html,
@@ -286,14 +286,26 @@ describe("dashboard CRUD repair", () => {
       assert.match(sum2, /25 pezzi/);
       assert.match(sum2, /104 in stock/);
       assert.equal(await frame2.locator("#fk-saved").count(), 0);
-      await frame2.locator("tr", { hasText: "Codex Prova Reale" }).getByRole("button", { name: /^modifica$/i }).click();
+      const target = frame2.locator("tr", { hasText: "Codex Prova Reale" });
+      await target.getByRole("button", { name: /^modifica$/i }).click();
+      await frame2.locator("#p-qty").waitFor({ timeout: 3000 });
+      assert.equal(await frame2.locator("#p-qty").inputValue(), "2");
+      assert.equal(await frame2.locator("#p-prezzo").inputValue(), "17");
       await frame2.locator("#p-qty").fill("5");
       await frame2.locator("#p-prezzo").fill("20");
       await frame2.getByRole("button", { name: /^salva$/i }).click();
-      await frame2.getByText("107 in stock").waitFor({ timeout: 4000 });
-      await frame2.locator("tr", { hasText: "Codex Prova Reale" }).getByRole("button", { name: /^elimina$/i }).click();
-      await frame2.getByText("24 pezzi").waitFor({ timeout: 4000 });
-      assert.match((await frame2.locator(".summary").innerText()).replace(/\s+/g, " "), /102 in stock/);
+      await target.locator("td").nth(3).filter({ hasText: /^5$/ }).waitFor({ timeout: 4000 });
+      assert.equal((await target.locator("td").nth(4).textContent())?.trim(), "20");
+      const afterEdit = (await frame2.locator(".summary").innerText()).replace(/\s+/g, " ");
+      assert.match(afterEdit, /25 pezzi/);
+      assert.match(afterEdit, /107 in stock/);
+      assert.match(afterEdit, /3704/);
+      await target.getByRole("button", { name: /^elimina$/i }).click();
+      await frame2.locator("tr", { hasText: "Codex Prova Reale" }).waitFor({ state: "detached", timeout: 4000 });
+      const afterDel = (await frame2.locator(".summary").innerText()).replace(/\s+/g, " ");
+      assert.match(afterDel, /24 pezzi/);
+      assert.match(afterDel, /102 in stock/);
+      assert.match(afterDel, /3604/);
       await page.close();
     } finally {
       await browser.close();

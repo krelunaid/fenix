@@ -1,8 +1,8 @@
 /** Injected into gestionale HTML. No ${} — product JS, not a template. */
-export const DASHBOARD_CRUD_SCRIPT = `<script data-fenix-crud="4">
+export const DASHBOARD_CRUD_SCRIPT = `<script data-fenix-crud="5">
 (function(){
-  if (window.__fenixCrud >= 4) return;
-  window.__fenixCrud = 4;
+  if (window.__fenixCrud >= 5) return;
+  window.__fenixCrud = 5;
   function qsa(s, r){ return Array.prototype.slice.call((r || document).querySelectorAll(s)); }
   function qs(s, r){ return (r || document).querySelector(s); }
   function txt(el){ return ((el && (el.textContent || (el.getAttribute && el.getAttribute("aria-label")))) || "").replace(/\\s+/g, " ").trim(); }
@@ -345,6 +345,11 @@ export const DASHBOARD_CRUD_SCRIPT = `<script data-fenix-crud="4">
   }, true);
   function boot(attempt){
     attempt = attempt || 0;
+    if (paintedFromHost) return;
+    if (dlg && (dlg.hasAttribute("open") || dlg.classList.contains("open") || !dlg.hidden)) {
+      if (attempt < 12) setTimeout(function(){ boot(attempt + 1); }, 150);
+      return;
+    }
     var F = host();
     if (!F || !F.load) {
       if (attempt < 25) setTimeout(function(){ boot(attempt + 1); }, 80);
@@ -352,21 +357,32 @@ export const DASHBOARD_CRUD_SCRIPT = `<script data-fenix-crud="4">
       return;
     }
     Promise.all([F.load("items"), F.load("state")]).then(function(pair){
+      if (paintedFromHost) return;
       var a = pair[0], st = pair[1];
       var rows = Array.isArray(a) && a.length ? a : (st && (Array.isArray(st.items) ? st.items : st.rows));
       hideSaved();
-      if (Array.isArray(rows) && rows.length) paint(rows);
-      else if (attempt < 8) {
+      if (Array.isArray(rows) && rows.length) {
+        var current = readRows();
+        if (current.length > rows.length) {
+          paintedFromHost = true;
+          refreshSummary();
+          return;
+        }
+        paint(rows);
+        paintedFromHost = true;
+        refreshSummary();
+        return;
+      }
+      if (attempt < 8) {
         setTimeout(function(){ boot(attempt + 1); }, 120);
         return;
       }
       refreshSummary();
     });
   }
+  var paintedFromHost = false;
   hideSaved();
   refreshSummary();
   setTimeout(function(){ boot(0); }, 0);
-  setTimeout(function(){ boot(0); }, 400);
-  setTimeout(function(){ boot(0); }, 1200);
 })();
 </script>`;

@@ -507,7 +507,7 @@ export function prepareSrcDoc(
       ? next.replace(/<head[^>]*>/i, (open) => `${open}${kit}`)
       : `${kit}${next}`;
   }
-  if (shouldRepairDashboard(next, kind) && !/data-fenix-crud="4"/.test(next)) {
+  if (shouldRepairDashboard(next, kind) && !/data-fenix-crud="5"/.test(next)) {
     next = next.replace(/<script[^>]*data-fenix-crud[^>]*>[\s\S]*?<\/script>/gi, "");
     next = /<\/body>/i.test(next)
       ? next.replace(/<\/body>/i, `${DASHBOARD_CRUD_SCRIPT}</body>`)
