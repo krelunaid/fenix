@@ -160,6 +160,8 @@ describe("focus-visible and worker model", () => {
     assert.match(runBuild, /GENERATE_POLL_MAX = 360/);
     assert.match(runBuild, /isTransientNetwork/);
     assert.match(runBuild, /throw new Error\(event\.error \|\| "network error"\)/);
+    assert.match(runBuild, /proxyAnswered/);
+    assert.match(runBuild, /else if \(isIOS\(\) \|\| desk\)/);
     assert.doesNotMatch(runBuild, /alreadyPronto/);
     const buildApi = readFileSync(join(root, "src/routes/api/build.ts"), "utf8");
     assert.match(buildApi, /materializeHero/);

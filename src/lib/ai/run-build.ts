@@ -273,7 +273,9 @@ async function consumeViaWorker(
   const store = useProjectStore.getState();
   const bases = ["/__worker", WORKER_POLISH.replace(/\/$/, "")];
   let lastErr = "Load failed";
+  let proxyAnswered = false;
   for (const base of bases) {
+    if (base !== "/__worker" && proxyAnswered) continue;
     try {
       const started = await fetch(`${base}/build`, {
         method: "POST",
@@ -282,7 +284,9 @@ async function consumeViaWorker(
           "Idempotency-Key": projectId,
         },
         body: JSON.stringify({ ...body, projectId }),
+        signal: AbortSignal.timeout(8000),
       });
+      if (base === "/__worker") proxyAnswered = true;
       if (started.status !== 202) {
         lastErr = `Build HTTP ${started.status}`;
         continue;
@@ -295,16 +299,11 @@ async function consumeViaWorker(
         error: undefined,
       });
       for (let i = 0; i < GENERATE_POLL_MAX; i++) {
-        await new Promise((r) => window.setTimeout(r, WORKER_POLL_MS));
-        const jobRes = await fetch(`${base}/jobs/${id}`);
-        if (!jobRes.ok) continue;
-        const job = (await jobRes.json()) as {
-          status?: string;
-          html?: string;
-          meta?: Record<string, unknown>;
-          log?: string[];
-          error?: string;
-        };
+        await delay(WORKER_POLL_MS);
+        const fetched = await fetchJob(id);
+        if (fetched.state === "missing") throw new Error(JOB_GONE);
+        if (fetched.state === "retry") continue;
+        const job = fetched.job;
         if (job.log?.length) {
           const live = useProjectStore.getState().getProject(projectId);
           store.updateProject(projectId, { buildLog: mergeUniqueLogs(live?.buildLog, job.log) });
@@ -336,8 +335,12 @@ async function consumeViaWorker(
         }
         if (job.status === "err") throw new Error(job.error || "Build fallita");
       }
+      throw new Error(JOB_STILL_RUNNING);
     } catch (err) {
       lastErr = err instanceof Error ? err.message : "Load failed";
+      if (lastErr === JOB_STILL_RUNNING || lastErr === JOB_GONE) {
+        throw err instanceof Error ? err : new Error(lastErr);
+      }
     }
   }
   throw new Error(lastErr);
@@ -746,8 +749,11 @@ export async function runBuild(projectId: string, instruction?: string) {
         : await consumeStream(projectId, payload, true);
     } catch (first) {
       const msg = first instanceof Error ? first.message : "";
+      if (msg === JOB_STILL_RUNNING) throw first;
       if (isTransientNetwork(msg)) {
         streamed = await consumeViaWorker(projectId, payload, true);
+      } else if (isIOS() || desk) {
+        streamed = await consumeStream(projectId, payload, true);
       } else {
         throw first;
       }

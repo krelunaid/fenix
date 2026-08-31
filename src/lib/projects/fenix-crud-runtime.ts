@@ -205,8 +205,21 @@ const CRUD_TEMPLATE = `<script data-fenix-crud="12">
     }
     return Promise.resolve(F.save(COL, box)).then(function(ack){
       var n = ackOk(ack);
-      markBoot({ save: 1, durable: n, col: COL, n: list.length });
-      return n ? n : false;
+      if (ack && typeof ack === "object" && ack.v && typeof ack.v === "object" && ack.v.rev) {
+        localRev = Math.max(localRev, Number(ack.v.rev) || 0);
+      }
+      if (n) {
+        markBoot({ save: 1, durable: n, col: COL, n: list.length });
+        return n;
+      }
+      return Promise.resolve(F.save(COL, list)).then(function(ack2){
+        var n2 = ackOk(ack2);
+        if (ack2 && typeof ack2 === "object" && ack2.v && typeof ack2.v === "object" && ack2.v.rev) {
+          localRev = Math.max(localRev, Number(ack2.v.rev) || 0);
+        }
+        markBoot({ save: 1, durable: n2, col: COL, n: list.length, retry: 1 });
+        return n2 ? n2 : false;
+      });
     }).catch(function(){ return false; });
   }
   function asRow(r){

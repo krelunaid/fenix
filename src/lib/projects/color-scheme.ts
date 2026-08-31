@@ -221,6 +221,7 @@ export function fenixRuntimeScript(projectId: string, kind?: string) {
 (function(){
   var pid = ${JSON.stringify(projectId)};
   var desk = ${kind === "site" || kind === "landing" || kind === "dashboard" ? "true" : "false"};
+  var unwrapBoxes = ${kind === "site" || kind === "landing" ? "true" : "false"};
   function reportBootError(err, kind){
     var msg = "";
     try { msg = err && err.message ? String(err.message) : String(err || "errore"); } catch (e) { msg = "errore"; }
@@ -320,6 +321,7 @@ export function fenixRuntimeScript(projectId: string, kind?: string) {
     return false;
   }
   function unwrapLoad(v){
+    if (!unwrapBoxes) return v;
     if (v && typeof v === "object" && v._fenix === 1 && Array.isArray(v.items)) return v.items;
     return v;
   }

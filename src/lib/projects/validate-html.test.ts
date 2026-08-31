@@ -103,6 +103,8 @@ describe("validateProductHtml", () => {
     assert.match(fenixRuntimeScript("p"), /var desk = false/);
     assert.match(fenixRuntimeScript("p", "site"), /if \(desk\) return;/);
     assert.match(fenixRuntimeScript("p", "site"), /unwrapLoad/);
+    assert.match(fenixRuntimeScript("p", "site"), /var unwrapBoxes = true/);
+    assert.match(fenixRuntimeScript("p", "dashboard"), /var unwrapBoxes = false/);
   });
 });
 
