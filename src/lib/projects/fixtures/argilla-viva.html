@@ -15,17 +15,37 @@ body{font-family:Inter,system-ui,sans-serif;background:#f5f5f7;color:#1d1d1f;mar
 <header>
   <strong>Argilla Viva</strong>
   <nav>
-    <button type="button" data-view="dash">Dashboard</button>
-    <button type="button" data-view="inv" class="on">Inventario</button>
+    <button type="button" data-view="dash" class="on">Dashboard</button>
+    <button type="button" data-view="inv">Inventario</button>
     <button type="button" data-view="ord">Ordini</button>
     <button type="button" data-view="cli">Clienti</button>
   </nav>
 </header>
 <main>
-  <section data-view-panel="dash" hidden><h1>Dashboard</h1></section>
-  <section data-view-panel="inv">
+  <section data-view-panel="dash">
+    <h1>Dashboard</h1>
+    <div class="summary" id="dash-summary">
+      <div class="summary-item"><b>24</b> pezzi</div>
+      <div class="summary-item"><b>102</b> in stock</div>
+      <div class="summary-item">€<b>3604</b></div>
+    </div>
+    <h2>Ultimi pezzi inseriti</h2>
+    <table id="recent">
+      <thead>
+        <tr><th>Nome</th><th>Prezzo</th></tr>
+      </thead>
+      <tbody id="recent-rows">
+        <tr><td>P20</td><td>€18</td></tr>
+        <tr><td>Q1</td><td>€18</td></tr>
+        <tr><td>Q2</td><td>€18</td></tr>
+        <tr><td>Q3</td><td>€18</td></tr>
+      </tbody>
+    </table>
+    <button type="button" id="btn-new-dash">+ Nuovo pezzo</button>
+  </section>
+  <section data-view-panel="inv" hidden>
     <h1>Inventario</h1>
-    <div class="summary">
+    <div class="summary" id="inv-summary">
       <div class="summary-item"><b>24</b> pezzi</div>
       <div class="summary-item"><b>102</b> in stock</div>
       <div class="summary-item">€<b>3604</b></div>
@@ -83,10 +103,64 @@ body{font-family:Inter,system-ui,sans-serif;background:#f5f5f7;color:#1d1d1f;mar
   <section data-view-panel="cli" hidden><h1>Clienti</h1></section>
 </main>
 <script>
+(function(){
   window.Fenix = {
     load: function(){ return Promise.resolve({ items: [] }); },
     save: function(){ return Promise.resolve(); }
   };
+  var items = [];
+  document.querySelectorAll("#rows tr").forEach(function(tr){
+    var td = tr.querySelectorAll("td");
+    items.push({
+      nome: ((td[0] && td[0].textContent) || "").trim(),
+      categoria: ((td[1] && td[1].textContent) || "").trim(),
+      stato: ((td[2] && td[2].textContent) || "").trim(),
+      qty: ((td[3] && td[3].textContent) || "").trim(),
+      prezzo: ((td[4] && td[4].textContent) || "").trim()
+    });
+  });
+  function rowInv(r){
+    return "<tr><td>"+r.nome+"</td><td>"+r.categoria+"</td><td>"+r.stato+"</td><td>"+r.qty+"</td><td>"+r.prezzo+"</td><td><button type=button class=edit>Modifica</button></td></tr>";
+  }
+  function rowRecent(r){
+    return "<tr><td>"+r.nome+"</td><td>"+r.prezzo+"</td></tr>";
+  }
+  function seedLine(){
+    var stock = 0, valore = 0;
+    items.forEach(function(r){
+      var q = parseFloat(String(r.qty).replace(/[^0-9.-]/g, "")) || 0;
+      var p = parseFloat(String(r.prezzo).replace(/€/g, "").replace(/[^0-9.,-]/g, "").replace(",", ".")) || 0;
+      stock += q;
+      valore += q * p;
+    });
+    return { pezzi: items.length, stock: stock, valore: Math.round(valore) };
+  }
+  function fillSummary(id){
+    var t = seedLine();
+    var box = document.getElementById(id);
+    if (!box) return;
+    box.innerHTML = '<div class="summary-item"><b>'+t.pezzi+'</b> pezzi</div><div class="summary-item"><b>'+t.stock+'</b> in stock</div><div class="summary-item">€<b>'+t.valore+'</b></div>';
+  }
+  function renderInv(){
+    var tb = document.getElementById("rows");
+    if (tb) tb.innerHTML = items.map(rowInv).join("");
+    fillSummary("inv-summary");
+  }
+  function renderDash(){
+    var tb = document.getElementById("recent-rows");
+    if (tb) tb.innerHTML = items.slice(-5).map(rowRecent).join("");
+    fillSummary("dash-summary");
+  }
+  function show(id){
+    document.querySelectorAll("[data-view-panel]").forEach(function(p){
+      p.hidden = p.getAttribute("data-view-panel") !== id;
+    });
+    document.querySelectorAll("[data-view]").forEach(function(b){
+      b.classList.toggle("on", b.getAttribute("data-view") === id);
+    });
+    if (id === "inv") renderInv();
+    if (id === "dash") renderDash();
+  }
   window.Fenix.load("argilla_viva").then(function (st) {
     if (st && Array.isArray(st.items) && st.items.length) return;
   });
@@ -108,13 +182,12 @@ body{font-family:Inter,system-ui,sans-serif;background:#f5f5f7;color:#1d1d1f;mar
   });
   document.querySelectorAll("[data-view]").forEach(function(b){
     b.addEventListener("click", function(){
-      var id = b.getAttribute("data-view");
-      document.querySelectorAll("[data-view-panel]").forEach(function(p){
-        p.hidden = p.getAttribute("data-view-panel") !== id;
-      });
+      show(b.getAttribute("data-view"));
     });
   });
+  show("dash");
   document.documentElement.setAttribute("data-fenix-ready","1");
+})();
 </script>
 </body>
 </html>

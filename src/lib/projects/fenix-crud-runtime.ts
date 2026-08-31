@@ -1,8 +1,8 @@
 /** Injected into gestionale HTML. %%COL%% is replaced by dashboardCrudScript. */
-const CRUD_TEMPLATE = `<script data-fenix-crud="11">
+const CRUD_TEMPLATE = `<script data-fenix-crud="12">
 (function(){
-  if (window.__fenixCrud >= 11) return;
-  window.__fenixCrud = 11;
+  if (window.__fenixCrud >= 12) return;
+  window.__fenixCrud = 12;
   var COL = "%%COL%%";
   function qsa(s, r){ return Array.prototype.slice.call((r || document).querySelectorAll(s)); }
   function qs(s, r){ return (r || document).querySelector(s); }
@@ -38,6 +38,13 @@ const CRUD_TEMPLATE = `<script data-fenix-crud="11">
     if (el.getAttribute && el.getAttribute("type") === "submit") return true;
     return /^(salva|aggiungi|registra|conferma)(\\b|$)/.test(t);
   }
+  function isNavBtn(el){
+    if (!el) return false;
+    if (el.getAttribute && (el.getAttribute("data-view") || el.getAttribute("data-go"))) return true;
+    if (el.closest && el.closest("nav") && /BUTTON|A/i.test(el.tagName)) return true;
+    var t = txt(el).toLowerCase();
+    return /^(inventario|dashboard|ordini|clienti|magazzino|home)$/.test(t);
+  }
   var dlg = qs("dialog") || qs("[role=dialog]") || qs(".modal, .drawer, .sheet, #modal, #dialog, [data-modal]");
   if (!dlg) {
     dlg = document.createElement("dialog");
@@ -46,7 +53,14 @@ const CRUD_TEMPLATE = `<script data-fenix-crud="11">
     document.body.appendChild(dlg);
   }
   var editTr = null;
+  var canonical = [];
+  var hydrated = false;
+  var painting = false;
+  var restoreTimer = 0;
   function openDlg(){
+    if (dlg.parentNode !== document.body) {
+      try { document.body.appendChild(dlg); } catch (e) {}
+    }
     dlg.hidden = false;
     dlg.removeAttribute("hidden");
     dlg.classList.add("open", "show", "is-open", "active");
@@ -64,6 +78,7 @@ const CRUD_TEMPLATE = `<script data-fenix-crud="11">
     dlg.classList.remove("open", "show", "is-open", "active");
     dlg.style.display = "none";
     editTr = null;
+    scheduleRestore();
   }
   function isComputedHidden(el){
     if (!el) return true;
@@ -98,10 +113,10 @@ const CRUD_TEMPLATE = `<script data-fenix-crud="11">
   }
   var watchingDlg = false;
   function watchDlgThenBoot(){
-    if (watchingDlg || paintedFromHost || !dlg) return;
+    if (watchingDlg || hydrated || !dlg) return;
     watchingDlg = true;
     function go(){
-      if (paintedFromHost) return;
+      if (hydrated) return;
       if (isDlgOpen(dlg)) return;
       watchingDlg = false;
       boot(0);
@@ -141,8 +156,11 @@ const CRUD_TEMPLATE = `<script data-fenix-crud="11">
     data.categoria = alias(data, ["categoria","cat","tipo","category"], "");
     return data;
   }
-  function headers(){
-    return qsa("table thead th").map(function(th){ return txt(th); });
+  function tableHeads(table){
+    if (!table) return [];
+    var ths = qsa("thead th", table);
+    if (ths.length) return ths.map(txt);
+    return qsa("tr:first-child th", table).map(txt);
   }
   function host(){ return window.__fenixHost || window.Fenix; }
   var writer = Math.random().toString(36).slice(2, 8);
@@ -165,7 +183,7 @@ const CRUD_TEMPLATE = `<script data-fenix-crud="11">
         col: COL,
         writer: writer,
         rev: localRev,
-        rows: readRows().length,
+        rows: canonical.length || readAllRows().length,
         epoch: Date.now()
       };
       if (extra) Object.keys(extra).forEach(function(k){ payload[k] = extra[k]; });
@@ -175,17 +193,19 @@ const CRUD_TEMPLATE = `<script data-fenix-crud="11">
   function persist(rows){
     var F = host();
     if (!F || !F.save) return Promise.resolve(false);
+    var list = Array.isArray(rows) ? rows.map(asRow) : canonical.slice();
+    canonical = list;
     localRev += 1;
-    var box = { _fenix: 1, rev: localRev, at: Date.now(), writer: writer, items: rows };
+    var box = { _fenix: 1, rev: localRev, at: Date.now(), writer: writer, items: list };
     function ackOk(v){
       if (!v || v === false) return 0;
-      if (typeof v === "object" && "ok" in v) return v.ok ? (v.durable || rows.length) : 0;
+      if (typeof v === "object" && "ok" in v) return v.ok ? (v.durable || list.length) : 0;
       var n = Array.isArray(v) ? v.length : (v && Array.isArray(v.items) ? v.items.length : -1);
       return n >= 0 ? n : 0;
     }
     return Promise.resolve(F.save(COL, box)).then(function(ack){
       var n = ackOk(ack);
-      markBoot({ save: 1, durable: n, col: COL });
+      markBoot({ save: 1, durable: n, col: COL, n: list.length });
       return n ? n : false;
     }).catch(function(){ return false; });
   }
@@ -201,20 +221,31 @@ const CRUD_TEMPLATE = `<script data-fenix-crud="11">
     out.prezzo = out.prezzo || r.prezzo || r.price || "0";
     return out;
   }
-  function readRows(){
-    var heads = headers();
-    return qsa("table tbody tr").map(function(tr){
-      var obj = {};
-      qsa("td", tr).forEach(function(td, i){
-        var kind = kindOf(heads[i] || "");
-        var val = (td.textContent || "").trim();
-        if (kind === "azioni") return;
-        if (kind) obj[kind] = val;
-        if (i === 0) obj.nome = obj.nome || val;
-      });
-      return asRow(obj);
+  function inventoryTables(){
+    return qsa("table").filter(function(table){
+      if (table.closest && table.closest("dialog, .modal, form, [role=dialog]")) return false;
+      var heads = tableHeads(table);
+      var kinds = heads.map(kindOf);
+      if (kinds.some(function(k){ return k === "nome" || k === "qty" || k === "prezzo" || k === "categoria"; })) return true;
+      return !!qs("tbody", table);
+    });
+  }
+  function readRowsFromTable(table){
+    var heads = tableHeads(table);
+    var tb = qs("tbody", table) || table;
+    return qsa("tr", tb).map(function(tr){
+      return asRow(readRowsFromTr(tr, heads));
     }).filter(function(o){ return o.nome && !/modifica|elimina/.test(o.nome); });
   }
+  function readAllRows(){
+    var best = [];
+    inventoryTables().forEach(function(table){
+      var rows = readRowsFromTable(table);
+      if (rows.length > best.length) best = rows;
+    });
+    return best;
+  }
+  function readRows(){ return canonical.length ? canonical.slice() : readAllRows(); }
   function cellFor(h, data){
     var kind = kindOf(h);
     if (kind === "nome") return data.nome || "";
@@ -225,17 +256,16 @@ const CRUD_TEMPLATE = `<script data-fenix-crud="11">
     if (kind === "azioni") return "";
     return data[kind] || "";
   }
-  function rowHtml(data){
-    var heads = headers();
+  function rowHtmlFor(heads, data){
     var cells;
-    if (heads.length) {
+    if (heads && heads.length) {
       cells = heads.map(function(h){
         if (kindOf(h) === "azioni") {
           return '<td><button type="button">Modifica</button> <button type="button">Elimina</button></td>';
         }
         return "<td>"+String(cellFor(h, data)).replace(/</g,"")+"</td>";
       });
-      if (!heads.some(function(h){ return kindOf(h) === "azioni"; })) {
+      if (!heads.some(function(h){ return kindOf(h) === "azioni"; }) && heads.length >= 4) {
         cells.push('<td><button type="button">Modifica</button> <button type="button">Elimina</button></td>');
       }
     } else {
@@ -256,7 +286,7 @@ const CRUD_TEMPLATE = `<script data-fenix-crud="11">
     return isFinite(n) ? n : 0;
   }
   function totals(){
-    var rows = readRows();
+    var rows = canonical.length ? canonical : readAllRows();
     var stock = 0, valore = 0;
     rows.forEach(function(r){
       var q = num(r.qty);
@@ -287,12 +317,9 @@ const CRUD_TEMPLATE = `<script data-fenix-crud="11">
         setNum(el, t.valore, "€" + t.valore); hit++;
       }
     });
-    if (hit) return;
-    var box = qs(".summary, [data-summary]");
-    if (box && !qsa(".summary-item", box).length) {
-      box.textContent = line;
-      return;
-    }
+    qsa(".summary, [data-summary]").forEach(function(box){
+      if (!qsa(".summary-item", box).length) box.textContent = line;
+    });
     qsa("p, h2, h3, span, small, .sub, .kpi, .muted").forEach(function(el){
       if (el.closest && el.closest("table, form, dialog, .modal, nav")) return;
       var s = (el.textContent || "").replace(/\\s+/g, " ").trim();
@@ -304,30 +331,170 @@ const CRUD_TEMPLATE = `<script data-fenix-crud="11">
     var ul = document.getElementById("fk-saved");
     if (ul && ul.parentNode) ul.parentNode.removeChild(ul);
   }
-  function paint(rows){
-    var tb = qs("table tbody");
-    if (!tb || !rows || !rows.length) return;
-    tb.innerHTML = rows.map(function(r){
-      return "<tr data-fenix-row=1>"+rowHtml(asRow(r))+"</tr>";
+  function looksLikeItems(arr){
+    if (!Array.isArray(arr) || !arr.length) return false;
+    var n = 0, lim = Math.min(arr.length, 6);
+    for (var i = 0; i < lim; i++) {
+      var r = arr[i];
+      if (r && typeof r === "object" && (r.nome || r.name || r.prezzo || r.price || r.qty || r.qta)) n++;
+    }
+    return n >= 1;
+  }
+  function spliceRows(arr, rows){
+    var sample = arr[0];
+    arr.length = 0;
+    for (var i = 0; i < rows.length; i++) {
+      var r = asRow(rows[i]);
+      if (sample && typeof sample === "object" && !Array.isArray(sample)) {
+        var o = {};
+        Object.keys(sample).forEach(function(k){
+          var kind = kindOf(k);
+          if (kind && r[kind] != null && r[kind] !== "") o[k] = r[kind];
+          else if (r[k] != null) o[k] = r[k];
+        });
+        if (!o.nome && !o.name) o.nome = r.nome;
+        arr.push(o);
+      } else arr.push(r);
+    }
+  }
+  function writeIntoOriginalState(rows){
+    var keys = ["items","pezzi","rows","inventory","list"];
+    var roots = [window];
+    ["S","state","app","store","DB","db","DATA","model","inventory"].forEach(function(k){
+      try { if (window[k] && typeof window[k] === "object") roots.push(window[k]); } catch (e) {}
+    });
+    roots.forEach(function(root){
+      keys.forEach(function(k){
+        try {
+          if (Array.isArray(root[k]) && looksLikeItems(root[k])) spliceRows(root[k], rows);
+        } catch (e) {}
+      });
+    });
+  }
+  function wrapInnerHTML(){
+    if (window.__fenixHtmlWrap) return;
+    var desc = Object.getOwnPropertyDescriptor(Element.prototype, "innerHTML");
+    if (!desc || !desc.set) return;
+    window.__fenixHtmlWrap = 1;
+    var set = desc.set;
+    Object.defineProperty(Element.prototype, "innerHTML", {
+      configurable: true,
+      enumerable: desc.enumerable,
+      get: desc.get,
+      set: function(v){
+        set.call(this, v);
+        if (painting || !hydrated) return;
+        if (this.closest && this.closest("dialog, .modal, form, [role=dialog]")) return;
+        var table = this.tagName === "TABLE" ? this : (this.closest && this.closest("table"));
+        var summary = (this.classList && (this.classList.contains("summary") || this.classList.contains("summary-item")))
+          || (this.closest && this.closest(".summary, [data-summary]"));
+        if (!table && !summary) return;
+        restoreNow();
+      }
+    });
+  }
+  function paintTable(table, rows){
+    var tb = qs("tbody", table);
+    if (!tb) return;
+    var heads = tableHeads(table);
+    tb.innerHTML = (rows || []).map(function(r){
+      return "<tr data-fenix-row=1>"+rowHtmlFor(heads, asRow(r))+"</tr>";
     }).join("");
+  }
+  function paintAll(rows){
+    if (painting) return;
+    painting = true;
+    try {
+      inventoryTables().forEach(function(table){ paintTable(table, rows); });
+      refreshSummary();
+    } finally {
+      painting = false;
+    }
+  }
+  function namesOf(rows){
+    var o = {};
+    (rows || []).forEach(function(r){ var n = fold(asRow(r).nome); if (n) o[n] = 1; });
+    return o;
+  }
+  function domMatchesCanonical(){
+    if (!canonical.length) return true;
+    var want = namesOf(canonical);
+    var tables = inventoryTables();
+    if (!tables.length) return true;
+    for (var i = 0; i < tables.length; i++) {
+      var present = namesOf(readRowsFromTable(tables[i]));
+      var missing = 0;
+      Object.keys(want).forEach(function(n){ if (!present[n]) missing++; });
+      if (missing) return false;
+      if (readRowsFromTable(tables[i]).length < canonical.length) return false;
+    }
+    var t = totals();
+    var summaries = qsa(".summary, [data-summary]");
+    for (var j = 0; j < summaries.length; j++) {
+      var s = (summaries[j].textContent || "").replace(/\\s+/g, " ");
+      if (!/pezzi/i.test(s) && !/in stock/i.test(s)) continue;
+      if (s.indexOf(String(t.pezzi)) < 0) return false;
+      if (/in stock/i.test(s) && s.indexOf(String(t.stock)) < 0) return false;
+    }
+    return true;
+  }
+  function applyCanonical(rows){
+    canonical = (rows || []).map(asRow).filter(function(r){ return r.nome; });
+    hydrated = true;
+    wrapInnerHTML();
+    writeIntoOriginalState(canonical);
+    paintAll(canonical);
+    hideSaved();
+    markBoot({ boot: 1, n: canonical.length, col: COL, rev: localRev });
+  }
+  function restoreNow(){
+    if (!hydrated || painting) return;
+    if (domMatchesCanonical()) return;
+    applyCanonical(canonical);
+  }
+  function scheduleRestore(){
+    if (!hydrated) return;
+    restoreNow();
+    [0, 40, 180, 400].forEach(function(ms){
+      setTimeout(restoreNow, ms);
+    });
+  }
+  function startWatch(){
+    if (window.__fenixCrudWatch) return;
+    window.__fenixCrudWatch = 1;
+    wrapInnerHTML();
+    try {
+      var mo = new MutationObserver(function(){
+        if (painting || !hydrated) return;
+        if (restoreTimer) clearTimeout(restoreTimer);
+        restoreTimer = setTimeout(restoreNow, 24);
+      });
+      mo.observe(document.documentElement, { childList: true, subtree: true });
+    } catch (err) {}
+    window.addEventListener("hashchange", scheduleRestore);
+    window.addEventListener("popstate", scheduleRestore);
+    document.addEventListener("click", function(e){
+      var t = e.target && e.target.closest ? e.target.closest("button, a, [role=button]") : null;
+      if (t && isNavBtn(t)) scheduleRestore();
+    }, false);
   }
   function addOrUpdate(data){
     if (!data.nome) return false;
-    var tb = qs("table tbody") || qs("table");
-    if (!tb) return false;
+    if (!canonical.length) canonical = readAllRows();
+    var i = -1;
+    var key = fold(data.nome);
     if (editTr && editTr.parentNode) {
-      editTr.innerHTML = rowHtml(data);
-    } else {
-      var tr = document.createElement("tr");
-      tr.setAttribute("data-fenix-row", "1");
-      tr.innerHTML = rowHtml(data);
-      if (tb.tagName === "TABLE") tb.appendChild(tr);
-      else tb.insertBefore(tr, tb.firstChild);
+      var fromTr = fold(txt(qs("td", editTr)));
+      for (var k = 0; k < canonical.length; k++) if (fold(canonical[k].nome) === fromTr) i = k;
     }
-    var saved = persist(readRows());
-    hideSaved();
-    refreshSummary();
-    return saved;
+    if (i < 0) {
+      for (var k2 = 0; k2 < canonical.length; k2++) if (fold(canonical[k2].nome) === key) i = k2;
+    }
+    var row = asRow(data);
+    if (i >= 0) canonical[i] = Object.assign({}, canonical[i], row);
+    else canonical.unshift(row);
+    applyCanonical(canonical);
+    return persist(canonical);
   }
   function findField(names){
     var nodes = qsa("input, select, textarea", dlg);
@@ -376,12 +543,11 @@ const CRUD_TEMPLATE = `<script data-fenix-crud="11">
     return true;
   }
   function rowsHint(){
-    try { return readRows().length; } catch (e) { return 1; }
+    try { return canonical.length || readRows().length; } catch (e) { return 1; }
   }
   document.addEventListener("click", function(e){
     var t = e.target && e.target.closest ? e.target.closest("button, a, [role=button], input[type=submit]") : null;
     if (!t) return;
-    if (t.getAttribute && t.getAttribute("data-view")) return;
     if (isNew(t)) {
       e.preventDefault();
       e.stopImmediatePropagation();
@@ -401,17 +567,18 @@ const CRUD_TEMPLATE = `<script data-fenix-crud="11">
       e.preventDefault();
       e.stopImmediatePropagation();
       var row = t.closest("tr");
-      if (row && row.parentNode) row.parentNode.removeChild(row);
-      persist(readRows());
-      hideSaved();
-      refreshSummary();
+      var name = fold(txt(qs("td", row)));
+      if (!canonical.length) canonical = readAllRows();
+      canonical = canonical.filter(function(r){ return fold(r.nome) !== name; });
+      applyCanonical(canonical);
+      persist(canonical);
       return;
     }
     if (isEdit(t)) {
       e.preventDefault();
       e.stopImmediatePropagation();
       editTr = t.closest("tr");
-      fillForm(editTr ? asRow(readRowsFromTr(editTr)) : {});
+      fillForm(editTr ? asRow(readRowsFromTr(editTr, tableHeads(editTr && editTr.closest("table")))) : {});
       openDlg();
       return;
     }
@@ -419,13 +586,15 @@ const CRUD_TEMPLATE = `<script data-fenix-crud="11">
       e.preventDefault();
       e.stopImmediatePropagation();
       commitSave(t);
+      return;
     }
+    if (isNavBtn(t)) scheduleRestore();
   }, true);
-  function readRowsFromTr(tr){
-    var heads = headers();
+  function readRowsFromTr(tr, heads){
+    heads = heads || tableHeads(tr && tr.closest && tr.closest("table"));
     var obj = {};
     qsa("td", tr).forEach(function(td, i){
-      var kind = kindOf(heads[i] || "");
+      var kind = kindOf((heads && heads[i]) || "");
       var val = (td.textContent || "").trim();
       if (kind && kind !== "azioni") obj[kind] = val;
       if (i === 0) obj.nome = obj.nome || val;
@@ -441,7 +610,7 @@ const CRUD_TEMPLATE = `<script data-fenix-crud="11">
   }, true);
   function boot(attempt){
     attempt = attempt || 0;
-    if (paintedFromHost) return;
+    if (hydrated && canonical.length) return;
     if (dlg && isDlgOpen(dlg)) {
       if (attempt < 12) {
         setTimeout(function(){ boot(attempt + 1); }, 150);
@@ -461,38 +630,42 @@ const CRUD_TEMPLATE = `<script data-fenix-crud="11">
       return;
     }
     Promise.resolve(F.load(COL)).then(function(a){
-      if (paintedFromHost) return;
+      if (hydrated && canonical.length) return;
       var box = boxOf(a);
       if (box && box.rev) localRev = Math.max(localRev, box.rev);
-      var rows = itemsOf(a) || [];
+      var rows = (itemsOf(a) || []).map(asRow).filter(function(r){ return r.nome; });
       hideSaved();
-      markBoot({ boot: 1, n: rows.length, col: COL, rev: localRev });
       if (box && box.rev > 0) {
-        paint(rows);
-        paintedFromHost = true;
-        refreshSummary();
+        applyCanonical(rows);
+        startWatch();
         return;
       }
-      if (Array.isArray(rows) && rows.length) {
-        var current = readRows();
-        if (current.length > rows.length) {
-          paintedFromHost = true;
-          refreshSummary();
+      if (rows.length) {
+        var current = readAllRows();
+        if (current.length > rows.length && !(box && box.rev > 0)) {
+          canonical = current;
+          hydrated = true;
+          applyCanonical(current);
+          startWatch();
           return;
         }
-        paint(rows);
-        paintedFromHost = true;
-        refreshSummary();
+        applyCanonical(rows);
+        startWatch();
         return;
       }
       if (attempt < 8) {
         setTimeout(function(){ boot(attempt + 1); }, 120);
         return;
       }
+      var seed = readAllRows();
+      if (seed.length) {
+        applyCanonical(seed);
+        startWatch();
+        return;
+      }
       refreshSummary();
     });
   }
-  var paintedFromHost = false;
   hideSaved();
   refreshSummary();
   setTimeout(function(){ boot(0); }, 0);

@@ -302,15 +302,23 @@ export function fenixRuntimeScript(projectId: string) {
       }, 2500);
     });
   }
-  window.Fenix = {
+  var api = {
     projectId: pid,
     load: function(col){ return call("load", col); },
     save: function(col, data){ fallbackSave(col, data); return call("save", col, data); },
     ready: function(){ document.documentElement.setAttribute("data-fenix-ready","1"); }
   };
   try {
-    Object.defineProperty(window, "__fenixHost", { value: window.Fenix, writable: false, configurable: false });
-  } catch (e) { window.__fenixHost = window.Fenix; }
+    Object.defineProperty(window, "__fenixHost", { value: api, writable: false, configurable: false });
+  } catch (e) { window.__fenixHost = api; }
+  try {
+    Object.defineProperty(window, "Fenix", {
+      configurable: true,
+      enumerable: true,
+      get: function(){ return api; },
+      set: function(){ /* product stub cannot clobber host load/save */ }
+    });
+  } catch (e) { window.Fenix = api; }
   function audit(){
     try {
       var tabs = document.querySelectorAll("[data-view], [data-tab], .tabbar button, nav.tabs button, .tabs button, nav[aria-label] button").length;
@@ -489,6 +497,126 @@ export function sanitizePreviewHtml(html: string) {
     .replace(/>\s*"\s*\/>/g, ">");
 }
 
+/**
+ * HTML parser closes <script> at the first </script>, even inside a JS string.
+ * That yields `SyntaxError: missing ) after argument list` on about:srcdoc.
+ * Escape those embedded closers; leave the real tag intact.
+ */
+export function escapeEmbeddedScriptEnds(html: string): string {
+  const src = String(html || "");
+  if (!/<script/i.test(src)) return src;
+  let out = "";
+  const lower = src.toLowerCase();
+  let i = 0;
+  while (i < src.length) {
+    const open = lower.indexOf("<script", i);
+    if (open < 0) {
+      out += src.slice(i);
+      break;
+    }
+    out += src.slice(i, open);
+    const tagEnd = src.indexOf(">", open);
+    if (tagEnd < 0) {
+      out += src.slice(open);
+      break;
+    }
+    const openTag = src.slice(open, tagEnd + 1);
+    out += openTag;
+    if (/\bsrc\s*=/i.test(openTag) || /\/\s*>$/.test(openTag)) {
+      i = tagEnd + 1;
+      continue;
+    }
+    const scanned = scanScriptBody(src, tagEnd + 1);
+    out += scanned.body + scanned.closer;
+    i = scanned.end;
+  }
+  return out;
+}
+
+function scanScriptBody(html: string, start: number): { body: string; closer: string; end: number } {
+  let i = start;
+  let body = "";
+  let quote: string | null = null;
+  let escaped = false;
+  let lineComment = false;
+  let blockComment = false;
+  while (i < html.length) {
+    const ch = html[i];
+    const two = html.slice(i, i + 2);
+    if (quote) {
+      if (escaped) {
+        body += ch;
+        escaped = false;
+        i += 1;
+        continue;
+      }
+      if (ch === "\\") {
+        body += ch;
+        escaped = true;
+        i += 1;
+        continue;
+      }
+      if (ch === quote) {
+        quote = null;
+        body += ch;
+        i += 1;
+        continue;
+      }
+      if (html.slice(i, i + 8).toLowerCase() === "</script") {
+        body += "<\\/script";
+        i += 8;
+        continue;
+      }
+      body += ch;
+      i += 1;
+      continue;
+    }
+    if (lineComment) {
+      body += ch;
+      if (ch === "\n") lineComment = false;
+      i += 1;
+      continue;
+    }
+    if (blockComment) {
+      body += ch;
+      if (two === "*/") {
+        body += html[i + 1] || "";
+        i += 2;
+        blockComment = false;
+        continue;
+      }
+      i += 1;
+      continue;
+    }
+    if (two === "//") {
+      lineComment = true;
+      body += two;
+      i += 2;
+      continue;
+    }
+    if (two === "/*") {
+      blockComment = true;
+      body += two;
+      i += 2;
+      continue;
+    }
+    if (ch === "\"" || ch === "'" || ch === "`") {
+      quote = ch;
+      body += ch;
+      i += 1;
+      continue;
+    }
+    if (html.slice(i, i + 8).toLowerCase() === "</script") {
+      const closeEnd = html.indexOf(">", i);
+      const closer = closeEnd >= 0 ? html.slice(i, closeEnd + 1) : html.slice(i);
+      return { body, closer, end: closeEnd >= 0 ? closeEnd + 1 : html.length };
+    }
+    body += ch;
+    i += 1;
+  }
+  return { body, closer: "", end: html.length };
+}
+
 export function prepareSrcDoc(
   html: string,
   bgOrPalette: string | SrcPalette = "#ffffff",
@@ -527,7 +655,7 @@ export function prepareSrcDoc(
       ? next.replace(/<head[^>]*>/i, (open) => `${open}${kit}`)
       : `${kit}${next}`;
   }
-  if (shouldRepairDashboard(next, kind) && !/data-fenix-crud="11"/.test(next)) {
+  if (shouldRepairDashboard(html, kind) && !/data-fenix-crud="12"/.test(next)) {
     next = next.replace(/<script[^>]*data-fenix-crud[^>]*>[\s\S]*?<\/script>/gi, "");
     const crud = dashboardCrudScript(discoverAppCollection(html));
     next = /<\/body>/i.test(next)
@@ -542,5 +670,5 @@ export function prepareSrcDoc(
       ? next.replace(/<\/head>/i, `${pal}</head>`)
       : `${pal}${next}`;
   }
-  return next;
+  return escapeEmbeddedScriptEnds(next);
 }

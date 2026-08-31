@@ -120,6 +120,8 @@ describe("dashboard CRUD repair", () => {
     assert.match(ARGILLA, /QTÀ/);
     assert.match(ARGILLA, /€42/);
     assert.match(ARGILLA, /\.modal\{display:none/);
+    assert.match(ARGILLA, /Ultimi pezzi inseriti/);
+    assert.match(ARGILLA, /data-view="dash" class="on"/);
     assert.doesNotMatch(ARGILLA, /id="modal"[^>]*\bhidden\b/);
     assert.doesNotMatch(ARGILLA, /data-summary/);
   });
@@ -138,7 +140,7 @@ describe("dashboard CRUD repair", () => {
       `<script data-fenix-crud>window.__fenixCrud=1;</script></body>`,
     );
     const html = repairDashboardCrud(withV1);
-    assert.match(html, /data-fenix-crud="11"/);
+    assert.match(html, /data-fenix-crud="12"/);
     assert.match(html, /var COL = "argilla_viva"/);
     assert.equal((html.match(/data-fenix-crud/g) || []).length, 1);
     const src = prepareSrcDoc(
@@ -170,7 +172,7 @@ describe("dashboard CRUD repair", () => {
       };
       await loadSrc();
       const frame = page.frameLocator("#f");
-      await frame.getByRole("heading", { name: "Inventario" }).waitFor({ timeout: 8000 });
+      await frame.getByRole("heading", { name: "Dashboard" }).waitFor({ timeout: 8000 });
       const modalCss = await frame.locator("#modal").evaluate((el) => {
         const cs = window.getComputedStyle(el);
         return {
@@ -186,7 +188,7 @@ describe("dashboard CRUD repair", () => {
       assert.equal(modalCss.openAttr, false);
       assert.equal(modalCss.display, "none");
       await frame.getByRole("button", { name: /inventario/i }).click();
-      const rows0 = await frame.locator("table tbody tr").count();
+      await frame.getByRole("heading", { name: "Inventario" }).waitFor({ timeout: 4000 });
       await frame.getByRole("button", { name: /nuovo pezzo/i }).click();
       await frame.locator("#p-nome").waitFor({ timeout: 3000 });
       await frame.getByRole("button", { name: /^annulla$/i }).click();
@@ -195,25 +197,28 @@ describe("dashboard CRUD repair", () => {
       await frame.locator("#p-qty").fill("2");
       await frame.locator("#p-prezzo").fill("17");
       await frame.getByRole("button", { name: /^salva$/i }).click();
-      const row = frame.locator("tr", { hasText: "Codex Prova Reale" });
+      const row = frame.locator("#rows tr", { hasText: "Codex Prova Reale" });
       await row.waitFor({ timeout: 4000 });
       assert.equal((await row.locator("td").nth(3).textContent())?.trim(), "2");
       assert.equal((await row.locator("td").nth(4).textContent())?.trim(), "17");
-      const sum = (await frame.locator(".summary").innerText()).replace(/\s+/g, " ");
+      const sum = (await frame.locator("#inv-summary").innerText()).replace(/\s+/g, " ");
       assert.match(sum, /25 pezzi/);
       assert.match(sum, /104 in stock/);
       assert.match(sum, /3638/);
       assert.equal(await frame.locator("#fk-saved").count(), 0);
-      const rows1 = await frame.locator("table tbody tr").count();
-      assert.equal(rows1, 25);
+      assert.equal(await frame.locator("#rows tr").count(), 25);
       await loadSrc();
-      const row2 = frame.locator("tr", { hasText: "Codex Prova Reale" });
+      await frame.getByRole("heading", { name: "Dashboard" }).waitFor({ timeout: 8000 });
+      const dashRow = frame.locator("#recent-rows tr", { hasText: "Codex Prova Reale" });
+      await dashRow.waitFor({ timeout: 5000 });
+      await frame.getByRole("button", { name: /inventario/i }).click();
+      const row2 = frame.locator("#rows tr", { hasText: "Codex Prova Reale" });
       await row2.waitFor({ timeout: 5000 });
       const bootSrc = JSON.parse((await frame.locator("html").getAttribute("data-fenix-boot")) || "{}");
       assert.equal(bootSrc.col, "argilla_viva", `srcdoc boot ${JSON.stringify(bootSrc)}`);
       assert.equal(bootSrc.n, 25);
       assert.equal((await row2.locator("td").nth(3).textContent())?.trim(), "2");
-      const sum2 = (await frame.locator(".summary").innerText()).replace(/\s+/g, " ");
+      const sum2 = (await frame.locator("#inv-summary").innerText()).replace(/\s+/g, " ");
       assert.match(sum2, /25 pezzi/);
       assert.match(sum2, /104 in stock/);
       assert.equal(await frame.locator("#fk-saved").count(), 0);
@@ -224,14 +229,14 @@ describe("dashboard CRUD repair", () => {
       await frame.locator("#p-qty").fill("5");
       await frame.locator("#p-prezzo").fill("20");
       await frame.getByRole("button", { name: /^salva$/i }).click();
-      await frame.getByText("107 in stock").waitFor({ timeout: 3000 });
-      await frame.locator("tr", { hasText: "Codex Prova Reale" }).getByRole("button", { name: /^elimina$/i }).click();
-      assert.equal(await frame.getByText("Codex Prova Reale").count(), 0);
-      const sum3 = (await frame.locator(".summary").innerText()).replace(/\s+/g, " ");
+      await frame.locator("#inv-summary").getByText("107 in stock").waitFor({ timeout: 3000 });
+      await frame.locator("#rows tr", { hasText: "Codex Prova Reale" }).getByRole("button", { name: /^elimina$/i }).click();
+      assert.equal(await frame.locator("#rows tr", { hasText: "Codex Prova Reale" }).count(), 0);
+      const sum3 = (await frame.locator("#inv-summary").innerText()).replace(/\s+/g, " ");
       assert.match(sum3, /24 pezzi/);
       assert.match(sum3, /102 in stock/);
       assert.match(sum3, /3604/);
-      assert.equal(await frame.locator("table tbody tr").count(), 24);
+      assert.equal(await frame.locator("#rows tr").count(), 24);
       await page.close();
     } finally {
       await browser.close();
@@ -299,14 +304,18 @@ describe("dashboard CRUD repair", () => {
       await page.locator("iframe").first().waitFor({ timeout: 15000 });
       assert.equal(await page.locator("iframe").count(), 2);
       const frame = page.locator("section.hidden.md\\:block").frameLocator("iframe");
-      await frame.getByRole("heading", { name: "Inventario" }).waitFor({ timeout: 15000 });
+      await frame.getByRole("heading", { name: "Dashboard" }).waitFor({ timeout: 15000 });
       await frame.getByRole("button", { name: /nuovo pezzo/i }).click();
+      await frame.locator("#p-nome").waitFor({ timeout: 4000 });
       await frame.locator("#p-nome").fill("Codex Verifica 1e7b47a");
       await frame.locator("#p-qty").fill("2");
       await frame.locator("#p-prezzo").fill("17");
       await frame.getByRole("button", { name: /^salva$/i }).click();
-      await frame.locator("tr", { hasText: "Codex Verifica 1e7b47a" }).waitFor({ timeout: 5000 });
-      const sum = (await frame.locator(".summary").innerText()).replace(/\s+/g, " ");
+      await frame.locator("tr", { hasText: "Codex Verifica 1e7b47a" }).first().waitFor({ timeout: 8000 });
+      await frame.getByRole("button", { name: /inventario/i }).click();
+      await frame.getByRole("heading", { name: "Inventario" }).waitFor({ timeout: 8000 });
+      await frame.locator("#rows tr", { hasText: "Codex Verifica 1e7b47a" }).waitFor({ timeout: 8000 });
+      const sum = (await frame.locator("#inv-summary").innerText()).replace(/\s+/g, " ");
       assert.match(sum, /25 pezzi/);
       assert.match(sum, /104 in stock/);
       assert.match(sum, /3638/);
@@ -344,48 +353,168 @@ describe("dashboard CRUD repair", () => {
       }, null, { timeout: 15000 });
 
       const frame2 = page.locator("section.hidden.md\\:block").frameLocator("iframe");
-      await frame2.locator("tr", { hasText: "Codex Verifica 1e7b47a" }).waitFor({ timeout: 15000 });
+      await frame2.getByRole("heading", { name: "Dashboard" }).waitFor({ timeout: 15000 });
+      const initialRow = await frame2.locator("tr", { hasText: "Codex Verifica 1e7b47a" }).count();
+      assert.ok(initialRow > 0, "riga assente in Dashboard dopo reload");
+      await frame2.getByRole("button", { name: /inventario/i }).click();
+      const row2 = frame2.locator("#rows tr", { hasText: "Codex Verifica 1e7b47a" });
+      await row2.waitFor({ timeout: 8000 });
       const boot = JSON.parse((await frame2.locator("html").getAttribute("data-fenix-boot")) || "{}");
       assert.equal(boot.col, "argilla_viva", `boot after reload ${JSON.stringify(boot)}`);
       assert.equal(boot.n, 25);
-      const sum2 = (await frame2.locator(".summary").innerText()).replace(/\s+/g, " ");
+      const sum2 = (await frame2.locator("#inv-summary").innerText()).replace(/\s+/g, " ");
       assert.match(sum2, /25 pezzi/);
       assert.match(sum2, /104 in stock/);
       assert.match(sum2, /3638/);
       assert.equal(await frame2.locator("#fk-saved").count(), 0);
-      const target = frame2.locator("tr", { hasText: "Codex Verifica 1e7b47a" });
-      await target.getByRole("button", { name: /^modifica$/i }).click();
+      await row2.getByRole("button", { name: /^modifica$/i }).click();
       await frame2.locator("#p-qty").waitFor({ timeout: 3000 });
       assert.equal(await frame2.locator("#p-qty").inputValue(), "2");
       await frame2.locator("#p-qty").fill("5");
       await frame2.locator("#p-prezzo").fill("20");
       await frame2.getByRole("button", { name: /^salva$/i }).click();
-      await target.locator("td").nth(3).filter({ hasText: /^5$/ }).waitFor({ timeout: 4000 });
-      assert.match((await frame2.locator(".summary").innerText()).replace(/\s+/g, " "), /107 in stock/);
+      await row2.locator("td").nth(3).filter({ hasText: /^5$/ }).waitFor({ timeout: 4000 });
+      assert.match((await frame2.locator("#inv-summary").innerText()).replace(/\s+/g, " "), /107 in stock/);
 
       await page.reload({ waitUntil: "domcontentloaded" });
       await page.locator("iframe").first().waitFor({ timeout: 15000 });
       const frame3 = page.locator("section.hidden.md\\:block").frameLocator("iframe");
-      const edited = frame3.locator("tr", { hasText: "Codex Verifica 1e7b47a" });
+      await frame3.getByRole("heading", { name: "Dashboard" }).waitFor({ timeout: 15000 });
+      await frame3.getByRole("button", { name: /inventario/i }).click();
+      const edited = frame3.locator("#rows tr", { hasText: "Codex Verifica 1e7b47a" });
       await edited.waitFor({ timeout: 15000 });
       await edited.locator("td").nth(3).filter({ hasText: /^5$/ }).waitFor({ timeout: 4000 });
       await edited.getByRole("button", { name: /^elimina$/i }).click();
-      await frame3.locator("tr", { hasText: "Codex Verifica 1e7b47a" }).waitFor({
+      await frame3.locator("#rows tr", { hasText: "Codex Verifica 1e7b47a" }).waitFor({
         state: "detached",
         timeout: 4000,
       });
-      assert.match((await frame3.locator(".summary").innerText()).replace(/\s+/g, " "), /24 pezzi/);
+      assert.match((await frame3.locator("#inv-summary").innerText()).replace(/\s+/g, " "), /24 pezzi/);
 
       await page.reload({ waitUntil: "domcontentloaded" });
       await page.locator("iframe").first().waitFor({ timeout: 15000 });
       const frame4 = page.locator("section.hidden.md\\:block").frameLocator("iframe");
-      await frame4.getByRole("heading", { name: "Inventario" }).waitFor({ timeout: 15000 });
-      assert.equal(await frame4.locator("tr", { hasText: "Codex Verifica 1e7b47a" }).count(), 0);
-      assert.match((await frame4.locator(".summary").innerText()).replace(/\s+/g, " "), /24 pezzi/);
-      assert.match((await frame4.locator(".summary").innerText()).replace(/\s+/g, " "), /102 in stock/);
+      await frame4.getByRole("heading", { name: "Dashboard" }).waitFor({ timeout: 15000 });
+      await frame4.getByRole("button", { name: /inventario/i }).click();
+      await frame4.getByRole("heading", { name: "Inventario" }).waitFor({ timeout: 8000 });
+      assert.equal(await frame4.locator("#rows tr", { hasText: "Codex Verifica 1e7b47a" }).count(), 0);
+      assert.match((await frame4.locator("#inv-summary").innerText()).replace(/\s+/g, " "), /24 pezzi/);
+      assert.match((await frame4.locator("#inv-summary").innerText()).replace(/\s+/g, " "), /102 in stock/);
       const tomb = JSON.parse((await frame4.locator("html").getAttribute("data-fenix-boot")) || "{}");
       assert.equal(tomb.col, "argilla_viva");
       assert.equal(tomb.n, 24);
+      await page.close();
+    } finally {
+      await browser.close();
+    }
+  });
+
+  it("add survives reload + Inventario, no data loss, console clean", async () => {
+    const html = repairDashboardCrud(ARGILLA);
+    const src = prepareSrcDoc(
+      html,
+      { bg: "#f3eadc", fg: "#2b211c", accent: "#b85c38" },
+      "argilla-viva",
+      "dashboard",
+    );
+    const browser = await chromium.launch({ headless: true });
+    try {
+      const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+      const errors: string[] = [];
+      page.on("pageerror", (err) => errors.push(String(err)));
+      page.on("console", (msg) => {
+        if (msg.type() === "error") errors.push(msg.text());
+      });
+      await page.setContent(`<!DOCTYPE html><html><body>
+<iframe id="f" style="width:1280px;height:800px;border:0"></iframe>
+<script>
+  window.__db = {};
+  window.addEventListener("message", function (e) {
+    var m = e.data;
+    if (!m || m.t !== "fenix-db" || !m.id) return;
+    if (m.op === "save") window.__db[m.col] = m.data;
+    var v = m.op === "load" ? (window.__db[m.col] || null) : m.data;
+    e.source.postMessage({ t: "fenix-db", id: m.id, v: v }, "*");
+  });
+</script>
+</body></html>`);
+      const loadSrc = async () => {
+        await page.locator("#f").evaluate((el, srcDoc: string) => {
+          (el as HTMLIFrameElement).srcdoc = srcDoc;
+        }, src);
+      };
+      const frame = page.frameLocator("#f");
+      const goInv = async () => {
+        await frame.getByRole("button", { name: /inventario/i }).click();
+        await frame.getByRole("heading", { name: "Inventario" }).waitFor({ timeout: 4000 });
+      };
+      await loadSrc();
+      await frame.getByRole("heading", { name: "Dashboard" }).waitFor({ timeout: 8000 });
+      await frame.getByRole("button", { name: /nuovo pezzo/i }).click();
+      await frame.locator("#p-nome").fill("Codex QA c9a047e");
+      await frame.locator("#p-qty").fill("3");
+      await frame.locator("#p-prezzo").fill("19");
+      await frame.getByRole("button", { name: /^salva$/i }).click();
+      await frame.locator("tr", { hasText: "Codex QA c9a047e" }).first().waitFor({ timeout: 4000 });
+      await goInv();
+      const added = frame.locator("#rows tr", { hasText: "Codex QA c9a047e" });
+      await added.waitFor({ timeout: 4000 });
+      let inv = (await frame.locator("#inv-summary").innerText()).replace(/\s+/g, " ");
+      assert.match(inv, /25 pezzi/);
+      assert.match(inv, /105 in stock/);
+      assert.match(inv, /3661/);
+      await loadSrc();
+      await frame.getByRole("heading", { name: "Dashboard" }).waitFor({ timeout: 8000 });
+      const initialRow = (await frame.locator("tr", { hasText: "Codex QA c9a047e" }).count()) > 0;
+      assert.equal(initialRow, true, "initialRow after reload");
+      await goInv();
+      const afterNav = frame.locator("#rows tr", { hasText: "Codex QA c9a047e" });
+      await afterNav.waitFor({ timeout: 5000 });
+      inv = (await frame.locator("#inv-summary").innerText()).replace(/\s+/g, " ");
+      assert.match(inv, /25 pezzi/);
+      assert.match(inv, /105 in stock/);
+      assert.match(inv, /3661/);
+      await afterNav.getByRole("button", { name: /^modifica$/i }).click();
+      await frame.locator("#p-qty").fill("4");
+      await frame.locator("#p-prezzo").fill("21");
+      await frame.getByRole("button", { name: /^salva$/i }).click();
+      await afterNav.locator("td").nth(3).filter({ hasText: /^4$/ }).waitFor({ timeout: 4000 });
+      await loadSrc();
+      await frame.getByRole("heading", { name: "Dashboard" }).waitFor({ timeout: 8000 });
+      await goInv();
+      const edited = frame.locator("#rows tr", { hasText: "Codex QA c9a047e" });
+      await edited.waitFor({ timeout: 5000 });
+      assert.equal((await edited.locator("td").nth(3).textContent())?.trim(), "4");
+      await edited.getByRole("button", { name: /^elimina$/i }).click();
+      await frame.locator("#rows tr", { hasText: "Codex QA c9a047e" }).waitFor({ state: "detached", timeout: 4000 });
+      await loadSrc();
+      await frame.getByRole("heading", { name: "Dashboard" }).waitFor({ timeout: 8000 });
+      await goInv();
+      assert.equal(await frame.locator("#rows tr", { hasText: "Codex QA c9a047e" }).count(), 0);
+      inv = (await frame.locator("#inv-summary").innerText()).replace(/\s+/g, " ");
+      assert.match(inv, /24 pezzi/);
+      assert.match(inv, /102 in stock/);
+      assert.match(inv, /3604/);
+      await frame.getByRole("button", { name: /nuovo pezzo/i }).click();
+      await frame.locator("#p-nome").fill("Keep A");
+      await frame.locator("#p-qty").fill("1");
+      await frame.locator("#p-prezzo").fill("10");
+      await frame.getByRole("button", { name: /^salva$/i }).click();
+      await frame.locator("#rows tr", { hasText: "Keep A" }).waitFor({ timeout: 4000 });
+      await frame.getByRole("button", { name: /nuovo pezzo/i }).click();
+      await frame.locator("#p-nome").fill("Keep B");
+      await frame.locator("#p-qty").fill("1");
+      await frame.locator("#p-prezzo").fill("10");
+      await frame.getByRole("button", { name: /^salva$/i }).click();
+      await frame.locator("#rows tr", { hasText: "Keep B" }).waitFor({ timeout: 4000 });
+      await loadSrc();
+      await frame.getByRole("heading", { name: "Dashboard" }).waitFor({ timeout: 8000 });
+      await goInv();
+      assert.equal(await frame.locator("#rows tr", { hasText: "Keep A" }).count(), 1);
+      assert.equal(await frame.locator("#rows tr", { hasText: "Keep B" }).count(), 1);
+      assert.equal(await frame.locator("#rows tr").count(), 26);
+      const syntax = errors.filter((e) => /missing \) after argument list|SyntaxError/i.test(e));
+      assert.equal(syntax.join(" | "), "", `srcdoc syntax ${syntax.join(" | ")}`);
       await page.close();
     } finally {
       await browser.close();

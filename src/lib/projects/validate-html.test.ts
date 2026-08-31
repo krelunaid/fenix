@@ -10,7 +10,7 @@ import {
   validateProductHtml,
   validatePublishable,
 } from "./validate-html.ts";
-import { fenixRuntimeScript, looksLikeSite, prepareSrcDoc, sanitizePreviewHtml } from "./color-scheme.ts";
+import { fenixRuntimeScript, looksLikeSite, prepareSrcDoc, sanitizePreviewHtml, escapeEmbeddedScriptEnds } from "./color-scheme.ts";
 import { DEMOS } from "./demos.ts";
 import { APP_SHELL_HTML } from "../ai/app-shell.ts";
 
@@ -103,6 +103,34 @@ describe("validatePublishable final srcdoc", () => {
     assert.doesNotMatch(runtime, /rel=\\"icon\\"/);
     const code = runtime.replace(/^<script[^>]*>/, "").replace(/<\/script>$/, "");
     assert.equal(checkScriptSyntax(code).ok, true, checkScriptSyntax(code).error);
+  });
+
+  it("escapes </script> inside JS strings so srcdoc does not SyntaxError", () => {
+    const poisoned = `<!DOCTYPE html><html lang="it"><head><meta charset="utf-8"/><title>X</title></head><body>
+<nav><button data-view="a">A</button><button data-view="b">B</button><button data-view="c">C</button></nav>
+<script>
+  var a = "<script>foo(</script>";
+  var b = "<script>bar(</script>";
+  var c = "<script>baz(</script>";
+  window.Fenix = { load: function(){ return Promise.resolve([]); }, save: function(){ return Promise.resolve(); } };
+  document.documentElement.setAttribute("data-fenix-ready","1");
+</script>
+</body></html>`;
+    const rawScripts = extractInlineScripts(poisoned);
+    assert.ok(rawScripts.some((s) => !checkScriptSyntax(s.code).ok), "fixture must split without escape");
+    const escaped = escapeEmbeddedScriptEnds(poisoned);
+    assert.match(escaped, /<\\\/script/);
+    const scripts = extractInlineScripts(escaped);
+    assert.ok(scripts.length >= 1);
+    for (const script of scripts) {
+      const syntax = checkScriptSyntax(script.code);
+      assert.equal(syntax.ok, true, syntax.error);
+    }
+    const src = prepareSrcDoc(poisoned, "#ffffff", "poison", "dashboard");
+    for (const script of extractInlineScripts(src)) {
+      const syntax = checkScriptSyntax(script.code);
+      assert.equal(syntax.ok, true, syntax.error);
+    }
   });
 
   it("does not publish when the final srcdoc is syntactically invalid", () => {
