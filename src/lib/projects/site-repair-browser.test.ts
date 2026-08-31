@@ -6,6 +6,7 @@ import { describe, it } from "node:test";
 import { chromium } from "playwright";
 import { requirePreview } from "./ensure-preview.ts";
 import { ensureFenixAdapter } from "./fenix-adapter.ts";
+import { DEFAULT_PALETTE } from "./types.ts";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const SITE = readFileSync(join(here, "fixtures/music-site-no-fenix.html"), "utf8");
@@ -190,6 +191,83 @@ describe("studio repair for a new site project", () => {
         return parsed.state?.creditsRemaining;
       });
       assert.equal(remaining, 46);
+    } finally {
+      await browser.close();
+    }
+  });
+
+  it("empty/error project walks SSE /api/build through adapter to a ready preview", async () => {
+    await requirePreview();
+    const browser = await chromium.launch({ headless: true });
+    try {
+      const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+      const adapted = ensureFenixAdapter(SITE);
+      const result = {
+        name: "Onda",
+        tagline: "Carica musica",
+        kind: "site",
+        summary: "Sito di caricamento musicale",
+        direction: "inchiostro",
+        palette: DEFAULT_PALETTE,
+        html: adapted,
+        files: [],
+      };
+      await page.route(/\/api\/build/, async (route) => {
+        const body =
+          `data: ${JSON.stringify({ t: "s", s: "Adatto Fenix" })}\n\n` +
+          `data: ${JSON.stringify({ t: "ok", result })}\n\n`;
+        await route.fulfill({
+          status: 200,
+          contentType: "text/event-stream; charset=utf-8",
+          body,
+        });
+      });
+      await page.route(/polish|\/__worker/, async (route) => {
+        await route.fulfill({ status: 500, body: "no-worker" });
+      });
+      await page.addInitScript(() => {
+        localStorage.setItem(
+          "officina-projects",
+          JSON.stringify({
+            state: {
+              projects: [
+                {
+                  id: "p-sse",
+                  name: "Nuovo studio",
+                  tagline: "",
+                  prompt: "mi crei un sito di caricamento musicale. kind=site",
+                  kind: "site",
+                  requestedKind: "site",
+                  summary: "",
+                  palette: {
+                    bg: "#120c1c",
+                    surface: "#1c1528",
+                    fg: "#f4efe8",
+                    muted: "#9b93c2",
+                    accent: "#e85d4c",
+                  },
+                  html: "",
+                  messages: [],
+                  buildLog: [],
+                  status: "error",
+                  error: "Il prodotto non è completo: Manca window.Fenix.load/save per i dati.",
+                  creditRefunded: true,
+                  createdAt: Date.now(),
+                  updatedAt: Date.now(),
+                },
+              ],
+              creditsRemaining: 46,
+            },
+            version: 2,
+          }),
+        );
+      });
+      await page.goto(`${PREVIEW}/studio/p-sse`, { waitUntil: "domcontentloaded", timeout: 20000 });
+      await page.getByRole("button", { name: "Riprova. Lo ricostruisco." }).first().click();
+      const frame = page.locator("section.hidden.md\\:block").frameLocator("iframe");
+      await frame.getByRole("heading", { name: "Onda" }).waitFor({ timeout: 25000 });
+      await page.getByText("Adatto Fenix").first().waitFor({ timeout: 8000 });
+      assert.equal(await page.getByText("L'anteprima apparirà qui").count(), 0);
     } finally {
       await browser.close();
     }

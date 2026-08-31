@@ -99,6 +99,9 @@ export function parseLsofListenPids(text) {
   return [...new Set(pids)];
 }
 
+/** Real macOS cmdline is `.../vite/bin/vite.js preview`, not `vite preview`. */
+export const VITE_PREVIEW_RE = /(?:^|[/\\\s])vite(?:\.js)?\s+preview(?:\s|$)/;
+
 export function looksLikePreviewProcess(cmdline) {
   // /proc/<pid>/cmdline is NUL-separated.
   const argv = String(cmdline ?? "")
@@ -112,7 +115,7 @@ export function looksLikePreviewProcess(cmdline) {
   return (
     /\brun\s+preview(?:\s|$)/.test(argv) ||
     /\b(?:npm|pnpm|yarn)\s+preview(?:\s|$)/.test(argv) ||
-    /\bvite\b\s+preview\b/.test(argv)
+    VITE_PREVIEW_RE.test(argv)
   );
 }
 
@@ -130,7 +133,13 @@ export function looksLikePreviewChild(cmdline) {
     .split("\0")
     .filter(Boolean)
     .join(" ");
-  return looksLikePreviewProcess(argv) && /\bvite\b/.test(argv);
+  return looksLikePreviewProcess(argv) && VITE_PREVIEW_RE.test(argv);
+}
+
+export function requirePreviewCmdline(env = process.env, proc = hasProcFs) {
+  if (env.FENIX_PREVIEW_REQUIRE_CMDLINE === "1") return true;
+  if (env.FENIX_PREVIEW_REQUIRE_CMDLINE === "0") return false;
+  return !proc();
 }
 
 /**
@@ -385,7 +394,7 @@ export function probePort(port = PREVIEW_PORT, host = "127.0.0.1", timeoutMs = 4
 }
 
 async function stop(announce = true) {
-  const requireCmdline = !hasProcFs();
+  const requireCmdline = requirePreviewCmdline();
   const scanned = portOwners();
   const owners = previewOwners({
     portPids: scanned.pids,

@@ -12,6 +12,7 @@ import {
   parsePreviewArgs,
   parsePsPgid,
   previewOwners,
+  requirePreviewCmdline,
   stopOutcome,
   terminatePids,
 } from "./preview.mjs";
@@ -105,6 +106,21 @@ test("looksLikePreviewProcess matches the npm wrapper and its vite child", () =>
   );
   // `ps -o command=` output is space-separated.
   assert.equal(looksLikePreviewProcess("node /ws/node_modules/.bin/vite preview"), true);
+});
+
+const MACOS_VITE_CHILD =
+  "node /private/tmp/fenix-verifyd3.72AwZb/repo/node_modules/.bin/../vite/bin/vite.js preview";
+const MACOS_VITE_LEADER =
+  "node /private/tmp/fenix-verifyd3.72AwZb/repo/scripts/with-app-env.mjs vite preview";
+
+test("looksLikePreviewProcess matches the real macOS vite.js preview cmdline", () => {
+  assert.equal(looksLikePreviewProcess(MACOS_VITE_CHILD), true);
+  assert.equal(looksLikePreviewChild(MACOS_VITE_CHILD), true);
+  assert.equal(looksLikePreviewLeader(MACOS_VITE_LEADER), true);
+  assert.equal(looksLikePreviewProcess(MACOS_VITE_LEADER), true);
+  assert.equal(looksLikePreviewProcess("node vite.config.js preview"), false);
+  assert.equal(looksLikePreviewChild("Google Chrome"), false);
+  assert.equal(looksLikePreviewChild("node /usr/bin/preview-tool --x"), false);
 });
 
 test("looksLikePreviewProcess spares the sibling scripts and re-used pids", () => {
@@ -347,7 +363,28 @@ test("looksLikePreviewLeader matches with-app-env and package-manager wrappers",
 test("looksLikePreviewChild matches the vite listener", () => {
   assert.equal(looksLikePreviewChild("node node_modules/.bin/vite preview"), true);
   assert.equal(looksLikePreviewChild("node scripts/with-app-env.mjs vite preview"), true);
+  assert.equal(looksLikePreviewChild(MACOS_VITE_CHILD), true);
   assert.equal(looksLikePreviewChild("Google Chrome"), false);
+});
+
+test("no-/proc cross-clone: macOS vite.js listener + preview leader, pidfile absent", () => {
+  const owners = previewOwners({
+    portPids: [32162],
+    pidFilePid: null,
+    requireCmdline: true,
+    cmdlineOf: (pid) => {
+      if (pid === 32162) return MACOS_VITE_CHILD;
+      if (pid === 32161) return MACOS_VITE_LEADER;
+      return "";
+    },
+    pgidOf: (pid) => (pid === 32162 || pid === 32161 ? 32161 : null),
+  });
+  assert.deepEqual([...owners].sort((a, b) => a - b), [32161, 32162]);
+});
+
+test("requirePreviewCmdline honors the macOS-forcing env flag", () => {
+  assert.equal(requirePreviewCmdline({ FENIX_PREVIEW_REQUIRE_CMDLINE: "1" }, () => true), true);
+  assert.equal(requirePreviewCmdline({ FENIX_PREVIEW_REQUIRE_CMDLINE: "0" }, () => false), false);
 });
 
 test("no-/proc cross-clone: listener child + preview leader, pidfile absent", () => {

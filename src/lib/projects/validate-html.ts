@@ -16,6 +16,18 @@ export type HtmlReport = {
   scriptErrors: ScriptSyntaxError[];
 };
 
+/** Both load and save, or a verified data-fenix-adapter that defines both. */
+export function htmlHasFenixApi(html: string): boolean {
+  const text = String(html || "");
+  const adapter = text.match(/<script\b[^>]*data-fenix-adapter\b[^>]*>([\s\S]*?)<\/script>/i);
+  if (adapter && /\bFenix\.load\b/.test(adapter[1]) && /\bFenix\.save\b/.test(adapter[1])) {
+    return true;
+  }
+  const load = /\bFenix\.load\b/.test(text) || /Fenix\s*=\s*\{[\s\S]{0,800}\bload\s*:/.test(text);
+  const save = /\bFenix\.save\b/.test(text) || /Fenix\s*=\s*\{[\s\S]{0,800}\bsave\s*:/.test(text);
+  return Boolean(load && save);
+}
+
 export function extractInlineScripts(html: string) {
   const scripts: { index: number; code: string; start: number }[] = [];
   const re = /<script\b([^>]*)>([\s\S]*?)<\/script>/gi;
@@ -124,7 +136,7 @@ export function validateProductHtml(
   const screens = (text.match(/<(?:template|section)[^>]+id=["']t-(home|new|list|stats|more)/gi) || []).length;
   const tabButtons = (text.match(/<(?:button|a)[^>]*data-view=/gi) || []).length;
   const sections = (text.match(/<section\b/gi) || []).length;
-  const hasFenix = /\bFenix\.(load|save)\b/.test(text) || /\bwindow\.Fenix\b/.test(text);
+  const hasFenix = htmlHasFenixApi(text);
 
   if (kind === "dashboard" && /\bfk-tab\b/.test(markup)) {
     errors.push("Un gestionale non usa la tabbar telefono.");

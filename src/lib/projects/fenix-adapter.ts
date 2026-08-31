@@ -1,4 +1,4 @@
-import { formatHtmlErrors, validateProductHtml, type HtmlReport } from "./validate-html.ts";
+import { formatHtmlErrors, htmlHasFenixApi, validateProductHtml, type HtmlReport } from "./validate-html.ts";
 import { kindFromPrompt } from "./infer.ts";
 import type { BuildResult } from "../ai/parse.ts";
 
@@ -24,10 +24,7 @@ export const FENIX_ADAPTER_SCRIPT = `<script data-fenix-adapter>
 })();
 </script>`;
 
-export function htmlHasFenixApi(html: string): boolean {
-  const text = String(html || "");
-  return /data-fenix-adapter/.test(text) || /\bFenix\.(load|save)\b/.test(text);
-}
+export { htmlHasFenixApi };
 
 export function ensureFenixAdapter(html: string): string {
   const text = String(html || "");

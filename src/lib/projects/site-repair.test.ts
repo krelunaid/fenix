@@ -38,6 +38,17 @@ describe("Fenix adapter + gate", () => {
     assert.ok(report.errors.some((e) => /Fenix\.load\/save/i.test(e)));
   });
 
+  it("rejects Fenix.load without save (and the reverse)", () => {
+    const onlyLoad = `${SITE}<script>window.Fenix.load("x")</script>`;
+    const onlySave = `${SITE}<script>window.Fenix.save("x", {})</script>`;
+    const onlyObj = `${SITE}<script>window.Fenix = {}</script>`;
+    assert.equal(htmlHasFenixApi(onlyLoad), false);
+    assert.equal(htmlHasFenixApi(onlySave), false);
+    assert.equal(htmlHasFenixApi(onlyObj), false);
+    assert.equal(validateProductHtml(onlyLoad, { kind: "site" }).ok, false);
+    assert.equal(validateProductHtml(onlySave, { kind: "site" }).ok, false);
+  });
+
   it("injects a bridge adapter and the site becomes complete", () => {
     const patched = ensureFenixAdapter(SITE);
     assert.match(patched, /data-fenix-adapter/);
