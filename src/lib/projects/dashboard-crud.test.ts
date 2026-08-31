@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, it } from "node:test";
 import { chromium } from "playwright";
 import { prepareSrcDoc } from "./color-scheme.ts";
-import { waitForFenixReady } from "../../../scripts/fenix-ready.mjs";
 import {
   looksLikeBeigeSaas,
   polishDashboardHtml,
@@ -13,6 +15,9 @@ import {
 import { recoverPersistedProject } from "./recover.ts";
 import { DEMOS } from "./demos.ts";
 import { validateProductHtml } from "./validate-html.ts";
+
+const here = dirname(fileURLToPath(import.meta.url));
+const ARGILLA = readFileSync(join(here, "fixtures/argilla-viva.html"), "utf8");
 
 const BROKEN = `<!DOCTYPE html><html lang="it"><head><meta charset="utf-8"/><title>Argilla Viva</title>
 <style>:root{--bg:#f5f5f7;--fg:#1d1d1f;--accent:#0071e3}body{font-family:Inter,system-ui,sans-serif;background:#f5f5f7}</style>
@@ -46,24 +51,19 @@ const BROKEN = `<!DOCTYPE html><html lang="it"><head><meta charset="utf-8"/><tit
 </main>
 <script>
   window.Fenix = { load: function(){ return Promise.resolve({items:[]}); }, save: function(){ return Promise.resolve(); } };
-  document.getElementById("m").querySelector("button[type=submit]");
-  document.querySelectorAll("[data-view]").forEach(function(b){
-    b.addEventListener("click", function(){ b.classList.add("on"); });
-  });
-  document.querySelector("button").addEventListener; /* Modifica opens, Annulla no */
-  document.querySelectorAll("button").forEach(function(b){
-    if (/modifica/i.test(b.textContent||"")) b.addEventListener("click", function(){ document.getElementById("m").showModal(); });
-  });
   document.documentElement.setAttribute("data-fenix-ready","1");
 </script>
 </body></html>`;
 
+
 describe("dashboard CRUD repair", () => {
   it("strips fake Studio copy", () => {
     const cleaned = stripFakeStudioCopy(
-      "Pronto. Argilla è in anteprima: 1 schermate (Fenix 2: Vite + React).",
+      "Pronto. Argilla Viva è in anteprima: 1 schermate (Fenix 2: Vite + React).",
     );
-    assert.doesNotMatch(cleaned, /Fenix 2|Vite \+ React|1 schermate/);
+    assert.doesNotMatch(cleaned, /Fenix 2|Vite \+ React|1 schermate|\(\)|:\s*\./);
+    const leftover = stripFakeStudioCopy("Argilla Viva è in anteprima: ().");
+    assert.equal(leftover, "Argilla Viva è in anteprima");
     const msgs = scrubTechMessages([
       { content: "Persistenza via ,", role: "assistant" },
       { content: "Ok. Inventario pronto.", role: "assistant" },
@@ -101,36 +101,65 @@ describe("dashboard CRUD repair", () => {
     assert.doesNotMatch(kiln, /data-fenix-crud/);
   });
 
-  it("click + Nuovo pezzo opens, Annulla closes, Salva adds a row", async () => {
-    const html = repairDashboardCrud(BROKEN);
-    const src = prepareSrcDoc(html, { bg: "#f3eadc", fg: "#2b211c", accent: "#b85c38" }, "argilla", "dashboard");
+  it("Salva on real Argilla HTML adds a row, survives reload, edit and delete", async () => {
+    const withV1 = ARGILLA.replace(
+      "</body>",
+      `<script data-fenix-crud>window.__fenixCrud=1;</script></body>`,
+    );
+    const html = repairDashboardCrud(withV1);
+    assert.match(html, /data-fenix-crud="2"/);
+    assert.equal((html.match(/data-fenix-crud/g) || []).length, 1);
+    const src = prepareSrcDoc(
+      html,
+      { bg: "#f3eadc", fg: "#2b211c", accent: "#b85c38" },
+      "argilla-viva",
+      "dashboard",
+    );
     const browser = await chromium.launch({ headless: true });
     try {
       const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
-      await page.setContent(src, { waitUntil: "domcontentloaded", timeout: 15000 });
-      await waitForFenixReady(page, 8000);
-      const rows0 = await page.locator("table tbody tr").count();
-      await page.getByRole("button", { name: /nuovo pezzo/i }).click();
-      const opened = await page.evaluate(() => {
-        const d = document.querySelector("dialog, [role=dialog], .modal");
-        if (!d) return false;
-        const cs = getComputedStyle(d);
-        return d.hasAttribute("open") || cs.display !== "none";
-      });
-      assert.equal(opened, true, "+ Nuovo pezzo did not open a form");
-      await page.getByRole("button", { name: /^annulla$/i }).click();
-      const closed = await page.evaluate(() => {
-        const d = document.querySelector("dialog, [role=dialog], .modal");
-        if (!d) return false;
-        return !(d as HTMLElement).hasAttribute("open") || (d as HTMLElement).hidden === true || getComputedStyle(d).display === "none";
-      });
-      assert.equal(closed, true, "Annulla did not close");
-      await page.getByRole("button", { name: /nuovo pezzo/i }).click();
-      await page.locator("dialog input, [role=dialog] input, .modal input").first().fill("Anfora");
-      await page.getByRole("button", { name: /^salva$/i }).click();
-      const rows1 = await page.locator("table tbody tr").count();
+      await page.setContent(`<!DOCTYPE html><html><body>
+<iframe id="f" style="width:1280px;height:800px;border:0"></iframe>
+<script>
+  window.__db = {};
+  window.addEventListener("message", function (e) {
+    var m = e.data;
+    if (!m || m.t !== "fenix-db" || !m.id) return;
+    if (m.op === "save") window.__db[m.col] = m.data;
+    var v = m.op === "load" ? (window.__db[m.col] || null) : m.data;
+    e.source.postMessage({ t: "fenix-db", id: m.id, v: v }, "*");
+  });
+</script>
+</body></html>`);
+      const loadSrc = async () => {
+        await page.locator("#f").evaluate((el, srcDoc: string) => {
+          (el as HTMLIFrameElement).srcdoc = srcDoc;
+        }, src);
+      };
+      await loadSrc();
+      const frame = page.frameLocator("#f");
+      await frame.getByRole("heading", { name: "Inventario" }).waitFor({ timeout: 8000 });
+      await frame.getByRole("button", { name: /inventario/i }).click();
+      const rows0 = await frame.locator("table tbody tr").count();
+      await frame.getByRole("button", { name: /nuovo pezzo/i }).click();
+      await frame.locator("#p-nome").waitFor({ timeout: 3000 });
+      await frame.getByRole("button", { name: /^annulla$/i }).click();
+      await frame.getByRole("button", { name: /nuovo pezzo/i }).click();
+      await frame.locator("#p-nome").fill("Codex Prova 2");
+      await frame.locator("#p-qty").fill("2");
+      await frame.locator("#p-prezzo").fill("17");
+      await frame.getByRole("button", { name: /^salva$/i }).click();
+      await frame.getByRole("cell", { name: "Codex Prova 2" }).waitFor({ timeout: 4000 });
+      const rows1 = await frame.locator("table tbody tr").count();
       assert.ok(rows1 > rows0, `Salva did not add a row (${rows0} → ${rows1})`);
-      assert.ok(await page.getByText("Anfora").count());
+      await loadSrc();
+      await frame.getByRole("cell", { name: "Codex Prova 2" }).waitFor({ timeout: 5000 });
+      await frame.locator("tr", { hasText: "Codex Prova 2" }).getByRole("button", { name: /^modifica$/i }).click();
+      await frame.locator("#p-nome").fill("Codex Prova 2b");
+      await frame.getByRole("button", { name: /^salva$/i }).click();
+      await frame.getByRole("cell", { name: "Codex Prova 2b" }).waitFor({ timeout: 4000 });
+      await frame.locator("tr", { hasText: "Codex Prova 2b" }).getByRole("button", { name: /^elimina$/i }).click();
+      assert.equal(await frame.getByRole("cell", { name: "Codex Prova 2b" }).count(), 0);
       await page.close();
     } finally {
       await browser.close();

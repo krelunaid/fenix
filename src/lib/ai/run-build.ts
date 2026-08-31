@@ -33,10 +33,12 @@ function readyCopy(result: BuildResult) {
     .replace(/Fenix 2:\s*Vite \+ React/gi, "")
     .replace(/Persistenza via\s*,?/gi, "")
     .replace(/\d+ schermate/gi, "")
+    .replace(/\(\s*\)\.?/g, "")
     .trim();
+  const useful = summary && !/^[\s.:()]+$/.test(summary) ? summary : "";
   return [
     `Pronto. ${result.name} è in anteprima e si usa.`,
-    summary,
+    useful,
     "Tocca un suggerimento sotto, o scrivi cosa cambiare.",
   ]
     .filter(Boolean)

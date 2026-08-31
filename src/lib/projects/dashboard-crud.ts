@@ -1,3 +1,6 @@
+import { DASHBOARD_CRUD_SCRIPT } from "./fenix-crud-runtime.ts";
+export { DASHBOARD_CRUD_SCRIPT };
+
 /** Repair gestionali: modal Nuovo/Annulla/Salva + pelle terracotta/cobalto/avorio. */
 
 export const ARGILLA_PALETTE = {
@@ -15,8 +18,11 @@ const FAKE_COPY =
 export function stripFakeStudioCopy(text: string): string {
   return String(text || "")
     .replace(FAKE_COPY, "")
+    .replace(/\(\s*\)\.?/g, "")
+    .replace(/:\s*\.?\s*$/g, "")
     .replace(/\s{2,}/g, " ")
     .replace(/\s+\./g, ".")
+    .replace(/\s+:/g, ":")
     .trim();
 }
 
@@ -35,143 +41,6 @@ export function looksLikeBeigeSaas(html: string): boolean {
   return (beige && generic) || (beige && fewMarks && /nuovo pezzo|inventario/i.test(h));
 }
 
-export const DASHBOARD_CRUD_SCRIPT = `<script data-fenix-crud>
-(function(){
-  if (window.__fenixCrud) return;
-  window.__fenixCrud = 1;
-  function qsa(s, r){ return Array.prototype.slice.call((r || document).querySelectorAll(s)); }
-  function qs(s, r){ return (r || document).querySelector(s); }
-  function txt(el){ return ((el && (el.textContent || el.getAttribute && el.getAttribute("aria-label"))) || "").replace(/\\s+/g, " ").trim(); }
-  function isNew(el){
-    var t = txt(el).toLowerCase();
-    return /^(?:\\+|\\+\\s*)?(nuovo|aggiungi|crea)\\b|nuovo pezzo|add item/.test(t);
-  }
-  function isCancel(el){
-    var t = txt(el).toLowerCase();
-    return /^(annulla|cancel|chiudi|close|×|x)$/.test(t) || t === "×";
-  }
-  function isEdit(el){
-    var t = txt(el).toLowerCase();
-    return /^(modifica|edit|apri)$/.test(t);
-  }
-  function isDel(el){
-    var t = txt(el).toLowerCase();
-    return /^(elimina|rimuovi|delete|cancella)$/.test(t);
-  }
-  var dlg = qs("dialog") || qs("[role=dialog]") || qs(".modal, .drawer, .sheet, #modal");
-  if (!dlg) {
-    dlg = document.createElement("dialog");
-    dlg.id = "fenix-sheet";
-    dlg.innerHTML = '<form method="dialog" id="fenix-crud-form"><h2>Nuovo</h2><label>Nome</label><input name="nome" required placeholder="Nome"/><label>Quantità</label><input name="qty" placeholder="1"/><div class="fenix-actions"><button type="button" data-fenix="cancel">Annulla</button><button type="submit">Salva</button></div></form>';
-    document.body.appendChild(dlg);
-  }
-  function openDlg(){
-    dlg.hidden = false;
-    dlg.removeAttribute("hidden");
-    dlg.classList.add("open", "show", "is-open", "active");
-    dlg.setAttribute("open", "");
-    dlg.style.display = "block";
-    if (typeof dlg.showModal === "function") { try { dlg.showModal(); } catch (e) {} }
-    var first = dlg.querySelector("input, textarea, select");
-    if (first && first.focus) first.focus();
-  }
-  function closeDlg(){
-    if (typeof dlg.close === "function") { try { dlg.close(); } catch (e) {} }
-    dlg.removeAttribute("open");
-    dlg.hidden = true;
-    dlg.setAttribute("hidden", "");
-    dlg.classList.remove("open", "show", "is-open", "active");
-    dlg.style.display = "none";
-  }
-  function table(){ return qs("table tbody") || qs("table") || qs("[data-list]"); }
-  function persist(rows){
-    if (!window.Fenix || !window.Fenix.save) return;
-    window.Fenix.save("state", { rows: rows });
-    window.Fenix.save("items", rows);
-  }
-  function readRows(){
-    var tb = qs("table tbody");
-    if (!tb) return [];
-    return qsa("tr", tb).map(function(tr){
-      return qsa("td", tr).map(function(td){ return (td.textContent || "").trim(); });
-    }).filter(function(r){ return r.some(Boolean); });
-  }
-  function addRow(data){
-    var tb = qs("table tbody");
-    if (!tb) return;
-    var tr = document.createElement("tr");
-    var vals = [data.nome || data.name || data.n || "Pezzo", data.qty || data.quantita || "1", data.stato || "in laboratorio"];
-    tr.innerHTML = vals.map(function(v){ return "<td>"+String(v).replace(/</g,"")+"</td>"; }).join("") +
-      '<td><button type="button">Modifica</button> <button type="button">Elimina</button></td>';
-    tb.insertBefore(tr, tb.firstChild);
-    persist(readRows());
-  }
-  document.addEventListener("click", function(e){
-    var t = e.target && e.target.closest ? e.target.closest("button, a, [role=button]") : null;
-    if (!t) return;
-    if (t.getAttribute && t.getAttribute("data-view")) return;
-    if (isNew(t)) {
-      e.preventDefault();
-      e.stopPropagation();
-      openDlg();
-      return;
-    }
-    if (isCancel(t) || t.getAttribute("data-fenix") === "cancel") {
-      e.preventDefault();
-      e.stopPropagation();
-      closeDlg();
-      return;
-    }
-    if (isDel(t)) {
-      var row = t.closest("tr");
-      if (row) { row.parentNode.removeChild(row); persist(readRows()); }
-      return;
-    }
-    if (isEdit(t)) {
-      e.preventDefault();
-      openDlg();
-      var row = t.closest("tr");
-      var cells = row ? qsa("td", row) : [];
-      var nome = dlg.querySelector("[name=nome], input");
-      if (nome && cells[0]) nome.value = cells[0].textContent.trim();
-      return;
-    }
-    if ((t.getAttribute("type") === "submit" || /^salva$/i.test(txt(t).toLowerCase())) && (dlg.contains(t) || t.closest("dialog, [role=dialog], .modal"))) {
-      e.preventDefault();
-      e.stopPropagation();
-      var f = t.closest("form") || qs("form", dlg);
-      var data = {};
-      if (f) {
-        try { new FormData(f).forEach(function(v,k){ if(String(v).trim()) data[k]=String(v).trim(); }); } catch (err) {}
-        if (!data.nome) {
-          var inp = f.querySelector("input");
-          if (inp && inp.value) data.nome = String(inp.value).trim();
-        }
-      }
-      if (!data.nome) return;
-      addRow(data);
-      if (f) try { f.reset(); } catch (err) {}
-      closeDlg();
-    }
-  }, true);
-  document.addEventListener("submit", function(e){
-    var f = e.target;
-    if (!f || !dlg.contains(f) && f.id !== "fenix-crud-form") return;
-    e.preventDefault();
-    var data = {};
-    try { new FormData(f).forEach(function(v,k){ if(String(v).trim()) data[k]=String(v).trim(); }); } catch (err) {}
-    if (!data.nome) {
-      var inp = f.querySelector("input");
-      if (inp && inp.value) data.nome = String(inp.value).trim();
-    }
-    if (!data.nome) return;
-    addRow(data);
-    try { f.reset(); } catch (err) {}
-    closeDlg();
-  }, true);
-})();
-</script>`;
-
 export function shouldRepairDashboard(html: string, kind?: string): boolean {
   if (kind && kind !== "dashboard") return false;
   if (!html) return false;
@@ -187,7 +56,7 @@ export function hasDashboardCrud(html: string): boolean {
 export function repairDashboardCrud(html: string): string {
   if (!html) return html;
   let next = html.replace(FAKE_COPY, "");
-  if (hasDashboardCrud(next)) return next;
+  next = next.replace(/<script[^>]*data-fenix-crud[^>]*>[\s\S]*?<\/script>/gi, "");
   if (/<\/body>/i.test(next)) return next.replace(/<\/body>/i, `${DASHBOARD_CRUD_SCRIPT}</body>`);
   return next + DASHBOARD_CRUD_SCRIPT;
 }

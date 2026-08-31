@@ -285,6 +285,7 @@ export function fenixRuntimeScript(projectId: string) {
     save: function(col, data){ fallbackSave(col, data); return call("save", col, data); },
     ready: function(){ document.documentElement.setAttribute("data-fenix-ready","1"); }
   };
+  window.__fenixHost = window.Fenix;
   function audit(){
     try {
       var tabs = document.querySelectorAll("[data-view], [data-tab], .tabbar button, nav.tabs button, .tabs button, nav[aria-label] button").length;
@@ -404,6 +405,7 @@ export function fenixRuntimeScript(projectId: string) {
     chip.classList.add("on");
   }, true);
   document.addEventListener("submit", function(e){
+    if (window.__fenixCrud) return;
     e.preventDefault();
     e.stopPropagation();
     var f = e.target;
@@ -494,7 +496,8 @@ export function prepareSrcDoc(
       ? next.replace(/<head[^>]*>/i, (open) => `${open}${kit}`)
       : `${kit}${next}`;
   }
-  if (shouldRepairDashboard(next, kind) && !/data-fenix-crud/.test(next)) {
+  if (shouldRepairDashboard(next, kind) && !/data-fenix-crud="2"/.test(next)) {
+    next = next.replace(/<script[^>]*data-fenix-crud[^>]*>[\s\S]*?<\/script>/gi, "");
     next = /<\/body>/i.test(next)
       ? next.replace(/<\/body>/i, `${DASHBOARD_CRUD_SCRIPT}</body>`)
       : `${next}${DASHBOARD_CRUD_SCRIPT}`;
