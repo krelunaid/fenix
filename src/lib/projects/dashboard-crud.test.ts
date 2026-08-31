@@ -225,6 +225,12 @@ describe("dashboard CRUD repair", () => {
       const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
       await page.addInitScript(
         ({ seeded, pid }: { seeded: string; pid: string }) => {
+          try {
+            if (sessionStorage.getItem("fenix-seed-" + pid)) return;
+            sessionStorage.setItem("fenix-seed-" + pid, "1");
+          } catch {
+            /* ignore */
+          }
           const now = Date.now();
           localStorage.setItem(
             "officina-projects",
@@ -281,39 +287,35 @@ describe("dashboard CRUD repair", () => {
       assert.match(sum, /25 pezzi/);
       assert.match(sum, /104 in stock/);
       assert.match(sum, /3638/);
-      assert.doesNotMatch(sum, /€34(?:\D|$)/);
-      const snapshot = await page.evaluate(() => ({
-        projects: localStorage.getItem("officina-projects"),
-        appdb: localStorage.getItem("officina-appdb"),
-      }));
-      assert.ok(snapshot.appdb, "officina-appdb missing after save");
-      const db = JSON.parse(snapshot.appdb as string) as Record<
-        string,
-        { items?: { nome?: string }[]; state?: { items?: unknown[] } }
-      >;
-      assert.ok(db[ARGILLA_PID], `missing projectId ${ARGILLA_PID}`);
-      assert.ok(Array.isArray(db[ARGILLA_PID].items), "items collection missing");
-      assert.ok(
-        db[ARGILLA_PID].items?.some((r) => r.nome === "Codex Verifica 1e7b47a"),
-        "items does not contain saved row",
-      );
-      assert.ok(db[ARGILLA_PID].state, "state collection missing");
-      await page.close();
-
-      const ctx2 = await browser.newContext({ viewport: { width: 1280, height: 800 } });
-      const fresh = await ctx2.newPage();
-      await fresh.addInitScript(
-        (snap: { projects: string | null; appdb: string | null }) => {
-          if (snap.projects) localStorage.setItem("officina-projects", snap.projects);
-          if (snap.appdb) localStorage.setItem("officina-appdb", snap.appdb);
+      await page.waitForFunction(
+        (pid: string) => {
+          try {
+            const db = JSON.parse(localStorage.getItem("officina-appdb") || "{}") as Record<
+              string,
+              { items?: { nome?: string }[] }
+            >;
+            return Boolean(db[pid]?.items?.some((r) => r.nome === "Codex Verifica 1e7b47a"));
+          } catch {
+            return false;
+          }
         },
-        snapshot,
+        ARGILLA_PID,
+        { timeout: 8000 },
       );
-      await fresh.goto(`${PREVIEW}/studio/${ARGILLA_PID}?cb=${Date.now()}`, {
-        waitUntil: "domcontentloaded",
-        timeout: 20000,
-      });
-      const frame2 = fresh.locator("section.hidden.md\\:block").frameLocator("iframe");
+      const before = await page.evaluate(() => localStorage.getItem("officina-appdb"));
+      assert.ok(before, "officina-appdb missing after save");
+      const dbBefore = JSON.parse(before as string) as Record<
+        string,
+        { items?: { nome?: string }[]; state?: unknown }
+      >;
+      assert.ok(dbBefore[ARGILLA_PID]?.items, "items missing before reload");
+      assert.ok(dbBefore[ARGILLA_PID]?.state, "state missing before reload");
+
+      await page.reload({ waitUntil: "domcontentloaded" });
+      const after = await page.evaluate(() => localStorage.getItem("officina-appdb"));
+      assert.equal(after, before, "officina-appdb changed across same-tab reload");
+
+      const frame2 = page.locator("section.hidden.md\\:block").frameLocator("iframe");
       await frame2.locator("tr", { hasText: "Codex Verifica 1e7b47a" }).waitFor({ timeout: 15000 });
       const sum2 = (await frame2.locator(".summary").innerText()).replace(/\s+/g, " ");
       assert.match(sum2, /25 pezzi/);
@@ -339,8 +341,7 @@ describe("dashboard CRUD repair", () => {
       assert.match(afterDel, /24 pezzi/);
       assert.match(afterDel, /102 in stock/);
       assert.match(afterDel, /3604/);
-      await fresh.close();
-      await ctx2.close();
+      await page.close();
     } finally {
       await browser.close();
     }

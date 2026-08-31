@@ -250,6 +250,16 @@ export function fenixRuntimeScript(projectId: string) {
     try { localStorage.setItem(localKey(col), JSON.stringify(data)); } catch(e){}
     return data;
   }
+  function emptyVal(v){
+    if (v == null || v === "") return true;
+    if (Array.isArray(v)) return v.length === 0;
+    return false;
+  }
+  function pickLoad(v, col){
+    var local = fallbackLoad(col);
+    if (emptyVal(v) && !emptyVal(local)) return local;
+    return emptyVal(v) ? local : v;
+  }
   function call(op, col, data){
     if (!window.parent || window.parent === window) {
       return Promise.resolve(op === "load" ? fallbackLoad(col) : fallbackSave(col, data));
@@ -261,7 +271,7 @@ export function fenixRuntimeScript(projectId: string) {
         if (done) return;
         done = true;
         window.removeEventListener("message", on);
-        resolve(v);
+        resolve(op === "load" ? pickLoad(v, col) : v);
       }
       function on(e){
         var m = e.data;
@@ -490,7 +500,10 @@ export function prepareSrcDoc(
       ? next.replace(/<head[^>]*>/i, (open) => `${open}${meta}`)
       : `${meta}${next}`;
   }
-  if (!/data-fenix-runtime/.test(next)) {
+  if (/data-fenix-runtime/.test(next)) {
+    next = next.replace(/<script[^>]*data-fenix-runtime[^>]*>[\s\S]*?<\/script>/gi, "");
+  }
+  {
     const runtime = fenixRuntimeScript(projectId);
     next = /<head[^>]*>/i.test(next)
       ? next.replace(/<head[^>]*>/i, (open) => `${open}${runtime}`)

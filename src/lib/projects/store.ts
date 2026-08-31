@@ -41,6 +41,27 @@ function writeDiskAppDb(db: Record<string, Record<string, unknown>>) {
   }
 }
 
+function isEmptyVal(v: unknown): boolean {
+  if (v == null || v === "") return true;
+  if (Array.isArray(v)) return v.length === 0;
+  return false;
+}
+
+function loadCollection(
+  projectId: string,
+  collection: string,
+  appDb: Record<string, Record<string, unknown>>,
+  projects: Project[],
+): unknown {
+  const diskVal = readDiskAppDb()[projectId]?.[collection];
+  if (!isEmptyVal(diskVal)) return diskVal;
+  const mem = appDb[projectId]?.[collection];
+  if (!isEmptyVal(mem)) return mem;
+  const embedded = projects.find((p) => p.id === projectId)?.appData?.[collection];
+  if (!isEmptyVal(embedded)) return embedded;
+  return diskVal ?? mem ?? embedded ?? null;
+}
+
 type NewProjectInput = {
   prompt: string;
   demoId?: string;
@@ -121,9 +142,7 @@ export const useProjectStore = create<ProjectStore>()(
         }));
       },
       loadAppData: (projectId, collection) => {
-        const diskVal = readDiskAppDb()[projectId]?.[collection];
-        if (diskVal != null) return diskVal;
-        return get().appDb[projectId]?.[collection] ?? null;
+        return loadCollection(projectId, collection, get().appDb, get().projects);
       },
       saveAppData: (projectId, collection, data) => {
         const disk = readDiskAppDb();
@@ -137,6 +156,15 @@ export const useProjectStore = create<ProjectStore>()(
               [collection]: data,
             },
           },
+          projects: s.projects.map((p) =>
+            p.id === projectId
+              ? {
+                  ...p,
+                  appData: { ...(p.appData ?? {}), [collection]: data },
+                  updatedAt: Date.now(),
+                }
+              : p,
+          ),
         }));
       },
       createFromBrief: ({ prompt, kind }) => {
@@ -250,8 +278,13 @@ export const useProjectStore = create<ProjectStore>()(
           if (!state.appDb) state.appDb = {};
           const disk = readDiskAppDb();
           const merged: Record<string, Record<string, unknown>> = { ...state.appDb };
-          for (const [pid, cols] of Object.entries({ ...disk, ...state.appDb })) {
-            merged[pid] = { ...(state.appDb[pid] ?? {}), ...(disk[pid] ?? {}) };
+          for (const p of state.projects) {
+            if (p.appData) {
+              merged[p.id] = { ...(merged[p.id] ?? {}), ...p.appData };
+            }
+          }
+          for (const [pid, cols] of Object.entries({ ...disk, ...merged })) {
+            merged[pid] = { ...(merged[pid] ?? {}), ...(disk[pid] ?? {}) };
           }
           state.appDb = merged;
         }

@@ -44,6 +44,8 @@ export type Project = {
   visualJobId?: string;
   visualJobStatus?: "run" | "ok" | "err";
   visualJobStartedAt?: number;
+  /** Fenix.load/save collections. Persisted with the project so reload keeps rows. */
+  appData?: Record<string, unknown>;
 };
 
 export const DEFAULT_PALETTE: Palette = {
