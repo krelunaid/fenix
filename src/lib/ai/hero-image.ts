@@ -1,4 +1,5 @@
 const XAI_IMAGES = "https://api.x.ai/v1/images/generations";
+const HERO_MAX_BYTES = 900_000;
 
 export async function generateHeroUrl(
   apiKey: string,
@@ -31,13 +32,39 @@ function isPhoneApp(html: string) {
   return /fk-tab|data-view=["']home["']/i.test(html);
 }
 
+export function isHeroSrc(url: string) {
+  return (
+    /^https:\/\//i.test(url) ||
+    /^data:image\/(jpeg|jpg|png|webp|gif|avif)/i.test(url)
+  );
+}
+
+/** Fetch a remote Imagine/CDN URL into a durable data URL. 404/non-image → null. */
+export async function materializeHero(url: string, signal?: AbortSignal): Promise<string | null> {
+  const src = String(url || "").trim();
+  if (!src) return null;
+  if (/^data:image\/(jpeg|jpg|png|webp|gif|avif)/i.test(src)) return src;
+  if (!/^https:\/\//i.test(src)) return null;
+  try {
+    const res = await fetch(src, { signal, redirect: "follow" });
+    if (!res.ok) return null;
+    const type = (res.headers.get("content-type") || "").split(";")[0].trim().toLowerCase();
+    if (!/^image\/(jpeg|jpg|png|webp|gif|avif)$/.test(type)) return null;
+    const buf = Buffer.from(await res.arrayBuffer());
+    if (!buf.length || buf.length > HERO_MAX_BYTES) return null;
+    return `data:${type};base64,${buf.toString("base64")}`;
+  } catch {
+    return null;
+  }
+}
+
 export function injectHero(html: string, url: string) {
-  if (!html || !url || !/^https:\/\//i.test(url)) return html;
+  if (!html || !url || !isHeroSrc(url) || /["<>]/.test(url)) return html;
   let next = html.replace(/^\s*"\s*\/>/m, "").replace(/>\s*"\s*\/>/g, ">");
   const phone = isPhoneApp(next);
   const img = phone
-    ? `<img class="fk-hero" src="${url}" alt="" width="400" height="400" style="width:100%;height:140px;object-fit:cover;border-radius:20px;display:block;margin:8px 0 12px"/>`
-    : `<img class="fk-hero" src="${url}" alt="" width="1200" height="675" style="width:100%;height:220px;object-fit:cover;border-radius:18px;display:block;margin:0 0 16px"/>`;
+    ? `<img class="fk-hero" src="${url}" alt="" width="400" height="400" style="width:100%;height:140px;object-fit:cover;border-radius:20px;display:block;margin:8px 0 12px" onerror="this.removeAttribute('src')"/>`
+    : `<img class="fk-hero" src="${url}" alt="" width="1200" height="675" style="width:100%;height:220px;object-fit:cover;border-radius:18px;display:block;margin:0 0 16px" onerror="this.removeAttribute('src')"/>`;
   if (/class=["'][^"']*fk-hero/.test(next)) {
     return next.replace(/<img[^>]*fk-hero[^>]*>/i, img);
   }

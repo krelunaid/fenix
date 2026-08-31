@@ -607,6 +607,8 @@ describe("iframe boot error on null innerHTML", () => {
       const frame = page.frameLocator("#f");
       assert.equal(await frame.locator("html").getAttribute("data-fenix-boot-error"), null);
       assert.equal(await frame.locator("html").getAttribute("data-fenix-boot-ok"), "1");
+      await frame.locator("[data-fenix-img='broken']").waitFor({ state: "attached", timeout: 5000 });
+      assert.equal(await frame.locator("img[src='https://example.invalid/hero.jpg']").count(), 0);
     } finally {
       await browser.close();
     }

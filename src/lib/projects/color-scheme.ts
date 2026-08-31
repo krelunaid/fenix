@@ -258,7 +258,16 @@ export function fenixRuntimeScript(projectId: string) {
     return true;
   };
   window.addEventListener("error", function(ev){
-    if (ev && ev.target && ev.target !== window && ev.target.nodeType === 1) return;
+    if (ev && ev.target && ev.target !== window && ev.target.nodeType === 1) {
+      var node = ev.target;
+      if (node.tagName === "IMG") {
+        try {
+          node.setAttribute("data-fenix-img", "broken");
+          node.removeAttribute("src");
+        } catch (e) {}
+      }
+      return;
+    }
     var err = ev && ev.error;
     var msg = err && err.message ? String(err.message) : String((ev && ev.message) || "");
     if (!msg || /^error$/i.test(msg.trim())) return;

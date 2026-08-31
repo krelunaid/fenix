@@ -118,6 +118,7 @@ describe("focus-visible and worker model", () => {
     assert.match(scheme, /fenix-boot-error/);
     assert.match(scheme, /fenix-boot-ok/);
     assert.match(scheme, /ev\.target !== window/);
+    assert.match(scheme, /data-fenix-img/);
     assert.match(scheme, /unhandledrejection/);
     assert.match(scheme, /data-fenix-boot-error/);
     assert.match(scheme, /data-fenix-boot-ok/);
@@ -135,6 +136,12 @@ describe("focus-visible and worker model", () => {
     assert.match(runBuild, /repairBootFailures/);
     assert.match(runBuild, /waitPreviewBoot/);
     assert.match(runBuild, /getPreviewBootOk/);
+    const buildApi = readFileSync(join(root, "src/routes/api/build.ts"), "utf8");
+    assert.match(buildApi, /materializeHero/);
+    const hero = readFileSync(join(root, "src/lib/ai/hero-image.ts"), "utf8");
+    assert.match(hero, /export async function materializeHero/);
+    assert.match(hero, /data:image/);
+    assert.match(hero, /this.removeAttribute\('src'\)/);
     assert.doesNotMatch(runBuild, /Pronto\. \$\{result\.name\} è in anteprima/);
     const resume = runBuild.slice(
       runBuild.indexOf("export async function resumePolish"),
