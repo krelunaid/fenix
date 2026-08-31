@@ -129,4 +129,44 @@ main { flex: 1; overflow: auto; padding: 1rem; }
     assert.doesNotMatch(recovered.html, /fk-appicon/);
     assert.equal(recovered.status, "ready");
   });
+
+  it("does not eat JS that queries .bottom-tab button", () => {
+    const site = `<!DOCTYPE html><html><head><style>
+html, body { height: 100dvh; margin: 0; display: flex; flex-direction: column; }
+.bottom-tab { display: flex; }
+</style></head><body>
+<header><nav><a href="#bottega">Bottega</a></nav></header>
+<main>
+<section id="home"><h1>A</h1></section>
+<section id="bottega"><h2>B</h2></section>
+<section id="lavori"><h2>C</h2></section>
+<section id="visita"><h2>D</h2></section>
+</main>
+<nav class="bottom-tab"><button data-section="home">Home</button></nav>
+<script>
+window.Fenix={load:function(){return Promise.resolve([])},save:function(){return Promise.resolve()}};
+document.querySelectorAll('.bottom-tab button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const section = document.getElementById(btn.dataset.section);
+    if (section) section.scrollIntoView();
+  });
+});
+</script>
+</body></html>`;
+    const next = stripPhoneChromeFromSite(site);
+    assert.doesNotMatch(next, /<nav class="bottom-tab"/);
+    assert.match(next, /querySelectorAll\('\.bottom-tab button'\)/);
+    assert.match(next, /scrollIntoView/);
+    const recovered = recoverPersistedProject({
+      id: "site-js",
+      status: "ready",
+      html: site,
+      kind: "site",
+      requestedKind: "site",
+      prompt: "FORMATO: sito web. kind=site.",
+      updatedAt: Date.now(),
+    });
+    assert.equal(recovered.status, "ready");
+    assert.doesNotMatch(recovered.html, /<nav class="bottom-tab"/);
+  });
 });

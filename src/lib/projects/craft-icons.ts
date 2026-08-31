@@ -120,7 +120,7 @@ export function stripPhoneChromeFromSite(html: string): string {
   next = next.replace(/<nav[^>]*class=["'][^"']*bottom-tab[^"']*["'][^>]*>[\s\S]*?<\/nav>/gi, "");
   next = next.replace(/<nav[^>]*class=["'][^"']*fk-tab[^"']*["'][^>]*>[\s\S]*?<\/nav>/gi, "");
   next = next.replace(/<span[^>]*class=["'][^"']*fk-appicon[^"']*["'][^>]*>[\s\S]*?<\/span>/gi, "");
-  next = next.replace(/\.bottom-tab[^{]*\{[^}]*\}/g, "");
+  next = next.replace(/\.bottom-tab\s*\{[^}]*\}/g, "");
   next = next.replace(/html,\s*body\s*\{([^}]*)\}/i, (_m, body: string) => {
     const cleaned = String(body)
       .replace(/height:\s*100dvh\s*;?/i, "")
