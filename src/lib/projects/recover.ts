@@ -11,6 +11,7 @@ import {
 } from "./visual-job.ts";
 import { polishDashboardHtml, shouldRepairDashboard } from "./dashboard-crud.ts";
 import { replaceAppleTabIcons, rewriteIosWidgetHome, stripPhoneChromeFromSite, ensureMainElementId } from "./craft-icons.ts";
+import { repairLeakedCss } from "./color-scheme.ts";
 
 export const STALE_BUILD_MS = 120_000;
 export const RESUME_ERROR = "Rifinitura interrotta. Tocca Riprendi rifinitura.";
@@ -54,14 +55,16 @@ export function recoverPersistedProject<T extends Recoverable>(p: T, now = Date.
   // Never rewrite building/error HTML: overlay and Riprendi must see the persisted fixture.
   let html = p.html;
   if (p.status === "ready" && p.html) {
-    html = ensureMainElementId(
-      isPhoneKind(kind)
-        ? rewriteIosWidgetHome(replaceAppleTabIcons(p.html))
-        : shouldRepairDashboard(p.html, kind)
-          ? polishDashboardHtml(p.html, kind)
-          : kind === "site" || kind === "landing"
-            ? stripPhoneChromeFromSite(p.html)
-            : p.html,
+    html = repairLeakedCss(
+      ensureMainElementId(
+        isPhoneKind(kind)
+          ? rewriteIosWidgetHome(replaceAppleTabIcons(p.html))
+          : shouldRepairDashboard(p.html, kind)
+            ? polishDashboardHtml(p.html, kind)
+            : kind === "site" || kind === "landing"
+              ? stripPhoneChromeFromSite(p.html)
+              : p.html,
+      ),
     );
   }
   const jobLive = hasActiveVisualJob(p, now);

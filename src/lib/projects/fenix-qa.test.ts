@@ -255,4 +255,33 @@ describe("focus-visible and worker model", () => {
     const appTips = suggestEdits("FORMATO: app telefono. kind=app. Taccuino");
     assert.equal(appTips.some((t) => /cinque tab/i.test(t)), true);
   });
+
+  it("rescues leaked phone-kit CSS and refuses to publish the dump", () => {
+    const scheme = readFileSync(join(root, "src/lib/projects/color-scheme.ts"), "utf8");
+    assert.match(scheme, /export function looksLikeLeakedCss/);
+    assert.match(scheme, /export function repairLeakedCss/);
+    assert.match(scheme, /export function looksLikeCssDump/);
+    assert.match(scheme, /data-fenix-rescued/);
+    assert.match(scheme, /next = repairLeakedCss\(next\)/);
+    assert.match(scheme, /\\u0026lt;\\\/\?style/);
+    const validate = readFileSync(join(root, "src/lib/projects/validate-html.ts"), "utf8");
+    assert.match(validate, /CSS tecnico visibile/);
+    assert.match(validate, /looksLikeLeakedCss/);
+    const recover = readFileSync(join(root, "src/lib/projects/recover.ts"), "utf8");
+    assert.match(recover, /repairLeakedCss/);
+    const store = readFileSync(join(root, "src/lib/projects/store.ts"), "utf8");
+    assert.match(store, /repairLeakedCss/);
+    const files = readFileSync(join(root, "src/lib/projects/files.ts"), "utf8");
+    assert.match(files, /!looksLikeLeakedCss\(main\)/);
+    const worker = readFileSync(join(root, "workers/visual/server.mjs"), "utf8");
+    assert.match(worker, /function looksLikeCssDump/);
+    assert.match(worker, /if \(looksLikeCssDump\(inner\)\) return html/);
+    assert.match(worker, /if \(looksLikeCssDump\(m\[1\]\)\) return html/);
+    assert.equal(existsSync(join(root, "src/lib/projects/fixtures/leaked-phone-css.html")), true);
+    const leaked = readFileSync(join(root, "src/lib/projects/fixtures/leaked-phone-css.html"), "utf8");
+    assert.match(leaked, /\.fk-hello\{/);
+    assert.match(leaked, /\.fk-tab,/);
+    assert.match(leaked, /\.fk-sheet\{/);
+    assert.match(leaked, /<main class="fk-main"/);
+  });
 });

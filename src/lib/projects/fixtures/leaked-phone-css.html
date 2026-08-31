@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <title>Orto Vivo</title>
+<style>
+:root{--bg:#efe6d4;--surface:#f7f1e4;--fg:#1c1712;--muted:#5c5348;--accent:#3d4a1f;--line:#c4b49a}
+html,body{height:100%;margin:0}
+</style>
+</head>
+<body>
+  <header class="fk-top">
+    <h1 class="fk-hello">Orto Vivo</h1>
+    <p class="fk-role">Orticoltore</p>
+  </header>
+  <main class="fk-main" id="main">
+html,body{height:100%!important;margin:0;max-width:100%;overflow:hidden;color:var(--fg,#1c1712);background:var(--bg,#efe6d4)}
+body{display:flex!important;flex-direction:column!important;min-height:100dvh;font-size:16px}
+.fk-hello{margin:0;font-size:22px;font-weight:700;letter-spacing:-.03em;line-height:1.15}
+.fk-role{margin:4px 0 0;font-size:12px;color:var(--muted,#5c5348)}
+.fk-tab,.tabbar,nav[aria-label]{
+  flex-shrink:0;display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr))!important;
+  height:64px!important;max-height:72px;padding:6px 4px;
+  border-top:1px solid color-mix(in srgb, currentColor 12%, transparent);
+  background:var(--bg,#efe6d4);color:var(--muted,#5c5348);
+  position:sticky;bottom:0;z-index:20;
+}
+.fk-tab button,.tabbar button,nav[aria-label] button{
+  min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:3px;margin:0;padding:0 2px!important;border:0;background:none!important;color:inherit;
+  font:600 10px/1.1 inherit!important;
+}
+.fk-sheet{padding:4px 0 8px}
+.fk-kicker{margin:0 0 6px;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted,#5c5348)}
+.fk-main,body>main,main{flex:1 1 auto!important;min-height:0!important;overflow-y:auto!important;padding:0 16px 28px}
+.fk-btn{display:flex;align-items:center;justify-content:center;width:100%;border:0;border-radius:2px;padding:14px 16px;font:700 15px/1 inherit;background:var(--accent,#3d4a1f);color:#fff}
+.fk-panel{background:var(--surface,#f7f1e4);border:1px solid var(--line,#c4b49a);padding:16px 14px;margin:0 0 14px}
+  </main>
+  <nav class="fk-tab" aria-label="Sezioni">
+    <button type="button" data-view="home">Oggi</button>
+    <button type="button" data-view="new">Nuovo</button>
+    <button type="button" data-view="list">Elenco</button>
+  </nav>
+  <script>
+    window.Fenix.load("state").then(function (st) {
+      window.Fenix.save("state", st || { items: [] });
+    });
+  </script>
+</body>
+</html>

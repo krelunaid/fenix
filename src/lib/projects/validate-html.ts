@@ -1,4 +1,4 @@
-import { prepareSrcDoc, type SrcPalette } from "./color-scheme.ts";
+import { prepareSrcDoc, looksLikeLeakedCss, type SrcPalette } from "./color-scheme.ts";
 import { looksLikeAppleTabIcons, looksLikeIosWidgetHome } from "./craft-icons.ts";
 
 export type ScriptSyntaxError = {
@@ -134,6 +134,9 @@ export function validateProductHtml(
   if (/\$\{/.test(markup)) {
     errors.push("Template literal stampato nel DOM (${...} fuori da <script>).");
   }
+  if (looksLikeLeakedCss(text)) {
+    errors.push("CSS tecnico visibile nel DOM (.fk-* fuori da <style>).");
+  }
 
   const own = productScripts(text);
   const ownCode = own.map((s) => s.code).join("\n");
@@ -217,13 +220,27 @@ export function validatePublishable(
   html: string,
   opts?: { kind?: string; projectId?: string; bg?: string; palette?: SrcPalette },
 ): HtmlReport & { srcDoc: string } {
+  const leaked = looksLikeLeakedCss(html);
   const srcDoc = prepareSrcDoc(
     html,
     opts?.palette ?? { bg: opts?.bg ?? "#ffffff" },
     opts?.projectId ?? "preview",
     opts?.kind,
   );
-  return { ...validateProductHtml(srcDoc, { kind: opts?.kind }), srcDoc };
+  const report = validateProductHtml(srcDoc, { kind: opts?.kind });
+  if (leaked) {
+    const errors = report.errors.some((e) => /CSS tecnico visibile/i.test(e))
+      ? report.errors
+      : ["CSS tecnico visibile nel DOM (.fk-* fuori da <style>).", ...report.errors];
+    return {
+      ...report,
+      errors,
+      complete: false,
+      ok: false,
+      srcDoc,
+    };
+  }
+  return { ...report, srcDoc };
 }
 
 export function canPublishHtml(html: string, kind?: string, projectId = "preview") {

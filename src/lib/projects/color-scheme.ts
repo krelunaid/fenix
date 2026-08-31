@@ -591,6 +591,103 @@ export function sanitizePreviewHtml(html: string) {
     .replace(/>\s*"\s*\/>/g, ">");
 }
 
+function markupWithoutStyleOrScript(html: string) {
+  return String(html || "")
+    .replace(/<script\b[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style\b[\s\S]*?<\/style>/gi, " ");
+}
+
+const FK_CSS_SEL =
+  /\.fk-(hello|tab|sheet|main|top|btn|appicon|role|date|ledger|tile|stat|panel|field|lbl|kicker|chip|hero|seg)\b/;
+
+const ESCAPED_STYLE = /\u0026lt;\/?style/i;
+
+/**
+ * Phone-kit / product CSS dumped into the DOM as text (missing or escaped
+ * <style>). Visible as `.fk-hello {…}` in the preview.
+ */
+export function looksLikeLeakedCss(html: string): boolean {
+  const text = String(html || "");
+  if (ESCAPED_STYLE.test(text)) return true;
+  const markup = markupWithoutStyleOrScript(text);
+  return FK_CSS_SEL.test(markup) && /\{\s*[\w-]+\s*:/.test(markup);
+}
+
+/** Inner of main/template is a CSS dump, not markup. */
+export function looksLikeCssDump(inner: string): boolean {
+  const s = String(inner || "").trim();
+  if (!s) return false;
+  const withoutStyle = s
+    .replace(/<style\b[\s\S]*?<\/style>/gi, " ")
+    .replace(/<\/?style\b[^>]*>/gi, " ")
+    .trim();
+  if (!withoutStyle || /<[a-z]/i.test(withoutStyle)) return false;
+  return FK_CSS_SEL.test(withoutStyle) && /\{\s*[\w-]+\s*:/.test(withoutStyle);
+}
+
+const CSS_RUN =
+  /(?:html\s*,\s*body|:root|\.fk-[\w-]+)[^{]*\{[^{}]*\}(?:\s*(?:html|body|main|header|nav|img|button|input|textarea|select|svg|span|p|h[1-6]|:root|\.[\w-]+|\*|\[(?:data-|aria-|src)[^\]]+\]|:{1,2}[\w()-]+)[^{]*\{[^{}]*\})*/gi;
+
+function splitStyleScript(html: string) {
+  const chunks: { code: boolean; text: string }[] = [];
+  const re = /<script\b[\s\S]*?<\/script>|<style\b[\s\S]*?<\/style>/gi;
+  let last = 0;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(html))) {
+    if (m.index > last) chunks.push({ code: false, text: html.slice(last, m.index) });
+    chunks.push({ code: true, text: m[0] });
+    last = m.index + m[0].length;
+  }
+  if (last < html.length) chunks.push({ code: false, text: html.slice(last) });
+  return chunks;
+}
+
+function injectRescued(html: string, rescued: string) {
+  if (!rescued) return html;
+  const tag = `<style data-fenix-rescued>${rescued}</style>`;
+  if (/<\/head>/i.test(html)) return html.replace(/<\/head>/i, `${tag}</head>`);
+  if (/<head[^>]*>/i.test(html)) {
+    return html.replace(/<head[^>]*>/i, (open) => `${open}${tag}`);
+  }
+  return `${tag}${html}`;
+}
+
+/** Move orphan .fk-* CSS out of body/main into a real <style> in <head>. */
+export function repairLeakedCss(html: string): string {
+  let next = String(html || "");
+  if (!next) return next;
+  if (ESCAPED_STYLE.test(next)) {
+    next = next.replace(/\u0026lt;(\/?style\b[^&]*)(?:\u0026gt;|>)/gi, "<$1>");
+    next = next.replace(/\u0026lt;\/style(?:\u0026gt;|>)/gi, "</style>");
+  }
+  if (!looksLikeLeakedCss(next)) return next;
+
+  let rescued = "";
+  next = next.replace(
+    /<(main|template)(\b[^>]*)>([\s\S]*?)<\/\1>/gi,
+    (all, tag: string, attrs: string, inner: string) => {
+      if (!looksLikeCssDump(inner)) return all;
+      rescued += `${inner}\n`;
+      return `<${tag}${attrs}></${tag}>`;
+    },
+  );
+  if (!looksLikeLeakedCss(next)) return injectRescued(next, rescued);
+
+  const rebuilt = splitStyleScript(next)
+    .map((chunk) => {
+      if (chunk.code) return chunk.text;
+      return chunk.text.replace(CSS_RUN, (block) => {
+        if (!FK_CSS_SEL.test(block) && !/\.fk-/.test(block)) return block;
+        rescued += `${block}\n`;
+        return "\n";
+      });
+    })
+    .join("");
+  if (!rescued) return next;
+  return injectRescued(rebuilt, rescued);
+}
+
+
 /**
  * HTML parser closes <script> at the first </script>, even inside a JS string.
  * That yields `SyntaxError: missing ) after argument list` on about:srcdoc.
@@ -741,6 +838,7 @@ export function prepareSrcDoc(
   const bg = palette.bg;
   const scheme = isLightHex(bg) ? "light" : "dark";
   let next = sanitizePreviewHtml(html);
+  next = repairLeakedCss(next);
   next = scrubCraftMedia(next);
   next = rewriteIosWidgetHome(replaceAppleTabIcons(next));
   if (!/color-scheme/i.test(next)) {

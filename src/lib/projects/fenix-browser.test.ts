@@ -14,6 +14,7 @@ const here = dirname(fileURLToPath(import.meta.url));
 const VALID = readFileSync(join(here, "fixtures/valid-app.html"), "utf8");
 const NULL_INNER = readFileSync(join(here, "fixtures/null-innerhtml.html"), "utf8");
 const NULL_FIXED = readFileSync(join(here, "fixtures/null-innerhtml-fixed.html"), "utf8");
+const LEAKED_CSS = readFileSync(join(here, "fixtures/leaked-phone-css.html"), "utf8");
 const PREVIEW = process.env.PREVIEW_URL || "http://127.0.0.1:8081";
 
 async function launch() {
@@ -173,6 +174,40 @@ init();
         (el as HTMLIFrameElement).srcdoc = srcDoc;
       }, src);
       await frame.getByText("Anna della Luna").waitFor({ timeout: 8000 });
+    } finally {
+      await browser.close();
+    }
+  });
+});
+
+describe("leaked phone-kit CSS in the preview", () => {
+  it("does not show .fk-hello/.fk-tab/.fk-sheet as visible text after prepareSrcDoc", async () => {
+    const rawBrowser = await launch();
+    let raw = "";
+    try {
+      const page = await rawBrowser.newPage({ viewport: { width: 390, height: 844 } });
+      await page.setContent(LEAKED_CSS, { waitUntil: "domcontentloaded" });
+      raw = await page.evaluate(() => document.body.innerText);
+    } finally {
+      await rawBrowser.close();
+    }
+    assert.match(raw, /\.fk-hello\s*\{/, "fixture must leak CSS as visible text before repair");
+    assert.match(raw, /\.fk-tab/, "fixture must leak .fk-tab before repair");
+    assert.match(raw, /\.fk-sheet\s*\{/, "fixture must leak .fk-sheet before repair");
+
+    const src = prepareSrcDoc(LEAKED_CSS, "#efe6d4", "orto-vivo", "app");
+    assert.match(src, /data-fenix-rescued/);
+    const browser = await launch();
+    try {
+      const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+      await page.setContent(src, { waitUntil: "domcontentloaded", timeout: 15000 });
+      const visible = await page.evaluate(() => document.body.innerText);
+      assert.doesNotMatch(visible, /\.fk-hello\s*\{/);
+      assert.doesNotMatch(visible, /\.fk-tab\s*\{/);
+      assert.doesNotMatch(visible, /\.fk-sheet\s*\{/);
+      assert.match(visible, /Orto Vivo/);
+      const weight = await page.locator(".fk-hello").evaluate((el) => getComputedStyle(el).fontWeight);
+      assert.ok(Number(weight) >= 600, `rescued CSS should bold the hello, got ${weight}`);
     } finally {
       await browser.close();
     }
@@ -1255,6 +1290,98 @@ describe("studio overlay and resume in browser", () => {
       const publish = page.getByRole("button", { name: /Pubblica/ }).first();
       await publish.waitFor({ timeout: 8000 });
       assert.equal(await publish.isDisabled(), false);
+    } finally {
+      await browser.close();
+    }
+  });
+
+  it("building draft with leaked phone CSS hides the dump and keeps Pubblica closed", async () => {
+    await requirePreview();
+    const projectId = "p-orto-leak";
+    const jobId = "job-orto-leak";
+    let polishPosts = 0;
+    const browser = await launch();
+    try {
+      const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+      await page.route(/\/api\/build/, async (route) => {
+        await route.fulfill({ status: 204, body: "" });
+      });
+      await page.route(/polish/, async (route) => {
+        if (route.request().method() === "POST") {
+          polishPosts += 1;
+          await route.fulfill({
+            status: 202,
+            contentType: "application/json",
+            body: JSON.stringify({ id: jobId, status: "run" }),
+          });
+          return;
+        }
+        await route.continue();
+      });
+      await page.route(/\/jobs\//, async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({ id: jobId, status: "run", log: ["Partito"] }),
+        });
+      });
+      await page.addInitScript(
+        ({ html }: { html: string }) => {
+          if (window !== window.parent) return;
+          const now = Date.now();
+          localStorage.setItem("fenix.session", JSON.stringify({ email: "qa@fenix.test", name: "QA" }));
+          localStorage.setItem(
+            "officina-projects",
+            JSON.stringify({
+              state: {
+                projects: [
+                  {
+                    id: "p-orto-leak",
+                    name: "Orto Vivo",
+                    tagline: "",
+                    prompt: "FORMATO: app telefono. kind=app. Orto Vivo.",
+                    kind: "app",
+                    requestedKind: "app",
+                    summary: "",
+                    palette: {
+                      bg: "#efe6d4",
+                      surface: "#f7f1e4",
+                      fg: "#1c1712",
+                      muted: "#5c5348",
+                      accent: "#3d4a1f",
+                    },
+                    html,
+                    messages: [],
+                    buildLog: ["Motore visivo in sottofondo", "Partito"],
+                    status: "building",
+                    creditRefunded: true,
+                    visualJobId: "job-orto-leak",
+                    visualJobStatus: "run",
+                    visualJobStartedAt: now - 20_000,
+                    createdAt: now,
+                    updatedAt: now,
+                  },
+                ],
+                creditsRemaining: 100,
+                appDb: {},
+              },
+              version: 3,
+            }),
+          );
+        },
+        { html: LEAKED_CSS },
+      );
+      await page.goto(PREVIEW + `/studio/${projectId}`, { waitUntil: "domcontentloaded", timeout: 20000 });
+      await page.locator("section.hidden.md\\:block").getByText(/Partito|Rifinitura/i).first().waitFor({ timeout: 12000 });
+      const frame = page.frameLocator("iframe").first();
+      await frame.locator(".fk-hello").waitFor({ timeout: 12000 });
+      const visible = await frame.locator("body").innerText();
+      assert.doesNotMatch(visible, /\.fk-hello\s*\{/);
+      assert.doesNotMatch(visible, /\.fk-tab\s*\{/);
+      assert.doesNotMatch(visible, /\.fk-sheet\s*\{/);
+      assert.match(visible, /Orto Vivo/);
+      assert.equal(await page.getByRole("button", { name: /pubblica/i }).first().isDisabled(), true);
+      assert.equal(polishPosts, 0);
     } finally {
       await browser.close();
     }

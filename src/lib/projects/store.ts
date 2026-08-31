@@ -9,6 +9,7 @@ import { validatePublishable, type HtmlReport } from "./validate-html";
 import { recoverPersistedProject, STALE_BUILD_MS, RESUME_ERROR } from "./recover";
 import { polishDashboardHtml, scrubTechMessages, shouldRepairDashboard } from "./dashboard-crud";
 import { replaceAppleTabIcons, rewriteIosWidgetHome, stripPhoneChromeFromSite, ensureMainElementId } from "./craft-icons";
+import { repairLeakedCss } from "./color-scheme";
 import {
   DEFAULT_PALETTE,
   type BuildStatus,
@@ -491,14 +492,16 @@ export function applyBuildResult(
     worker: result.kind,
   });
   const requestedKind = existing?.requestedKind ?? kind;
-  const html = ensureMainElementId(
-    isPhoneKind(kind)
-      ? rewriteIosWidgetHome(replaceAppleTabIcons(result.html))
-      : shouldRepairDashboard(result.html, kind)
-        ? polishDashboardHtml(result.html, kind)
-        : kind === "site" || kind === "landing"
-          ? stripPhoneChromeFromSite(result.html)
-          : result.html,
+  const html = repairLeakedCss(
+    ensureMainElementId(
+      isPhoneKind(kind)
+        ? rewriteIosWidgetHome(replaceAppleTabIcons(result.html))
+        : shouldRepairDashboard(result.html, kind)
+          ? polishDashboardHtml(result.html, kind)
+          : kind === "site" || kind === "landing"
+            ? stripPhoneChromeFromSite(result.html)
+            : result.html,
+    ),
   );
   const report = validatePublishable(html, {
     kind,

@@ -66,8 +66,14 @@ function parseScreen(text) {
   return { id: (m[1] || "").toLowerCase(), inner };
 }
 
+function looksLikeCssDump(inner) {
+  const s = String(inner || "");
+  return /\.fk-(hello|tab|sheet|main|top)\s*\{/.test(s) && !/^\s*</.test(s);
+}
+
 function spliceScreen(html, id, inner) {
   if (!html || !inner) return html;
+  if (looksLikeCssDump(inner)) return html;
   const tid = TAB_IDS.includes(id) ? id : "home";
   const tRe = new RegExp(`(<template[^>]*\\bid=["']t-${tid}["'][^>]*>)([\\s\\S]*?)(<\\/template>)`, "i");
   if (tRe.test(html)) {
@@ -84,6 +90,7 @@ function restoreHome(html) {
   const m = html.match(/<template[^>]*id=["']t-home["'][^>]*>([\s\S]*?)<\/template>/i);
   if (!m) return html;
   if (!/<main\b/i.test(html)) return html;
+  if (looksLikeCssDump(m[1])) return html;
   return html.replace(/<main\b[^>]*>[\s\S]*?<\/main>/i, `<main class="fk-main">${m[1]}</main>`);
 }
 

@@ -1,3 +1,5 @@
+import { looksLikeLeakedCss } from "./color-scheme.ts";
+
 export type ProjectFile = {
   path: string;
   content: string;
@@ -49,7 +51,11 @@ export function seedFiveScreens(files: ProjectFile[], html: string, name = "App"
   const map = new Map(files.map((f) => [f.path, f]));
   if (html && !map.has("index.html")) map.set("index.html", { path: "index.html", content: html });
   const main = html.match(/<main[^>]*>([\s\S]*?)<\/main>/i)?.[1]?.trim();
-  if (main && (!map.get("screens/home.html")?.content || map.get("screens/home.html")!.content.length < 40)) {
+  if (
+    main &&
+    !looksLikeLeakedCss(main) &&
+    (!map.get("screens/home.html")?.content || map.get("screens/home.html")!.content.length < 40)
+  ) {
     map.set("screens/home.html", { path: "screens/home.html", content: main });
   }
   for (const id of SCREEN_IDS) {
@@ -68,6 +74,7 @@ export function extractScreens(html: string): ProjectFile[] {
     const id = screenIdFromAttrs(match[1] ?? "");
     const content = (match[2] ?? "").trim();
     if (!id || !content || seen.has(id)) continue;
+    if (looksLikeLeakedCss(content)) continue;
     seen.add(id);
     out.push({ path: `screens/${id}.html`, content });
   }
@@ -113,6 +120,7 @@ export function assembleHtml(files: ProjectFile[], fallbackHtml = "") {
         "i",
       );
       if (tRe.test(html)) {
+        if (looksLikeLeakedCss(f.content)) continue;
         html = html.replace(tRe, `$1${f.content}$2`);
       }
     }
@@ -122,6 +130,7 @@ export function assembleHtml(files: ProjectFile[], fallbackHtml = "") {
     });
     if (missing.length) {
     const templates = missing
+      .filter((f) => !looksLikeLeakedCss(f.content))
       .map((f) => {
         const id = f.path.replace(/^screens\//i, "").replace(/\.html$/i, "");
         return `<template id="t-${id}" data-screen="${id}">${f.content}</template>`;

@@ -11,7 +11,7 @@ import {
   validateProductHtml,
   validatePublishable,
 } from "./validate-html.ts";
-import { fenixRuntimeScript, looksLikeSite, prepareSrcDoc, sanitizePreviewHtml, escapeEmbeddedScriptEnds } from "./color-scheme.ts";
+import { fenixRuntimeScript, looksLikeSite, prepareSrcDoc, sanitizePreviewHtml, escapeEmbeddedScriptEnds, looksLikeLeakedCss, repairLeakedCss } from "./color-scheme.ts";
 import { DEMOS } from "./demos.ts";
 import { APP_SHELL_HTML } from "../ai/app-shell.ts";
 
@@ -21,6 +21,7 @@ const VALID = readFileSync(join(here, "fixtures/valid-app.html"), "utf8");
 const BOTTEGA = readFileSync(join(here, "fixtures/bottega-orders-crash.html"), "utf8");
 const NULL_INNER = readFileSync(join(here, "fixtures/null-innerhtml.html"), "utf8");
 const NULL_FIXED = readFileSync(join(here, "fixtures/null-innerhtml-fixed.html"), "utf8");
+const LEAKED_CSS = readFileSync(join(here, "fixtures/leaked-phone-css.html"), "utf8");
 
 describe("validateProductHtml", () => {
   it("extracts inline scripts and reports the exact syntax error", () => {
@@ -253,5 +254,57 @@ describe("looksLikeSite kind lock", () => {
     assert.match(src, /data-fenix-palette/);
     assert.match(src, /--fg:#efe6d4/);
     assert.match(src, /--bg:#1a1612/);
+  });
+});
+
+describe("leaked phone-kit CSS", () => {
+  it("detects a dump in <main> and never publishes the unrepaired source", () => {
+    assert.equal(looksLikeLeakedCss(LEAKED_CSS), true);
+    assert.equal(looksLikeLeakedCss(VALID), false);
+    for (const demo of Object.values(DEMOS)) {
+      assert.equal(looksLikeLeakedCss(demo.html), false, demo.id);
+    }
+    const report = validateProductHtml(LEAKED_CSS, { kind: "app" });
+    assert.equal(report.ok, false);
+    assert.ok(report.errors.some((e) => /CSS tecnico visibile/i.test(e)), report.errors.join(" · "));
+    assert.equal(canPublishHtml(LEAKED_CSS, "app", "orto-vivo"), false);
+    const pub = validatePublishable(LEAKED_CSS, { kind: "app", projectId: "orto-vivo" });
+    assert.equal(pub.ok, false);
+    assert.ok(pub.errors.some((e) => /CSS tecnico visibile/i.test(e)));
+    assert.match(pub.srcDoc, /data-fenix-rescued/);
+    assert.doesNotMatch(pub.srcDoc.replace(/<style\b[\s\S]*?<\/style>/gi, " "), /\.fk-hello\s*\{/);
+    assert.doesNotMatch(pub.srcDoc.replace(/<style\b[\s\S]*?<\/style>/gi, " "), /\.fk-tab\s*\{/);
+  });
+
+  it("moves the dump into <style data-fenix-rescued> so the source is clean", () => {
+    const fixed = repairLeakedCss(LEAKED_CSS);
+    assert.equal(looksLikeLeakedCss(fixed), false, "repaired source still looks leaked");
+    assert.match(fixed, /data-fenix-rescued/);
+    assert.match(fixed, /\.fk-hello\{/);
+    assert.match(fixed, /\.fk-tab,/);
+    assert.match(fixed, /\.fk-sheet\{/);
+    const markup = fixed.replace(/<script\b[\s\S]*?<\/script>/gi, " ").replace(/<style\b[\s\S]*?<\/style>/gi, " ");
+    assert.doesNotMatch(markup, /\.fk-hello\s*\{/);
+    assert.doesNotMatch(markup, /\.fk-tab\s*\{/);
+    assert.doesNotMatch(markup, /\.fk-sheet\s*\{/);
+    assert.equal(canPublishHtml(fixed, "app", "orto-vivo"), true, validatePublishable(fixed, { kind: "app" }).errors.join(" · "));
+  });
+
+  it("unescapes encoded style tags so the CSS is no longer visible text", () => {
+    const lt = "\u0026lt;";
+    const gt = "\u0026gt;";
+    const escaped = LEAKED_CSS.replace(
+      /<main\b([^>]*)>([\s\S]*?)<\/main>/i,
+      (_all, attrs: string, inner: string) =>
+        `<main${attrs}>${lt}style${gt}${inner}${lt}/style${gt}</main>`,
+    );
+    assert.equal(looksLikeLeakedCss(escaped), true);
+    assert.equal(canPublishHtml(escaped, "app", "orto-escaped"), false);
+    const fixed = repairLeakedCss(escaped);
+    assert.equal(looksLikeLeakedCss(fixed), false);
+    assert.match(fixed, /<style/i);
+    assert.doesNotMatch(fixed, /\u0026lt;style/i);
+    const markup = fixed.replace(/<script\b[\s\S]*?<\/script>/gi, " ").replace(/<style\b[\s\S]*?<\/style>/gi, " ");
+    assert.doesNotMatch(markup, /\.fk-hello\s*\{/);
   });
 });

@@ -11,11 +11,14 @@ import {
   isPublishable,
   needsResume,
 } from "./recover.ts";
+import { canPublishHtml } from "./validate-html.ts";
+import { looksLikeLeakedCss } from "./color-scheme.ts";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const VALID = readFileSync(join(here, "fixtures/valid-app.html"), "utf8");
 const BROKEN = readFileSync(join(here, "fixtures/broken-flusso.html"), "utf8");
 const BOTTEGA = readFileSync(join(here, "fixtures/bottega-orders-crash.html"), "utf8");
+const LEAKED_CSS = readFileSync(join(here, "fixtures/leaked-phone-css.html"), "utf8");
 
 function seed(patch: Partial<Parameters<typeof recoverPersistedProject>[0]>) {
   return {
@@ -252,6 +255,24 @@ describe("recoverPersistedProject", () => {
       assert.equal(recovered.status, "ready", `${demo.id}: ${recovered.error || ""}`);
       assert.equal(isPublishable(recovered), true, demo.id);
     }
+  });
+
+  it("does not publish a building draft whose HTML dumps phone-kit CSS", () => {
+    const recovered = recoverPersistedProject(
+      seed({ html: LEAKED_CSS, status: "building", updatedAt: Date.now() - 5_000 }),
+    );
+    assert.equal(recovered.status, "building");
+    assert.equal(recovered.html, LEAKED_CSS);
+    assert.equal(isPublishable(recovered), false);
+    assert.equal(canPublishHtml(LEAKED_CSS, "app"), false);
+  });
+
+  it("strips leaked CSS from a ready project so the dump is gone", () => {
+    const recovered = recoverPersistedProject(seed({ html: LEAKED_CSS, status: "ready" }));
+    assert.equal(looksLikeLeakedCss(recovered.html), false);
+    assert.match(recovered.html, /data-fenix-rescued/);
+    const markup = recovered.html.replace(/<style\b[\s\S]*?<\/style>/gi, " ");
+    assert.doesNotMatch(markup, /\.fk-hello\s*\{/);
   });
 });
 
