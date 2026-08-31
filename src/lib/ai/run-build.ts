@@ -33,8 +33,15 @@ export const WORKER_POLL_MAX = 30;
 const WORKER_POLL_MS = 2000;
 /** 2s ticks while a persisted job is live. Overlay stays compact. */
 export const WORKER_JOB_POLL_MAX = 180;
-const GENERATE_POLL_MAX = 90;
+/** Site/dashboard generate on Railway: 2s × 360 = 12 min. Edge SSE dies first. */
+const GENERATE_POLL_MAX = 360;
 export const BOOT_REPAIR_MAX = 2;
+
+function isTransientNetwork(msg: string) {
+  return /load failed|failed to fetch|network error|timeout|aborted|ERR_NETWORK|Failed to fetch/i.test(
+    String(msg || ""),
+  );
+}
 
 function abandonVisualJob(projectId: string, raw: string) {
   const store = useProjectStore.getState();
@@ -270,7 +277,10 @@ async function consumeViaWorker(
     try {
       const started = await fetch(`${base}/build`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Idempotency-Key": projectId,
+        },
         body: JSON.stringify({ ...body, projectId }),
       });
       if (started.status !== 202) {
@@ -279,6 +289,11 @@ async function consumeViaWorker(
       }
       const { id } = (await started.json()) as { id?: string };
       if (!id) continue;
+      store.updateProject(projectId, {
+        ...visualJobPatch(id, "run"),
+        status: "building",
+        error: undefined,
+      });
       for (let i = 0; i < GENERATE_POLL_MAX; i++) {
         await new Promise((r) => window.setTimeout(r, WORKER_POLL_MS));
         const jobRes = await fetch(`${base}/jobs/${id}`);
@@ -290,6 +305,10 @@ async function consumeViaWorker(
           log?: string[];
           error?: string;
         };
+        if (job.log?.length) {
+          const live = useProjectStore.getState().getProject(projectId);
+          store.updateProject(projectId, { buildLog: mergeUniqueLogs(live?.buildLog, job.log) });
+        }
         if (job.status === "ok" && job.html) {
           const current = useProjectStore.getState().getProject(projectId);
           const lockKind = resolveProjectKind({
@@ -304,6 +323,7 @@ async function consumeViaWorker(
           if (!result) throw new Error("Risposta non valida");
           resetAudit();
           const report = applyBuildResult(projectId, result, "building");
+          store.updateProject(projectId, { ...clearVisualJobPatch(), status: "building" });
           if (!report.syntaxOk) throw new Error(formatHtmlErrors(report) || "HTML non valido");
           if (!quiet) {
             store.addMessage(projectId, {
@@ -390,14 +410,24 @@ async function consumeStream(
         const salvage = event.result as BuildResult | undefined;
         if (salvage && typeof salvage === "object" && salvage.html) {
           applyBuildResult(projectId, salvage, "building");
+          store.updateProject(projectId, { status: "error", error: event.error });
+          store.addMessage(projectId, {
+            id: uid(),
+            role: "assistant",
+            content: event.error,
+          });
+          finished = true;
+        } else if (isTransientNetwork(event.error || "")) {
+          throw new Error(event.error || "network error");
+        } else {
+          store.updateProject(projectId, { status: "error", error: event.error });
+          store.addMessage(projectId, {
+            id: uid(),
+            role: "assistant",
+            content: event.error,
+          });
+          finished = true;
         }
-        store.updateProject(projectId, { status: "error", error: event.error });
-        store.addMessage(projectId, {
-          id: uid(),
-          role: "assistant",
-          content: event.error,
-        });
-        finished = true;
       }
     }
   }
@@ -696,6 +726,7 @@ export async function runBuild(projectId: string, instruction?: string) {
       prompt: project.prompt,
     });
     const phone = isPhoneKind(kind);
+    const desk = kind === "site" || kind === "landing" || kind === "dashboard";
     const payload = {
       prompt: project.prompt,
       html: instruction ? project.html : phone ? APP_SHELL_HTML : project.html || "",
@@ -703,17 +734,19 @@ export async function runBuild(projectId: string, instruction?: string) {
         instruction ||
         (kind === "dashboard"
           ? DASHBOARD_POLISH_INSTRUCTION
-          : phone
-            ? APP_SHELL_INSTRUCTION
-            : undefined),
+          : kind === "site" || kind === "landing"
+            ? SITE_POLISH_INSTRUCTION
+            : phone
+              ? APP_SHELL_INSTRUCTION
+              : undefined),
     };
     try {
-      streamed = isIOS()
+      streamed = isIOS() || desk
         ? await consumeViaWorker(projectId, payload, true)
         : await consumeStream(projectId, payload, true);
     } catch (first) {
       const msg = first instanceof Error ? first.message : "";
-      if (/load failed|failed to fetch/i.test(msg)) {
+      if (isTransientNetwork(msg)) {
         streamed = await consumeViaWorker(projectId, payload, true);
       } else {
         throw first;

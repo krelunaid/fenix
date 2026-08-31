@@ -186,6 +186,18 @@ describe("looksLikeSite kind lock", () => {
     const app = prepareSrcDoc(VALID, "#ffffff", "app", "app");
     assert.match(app, /data-fenix-phone/);
     assert.doesNotMatch(app, /data-fenix-site/);
+    const site = prepareSrcDoc(
+      `<!DOCTYPE html><html><head></head><body><nav><a href="#a">a</a></nav><section></section><section></section><section></section><section></section><footer></footer></body></html>`,
+      "#ffffff",
+      "site-kit",
+      "site",
+    );
+    assert.match(site, /data-fenix-site/);
+    assert.match(site, /data-fenix-desk/);
+    assert.match(site, /max-width:1120px/);
+    assert.doesNotMatch(site, /max-width:40rem/);
+    assert.doesNotMatch(site, /data-fenix-phone/);
+    assert.match(site, /nav\.bottom-tab,nav\.fk-tab\{display:none!important\}/);
   });
 
   it("gives the phone kit overflow-y scroll on main", () => {

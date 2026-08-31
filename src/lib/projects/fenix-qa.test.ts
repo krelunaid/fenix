@@ -127,6 +127,9 @@ describe("focus-visible and worker model", () => {
     assert.match(scheme, /data-fenix-ready/);
     assert.match(scheme, /ready:\s*function/);
     assert.match(scheme, /data-fenix-desk/);
+    assert.match(scheme, /max-width:1120px/);
+    assert.doesNotMatch(scheme, /max-width:40rem/);
+    assert.match(scheme, /nav\.bottom-tab,nav\.fk-tab\{display:none!important\}/);
     assert.match(scheme, /fenix-boot-error/);
     assert.match(scheme, /fenix-boot-ok/);
     assert.match(scheme, /ev\.target !== window/);
@@ -153,6 +156,10 @@ describe("focus-visible and worker model", () => {
     assert.match(runBuild, /withoutPronto/);
     assert.match(runBuild, /SITE_POLISH_INSTRUCTION/);
     assert.match(runBuild, /if \(!\(instruction \|\| isIOS\(\)\) && phone\)/);
+    assert.match(runBuild, /isIOS\(\) \|\| desk/);
+    assert.match(runBuild, /GENERATE_POLL_MAX = 360/);
+    assert.match(runBuild, /isTransientNetwork/);
+    assert.match(runBuild, /throw new Error\(event\.error \|\| "network error"\)/);
     assert.doesNotMatch(runBuild, /alreadyPronto/);
     const buildApi = readFileSync(join(root, "src/routes/api/build.ts"), "utf8");
     assert.match(buildApi, /materializeHero/);

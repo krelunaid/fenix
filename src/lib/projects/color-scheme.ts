@@ -165,21 +165,23 @@ main,.fk-main,main p,main li,main b,.fk-tile,.fk-tile b,.fk-hello,.fk-lbl{color:
 .fk-btn{color:#fff!important}
 </style>`;
 
-const SITE_KIT = `<style data-fenix-site>
-html,body{height:auto!important;min-height:100%;margin:0;max-width:100%;overflow:auto!important;overflow-x:hidden!important;-webkit-overflow-scrolling:touch;color:var(--fg,#1c1712);background:var(--bg,#efe6d4);font:400 16px/1.45 system-ui,sans-serif}
-body{display:block!important;padding:0 0 48px}
-header,body>header,.site-top{padding:14px 16px;display:flex;flex-wrap:wrap;align-items:center;gap:10px}
-nav{display:flex;flex-wrap:wrap;gap:4px 2px;padding:0 12px 8px}
-nav a,nav button{border:0;background:none;color:var(--fg,#1c1712);font:650 14px/1.2 system-ui,sans-serif;padding:8px 10px}
-.fk-hero,header img, .hero img, img.cover{width:100%;height:200px;object-fit:cover;display:block;border-radius:0}
-main,body>main{display:block!important;overflow:visible!important;flex:none!important;padding:20px 16px 32px;max-width:40rem;margin:0 auto}
-h1{font-size:28px;letter-spacing:-.03em;line-height:1.15;margin:0 0 10px}
-h2{font-size:20px;margin:28px 0 10px}
+const SITE_KIT = `<style data-fenix-site data-fenix-desk>
+html,body{height:auto!important;min-height:100%;margin:0;max-width:100%;overflow:auto!important;overflow-x:hidden!important;-webkit-overflow-scrolling:touch;color:var(--fg,#1c1712);background:var(--bg,#efe6d4);font:400 16px/1.5 system-ui,sans-serif}
+body{display:block!important;padding:0;overflow:visible!important}
+header,body>header,.site-top{padding:16px 24px;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px 24px;position:sticky;top:0;z-index:5;background:var(--surface,#f7f1e4);border-bottom:1px solid var(--line,#c4b49a)}
+nav,header nav{display:flex!important;flex-wrap:wrap;align-items:center;gap:6px 18px;padding:0;position:static!important;height:auto!important;max-height:none!important;grid-template-columns:none!important;border-top:0!important}
+nav a,nav button{border:0;background:none;color:var(--fg,#1c1712);font:650 15px/1.2 system-ui,sans-serif;padding:8px 10px}
+.fk-hero,header img, .hero img, img.cover, img.fk-hero{width:100%;height:min(52vh,560px)!important;min-height:280px;object-fit:cover;display:block;border-radius:0;margin:0}
+main,body>main{display:block!important;overflow:visible!important;flex:none!important;padding:28px 24px 72px;max-width:1120px;margin:0 auto}
+.hero-text h1, main>section:first-of-type h1, .hero h1{font-size:clamp(2.5rem,6vw,4.6rem);letter-spacing:-.03em;line-height:1.08;margin:0 0 12px}
+h2{font-size:clamp(1.4rem,3vw,2rem);margin:32px 0 12px}
 p,li{opacity:1}
-section{margin:0 0 28px}
-.card,.fk-tile{background:var(--surface,#f7f1e4);border-radius:16px;padding:16px;margin:0 0 12px;border:1px solid var(--line,#c4b49a);color:var(--fg,#1c1712)}
-footer{padding:24px 16px;font-size:13px;color:var(--muted,#5c5348)}
+section{margin:0 0 36px}
+.card,.fk-tile{background:var(--surface,#f7f1e4);border-radius:8px;padding:16px;margin:0 0 12px;border:1px solid var(--line,#c4b49a);color:var(--fg,#1c1712)}
+.gallery, .about{max-width:1120px}
+footer{padding:28px 24px;font-size:14px;color:var(--muted,#5c5348)}
 img[src=""],img:not([src]){display:none!important}
+.fk-tab,.tabbar,nav.bottom-tab,nav.fk-tab{display:none!important}
 </style>`;
 
 const DASHBOARD_KIT = `<style data-fenix-site data-fenix-desk>
