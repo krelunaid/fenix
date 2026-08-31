@@ -12,6 +12,7 @@ import {
   repairDashboardCrud,
   discoverAppCollection,
   scrubTechMessages,
+  keepLatestPronto,
   stripFakeStudioCopy,
 } from "./dashboard-crud.ts";
 import { recoverPersistedProject } from "./recover.ts";
@@ -86,6 +87,23 @@ describe("dashboard CRUD repair", () => {
     assert.ok(msgs.some((m) => /Inventario pronto/.test(m.content)));
     assert.equal(msgs.some((m) => /JOB_STILL_RUNNING/.test(m.content)), false);
     assert.ok(msgs.some((m) => /Riprendi rifinitura/.test(m.content)));
+  });
+
+  it("keeps a single latest Pronto on recover/scrub", () => {
+    const msgs = keepLatestPronto([
+      { content: "Pronto. Bottega Terra è in anteprima e si usa." },
+      { content: "Motore visivo: Foto hero." },
+      { content: "Pronto. Bottega Terra • Ceramica a Grottaglie è in anteprima e si usa." },
+    ]);
+    assert.equal(msgs.filter((m) => /^Pronto\./.test(m.content)).length, 1);
+    assert.match(msgs.at(-1)?.content || "", /Ceramica a Grottaglie/);
+    const scrubbed = scrubTechMessages([
+      { content: "Pronto. Prima.", role: "assistant" },
+      { content: "Ok.", role: "assistant" },
+      { content: "Pronto. Dopo.", role: "assistant" },
+    ]);
+    assert.equal(scrubbed.filter((m) => /^Pronto\./.test(m.content)).length, 1);
+    assert.equal(scrubbed.at(-1)?.content, "Pronto. Dopo.");
   });
 
   it("rejects unrepaired Nuovo pezzo and recover injects crud+craft", () => {

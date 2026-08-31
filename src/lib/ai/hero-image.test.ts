@@ -23,6 +23,9 @@ describe("injectHero / materializeHero", () => {
     assert.equal(isHeroSrc("data:text/html,x"), false);
     assert.equal(heroAspect('<div class="fk-tab"></div>'), "1:1");
     assert.equal(heroAspect("<main></main>"), "16:9");
+    assert.equal(heroAspect('<button data-view="home">Home</button>'), "16:9");
+    const siteHero = injectHero("<html><body><main></main></body></html>", DATA);
+    assert.match(siteHero, /min\(52vh,560px\)/);
   });
 
   it("materializeHero inlines reachable image bytes and drops 404", async () => {

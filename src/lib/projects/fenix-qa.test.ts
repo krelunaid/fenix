@@ -88,9 +88,13 @@ describe("focus-visible and worker model", () => {
     assert.match(worker, /nodo assente/);
     assert.doesNotMatch(worker, /<template id="t-\$\{tid\}">/);
     assert.match(worker, /DASHBOARD_SYSTEM/);
+    assert.match(worker, /SITE_SYSTEM/);
     assert.match(worker, /kind=dashboard/);
     assert.match(worker, /Rifinitura sito \(nav in alto, niente tabbar\)/);
+    assert.match(worker, /Layout desktop/);
     assert.match(worker, /function materializeHero/);
+    assert.doesNotMatch(worker, /\|\| remote/);
+    assert.doesNotMatch(worker, /\|\| hero;/);
     assert.match(worker, /function stripPhoneChromeFromSite/);
     assert.match(worker, /jobsByKey/);
     assert.match(worker, /byKey\.status === "run"/);
@@ -146,13 +150,31 @@ describe("focus-visible and worker model", () => {
     assert.match(runBuild, /getPreviewBootOk/);
     assert.match(runBuild, /polishedOnce/);
     assert.match(runBuild, /Anteprima già rifinita/);
-    assert.match(runBuild, /alreadyPronto/);
+    assert.match(runBuild, /withoutPronto/);
+    assert.match(runBuild, /SITE_POLISH_INSTRUCTION/);
+    assert.match(runBuild, /if \(!\(instruction \|\| isIOS\(\)\) && phone\)/);
+    assert.doesNotMatch(runBuild, /alreadyPronto/);
     const buildApi = readFileSync(join(root, "src/routes/api/build.ts"), "utf8");
     assert.match(buildApi, /materializeHero/);
+    assert.match(buildApi, /SITE_PROMPT/);
+    assert.match(buildApi, /const desk = lockKind === "site"/);
+    const prompts = readFileSync(join(root, "src/lib/ai/prompts.shared.ts"), "utf8");
+    assert.match(prompts, /export const SITE_PROMPT/);
+    assert.match(prompts, /kind":"site"/);
+    const qa = readFileSync(join(root, "src/lib/ai/qa.ts"), "utf8");
+    assert.match(qa, /isDeskKind\(kind\)\) return null/);
+    const suggest = readFileSync(join(root, "src/lib/ai/suggest.ts"), "utf8");
+    assert.match(suggest, /Nav in alto: Home, Bottega, Lavori, Visita/);
+    assert.match(suggest, /Le cinque tab devono aprire/);
     const hero = readFileSync(join(root, "src/lib/ai/hero-image.ts"), "utf8");
     assert.match(hero, /export async function materializeHero/);
     assert.match(hero, /data:image/);
     assert.match(hero, /this.removeAttribute\('src'\)/);
+    assert.match(hero, /fk-tab\|bottom-tab/);
+    assert.match(hero, /min\(52vh,560px\)/);
+    const edge = readFileSync(join(root, "netlify/edge-functions/build.ts"), "utf8");
+    assert.match(edge, /SITE_PROMPT/);
+    assert.match(edge, /const desk = lockKind === "site"/);
     assert.doesNotMatch(runBuild, /Pronto\. \$\{result\.name\} è in anteprima/);
     const resume = runBuild.slice(
       runBuild.indexOf("export async function resumePolish"),
@@ -161,5 +183,14 @@ describe("focus-visible and worker model", () => {
     assert.match(resume, /repairBootFailures/);
     assert.doesNotMatch(runBuild, /JOB_STILL_RUNNING \|\| \/Riprendi rifinitura/);
     assert.match(runBuild, /if \(workerError === JOB_STILL_RUNNING\)/);
+  });
+
+  it("suggests nav in alto for a site, not five phone tabs", async () => {
+    const { suggestEdits } = await import("../../lib/ai/suggest.ts");
+    const tips = suggestEdits("FORMATO: sito web. kind=site. Bottega Terra", "Bottega Terra");
+    assert.equal(tips.some((t) => /cinque tab/i.test(t)), false);
+    assert.equal(tips.some((t) => /nav in alto/i.test(t)), true);
+    const appTips = suggestEdits("FORMATO: app telefono. kind=app. Taccuino");
+    assert.equal(appTips.some((t) => /cinque tab/i.test(t)), true);
   });
 });

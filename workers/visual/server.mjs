@@ -147,6 +147,19 @@ elenco
 <!DOCTYPE html> con header.fk-top, main, nav.fk-tab 5 data-view, template id=t-home t-new t-list t-stats t-more
 <<<END>>>`;
 
+const SITE_SYSTEM = `Motore Fenix. Generi un SITO WEB desktop, non un'app telefono, non un gestionale.
+Italiano. Palette dal mestiere, mai #f5f5f7+#0071e3. Testo contrasto AA 4.5:1.
+Nav in alto, almeno 4 sezioni, footer con via/orari. Hero 16:9 a tutta larghezza.
+Desktop-first: h1 clamp(2.5rem, 6vw, 4.6rem), max-width 1120px.
+VIETATO: nav.fk-tab, nav.bottom-tab, template t-home, src/screens/*.tsx, 5 tab, fk-appicon, 100dvh colonna telefono, Inter, Manrope, Apple, iOS, Fenix, Grok.
+window.Fenix.load/save sul form. CSS reale. Google Fonts del mestiere.
+Rispondi SOLO:
+<<<META>>>
+{"name":"","tagline":"","kind":"site","summary":"","palette":{"bg":"#1a1612","surface":"#2a241c","fg":"#e6dcc8","muted":"#9a8f7a","accent":"#c45c26"}}
+<<<HTML>>>
+<!DOCTYPE html> sito desktop completo
+<<<END>>>`;
+
 const DASHBOARD_SYSTEM = `Motore Fenix. Generi un GESTIONALE DESKTOP, non un'app telefono, non una landing.
 Italiano. Palette dal mestiere, mai #f5f5f7+#0071e3. Testo contrasto AA 4.5:1.
 Header in alto o sidebar. Tab in alto — MAI nav.fk-tab in basso, MAI class fk-tab.
@@ -207,10 +220,10 @@ function injectHero(html, url) {
   if (!html || !url) return html;
   if (!/^https:\/\//i.test(url) && !/^data:image\//i.test(url)) return html;
   if (/["<>]/.test(url)) return html;
-  const phone = /fk-tab|data-view=["']home["']/i.test(html);
+  const phone = /fk-tab|bottom-tab/i.test(html);
   const img = phone
     ? `<img class="fk-hero" src="${url}" alt="" width="400" height="400" style="width:100%;height:140px;object-fit:cover;border-radius:20px;display:block;margin:8px 0 12px" onerror="this.removeAttribute('src')"/>`
-    : `<img class="fk-hero" src="${url}" alt="" width="1200" height="675" style="width:100%;height:220px;object-fit:cover;border-radius:18px;display:block;margin:0 0 16px" onerror="this.removeAttribute('src')"/>`;
+    : `<img class="fk-hero" src="${url}" alt="" width="1600" height="900" style="width:100%;height:min(52vh,560px);min-height:280px;object-fit:cover;display:block" onerror="this.removeAttribute('src')"/>`;
   let next = html.replace(/^\s*"\s*\/>/m, "").replace(/>\s*"\s*\/>/g, ">");
   if (/class=["'][^"']*fk-hero/.test(next)) {
     return next.replace(/<img[^>]*fk-hero[^>]*>/i, img);
@@ -245,7 +258,8 @@ async function placeHero(html, prompt) {
   const phone = /fk-tab/i.test(html);
   const remote = await generateHero(apiKey, prompt, phone ? "1:1" : "16:9");
   if (!remote) return { html, log: [] };
-  const durable = (await materializeHero(remote)) || remote;
+  const durable = await materializeHero(remote);
+  if (!durable) return { html, log: [] };
   return { html: injectHero(html, durable), log: ["Foto hero"] };
 }
 
@@ -277,13 +291,16 @@ async function generate(prompt, html, instruction) {
   const apiKey = (process.env.XAI_API_KEY || "").trim();
   if (!apiKey) throw new Error("Manca XAI_API_KEY");
   const dashboard = looksDashboard(prompt, instruction);
+  const site = looksSite(prompt, instruction);
   const user = [
     `BRIEF:\n${prompt}`,
     html ? `HTML ATTUALE:\n${html.slice(0, 20000)}` : "",
     instruction ? `MODIFICA:\n${instruction}` : "",
     dashboard
       ? "META kind=dashboard + HTML gestionale desktop completo ora. Niente nav.fk-tab."
-      : "META + HTML completo ora.",
+      : site
+        ? "META kind=site + HTML sito desktop completo ora. Nav in alto, niente tabbar, niente TSX, niente 5 tab."
+        : "META + HTML completo ora.",
   ]
     .filter(Boolean)
     .join("\n\n");
@@ -299,7 +316,7 @@ async function generate(prompt, html, instruction) {
       max_tokens: 8000,
       stream: false,
       messages: [
-        { role: "system", content: dashboard ? DASHBOARD_SYSTEM : GENERATE_SYSTEM },
+        { role: "system", content: dashboard ? DASHBOARD_SYSTEM : site ? SITE_SYSTEM : GENERATE_SYSTEM },
         { role: "user", content: user },
       ],
     }),
@@ -318,22 +335,21 @@ async function generate(prompt, html, instruction) {
     const content = m[2].trim();
     fromGrok.push({ path, content });
     const sm = path.match(/^screens\/(\w+)\.html$/);
-    if (sm && !dashboard) {
+    if (sm && !dashboard && !site) {
       out = spliceScreen(out, sm[1], content);
       const comp = TSX_NAME[sm[1]];
       if (comp) fromGrok.push({ path: `src/screens/${comp}.tsx`, content: htmlToJsx(content, comp) });
     }
   }
-  const hero = await generateHero(apiKey, prompt, /fk-tab/i.test(out) ? "1:1" : "16:9");
+  const hero = await generateHero(apiKey, prompt, /fk-tab|bottom-tab/i.test(out) ? "1:1" : "16:9");
   if (hero) {
-    const durable = (await materializeHero(hero)) || hero;
-    out = injectHero(out, durable);
+    const durable = await materializeHero(hero);
+    if (durable) out = injectHero(out, durable);
   }
-  if (!dashboard && looksSite(prompt, instruction)) {
+  if (!dashboard && site) {
     out = stripPhoneChromeFromSite(out);
   }
   const meta = dashboard ? { ...(parsed.meta || {}), kind: "dashboard" } : parsed.meta;
-  const site = looksSite(prompt, instruction);
   return {
     html: out,
     meta: site ? { ...(meta || {}), kind: "site" } : meta,
@@ -608,7 +624,17 @@ async function polish(prompt, html, instruction) {
   }
   if (looksSite(prompt, instruction)) {
     const log = ["Rifinitura sito (nav in alto, niente tabbar)"];
-    let current = stripPhoneChromeFromSite(html);
+    let current = html;
+    if (looksPhoneShell(html) || /bottom-tab|fk-appicon|height:\s*100dvh/i.test(html)) {
+      const regen = await generate(
+        prompt,
+        html,
+        instruction || "FORMATO: sito web. kind=site. Rigenera desktop, nav in alto, niente tabbar.",
+      );
+      current = regen.html;
+      log.push(...(regen.log || []), "Layout desktop");
+    }
+    current = stripPhoneChromeFromSite(current);
     try {
       const placed = await placeHero(current, prompt);
       current = placed.html;

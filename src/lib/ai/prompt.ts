@@ -1,1 +1,1 @@
-export { SYSTEM_PROMPT } from "./prompts.shared";
+export { SYSTEM_PROMPT, SITE_PROMPT } from "./prompts.shared";

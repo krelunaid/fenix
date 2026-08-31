@@ -5,10 +5,17 @@ import { kindFromPrompt } from "@/lib/projects/infer";
 
 export { QA_PROMPT } from "./prompts.shared";
 
-export function looksCheap(html: string) {
+function isDeskKind(kind?: string) {
+  return kind === "site" || kind === "landing" || kind === "dashboard";
+}
+
+export function looksCheap(html: string, kind?: string) {
   const h = html.toLowerCase();
   if (!html || html.length < 400) return true;
   const apple = h.includes("#f5f5f7") || h.includes("manrope") || h.includes("font-family: inter");
+  if (isDeskKind(kind)) {
+    return apple || !h.includes("<nav");
+  }
   const svgs = (h.match(/<svg/g) || []).length;
   const noMark = !h.includes('rel="icon"') && !h.includes("rel='icon'");
   const noTabs = !h.includes("data-view") && !h.includes("tabbar") && !h.includes("id=\"tabs\"");
@@ -22,6 +29,8 @@ export async function reviewBuild(input: {
   spec?: string;
   signal: AbortSignal;
 }): Promise<BuildResult | null> {
+  const kind = kindFromPrompt(input.prompt);
+  if (isDeskKind(kind)) return null;
   const res = await fetch("https://api.x.ai/v1/chat/completions", {
     method: "POST",
     headers: {

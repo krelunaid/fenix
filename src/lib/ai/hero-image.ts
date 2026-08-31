@@ -29,7 +29,7 @@ export async function generateHeroUrl(
 }
 
 function isPhoneApp(html: string) {
-  return /fk-tab|data-view=["']home["']/i.test(html);
+  return /fk-tab|bottom-tab/i.test(html);
 }
 
 export function isHeroSrc(url: string) {
@@ -64,7 +64,7 @@ export function injectHero(html: string, url: string) {
   const phone = isPhoneApp(next);
   const img = phone
     ? `<img class="fk-hero" src="${url}" alt="" width="400" height="400" style="width:100%;height:140px;object-fit:cover;border-radius:20px;display:block;margin:8px 0 12px" onerror="this.removeAttribute('src')"/>`
-    : `<img class="fk-hero" src="${url}" alt="" width="1200" height="675" style="width:100%;height:220px;object-fit:cover;border-radius:18px;display:block;margin:0 0 16px" onerror="this.removeAttribute('src')"/>`;
+    : `<img class="fk-hero" src="${url}" alt="" width="1600" height="900" style="width:100%;height:min(52vh,560px);min-height:280px;object-fit:cover;display:block" onerror="this.removeAttribute('src')"/>`;
   if (/class=["'][^"']*fk-hero/.test(next)) {
     return next.replace(/<img[^>]*fk-hero[^>]*>/i, img);
   }

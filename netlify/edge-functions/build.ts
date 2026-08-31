@@ -1,6 +1,6 @@
 declare const Netlify: { env: { get(name: string): string | undefined } };
 
-import { QA_PROMPT, SYSTEM_PROMPT, VISUAL_PROMPT } from "../../src/lib/ai/prompts.shared.ts";
+import { QA_PROMPT, SITE_PROMPT, SYSTEM_PROMPT, VISUAL_PROMPT } from "../../src/lib/ai/prompts.shared.ts";
 import { validateProductHtml } from "../../src/lib/projects/validate-html.ts";
 import { formatPrefix, kindFromPrompt } from "../../src/lib/projects/infer.ts";
 
@@ -346,7 +346,7 @@ export default async function build(request: Request) {
             max_tokens: 20000,
             stream: true,
             messages: [
-              { role: "system", content: SYSTEM_PROMPT },
+              { role: "system", content: lockKind === "site" || lockKind === "landing" ? SITE_PROMPT : SYSTEM_PROMPT },
               {
                 role: "user",
                 content: shot
@@ -415,7 +415,8 @@ export default async function build(request: Request) {
         }
         if (!terminal) {
           let result = parseResult(output, lockKind);
-          if (result && !instruction && !shot) {
+          const desk = lockKind === "site" || lockKind === "landing" || lockKind === "dashboard";
+          if (result && !desk && !instruction && !shot) {
             send({ t: "s", s: "Provo la grafica" });
             const reviewed = await reviewPass(apiKey, prompt, result.html, spec);
             result = parseResult(reviewed, lockKind) ?? result;

@@ -8,7 +8,7 @@ import {
 } from "@/lib/projects/store";
 import { parseBuildOutput, type BuildResult } from "./parse";
 import { isWeakPreview, lookInstruction, resetAudit, waitPreviewAudit, waitPreviewShot, waitPreviewBoot, getPreviewBootError, getPreviewBootOk, rememberBootError } from "./look";
-import { APP_SHELL_HTML, APP_SHELL_INSTRUCTION, DASHBOARD_POLISH_INSTRUCTION } from "./app-shell";
+import { APP_SHELL_HTML, APP_SHELL_INSTRUCTION, DASHBOARD_POLISH_INSTRUCTION, SITE_POLISH_INSTRUCTION } from "./app-shell";
 import { CREATE_COST, ITERATE_COST } from "@/lib/projects/credits";
 import { isPhoneKind, resolveProjectKind } from "@/lib/projects/infer";
 import { formatHtmlErrors, validateProductHtml } from "@/lib/projects/validate-html";
@@ -545,18 +545,20 @@ async function repairBootFailures(projectId: string, prompt: string): Promise<bo
 
 function finishPolish(projectId: string, lastValidHtml: string, refund?: number) {
   const store = useProjectStore.getState();
-  const existing = store.getProject(projectId);
-  const alreadyReady = existing?.status === "ready";
-  const alreadyPronto = Boolean(
-    existing?.messages?.some((m) => /^Pronto\./.test(String(m.content || ""))),
-  );
   const boot = getPreviewBootError();
   const canaryOk = getPreviewBootOk();
   const promoted = promoteReady(projectId);
   if (promoted.ok && !boot && canaryOk) {
-    store.updateProject(projectId, { ...clearVisualJobPatch(), status: "ready", error: undefined });
-    if (alreadyReady && alreadyPronto) return true;
     const current = store.getProject(projectId);
+    const withoutPronto = (current?.messages || []).filter(
+      (m) => !/^Pronto\./.test(String(m.content || "")),
+    );
+    store.updateProject(projectId, {
+      ...clearVisualJobPatch(),
+      status: "ready",
+      error: undefined,
+      messages: withoutPronto,
+    });
     store.addMessage(projectId, {
       id: uid(),
       role: "assistant",
@@ -771,9 +773,17 @@ export async function runBuild(projectId: string, instruction?: string) {
             ? "Bozza valida in anteprima. Il motore visivo rifinisce (icone, 5–10 min). Pubblica resta chiusa finché non è pronto."
             : "Bozza valida in anteprima. Il motore visivo rifinisce in sottofondo. Pubblica resta chiusa finché non è pronto.",
         });
-        let lastValidHtml = await polishDraft(projectId, project.prompt, latest.html, instruction);
+        let lastValidHtml = await polishDraft(
+          projectId,
+          project.prompt,
+          latest.html,
+          instruction ||
+            (kind === "site" || kind === "landing"
+              ? SITE_POLISH_INSTRUCTION
+              : instruction),
+        );
 
-        if (!(instruction || isIOS())) {
+        if (!(instruction || isIOS()) && phone) {
           const look = async (label: string) => {
             const current = useProjectStore.getState().getProject(projectId);
             const snapshot = current?.html;

@@ -28,9 +28,21 @@ export function stripFakeStudioCopy(text: string): string {
 }
 
 export function scrubTechMessages<T extends { content: string }>(messages: T[] = []): T[] {
-  return messages
-    .map((m) => ({ ...m, content: stripFakeStudioCopy(m.content) }))
-    .filter((m) => m.content.length > 1);
+  return keepLatestPronto(
+    messages
+      .map((m) => ({ ...m, content: stripFakeStudioCopy(m.content) }))
+      .filter((m) => m.content.length > 1),
+  );
+}
+
+/** Keep a single current Pronto. Historical duplicates collapse on recover. */
+export function keepLatestPronto<T extends { content: string }>(messages: T[] = []): T[] {
+  let last = -1;
+  for (let i = 0; i < messages.length; i++) {
+    if (/^Pronto\./.test(String(messages[i]?.content || ""))) last = i;
+  }
+  if (last < 0) return messages;
+  return messages.filter((m, i) => !/^Pronto\./.test(String(m.content || "")) || i === last);
 }
 
 export function parseEuro(v: unknown): number {

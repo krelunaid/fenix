@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { parseBuildOutput } from "@/lib/ai/parse";
 import { generateHeroUrl, injectHero, heroAspect, materializeHero } from "@/lib/ai/hero-image";
-import { SYSTEM_PROMPT } from "@/lib/ai/prompt";
+import { SYSTEM_PROMPT, SITE_PROMPT } from "@/lib/ai/prompt";
 import { looksCheap, reviewBuild } from "@/lib/ai/qa";
 import { gateBuildResult } from "@/lib/ai/repair";
 import { detectStage, sseLine } from "@/lib/ai/stages";
@@ -209,7 +209,7 @@ export const Route = createFileRoute("/api/build")({
                   max_tokens: 20000,
                   stream: true,
                   messages: [
-                    { role: "system", content: SYSTEM_PROMPT },
+                    { role: "system", content: lockKind === "site" || lockKind === "landing" ? SITE_PROMPT : SYSTEM_PROMPT },
                     {
                       role: "user",
                       content: shot
@@ -302,7 +302,8 @@ export const Route = createFileRoute("/api/build")({
                 });
               } else {
                 let result = parsed;
-                const shouldReview = !shot && (!instruction || looksCheap(parsed.html));
+                const desk = lockKind === "site" || lockKind === "landing" || lockKind === "dashboard";
+                const shouldReview = !desk && !shot && (!instruction || looksCheap(parsed.html, lockKind));
                 if (shouldReview) {
                   send({ t: "s", s: "Provo la grafica" });
                   const visCtl = new AbortController();

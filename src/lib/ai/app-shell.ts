@@ -18,6 +18,11 @@ CSS reale (palette, bordi, form, tabella), niente controlli browser nudi.
 Tieni window.Fenix.load/save. Date in italiano.
 Restituisci META kind=dashboard + HTML completo montato.`;
 
+export const SITE_POLISH_INSTRUCTION = `FORMATO: sito web. kind=site. Rigenera un sito desktop, nav in alto, almeno 4 sezioni, footer.
+NON un'app telefono: niente nav.fk-tab, niente bottom-tab, niente template t-home, niente src/screens/*.tsx, niente 5 tab.
+Hero 16:9 persistita, testi veri, form con window.Fenix.load/save. Palette dal mestiere.`;
+
+
 export const APP_SHELL_HTML = `<!DOCTYPE html>
 <html lang="it">
 <head>
