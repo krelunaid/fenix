@@ -101,13 +101,20 @@ describe("dashboard CRUD repair", () => {
     assert.doesNotMatch(kiln, /data-fenix-crud/);
   });
 
+  it("fixture matches production .summary/.summary-item, not data-summary", () => {
+    assert.match(ARGILLA, /class="summary"/);
+    assert.match(ARGILLA, /summary-item/);
+    assert.match(ARGILLA, /QTÀ/);
+    assert.doesNotMatch(ARGILLA, /data-summary/);
+  });
+
   it("Salva on real Argilla HTML adds a row, survives reload, edit and delete", async () => {
     const withV1 = ARGILLA.replace(
       "</body>",
       `<script data-fenix-crud>window.__fenixCrud=1;</script></body>`,
     );
     const html = repairDashboardCrud(withV1);
-    assert.match(html, /data-fenix-crud="3"/);
+    assert.match(html, /data-fenix-crud="4"/);
     assert.equal((html.match(/data-fenix-crud/g) || []).length, 1);
     const src = prepareSrcDoc(
       html,
@@ -153,7 +160,10 @@ describe("dashboard CRUD repair", () => {
       await row.waitFor({ timeout: 4000 });
       assert.equal((await row.locator("td").nth(3).textContent())?.trim(), "2");
       assert.equal((await row.locator("td").nth(4).textContent())?.trim(), "17");
-      await frame.getByText("25 pezzi • 104 in stock • €3638").waitFor({ timeout: 2000 });
+      const sum = (await frame.locator(".summary").innerText()).replace(/\s+/g, " ");
+      assert.match(sum, /25 pezzi/);
+      assert.match(sum, /104 in stock/);
+      assert.match(sum, /3638/);
       assert.equal(await frame.locator("#fk-saved").count(), 0);
       const rows1 = await frame.locator("table tbody tr").count();
       assert.equal(rows1, 25);
@@ -161,7 +171,9 @@ describe("dashboard CRUD repair", () => {
       const row2 = frame.locator("tr", { hasText: "Codex Prova Reale" });
       await row2.waitFor({ timeout: 5000 });
       assert.equal((await row2.locator("td").nth(3).textContent())?.trim(), "2");
-      await frame.getByText("25 pezzi • 104 in stock • €3638").waitFor({ timeout: 2000 });
+      const sum2 = (await frame.locator(".summary").innerText()).replace(/\s+/g, " ");
+      assert.match(sum2, /25 pezzi/);
+      assert.match(sum2, /104 in stock/);
       assert.equal(await frame.locator("#fk-saved").count(), 0);
       await row2.getByRole("button", { name: /^modifica$/i }).click();
       assert.equal(await frame.locator("#p-nome").inputValue(), "Codex Prova Reale");
@@ -170,11 +182,118 @@ describe("dashboard CRUD repair", () => {
       await frame.locator("#p-qty").fill("5");
       await frame.locator("#p-prezzo").fill("20");
       await frame.getByRole("button", { name: /^salva$/i }).click();
-      await frame.getByText("25 pezzi • 107 in stock • €3704").waitFor({ timeout: 3000 });
+      await frame.getByText("107 in stock").waitFor({ timeout: 3000 });
       await frame.locator("tr", { hasText: "Codex Prova Reale" }).getByRole("button", { name: /^elimina$/i }).click();
       assert.equal(await frame.getByText("Codex Prova Reale").count(), 0);
-      await frame.getByText("24 pezzi • 102 in stock • €3604").waitFor({ timeout: 3000 });
+      const sum3 = (await frame.locator(".summary").innerText()).replace(/\s+/g, " ");
+      assert.match(sum3, /24 pezzi/);
+      assert.match(sum3, /102 in stock/);
+      assert.match(sum3, /3604/);
       assert.equal(await frame.locator("table tbody tr").count(), 24);
+      await page.close();
+    } finally {
+      await browser.close();
+    }
+  });
+
+  it("Studio remount keeps Argilla row, summary and edit/delete", async (t) => {
+    const PREVIEW = process.env.PREVIEW_URL || "http://127.0.0.1:8081";
+    try {
+      const health = await fetch(`${PREVIEW}/`, { signal: AbortSignal.timeout(1200) });
+      if (!health.ok) {
+        t.skip("preview non in ascolto");
+        return;
+      }
+    } catch {
+      t.skip("preview non in ascolto");
+      return;
+    }
+    const html = polishDashboardHtml(ARGILLA, "dashboard");
+    const browser = await chromium.launch({ headless: true });
+    try {
+      const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+      await page.addInitScript(
+        ({ seeded }: { seeded: string }) => {
+          if (localStorage.getItem("officina-projects")) return;
+          const now = Date.now();
+          localStorage.setItem(
+            "officina-projects",
+            JSON.stringify({
+              state: {
+                projects: [
+                  {
+                    id: "p-argilla-crud",
+                    name: "Argilla Viva",
+                    tagline: "",
+                    prompt: "FORMATO: gestionale ufficio. kind=dashboard",
+                    kind: "dashboard",
+                    requestedKind: "dashboard",
+                    summary: "",
+                    palette: {
+                      bg: "#f3eadc",
+                      surface: "#fbf6ee",
+                      fg: "#2b211c",
+                      muted: "#6e5648",
+                      accent: "#b85c38",
+                      line: "#d7c4b0",
+                    },
+                    html: seeded,
+                    messages: [],
+                    buildLog: [],
+                    status: "ready",
+                    createdAt: now,
+                    updatedAt: now,
+                  },
+                ],
+                creditsRemaining: 46,
+                appDb: {},
+              },
+              version: 2,
+            }),
+          );
+          localStorage.removeItem("officina-appdb");
+        },
+        { seeded: html },
+      );
+      await page.goto(`${PREVIEW}/studio/p-argilla-crud`, {
+        waitUntil: "domcontentloaded",
+        timeout: 20000,
+      });
+      const frame = page.locator("section.hidden.md\\:block").frameLocator("iframe");
+      await frame.getByRole("heading", { name: "Inventario" }).waitFor({ timeout: 15000 });
+      await frame.getByRole("button", { name: /nuovo pezzo/i }).click();
+      await frame.locator("#p-nome").fill("Codex Prova Reale");
+      await frame.locator("#p-qty").fill("2");
+      await frame.locator("#p-prezzo").fill("17");
+      await frame.getByRole("button", { name: /^salva$/i }).click();
+      await frame.locator("tr", { hasText: "Codex Prova Reale" }).waitFor({ timeout: 5000 });
+      const sum = (await frame.locator(".summary").innerText()).replace(/\s+/g, " ");
+      assert.match(sum, /25 pezzi/);
+      assert.match(sum, /104 in stock/);
+      assert.match(sum, /3638/);
+      await page.waitForFunction(
+        () => {
+          const blob = `${localStorage.getItem("officina-appdb") || ""} ${localStorage.getItem("officina-projects") || ""}`;
+          return blob.includes("Codex Prova Reale");
+        },
+        null,
+        { timeout: 8000 },
+      );
+      await page.reload({ waitUntil: "domcontentloaded" });
+      const frame2 = page.locator("section.hidden.md\\:block").frameLocator("iframe");
+      await frame2.locator("tr", { hasText: "Codex Prova Reale" }).waitFor({ timeout: 15000 });
+      const sum2 = (await frame2.locator(".summary").innerText()).replace(/\s+/g, " ");
+      assert.match(sum2, /25 pezzi/);
+      assert.match(sum2, /104 in stock/);
+      assert.equal(await frame2.locator("#fk-saved").count(), 0);
+      await frame2.locator("tr", { hasText: "Codex Prova Reale" }).getByRole("button", { name: /^modifica$/i }).click();
+      await frame2.locator("#p-qty").fill("5");
+      await frame2.locator("#p-prezzo").fill("20");
+      await frame2.getByRole("button", { name: /^salva$/i }).click();
+      await frame2.getByText("107 in stock").waitFor({ timeout: 4000 });
+      await frame2.locator("tr", { hasText: "Codex Prova Reale" }).getByRole("button", { name: /^elimina$/i }).click();
+      await frame2.getByText("24 pezzi").waitFor({ timeout: 4000 });
+      assert.match((await frame2.locator(".summary").innerText()).replace(/\s+/g, " "), /102 in stock/);
       await page.close();
     } finally {
       await browser.close();

@@ -1,8 +1,8 @@
 /** Injected into gestionale HTML. No ${} — product JS, not a template. */
-export const DASHBOARD_CRUD_SCRIPT = `<script data-fenix-crud="3">
+export const DASHBOARD_CRUD_SCRIPT = `<script data-fenix-crud="4">
 (function(){
-  if (window.__fenixCrud >= 3) return;
-  window.__fenixCrud = 3;
+  if (window.__fenixCrud >= 4) return;
+  window.__fenixCrud = 4;
   function qsa(s, r){ return Array.prototype.slice.call((r || document).querySelectorAll(s)); }
   function qs(s, r){ return (r || document).querySelector(s); }
   function txt(el){ return ((el && (el.textContent || (el.getAttribute && el.getAttribute("aria-label")))) || "").replace(/\\s+/g, " ").trim(); }
@@ -99,9 +99,11 @@ export const DASHBOARD_CRUD_SCRIPT = `<script data-fenix-crud="3">
   function host(){ return window.__fenixHost || window.Fenix; }
   function persist(rows){
     var F = host();
-    if (!F || !F.save) return;
-    F.save("items", rows);
-    F.save("state", { items: rows, rows: rows });
+    if (!F || !F.save) return Promise.resolve();
+    return Promise.all([
+      Promise.resolve(F.save("items", rows)),
+      Promise.resolve(F.save("state", { items: rows, rows: rows }))
+    ]);
   }
   function asRow(r){
     if (!r || typeof r !== "object") return { nome: String(r || ""), qty: "1", prezzo: "0", categoria: "", stato: "" };
@@ -177,14 +179,37 @@ export const DASHBOARD_CRUD_SCRIPT = `<script data-fenix-crud="3">
   function refreshSummary(){
     var t = totals();
     var line = t.pezzi + " pezzi • " + t.stock + " in stock • €" + t.valore;
-    qsa("p, h2, h3, span, small, [data-summary], .sub, .kpi, .muted").forEach(function(el){
+    function setNum(el, n, fallback){
+      var b = el.querySelector("b, strong, em, [data-n]");
+      if (b) b.textContent = String(n);
+      else el.textContent = fallback;
+    }
+    var items = qsa(".summary-item, .summary .kpi, .summary > div, [data-summary] > *");
+    var hit = 0;
+    items.forEach(function(el){
+      var s = (el.textContent || "").replace(/\\s+/g, " ").trim();
+      if (/pezzi/i.test(s) && /in stock/i.test(s) && /€/.test(s)) {
+        el.textContent = line; hit++;
+      } else if (/pezzi/i.test(s)) {
+        setNum(el, t.pezzi, t.pezzi + " pezzi"); hit++;
+      } else if (/in stock/i.test(s)) {
+        setNum(el, t.stock, t.stock + " in stock"); hit++;
+      } else if (/€/.test(s) || /euro/i.test(s) || /valore/i.test(s)) {
+        setNum(el, t.valore, "€" + t.valore); hit++;
+      }
+    });
+    if (hit) return;
+    var box = qs(".summary, [data-summary]");
+    if (box && !qsa(".summary-item", box).length) {
+      box.textContent = line;
+      return;
+    }
+    qsa("p, h2, h3, span, small, .sub, .kpi, .muted").forEach(function(el){
       if (el.closest && el.closest("table, form, dialog, .modal, nav")) return;
       var s = (el.textContent || "").replace(/\\s+/g, " ").trim();
       if (s.length > 90) return;
       if (/\\d+\\s*pezzi/.test(s) && /in stock/i.test(s) && /€/.test(s)) el.textContent = line;
     });
-    var marked = qs("[data-summary]");
-    if (marked) marked.textContent = line;
   }
   function hideSaved(){
     var ul = document.getElementById("fk-saved");
@@ -210,10 +235,10 @@ export const DASHBOARD_CRUD_SCRIPT = `<script data-fenix-crud="3">
       if (tb.tagName === "TABLE") tb.appendChild(tr);
       else tb.insertBefore(tr, tb.firstChild);
     }
-    persist(readRows());
+    var saved = persist(readRows());
     hideSaved();
     refreshSummary();
-    return true;
+    return saved;
   }
   function findField(names){
     var nodes = qsa("input, select, textarea", dlg);
@@ -245,10 +270,16 @@ export const DASHBOARD_CRUD_SCRIPT = `<script data-fenix-crud="3">
     var root = (from && dlg.contains(from) ? (from.closest("form") || dlg) : dlg);
     var data = collect(root);
     if (!data.nome) return false;
-    if (!addOrUpdate(data)) return false;
+    var saved = addOrUpdate(data);
+    if (!saved) return false;
     var f = root.tagName === "FORM" ? root : qs("form", dlg);
-    if (f) try { f.reset(); } catch (err) {}
-    closeDlg();
+    Promise.race([
+      Promise.resolve(saved),
+      new Promise(function(res){ setTimeout(res, 2000); })
+    ]).then(function(){
+      if (f) try { f.reset(); } catch (err) {}
+      closeDlg();
+    });
     return true;
   }
   document.addEventListener("click", function(e){
@@ -335,5 +366,7 @@ export const DASHBOARD_CRUD_SCRIPT = `<script data-fenix-crud="3">
   hideSaved();
   refreshSummary();
   setTimeout(function(){ boot(0); }, 0);
+  setTimeout(function(){ boot(0); }, 400);
+  setTimeout(function(){ boot(0); }, 1200);
 })();
 </script>`;

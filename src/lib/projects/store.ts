@@ -20,6 +20,26 @@ import {
 
 const MAX_PROJECTS = 48;
 export { STALE_BUILD_MS, RESUME_ERROR };
+export const APP_DB_KEY = "officina-appdb";
+
+function readDiskAppDb(): Record<string, Record<string, unknown>> {
+  if (typeof localStorage === "undefined") return {};
+  try {
+    const raw = localStorage.getItem(APP_DB_KEY);
+    return raw ? (JSON.parse(raw) as Record<string, Record<string, unknown>>) : {};
+  } catch {
+    return {};
+  }
+}
+
+function writeDiskAppDb(db: Record<string, Record<string, unknown>>) {
+  if (typeof localStorage === "undefined") return;
+  try {
+    localStorage.setItem(APP_DB_KEY, JSON.stringify(db));
+  } catch {
+    /* quota */
+  }
+}
 
 type NewProjectInput = {
   prompt: string;
@@ -101,7 +121,9 @@ export const useProjectStore = create<ProjectStore>()(
         }));
       },
       loadAppData: (projectId, collection) => {
-        return get().appDb[projectId]?.[collection] ?? null;
+        const mem = get().appDb[projectId]?.[collection];
+        if (mem != null) return mem;
+        return readDiskAppDb()[projectId]?.[collection] ?? null;
       },
       saveAppData: (projectId, collection, data) => {
         set((s) => ({
@@ -113,6 +135,9 @@ export const useProjectStore = create<ProjectStore>()(
             },
           },
         }));
+        const disk = readDiskAppDb();
+        disk[projectId] = { ...(disk[projectId] ?? {}), [collection]: data };
+        writeDiskAppDb(disk);
       },
       createFromBrief: ({ prompt, kind }) => {
         const project = blankProject(prompt.trim(), kind ?? "app");
@@ -223,12 +248,56 @@ export const useProjectStore = create<ProjectStore>()(
             state.creditsRemaining = CREDITS_GRANT;
           }
           if (!state.appDb) state.appDb = {};
+          const disk = readDiskAppDb();
+          const merged: Record<string, Record<string, unknown>> = { ...disk };
+          for (const [pid, cols] of Object.entries(state.appDb)) {
+            merged[pid] = { ...(disk[pid] ?? {}), ...cols };
+          }
+          state.appDb = merged;
+          writeDiskAppDb(merged);
         }
         state?.setHydrated();
       },
     },
   ),
 );
+
+if (typeof window !== "undefined") {
+  window.addEventListener("message", (event: MessageEvent) => {
+    const msg = event.data as {
+      t?: string;
+      id?: string;
+      op?: string;
+      projectId?: string;
+      col?: string;
+      data?: unknown;
+    };
+    if (!msg || msg.t !== "fenix-db" || !msg.id || !msg.col || !msg.projectId) return;
+    const reply = (value: unknown) => {
+      const source = event.source as Window | null;
+      source?.postMessage({ t: "fenix-db", id: msg.id, v: value }, "*");
+    };
+    const apply = () => {
+      const store = useProjectStore.getState();
+      let value: unknown = null;
+      if (msg.op === "load") value = store.loadAppData(msg.projectId!, msg.col!);
+      if (msg.op === "save") {
+        store.saveAppData(msg.projectId!, msg.col!, msg.data);
+        value = msg.data;
+      }
+      reply(value);
+    };
+    if (useProjectStore.getState().hydrated) {
+      apply();
+      return;
+    }
+    const unsub = useProjectStore.subscribe((s) => {
+      if (!s.hydrated) return;
+      unsub();
+      apply();
+    });
+  });
+}
 
 export function applyBuildResult(
   id: string,

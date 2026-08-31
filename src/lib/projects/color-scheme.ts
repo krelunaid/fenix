@@ -275,8 +275,14 @@ export function fenixRuntimeScript(projectId: string) {
         finish(op === "load" ? fallbackLoad(col) : fallbackSave(col, data));
       }
       setTimeout(function(){
+        if (done) return;
+        try {
+          window.parent.postMessage({ t:"fenix-db", id:id, op:op, projectId:pid, col:col, data:data }, "*");
+        } catch(err) {}
+      }, 400);
+      setTimeout(function(){
         finish(op === "load" ? fallbackLoad(col) : fallbackSave(col, data));
-      }, 800);
+      }, 2500);
     });
   }
   window.Fenix = {
@@ -285,7 +291,9 @@ export function fenixRuntimeScript(projectId: string) {
     save: function(col, data){ fallbackSave(col, data); return call("save", col, data); },
     ready: function(){ document.documentElement.setAttribute("data-fenix-ready","1"); }
   };
-  window.__fenixHost = window.Fenix;
+  try {
+    Object.defineProperty(window, "__fenixHost", { value: window.Fenix, writable: false, configurable: false });
+  } catch (e) { window.__fenixHost = window.Fenix; }
   function audit(){
     try {
       var tabs = document.querySelectorAll("[data-view], [data-tab], .tabbar button, nav.tabs button, .tabs button, nav[aria-label] button").length;
@@ -499,7 +507,7 @@ export function prepareSrcDoc(
       ? next.replace(/<head[^>]*>/i, (open) => `${open}${kit}`)
       : `${kit}${next}`;
   }
-  if (shouldRepairDashboard(next, kind) && !/data-fenix-crud="3"/.test(next)) {
+  if (shouldRepairDashboard(next, kind) && !/data-fenix-crud="4"/.test(next)) {
     next = next.replace(/<script[^>]*data-fenix-crud[^>]*>[\s\S]*?<\/script>/gi, "");
     next = /<\/body>/i.test(next)
       ? next.replace(/<\/body>/i, `${DASHBOARD_CRUD_SCRIPT}</body>`)

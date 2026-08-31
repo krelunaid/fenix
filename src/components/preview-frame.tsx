@@ -78,16 +78,31 @@ export function PreviewFrame({
       }
       if (!msg || msg.t !== "fenix-db" || !msg.id || !msg.col) return;
       const id = msg.projectId || projectId;
+      const col = msg.col;
       if (!id) return;
-      const store = useProjectStore.getState();
-      let value: unknown = null;
-      if (msg.op === "load") value = store.loadAppData(id, msg.col);
-      if (msg.op === "save") {
-        store.saveAppData(id, msg.col, msg.data);
-        value = msg.data;
+      const reply = (value: unknown) => {
+        const source = event.source as Window | null;
+        source?.postMessage({ t: "fenix-db", id: msg.id, v: value }, "*");
+      };
+      const apply = () => {
+        const store = useProjectStore.getState();
+        let value: unknown = null;
+        if (msg.op === "load") value = store.loadAppData(id, col);
+        if (msg.op === "save") {
+          store.saveAppData(id, col, msg.data);
+          value = msg.data;
+        }
+        reply(value);
+      };
+      if (useProjectStore.getState().hydrated) {
+        apply();
+        return;
       }
-      const source = event.source as Window | null;
-      source?.postMessage({ t: "fenix-db", id: msg.id, v: value }, "*");
+      const unsub = useProjectStore.subscribe((s) => {
+        if (!s.hydrated) return;
+        unsub();
+        apply();
+      });
     }
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);

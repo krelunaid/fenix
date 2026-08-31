@@ -25,7 +25,11 @@ body{font-family:Inter,system-ui,sans-serif;background:#f5f5f7;color:#1d1d1f;mar
   <section data-view-panel="dash" hidden><h1>Dashboard</h1></section>
   <section data-view-panel="inv">
     <h1>Inventario</h1>
-    <p data-summary>24 pezzi • 102 in stock • €3604</p>
+    <div class="summary">
+      <div class="summary-item"><b>24</b> pezzi</div>
+      <div class="summary-item"><b>102</b> in stock</div>
+      <div class="summary-item">€<b>3604</b></div>
+    </div>
     <button type="button" id="btn-new">+ Nuovo pezzo</button>
     <table>
       <thead>
