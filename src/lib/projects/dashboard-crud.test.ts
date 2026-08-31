@@ -273,12 +273,9 @@ describe("dashboard CRUD repair", () => {
       const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
       await page.addInitScript(
         ({ seeded, pid }: { seeded: string; pid: string }) => {
-          try {
-            if (sessionStorage.getItem("fenix-seed-" + pid)) return;
-            sessionStorage.setItem("fenix-seed-" + pid, "1");
-          } catch {
-            /* ignore */
-          }
+          if (window !== window.parent) return;
+          if (sessionStorage.getItem("fenix-seed-" + pid)) return;
+          sessionStorage.setItem("fenix-seed-" + pid, "1");
           const now = Date.now();
           localStorage.setItem(
             "officina-projects",

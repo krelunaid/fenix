@@ -122,8 +122,8 @@ describe("published site is server-side, not localStorage", () => {
     try {
       const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
       await page.addInitScript(() => {
-        try {
-          localStorage.setItem(
+        if (window !== window.parent) return;
+        localStorage.setItem(
             "officina-projects",
             JSON.stringify({
               state: {
@@ -141,9 +141,6 @@ describe("published site is server-side, not localStorage", () => {
               version: 2,
             }),
           );
-        } catch {
-          /* sandboxed preview iframe */
-        }
       });
       await page.goto(`${PREVIEW}/sito/${id}`, { waitUntil: "domcontentloaded", timeout: 20000 });
       const frame = page.frameLocator("iframe").first();
@@ -166,8 +163,8 @@ describe("published site is server-side, not localStorage", () => {
       const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
       await page.addInitScript(
         ({ html, pid }: { html: string; pid: string }) => {
-          try {
-            localStorage.setItem(
+          if (window !== window.parent) return;
+          localStorage.setItem(
               "officina-projects",
               JSON.stringify({
                 state: {
@@ -184,9 +181,6 @@ describe("published site is server-side, not localStorage", () => {
                 version: 2,
               }),
             );
-          } catch {
-            /* sandboxed preview iframe */
-          }
         },
         { html: ADAPTED, pid: id },
       );

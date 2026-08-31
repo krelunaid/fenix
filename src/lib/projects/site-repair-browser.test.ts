@@ -18,11 +18,6 @@ const BROKEN_HERO = readFileSync(join(here, "fixtures/broken-hero-site.html"), "
 const PREVIEW = process.env.PREVIEW_URL || "http://127.0.0.1:8081";
 const ADAPTED = ensureFenixAdapter(SITE);
 
-/** Playwright addInitScript runs in every frame, including sandboxed srcdoc. */
-function isSandboxStorageNoise(msg: string) {
-  return /localStorage|sessionStorage|sandboxed and lacks|The document is sandboxed/i.test(msg);
-}
-
 describe("studio repair for a new site project", () => {
   it("adapter preview is not empty, has 3+ views, Pubblica after valid gate", async () => {
     await requirePreview();
@@ -31,14 +26,12 @@ describe("studio repair for a new site project", () => {
       const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
       const errors: string[] = [];
       page.on("pageerror", (err) => {
-        const msg = String(err.message || err);
-        if (isSandboxStorageNoise(msg)) return;
         errors.push(err.message);
       });
       await page.addInitScript(
         ({ html, pid }) => {
-          try {
-            localStorage.setItem(
+          if (window !== window.parent) return;
+          localStorage.setItem(
               "officina-projects",
               JSON.stringify({
                 state: {
@@ -71,9 +64,6 @@ describe("studio repair for a new site project", () => {
                 version: 2,
               }),
             );
-          } catch {
-            /* sandboxed preview iframe */
-          }
         },
         { html: ADAPTED, pid: "p-onda" },
       );
@@ -98,8 +88,8 @@ describe("studio repair for a new site project", () => {
     try {
       const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
       await page.addInitScript(() => {
-        try {
-          localStorage.setItem(
+        if (window !== window.parent) return;
+        localStorage.setItem(
             "officina-projects",
             JSON.stringify({
               state: {
@@ -141,9 +131,6 @@ describe("studio repair for a new site project", () => {
               version: 2,
             }),
           );
-        } catch {
-          /* sandboxed preview iframe */
-        }
       });
       await page.goto(`${PREVIEW}/studio/p-dead`, { waitUntil: "domcontentloaded", timeout: 20000 });
       await page.getByText("Bloccato").first().waitFor({ timeout: 12000 });
@@ -168,8 +155,8 @@ describe("studio repair for a new site project", () => {
         });
       });
       await page.addInitScript(() => {
-        try {
-          localStorage.setItem(
+        if (window !== window.parent) return;
+        localStorage.setItem(
             "officina-projects",
             JSON.stringify({
               state: {
@@ -204,9 +191,6 @@ describe("studio repair for a new site project", () => {
               version: 2,
             }),
           );
-        } catch {
-          /* sandboxed preview iframe */
-        }
       });
       await page.goto(`${PREVIEW}/studio/p-ref`, { waitUntil: "domcontentloaded", timeout: 20000 });
       await page.getByRole("button", { name: "Riprova. Lo ricostruisco." }).first().click();
@@ -252,8 +236,8 @@ describe("studio repair for a new site project", () => {
         await route.fulfill({ status: 500, body: "no-worker" });
       });
       await page.addInitScript(() => {
-        try {
-          localStorage.setItem(
+        if (window !== window.parent) return;
+        localStorage.setItem(
             "officina-projects",
             JSON.stringify({
               state: {
@@ -288,9 +272,6 @@ describe("studio repair for a new site project", () => {
               version: 2,
             }),
           );
-        } catch {
-          /* sandboxed preview iframe */
-        }
       });
       await page.goto(`${PREVIEW}/studio/p-sse`, { waitUntil: "domcontentloaded", timeout: 20000 });
       await page.getByRole("button", { name: "Riprova. Lo ricostruisco." }).first().click();
@@ -384,8 +365,8 @@ describe("iframe boot error on site null.orders", () => {
         await route.fulfill({ status: 500, body: "no-worker" });
       });
       await page.addInitScript(() => {
-        try {
-          localStorage.setItem(
+        if (window !== window.parent) return;
+        localStorage.setItem(
             "officina-projects",
             JSON.stringify({
               state: {
@@ -420,9 +401,6 @@ describe("iframe boot error on site null.orders", () => {
               version: 2,
             }),
           );
-        } catch {
-          /* sandboxed preview iframe */
-        }
       });
       await page.goto(`${PREVIEW}/studio/p-orders`, { waitUntil: "domcontentloaded", timeout: 20000 });
       await page.getByRole("button", { name: "Riprova. Lo ricostruisco." }).first().click();
@@ -460,10 +438,10 @@ describe("iframe boot error on site null.orders", () => {
       });
       await page.addInitScript(
         ({ html }: { html: string }) => {
-          try {
-            if (localStorage.getItem("officina-projects")) return;
-            const now = Date.now();
-            localStorage.setItem(
+          if (window !== window.parent) return;
+          if (localStorage.getItem("officina-projects")) return;
+          const now = Date.now();
+          localStorage.setItem(
               "officina-projects",
               JSON.stringify({
                 state: {
@@ -508,9 +486,6 @@ describe("iframe boot error on site null.orders", () => {
                 version: 2,
               }),
             );
-          } catch {
-            /* sandboxed preview iframe */
-          }
         },
         { html: BOTTEGA },
       );

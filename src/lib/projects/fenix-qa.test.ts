@@ -163,8 +163,9 @@ describe("focus-visible and worker model", () => {
     assert.match(scheme, /unhandledrejection/);
     assert.match(scheme, /data-fenix-boot-error/);
     assert.match(scheme, /data-fenix-boot-ok/);
-    assert.match(scheme, /sandboxNoise/);
+    assert.doesNotMatch(scheme, /sandboxNoise/);
     assert.match(scheme, /memoryStorage/);
+    assert.match(scheme, /defineProperty\(window, "localStorage"/);
     assert.match(look, /waitPreviewBoot/);
     assert.match(look, /rememberBootError/);
     assert.match(look, /rememberBootOk/);

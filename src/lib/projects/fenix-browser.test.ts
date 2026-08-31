@@ -193,6 +193,7 @@ describe("studio overlay and resume in browser", () => {
       });
       await page.addInitScript(
         ({ html, resumeError }: { html: string; resumeError: string }) => {
+          if (window !== window.parent) return;
           const now = Date.now();
           const overlay = {
             id: "p-overlay",
@@ -292,6 +293,7 @@ describe("studio overlay and resume in browser", () => {
       });
       await page.addInitScript(
         ({ html, resumeError, prompt }: { html: string; resumeError: string; prompt: string }) => {
+          if (window !== window.parent) return;
           if (localStorage.getItem("officina-projects")) return;
           const now = Date.now();
           localStorage.setItem(
@@ -465,6 +467,7 @@ describe("studio overlay and resume in browser", () => {
       });
       await page.addInitScript(
         ({ html, prompt }: { html: string; prompt: string }) => {
+          if (window !== window.parent) return;
           if (localStorage.getItem("officina-projects")) return;
           const now = Date.now();
           localStorage.setItem(
@@ -672,6 +675,7 @@ describe("studio overlay and resume in browser", () => {
         await route.fulfill({ status: 404, body: "gone" });
       });
       await page.addInitScript(() => {
+        if (window !== window.parent) return;
         const now = Date.now();
         localStorage.setItem(
           "officina-projects",
@@ -767,6 +771,7 @@ describe("studio overlay and resume in browser", () => {
       });
       await page.addInitScript(
         ({ html, prompt }: { html: string; prompt: string }) => {
+          if (window !== window.parent) return;
           if (localStorage.getItem("officina-projects")) return;
           const now = Date.now();
           localStorage.setItem(
@@ -919,6 +924,7 @@ describe("studio overlay and resume in browser", () => {
       });
       await page.addInitScript(
         ({ html, prompt }: { html: string; prompt: string }) => {
+          if (window !== window.parent) return;
           if (localStorage.getItem("officina-projects")) return;
           const now = Date.now();
           localStorage.setItem(
@@ -1064,6 +1070,7 @@ describe("studio overlay and resume in browser", () => {
       });
       await page.addInitScript(
         ({ html, prompt }: { html: string; prompt: string }) => {
+          if (window !== window.parent) return;
           if (localStorage.getItem("officina-projects")) return;
           const now = Date.now();
           localStorage.setItem(
@@ -1179,6 +1186,7 @@ describe("studio overlay and resume in browser", () => {
       });
       await page.addInitScript(
         ({ html, prompt }: { html: string; prompt: string }) => {
+          if (window !== window.parent) return;
           if (localStorage.getItem("officina-projects")) return;
           const now = Date.now();
           localStorage.setItem(

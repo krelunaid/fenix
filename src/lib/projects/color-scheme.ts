@@ -241,13 +241,9 @@ export function fenixRuntimeScript(projectId: string, kind?: string) {
       Object.defineProperty(window, "localStorage", { configurable: true, value: ls });
     } catch (e2) {}
   }
-  function sandboxNoise(msg){
-    return /allow-same-origin|sandboxed and lacks|The document is sandboxed/i.test(String(msg || ""));
-  }
   function reportBootError(err, kind){
     var msg = "";
     try { msg = err && err.message ? String(err.message) : String(err || "errore"); } catch (e) { msg = "errore"; }
-    if (sandboxNoise(msg)) return;
     try { document.documentElement.setAttribute("data-fenix-boot-error", msg.slice(0, 240)); } catch (e) {}
     try {
       window.parent && window.parent.postMessage({
@@ -278,7 +274,6 @@ export function fenixRuntimeScript(projectId: string, kind?: string) {
   } catch (e) {}
   window.onerror = function(m, _s, _l, _c, err){
     var msg = err && err.message ? String(err.message) : String(m || "");
-    if (sandboxNoise(msg)) return true;
     if (!msg || /^error$/i.test(msg.trim()) || msg === "Script error.") {
       if (!(err && err.message && err.message !== "error" && msg !== "Script error.")) return true;
     }
@@ -299,17 +294,12 @@ export function fenixRuntimeScript(projectId: string, kind?: string) {
     var err = ev && ev.error;
     var msg = err && err.message ? String(err.message) : String((ev && ev.message) || "");
     if (!msg || /^error$/i.test(msg.trim())) return;
-    if (sandboxNoise(msg)) return;
     reportBootError(err || new Error(msg), "error");
     try { ev.preventDefault(); } catch (e) {}
   }, true);
   window.addEventListener("unhandledrejection", function(ev){
     var r = ev.reason;
     var msg = r && r.message ? String(r.message) : String(r || "unhandledrejection");
-    if (sandboxNoise(msg)) {
-      try { ev.preventDefault(); } catch (e) {}
-      return;
-    }
     reportBootError(r instanceof Error ? r : new Error(msg), "unhandledrejection");
     try { ev.preventDefault(); } catch (e) {}
   });
