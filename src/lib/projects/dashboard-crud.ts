@@ -17,6 +17,7 @@ const FAKE_COPY =
 
 export function stripFakeStudioCopy(text: string): string {
   return String(text || "")
+    .replace(/\bJOB_STILL_RUNNING\b/g, "Rifinitura interrotta. Tocca Riprendi rifinitura.")
     .replace(FAKE_COPY, "")
     .replace(/\(\s*\)\.?/g, "")
     .replace(/:\s*\.?\s*$/g, "")

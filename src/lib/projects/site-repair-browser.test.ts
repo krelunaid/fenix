@@ -415,4 +415,116 @@ describe("iframe boot error on site null.orders", () => {
       await browser.close();
     }
   });
+
+  it("reload of error + stale visualJobId/JOB_STILL_RUNNING drops the job, Pubblica closed, credits unchanged", async () => {
+    await requirePreview();
+    const browser = await chromium.launch({ headless: true });
+    try {
+      const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+      let polishPosts = 0;
+      await page.route(/polish|\/__worker/, async (route) => {
+        if (route.request().method() === "POST") polishPosts += 1;
+        await route.fulfill({ status: 500, body: "no-worker" });
+      });
+      await page.addInitScript(
+        ({ html }: { html: string }) => {
+          const now = Date.now();
+          localStorage.setItem(
+            "officina-projects",
+            JSON.stringify({
+              state: {
+                projects: [
+                  {
+                    id: "p-stale-job",
+                    name: "Bottega del Tornio",
+                    tagline: "",
+                    prompt: "FORMATO: sito web. kind=site. Bottega del Tornio, vetrina artigiana a Grottaglie",
+                    kind: "site",
+                    requestedKind: "site",
+                    summary: "",
+                    palette: {
+                      bg: "#f3eadc",
+                      surface: "#fbf6ee",
+                      fg: "#2b211c",
+                      muted: "#6e5648",
+                      accent: "#b85c38",
+                    },
+                    html,
+                    messages: [
+                      {
+                        id: "m1",
+                        role: "assistant",
+                        content: "JOB_STILL_RUNNING",
+                        at: now,
+                      },
+                    ],
+                    buildLog: ["Motore visivo in sottofondo", "Partito", "Partito"],
+                    status: "error",
+                    error: "JOB_STILL_RUNNING",
+                    creditRefunded: true,
+                    visualJobId: "job-ghost",
+                    visualJobStatus: "run",
+                    visualJobStartedAt: now - 60_000,
+                    createdAt: now,
+                    updatedAt: now,
+                  },
+                ],
+                creditsRemaining: 46,
+              },
+              version: 2,
+            }),
+          );
+        },
+        { html: BOTTEGA },
+      );
+      await page.goto(`${PREVIEW}/studio/p-stale-job`, { waitUntil: "domcontentloaded", timeout: 20000 });
+      await page.waitForFunction(
+        () => {
+          const raw = localStorage.getItem("officina-projects");
+          if (!raw) return false;
+          try {
+            const state = JSON.parse(raw).state;
+            const project = state.projects.find((p: { id: string }) => p.id === "p-stale-job");
+            return (
+              project?.status === "error" &&
+              !project?.visualJobId &&
+              !/JOB_STILL_RUNNING/.test(project?.error || "") &&
+              state.creditsRemaining === 46
+            );
+          } catch {
+            return false;
+          }
+        },
+        null,
+        { timeout: 15000 },
+      );
+      await page.getByText("Bloccato").first().waitFor({ timeout: 8000 });
+      assert.equal(await page.getByText("JOB_STILL_RUNNING").count(), 0);
+      assert.equal(await page.getByText("Motore visivo ancora in corso").count(), 0);
+      const overlay = await page.locator("text=/orders|gestionale|avvio|rifinitura/i").first().innerText();
+      assert.match(overlay, /orders|gestionale|avvio|rifinitura/i);
+      const pub = page.getByRole("button", { name: /pubblica/i });
+      assert.equal(await pub.isDisabled(), true);
+      const snap = await page.evaluate(() => {
+        const raw = localStorage.getItem("officina-projects");
+        const state = JSON.parse(raw || "{}").state;
+        const project = state.projects.find((p: { id: string }) => p.id === "p-stale-job");
+        return {
+          jobId: project?.visualJobId ?? null,
+          status: project?.status,
+          error: project?.error,
+          credits: state.creditsRemaining,
+          partito: (project?.buildLog ?? []).filter((s: string) => s === "Partito").length,
+        };
+      });
+      assert.equal(snap.jobId, null);
+      assert.equal(snap.status, "error");
+      assert.doesNotMatch(String(snap.error), /JOB_STILL_RUNNING/);
+      assert.equal(snap.credits, 46);
+      assert.equal(snap.partito, 0);
+      assert.equal(polishPosts, 0, "reload must not POST a new visual job");
+    } finally {
+      await browser.close();
+    }
+  });
 });

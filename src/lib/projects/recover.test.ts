@@ -137,6 +137,79 @@ describe("recoverPersistedProject", () => {
     assert.equal(needsResume(recovered), true);
   });
 
+  it("error + JOB_STILL_RUNNING + stale visualJobId reloads to a null job", () => {
+    const now = Date.now();
+    const recovered = recoverPersistedProject(
+      seed({
+        status: "error",
+        error: "JOB_STILL_RUNNING",
+        visualJobId: "job-stale",
+        visualJobStatus: "run",
+        visualJobStartedAt: now - 21 * 60 * 1000,
+        buildLog: ["Motore visivo in sottofondo", "Partito", "Partito"],
+        updatedAt: now,
+      }),
+      now,
+    );
+    assert.equal(recovered.status, "error");
+    assert.equal(recovered.visualJobId, undefined);
+    assert.equal(recovered.visualJobStatus, undefined);
+    assert.equal(recovered.visualJobStartedAt, undefined);
+    assert.equal(recovered.error, RESUME_ERROR);
+    assert.doesNotMatch(String(recovered.error), /JOB_STILL_RUNNING/);
+    assert.equal(isPublishable(recovered), false);
+    assert.equal(needsResume(recovered), true);
+    assert.equal((recovered.buildLog ?? []).includes("Partito"), false);
+    assert.equal((recovered.buildLog ?? []).includes("Motore visivo in sottofondo"), false);
+  });
+
+  it("drops a leftover job on error even if the TTL has not expired", () => {
+    const now = Date.now();
+    const recovered = recoverPersistedProject(
+      seed({
+        id: "bottega",
+        status: "error",
+        error: "JOB_STILL_RUNNING",
+        html: BOTTEGA,
+        kind: "site",
+        prompt: "FORMATO: sito web. kind=site. Bottega del Tornio",
+        visualJobId: "job-bottega",
+        visualJobStatus: "run",
+        visualJobStartedAt: now - 8_000,
+        buildLog: ["Motore visivo in sottofondo", "Partito", "Partito"],
+        updatedAt: now,
+      }),
+      now,
+    );
+    assert.equal(recovered.status, "error");
+    assert.equal(recovered.visualJobId, undefined);
+    assert.match(String(recovered.error), /gestionale|orders|avvio/i);
+    assert.doesNotMatch(String(recovered.error), /JOB_STILL_RUNNING|ancora in corso/i);
+    assert.equal(isPublishable(recovered), false);
+    assert.equal(needsResume(recovered), false);
+    assert.equal((recovered.buildLog ?? []).filter((s) => s === "Partito").length, 0);
+  });
+
+  it("keeps a boot-error message and still drops the leftover job", () => {
+    const recovered = recoverPersistedProject(
+      seed({
+        status: "error",
+        error: "Errore in avvio: Cannot read properties of null (reading 'orders')",
+        html: BOTTEGA,
+        kind: "site",
+        prompt: "FORMATO: sito web. kind=site. Bottega del Tornio",
+        visualJobId: "job-x",
+        visualJobStatus: "run",
+        visualJobStartedAt: Date.now() - 1_000,
+      }),
+    );
+    assert.equal(recovered.status, "error");
+    assert.equal(recovered.visualJobId, undefined);
+    assert.match(String(recovered.error), /orders/);
+    assert.doesNotMatch(String(recovered.error), /JOB_STILL_RUNNING/);
+    assert.equal(isPublishable(recovered), false);
+  });
+
   it("keeps every demo ready after rehydrate", () => {
     for (const demo of Object.values(DEMOS)) {
       const recovered = recoverPersistedProject({

@@ -319,6 +319,19 @@ export const useProjectStore = create<ProjectStore>()(
         projects: s.projects,
         creditsRemaining: s.creditsRemaining,
       }),
+      merge: (persisted, current) => {
+        const incoming = (persisted ?? {}) as Partial<ProjectStore>;
+        const projects = (incoming.projects ?? current.projects).map((p) => recoverPersistedProject(p));
+        return {
+          ...current,
+          ...incoming,
+          projects,
+          creditsRemaining:
+            typeof incoming.creditsRemaining === "number"
+              ? incoming.creditsRemaining
+              : current.creditsRemaining,
+        };
+      },
       onRehydrateStorage: () => (state) => {
         void (async () => {
           const idb = await readIndexedDb();

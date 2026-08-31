@@ -14,7 +14,9 @@ import { isPhoneKind, resolveProjectKind } from "@/lib/projects/infer";
 import { formatHtmlErrors, validateProductHtml } from "@/lib/projects/validate-html";
 import {
   clearVisualJobPatch,
+  dropLiveJobLogs,
   hasActiveVisualJob,
+  isJobSentinelError,
   JOB_STILL_RUNNING,
   VISUAL_JOB_TTL_MS,
   visualJobPatch,
@@ -29,6 +31,31 @@ const WORKER_POLL_MS = 2000;
 export const WORKER_JOB_POLL_MAX = 180;
 const GENERATE_POLL_MAX = 90;
 export const BOOT_REPAIR_MAX = 2;
+
+function abandonVisualJob(projectId: string, raw: string) {
+  const store = useProjectStore.getState();
+  const current = store.getProject(projectId);
+  const boot = getPreviewBootError()?.message;
+  let human = String(raw || "").trim();
+  if (isJobSentinelError(human) || !human) {
+    if (boot) human = `Errore in avvio: ${boot}`;
+    else if (current?.html) {
+      const report = validateProductHtml(current.html, { kind: current.kind });
+      human = report.ok ? RESUME_ERROR : formatHtmlErrors(report) || RESUME_ERROR;
+    } else {
+      human = RESUME_ERROR;
+    }
+  }
+  store.updateProject(projectId, {
+    status: "error",
+    error: human,
+    buildLog: dropLiveJobLogs(current?.buildLog ?? []),
+    ...clearVisualJobPatch(),
+  });
+  const last = current?.messages[current.messages.length - 1];
+  if (last?.role === "assistant" && last.content === human) return;
+  store.addMessage(projectId, { id: uid(), role: "assistant", content: human });
+}
 
 function readyCopy(result: BuildResult) {
   const summary = (result.summary ?? "")
@@ -411,6 +438,7 @@ async function polishDraft(
   } catch (err) {
     const workerError = err instanceof Error ? err.message : "errore";
     if (workerError === JOB_STILL_RUNNING || /Riprendi rifinitura/i.test(workerError)) {
+      abandonVisualJob(projectId, workerError);
       throw err instanceof Error ? err : new Error(workerError);
     }
     store.addMessage(projectId, {
@@ -527,14 +555,7 @@ export async function resumePolish(projectId: string) {
     finishPolish(projectId, lastValidHtml);
   } catch (err) {
     const message = err instanceof Error ? err.message : RESUME_ERROR;
-    if (message === JOB_STILL_RUNNING) return;
-    const storeNow = useProjectStore.getState();
-    storeNow.updateProject(projectId, {
-      status: "error",
-      error: /riprendi/i.test(message) ? message : `${message}. ${RESUME_ERROR}`,
-      ...clearVisualJobPatch(),
-    });
-    storeNow.addMessage(projectId, { id: uid(), role: "assistant", content: message });
+    abandonVisualJob(projectId, message);
   } finally {
     inflight.delete(projectId);
   }
@@ -742,8 +763,7 @@ export async function runBuild(projectId: string, instruction?: string) {
     if (charged) refundBuildCredit(projectId, cost);
     const message =
       err instanceof Error ? err.message : "Qualcosa è andato storto. Riprova.";
-    store.updateProject(projectId, { status: "error", error: message });
-    store.addMessage(projectId, { id: uid(), role: "assistant", content: message });
+    abandonVisualJob(projectId, message);
   } finally {
     inflight.delete(projectId);
   }

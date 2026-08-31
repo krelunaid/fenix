@@ -3,7 +3,9 @@ import { describe, it } from "node:test";
 import {
   VISUAL_JOB_TTL_MS,
   clearVisualJobPatch,
+  dropLiveJobLogs,
   hasActiveVisualJob,
+  isJobSentinelError,
   visualJobPatch,
 } from "./visual-job.ts";
 
@@ -39,5 +41,15 @@ describe("hasActiveVisualJob", () => {
     const patch = visualJobPatch("job-9", "run", now);
     assert.equal(hasActiveVisualJob(patch, now), true);
     assert.equal(hasActiveVisualJob({ ...patch, ...clearVisualJobPatch() }, now), false);
+  });
+});
+
+describe("job sentinel", () => {
+  it("recognizes JOB_STILL_RUNNING and drops live worker logs", () => {
+    assert.equal(isJobSentinelError("JOB_STILL_RUNNING"), true);
+    assert.equal(isJobSentinelError("Errore in avvio: orders"), false);
+    assert.deepEqual(dropLiveJobLogs(["Adatto Fenix", "Partito", "Partito", "Motore visivo in sottofondo"]), [
+      "Adatto Fenix",
+    ]);
   });
 });

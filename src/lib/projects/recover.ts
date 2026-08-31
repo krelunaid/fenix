@@ -3,7 +3,9 @@ import { isPhoneKind, kindFromPrompt, resolveProjectKind } from "./infer.ts";
 import type { BuildStatus, Palette, ProjectKind } from "./types.ts";
 import {
   clearVisualJobPatch,
+  dropLiveJobLogs,
   hasActiveVisualJob,
+  isJobSentinelError,
   type VisualJobStatus,
 } from "./visual-job.ts";
 import { polishDashboardHtml, shouldRepairDashboard } from "./dashboard-crud.ts";
@@ -27,6 +29,17 @@ export type Recoverable = {
   visualJobStatus?: VisualJobStatus;
   visualJobStartedAt?: number;
 };
+
+function htmlRecoveryError(
+  html: string,
+  kind: ProjectKind,
+  projectId: string,
+  bg?: string,
+): string | undefined {
+  const report = validatePublishable(html, { kind, projectId, bg });
+  if (report.ok) return undefined;
+  return formatHtmlErrors(report) || undefined;
+}
 
 /** Solo resumePolish/runBuild (finishPolish) possono promuovere a ready. Mai lo stale. */
 export function recoverPersistedProject<T extends Recoverable>(p: T, now = Date.now()): T {
@@ -53,6 +66,7 @@ export function recoverPersistedProject<T extends Recoverable>(p: T, now = Date.
   let visualJobId = p.visualJobId;
   let visualJobStatus = p.visualJobStatus;
   let visualJobStartedAt = p.visualJobStartedAt;
+  let buildLog = p.buildLog ?? [];
 
   const dropJob = () => {
     visualJobId = undefined;
@@ -100,13 +114,24 @@ export function recoverPersistedProject<T extends Recoverable>(p: T, now = Date.
     }
   }
 
+  if (status === "error") {
+    dropJob();
+    if (isJobSentinelError(error) || !String(error || "").trim()) {
+      const fromHtml = html ? htmlRecoveryError(html, kind, p.id, p.palette?.bg) : undefined;
+      error = fromHtml || (html ? RESUME_ERROR : "Interrotto. Riprova.");
+    }
+    if (p.visualJobId || isJobSentinelError(p.error)) {
+      buildLog = dropLiveJobLogs(buildLog);
+    }
+  }
+
   const cleared = status !== "building" ? clearVisualJobPatch() : {};
   return {
     ...p,
     html,
     kind,
     requestedKind,
-    buildLog: p.buildLog ?? [],
+    buildLog,
     status,
     error,
     visualJobId: status === "building" ? visualJobId : cleared.visualJobId,

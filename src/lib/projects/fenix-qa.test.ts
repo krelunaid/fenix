@@ -28,6 +28,8 @@ describe("focus-visible and worker model", () => {
     );
     assert.doesNotMatch(resume, /spendCredit/);
     assert.match(resume, /finishPolish/);
+    assert.match(resume, /abandonVisualJob/);
+    assert.doesNotMatch(resume, /if \(message === JOB_STILL_RUNNING\) return/);
     assert.match(src, /if \(refund\) refundBuildCredit\(projectId, refund\)/);
     assert.match(src, /charged = !finishPolish/);
   });

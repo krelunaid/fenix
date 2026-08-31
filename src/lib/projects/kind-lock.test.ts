@@ -116,6 +116,7 @@ describe("recover persisted site + prompt kind=dashboard", () => {
     assert.match(resume, /resolveProjectKind/);
     assert.match(resume, /DASHBOARD_POLISH_INSTRUCTION/);
     assert.match(resume, /finishPolish/);
+    assert.match(resume, /abandonVisualJob/);
     assert.match(src, /visualJobId/);
     assert.match(src, /hasActiveVisualJob/);
     assert.match(src, /Idempotency-Key/);

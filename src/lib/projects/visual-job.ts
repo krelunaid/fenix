@@ -23,6 +23,17 @@ export function hasActiveVisualJob(p: VisualJobFields, now = Date.now()): boolea
   return now - started < VISUAL_JOB_TTL_MS;
 }
 
+export function isJobSentinelError(error?: string): boolean {
+  return /\bJOB_STILL_RUNNING\b/.test(String(error || ""));
+}
+
+const LIVE_JOB_LOG =
+  /^(Partito|In coda|Motore visivo ancora in corso|Motore visivo in sottofondo)$/i;
+
+export function dropLiveJobLogs(log: string[] = []): string[] {
+  return log.filter((s) => !LIVE_JOB_LOG.test(String(s).trim()));
+}
+
 export function visualJobPatch(
   id: string,
   status: VisualJobStatus = "run",

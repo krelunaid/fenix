@@ -80,9 +80,12 @@ describe("dashboard CRUD repair", () => {
     const msgs = scrubTechMessages([
       { content: "Persistenza via ,", role: "assistant" },
       { content: "Ok. Inventario pronto.", role: "assistant" },
+      { content: "JOB_STILL_RUNNING", role: "assistant" },
     ]);
     assert.equal(msgs.some((m) => /persistenza via/i.test(m.content)), false);
     assert.ok(msgs.some((m) => /Inventario pronto/.test(m.content)));
+    assert.equal(msgs.some((m) => /JOB_STILL_RUNNING/.test(m.content)), false);
+    assert.ok(msgs.some((m) => /Riprendi rifinitura/.test(m.content)));
   });
 
   it("rejects unrepaired Nuovo pezzo and recover injects crud+craft", () => {
