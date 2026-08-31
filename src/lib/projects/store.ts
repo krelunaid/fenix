@@ -300,16 +300,16 @@ export const useProjectStore = create<ProjectStore>()(
     }),
     {
       name: "officina-projects",
-      version: 2,
+      version: 3,
       migrate: (persistedState, version) => {
         const state = persistedState as Pick<
           ProjectStore,
           "projects" | "creditsRemaining" | "appDb"
         >;
 
-        // One-time upgrade to the 50-credit testing grant.
-        // The persist version prevents the refill from repeating after another 50 uses.
-        if (version < 2) {
+        // One-time upgrade to the 100-credit testing grant.
+        // The persist version prevents the refill from repeating after the credits are used.
+        if (version < 3) {
           return { ...state, creditsRemaining: CREDITS_GRANT };
         }
 

@@ -61,7 +61,7 @@ describe("studio repair for a new site project", () => {
                   ],
                   creditsRemaining: 46,
                 },
-                version: 2,
+                version: 3,
               }),
             );
         },
@@ -128,7 +128,7 @@ describe("studio repair for a new site project", () => {
                 ],
                 creditsRemaining: 46,
               },
-              version: 2,
+              version: 3,
             }),
           );
       });
@@ -188,7 +188,7 @@ describe("studio repair for a new site project", () => {
                 ],
                 creditsRemaining: 46,
               },
-              version: 2,
+              version: 3,
             }),
           );
       });
@@ -269,7 +269,7 @@ describe("studio repair for a new site project", () => {
                 ],
                 creditsRemaining: 46,
               },
-              version: 2,
+              version: 3,
             }),
           );
       });
@@ -398,7 +398,7 @@ describe("iframe boot error on site null.orders", () => {
                 ],
                 creditsRemaining: 46,
               },
-              version: 2,
+              version: 3,
             }),
           );
       });
@@ -483,7 +483,7 @@ describe("iframe boot error on site null.orders", () => {
                   ],
                   creditsRemaining: 46,
                 },
-                version: 2,
+                version: 3,
               }),
             );
         },

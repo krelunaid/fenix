@@ -222,7 +222,7 @@ describe("studio overlay and resume in browser", () => {
             "officina-projects",
             JSON.stringify({
               state: { projects: [overlay, resume], creditsRemaining: 50, appDb: {} },
-              version: 2,
+              version: 3,
             }),
           );
         },
@@ -328,7 +328,7 @@ describe("studio overlay and resume in browser", () => {
                 creditsRemaining: 46,
                 appDb: {},
               },
-              version: 2,
+              version: 3,
             }),
           );
         },
@@ -513,7 +513,7 @@ describe("studio overlay and resume in browser", () => {
                 creditsRemaining: 42,
                 appDb: {},
               },
-              version: 2,
+              version: 3,
             }),
           );
         },
@@ -711,7 +711,7 @@ describe("studio overlay and resume in browser", () => {
               creditsRemaining: 46,
               appDb: {},
             },
-            version: 2,
+            version: 3,
           }),
         );
       });
@@ -816,7 +816,7 @@ describe("studio overlay and resume in browser", () => {
                 creditsRemaining: 46,
                 appDb: {},
               },
-              version: 2,
+              version: 3,
             }),
           );
         },
@@ -968,7 +968,7 @@ describe("studio overlay and resume in browser", () => {
                 creditsRemaining: 46,
                 appDb: {},
               },
-              version: 2,
+              version: 3,
             }),
           );
         },
@@ -1108,7 +1108,7 @@ describe("studio overlay and resume in browser", () => {
                 creditsRemaining: 46,
                 appDb: {},
               },
-              version: 2,
+              version: 3,
             }),
           );
         },
@@ -1224,7 +1224,7 @@ describe("studio overlay and resume in browser", () => {
                 creditsRemaining: 46,
                 appDb: {},
               },
-              version: 2,
+              version: 3,
             }),
           );
         },

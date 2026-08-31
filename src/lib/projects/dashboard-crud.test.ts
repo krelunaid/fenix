@@ -309,7 +309,7 @@ describe("dashboard CRUD repair", () => {
                 creditsRemaining: 46,
                 appDb: {},
               },
-              version: 2,
+              version: 3,
             }),
           );
         },

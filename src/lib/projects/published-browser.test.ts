@@ -146,7 +146,7 @@ describe("published site is server-side, not localStorage", () => {
                 ],
                 creditsRemaining: 46,
               },
-              version: 2,
+              version: 3,
             }),
           );
       });
@@ -206,7 +206,7 @@ describe("published site is server-side, not localStorage", () => {
                     },
                   ],
                 },
-                version: 2,
+                version: 3,
               }),
             );
         },
@@ -286,7 +286,7 @@ describe("published site is server-side, not localStorage", () => {
                 creditsRemaining: 46,
                 appDb: {},
               },
-              version: 2,
+              version: 3,
             }),
           );
         },

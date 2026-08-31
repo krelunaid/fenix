@@ -8,6 +8,7 @@ import {
   Plus,
   Sparkles,
 } from "lucide-react";
+import { CreditMeter } from "@/components/credit-meter";
 import { clearLocalAccount, getLocalAccount } from "@/lib/local-account";
 import { cn } from "@/lib/utils";
 
@@ -121,6 +122,7 @@ export function AppShell({
 
         <div className="flex min-w-0 flex-1 flex-col">
           <header className="flex items-center justify-end gap-2 px-6 py-4">
+            <CreditMeter />
             <button
               type="button"
               className="grid size-9 place-items-center rounded-full border border-white/10 text-[#9b93c2]"
