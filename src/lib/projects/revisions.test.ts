@@ -49,10 +49,12 @@ describe("fase3 gap matrix is evidence, not parity", () => {
     const now = fase3NowGaps();
     assert.deepEqual(
       now.map((g) => g.id),
-      ["revisions"],
+      ["revisions", "project-tree"],
     );
     assert.equal(now[0]?.impact, "high");
     assert.notEqual(now[0]?.cost, "high");
+    assert.equal(now[1]?.impact, "high");
+    assert.match(now[1]?.fenix || "", /POSIX|albero|ZIP|entrypoint|index\.html/i);
     for (const row of FASE3_GAPS) {
       assert.doesNotMatch(row.fenix, /parit[aà]|feature-complete|uguale a Emergent/i);
     }

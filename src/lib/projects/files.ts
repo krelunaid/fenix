@@ -5,47 +5,233 @@ export type ProjectFile = {
   content: string;
 };
 
+export const ENTRYPOINT = "index.html";
+export const MAX_PROJECT_FILES = 48;
+export const MAX_FILE_BYTES = 256 * 1024;
+export const MAX_TREE_BYTES = 1_500_000;
+export const MAX_PATH_LENGTH = 180;
+
+export type FileReject = { path: string; reason: string };
+
+export type IngestResult = {
+  files: ProjectFile[];
+  rejected: FileReject[];
+  entrypoint: string;
+};
+
 const FILE_RE =
   /<<<FILE path="([^"]+)">>>\s*([\s\S]*?)(?=(?:<<<FILE path=)|(?:<<<END>>>)|$)/g;
 
-export function parseProjectFiles(text: string): ProjectFile[] {
-  const files: ProjectFile[] = [];
-  const seen = new Set<string>();
-  for (const match of text.matchAll(FILE_RE)) {
-    const path = (match[1] ?? "").replace(/^\/+/, "").trim();
-    const content = (match[2] ?? "").trim();
-    if (!path || !content || seen.has(path)) continue;
-    seen.add(path);
-    files.push({ path, content });
+const ALLOWED_EXT = new Set([
+  ".html",
+  ".htm",
+  ".css",
+  ".js",
+  ".mjs",
+  ".cjs",
+  ".json",
+  ".md",
+  ".txt",
+  ".svg",
+  ".csv",
+  ".xml",
+  ".map",
+  ".ts",
+  ".tsx",
+  ".jsx",
+]);
+
+const SECRETISH =
+  /-----BEGIN[\s\S]+?PRIVATE KEY|-----BEGIN [\s\S]+?-----|"private_key"\s*:|Bearer\s+[A-Za-z0-9._\-+/=]{16,}|\bsk-[A-Za-z0-9]{8,}|\bxai-[A-Za-z0-9]{8,}|\bnf_[A-Za-z0-9]{12,}/i;
+
+export function canonicalizePath(raw: string): { ok: true; path: string } | { ok: false; reason: string } {
+  let p = String(raw ?? "").replace(/\\/g, "/").trim();
+  if (!p) return { ok: false, reason: "vuoto" };
+  if (p.includes("\0") || /[\x00-\x1f\x7f]/.test(p)) return { ok: false, reason: "caratteri di controllo" };
+  if (/^[a-zA-Z]:/.test(p) || p.startsWith("/") || p.startsWith("//")) {
+    return { ok: false, reason: "percorso assoluto" };
   }
-  return files.slice(0, 24);
+  if (p.startsWith("~")) return { ok: false, reason: "percorso assoluto" };
+  const parts: string[] = [];
+  for (const seg of p.split("/")) {
+    if (!seg || seg === ".") continue;
+    if (seg === "..") return { ok: false, reason: "traversal" };
+    parts.push(seg);
+  }
+  const clean = parts.join("/");
+  if (!clean) return { ok: false, reason: "vuoto" };
+  if (clean.length > MAX_PATH_LENGTH) return { ok: false, reason: "percorso troppo lungo" };
+  if (!/^[A-Za-z0-9._+\-]+(?:\/[A-Za-z0-9._+\-]+)*$/.test(clean)) {
+    return { ok: false, reason: "caratteri non ammessi" };
+  }
+  if (/^(?:\.git|node_modules)(?:\/|$)/i.test(clean) || /(^|\/)\.env(?:$|\.)/i.test(clean)) {
+    return { ok: false, reason: "percorso riservato" };
+  }
+  if (clean.toLowerCase() === "fenix.json") return { ok: false, reason: "percorso riservato" };
+  return { ok: true, path: clean };
+}
+
+function extOf(path: string): string {
+  const base = path.split("/").pop() || "";
+  const i = base.lastIndexOf(".");
+  return i >= 0 ? base.slice(i).toLowerCase() : "";
+}
+
+function looksBinary(content: string): boolean {
+  if (content.includes("\0")) return true;
+  const n = Math.min(content.length, 8_000);
+  if (!n) return false;
+  let bad = 0;
+  for (let i = 0; i < n; i++) {
+    const c = content.charCodeAt(i);
+    if (c === 0 || c < 9 || (c > 13 && c < 32) || c === 0xfffd) bad += 1;
+  }
+  return bad / n > 0.08;
+}
+
+export function fileLooksLikeSecret(content: string, path = ""): boolean {
+  if (/\.(pem|p12|pfx|key)$/i.test(path)) return true;
+  return SECRETISH.test(content);
+}
+
+export function inspectFile(path: string, content: string): { ok: true } | { ok: false; reason: string } {
+  if (typeof content !== "string" || !content) return { ok: false, reason: "vuoto" };
+  const ext = extOf(path);
+  if (!ext || !ALLOWED_EXT.has(ext)) return { ok: false, reason: "estensione non ammessa" };
+  if (content.length > MAX_FILE_BYTES) return { ok: false, reason: "file troppo grande" };
+  if (looksBinary(content)) return { ok: false, reason: "binario" };
+  if (fileLooksLikeSecret(content, path)) return { ok: false, reason: "segreto" };
+  return { ok: true };
+}
+
+export function entrypointOf(files: ProjectFile[]): string {
+  if (files.some((f) => f.path === ENTRYPOINT)) return ENTRYPOINT;
+  const html = files.find((f) => /\.html?$/i.test(f.path));
+  return html?.path || ENTRYPOINT;
+}
+
+function sortTree(files: ProjectFile[]): ProjectFile[] {
+  return [...files].sort((a, b) => {
+    if (a.path === ENTRYPOINT) return -1;
+    if (b.path === ENTRYPOINT) return 1;
+    return a.path.localeCompare(b.path);
+  });
+}
+
+/** Ingest generated files. POSIX relative, no traversal, no secrets, hard limits. */
+export function ingestProjectFiles(
+  input: ProjectFile[] | undefined,
+  opts?: { html?: string },
+): IngestResult {
+  const rejected: FileReject[] = [];
+  const byKey = new Map<string, ProjectFile>();
+  let bytes = 0;
+
+  const accept = (path: string, content: string, replace = false) => {
+    const canon = canonicalizePath(path);
+    if (!canon.ok) {
+      rejected.push({ path, reason: canon.reason });
+      return;
+    }
+    const check = inspectFile(canon.path, content);
+    if (!check.ok) {
+      rejected.push({ path: canon.path, reason: check.reason });
+      return;
+    }
+    const key = canon.path.toLowerCase();
+    const existing = byKey.get(key);
+    if (existing && !replace) {
+      rejected.push({ path: canon.path, reason: "collisione" });
+      return;
+    }
+    if (!existing && byKey.size >= MAX_PROJECT_FILES) {
+      rejected.push({ path: canon.path, reason: "limite file" });
+      return;
+    }
+    const nextBytes = bytes - (existing?.content.length || 0) + content.length;
+    if (nextBytes > MAX_TREE_BYTES) {
+      rejected.push({ path: canon.path, reason: "albero troppo grande" });
+      return;
+    }
+    bytes = nextBytes;
+    byKey.set(key, { path: canon.path, content });
+  };
+
+  for (const file of input || []) accept(file.path, file.content, false);
+  const html = typeof opts?.html === "string" ? opts.html : "";
+  if (html) accept(ENTRYPOINT, html, true);
+
+  const files = sortTree([...byKey.values()]);
+  return { files, rejected, entrypoint: entrypointOf(files) };
+}
+
+export function parseProjectFiles(text: string): ProjectFile[] {
+  const raw: ProjectFile[] = [];
+  for (const match of text.matchAll(FILE_RE)) {
+    const path = (match[1] ?? "").trim();
+    const content = (match[2] ?? "").trim();
+    if (!path || !content) continue;
+    raw.push({ path, content });
+  }
+  return ingestProjectFiles(raw).files;
 }
 
 export function normalizeFilePath(path: string): string {
-  return String(path || "")
-    .replace(/\\/g, "/")
-    .replace(/^\/+/, "")
-    .trim();
+  const canon = canonicalizePath(path);
+  return canon.ok ? canon.path : "";
 }
 
-/** Canonical project tree. HTML is denormalized; files[] is the extensible source. */
+/** Canonical project tree. HTML is denormalized live copy; files[] is the source. */
 export function projectFiles(input: { html?: string; files?: ProjectFile[] }): ProjectFile[] {
-  const out: ProjectFile[] = [];
-  const seen = new Set<string>();
-  const push = (path: string, content: string) => {
-    const clean = normalizeFilePath(path);
-    if (!clean || seen.has(clean) || typeof content !== "string" || !content) return;
-    seen.add(clean);
-    out.push({ path: clean, content });
-  };
-  for (const file of input.files || []) push(file.path, file.content);
-  if (input.html && !seen.has("index.html")) {
-    out.unshift({ path: "index.html", content: input.html });
-    seen.add("index.html");
-  }
-  return out.slice(0, 48);
+  return ingestProjectFiles(input.files, { html: input.html }).files;
 }
 
+/** HTML-only projects become a one-file tree. Kind, storage and html stay. */
+export function migrateProjectTree<T extends { html?: string; files?: ProjectFile[] }>(project: T): T {
+  const files = projectFiles({ html: project.html, files: project.files });
+  if (files.length === 0 && !(project.files && project.files.length)) return project;
+  const same =
+    (project.files?.length || 0) === files.length &&
+    files.every((f, i) => project.files?.[i]?.path === f.path && project.files?.[i]?.content === f.content);
+  if (same) return project;
+  return { ...project, files };
+}
+
+export type FileTreeNode =
+  | { kind: "dir"; name: string; path: string; children: FileTreeNode[] }
+  | { kind: "file"; name: string; path: string };
+
+export function fileTree(files: ProjectFile[]): FileTreeNode[] {
+  type DirAcc = { kind: "dir"; name: string; path: string; children: FileTreeNode[]; dirs: Map<string, DirAcc> };
+  const root: DirAcc = { kind: "dir", name: "", path: "", children: [], dirs: new Map() };
+  for (const file of sortTree(files)) {
+    const segs = file.path.split("/");
+    let dir = root;
+    for (let i = 0; i < segs.length - 1; i++) {
+      const name = segs[i]!;
+      const path = segs.slice(0, i + 1).join("/");
+      let next = dir.dirs.get(name.toLowerCase());
+      if (!next) {
+        next = { kind: "dir", name, path, children: [], dirs: new Map() };
+        dir.dirs.set(name.toLowerCase(), next);
+        dir.children.push(next);
+      }
+      dir = next;
+    }
+    dir.children.push({ kind: "file", name: segs[segs.length - 1]!, path: file.path });
+  }
+  function freeze(node: DirAcc): FileTreeNode {
+    const children = node.children
+      .map((child) => (child.kind === "dir" ? freeze(child as DirAcc) : child))
+      .sort((a, b) => {
+        if (a.kind !== b.kind) return a.kind === "dir" ? -1 : 1;
+        return a.name.localeCompare(b.name);
+      });
+    return { kind: "dir", name: node.name, path: node.path, children };
+  }
+  const frozen = freeze(root);
+  return frozen.kind === "dir" ? frozen.children : [];
+}
 
 function screenIdFromAttrs(attrs: string) {
   return (
@@ -117,19 +303,19 @@ export function ensureScreenFiles(files: ProjectFile[], html: string): ProjectFi
 }
 
 export function assembleHtml(files: ProjectFile[], fallbackHtml = "") {
-  let index =
-    files.find((f) => /(^|\/)index\.html$/i.test(f.path))?.content ?? fallbackHtml;
+  const tree = ingestProjectFiles(files, { html: fallbackHtml || undefined }).files;
+  let index = tree.find((f) => f.path === ENTRYPOINT)?.content ?? fallbackHtml;
   if (!index) return "";
 
-  const css = files
+  const css = tree
     .filter((f) => f.path.endsWith(".css"))
     .map((f) => f.content)
     .join("\n");
-  const js = files
-    .filter((f) => f.path.endsWith(".js"))
+  const js = tree
+    .filter((f) => f.path.endsWith(".js") || f.path.endsWith(".mjs"))
     .map((f) => f.content)
     .join("\n;\n");
-  const screens = files.filter((f) => /^screens\/.+\.html$/i.test(f.path));
+  const screens = tree.filter((f) => /^screens\/.+\.html$/i.test(f.path));
 
   let html = index;
   if (css && !/<style/i.test(html)) {
@@ -201,5 +387,19 @@ export function assembleHtml(files: ProjectFile[], fallbackHtml = "") {
 
 export function filesFromHtml(html: string, name = "index.html"): ProjectFile[] {
   if (!html) return [];
-  return ensureScreenFiles([{ path: name, content: html }], html);
+  const path = name === "index.html" ? ENTRYPOINT : name;
+  return ingestProjectFiles([{ path, content: html }], { html }).files;
+}
+
+/** Preview/publish use only the validated entrypoint, never extra paths. */
+export function previewHtmlFromTree(files: ProjectFile[], fallbackHtml = ""): string {
+  const tree = ingestProjectFiles(files, { html: fallbackHtml || undefined }).files;
+  return tree.find((f) => f.path === entrypointOf(tree))?.content || fallbackHtml || "";
+}
+
+/** Live preview is the denormalized HTML. Extra tree files are never executed as URLs. */
+export function authorizedPreviewHtml(input: { html?: string; files?: ProjectFile[] }): string {
+  const html = typeof input.html === "string" ? input.html : "";
+  if (html) return html;
+  return previewHtmlFromTree(input.files || []);
 }

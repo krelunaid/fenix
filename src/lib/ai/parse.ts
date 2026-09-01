@@ -1,6 +1,6 @@
+import { assembleHtml, ensureScreenFiles, ingestProjectFiles, parseProjectFiles, seedFiveScreens, type ProjectFile } from "@/lib/projects/files";
 import { DEFAULT_PALETTE, type Palette, type ProjectKind } from "@/lib/projects/types";
 import { isPhoneKind } from "@/lib/projects/infer";
-import { assembleHtml, ensureScreenFiles, parseProjectFiles, seedFiveScreens, type ProjectFile } from "@/lib/projects/files";
 import { fenix2Files } from "@/lib/projects/fenix2";
 
 export type BuildResult = {
@@ -100,8 +100,10 @@ export function parseBuildOutput(text: string, lockKind?: ProjectKind): BuildRes
     if (title) meta.name = title.slice(0, 80);
   }
 
-  if (!files.some((f) => /(^|\/)index\.html$/i.test(f.path))) {
-    files = [{ path: "index.html", content: html }, ...files];
+  if (!files.some((f) => f.path === "index.html")) {
+    files = ingestProjectFiles([{ path: "index.html", content: html }, ...files], { html }).files;
+  } else {
+    files = ingestProjectFiles(files, { html }).files;
   }
 
   if (isPhoneKind(meta.kind)) {
@@ -111,11 +113,12 @@ export function parseBuildOutput(text: string, lockKind?: ProjectKind): BuildRes
     files = seedFiveScreens(files, html, meta.name);
     html = assembleHtml(files, html) || html;
     files = fenix2Files(files, { name: meta.name, palette: meta.palette });
+    files = ingestProjectFiles(files, { html }).files;
   } else {
-    files = [
-      { path: "index.html", content: html },
-      ...files.filter((f) => !/(^|\/)index\.html$/i.test(f.path) && !/^screens\//i.test(f.path)),
-    ];
+    files = ingestProjectFiles(
+      files.filter((f) => f.path === "index.html" || (!/^screens\//i.test(f.path) && !f.path.startsWith("src/"))),
+      { html },
+    ).files;
   }
 
   return { ...meta, html, files };

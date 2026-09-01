@@ -75,6 +75,7 @@ Desktop-first: h1 clamp(2.5rem, 6vw, 4.6rem), max-width 1120px, niente 100dvh co
 VIETATO: nav.fk-tab, nav.bottom-tab, header.fk-top, template t-home, src/screens/*.tsx, 5 tab, fk-appicon, max-width 430px, Inter, Manrope, Apple, iOS, Fenix, Grok.
 Foto: 1 hero (fk-hero) + 2–4 Unsplash photo- con &w=1600. Form che conferma e salva i messaggi.
 CSS in <style>, Google Fonts del mestiere. Niente commenti.
+File extra opzionali (css/, js/, data/*.json, pages/*.html): percorsi POSIX relativi, niente .., niente secret, niente server. L'HTML resta il documento dell'anteprima.
 Rispondi SOLO:
 <<<META>>>
 {"name":"","tagline":"","kind":"site","direction":"3-6 parole","summary":"cosa si visita","palette":{"bg":"#rrggbb","surface":"#rrggbb","fg":"#rrggbb","muted":"#rrggbb","accent":"#rrggbb"}}

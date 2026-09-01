@@ -12,6 +12,7 @@ import {
 import { polishDashboardHtml, shouldRepairDashboard } from "./dashboard-crud.ts";
 import { replaceAppleTabIcons, rewriteIosWidgetHome, stripPhoneChromeFromSite, ensureMainElementId } from "./craft-icons.ts";
 import { repairLeakedCss } from "./color-scheme.ts";
+import { migrateProjectTree, type ProjectFile } from "./files.ts";
 
 export const STALE_BUILD_MS = 120_000;
 export const RESUME_ERROR = "Rifinitura interrotta. Tocca Riprendi rifinitura.";
@@ -30,6 +31,8 @@ export type Recoverable = {
   visualJobId?: string;
   visualJobStatus?: VisualJobStatus;
   visualJobStartedAt?: number;
+  files?: ProjectFile[];
+  appData?: Record<string, unknown>;
 };
 
 function htmlRecoveryError(
@@ -148,7 +151,7 @@ export function recoverPersistedProject<T extends Recoverable>(p: T, now = Date.
   }
 
   const cleared = status !== "building" ? clearVisualJobPatch() : {};
-  return {
+  const withHtml = {
     ...p,
     html,
     kind,
@@ -160,6 +163,7 @@ export function recoverPersistedProject<T extends Recoverable>(p: T, now = Date.
     visualJobStatus: status === "building" ? visualJobStatus : cleared.visualJobStatus,
     visualJobStartedAt: status === "building" ? visualJobStartedAt : cleared.visualJobStartedAt,
   };
+  return migrateProjectTree(withHtml);
 }
 
 export function isPublishable(project: {

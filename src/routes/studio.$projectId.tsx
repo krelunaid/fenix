@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Wordmark } from "@/components/wordmark";
 import { CreditMeter } from "@/components/credit-meter";
+import { FileTree } from "@/components/file-tree";
 import { runBuild, resumePolish } from "@/lib/ai/run-build";
 import { suggestEdits } from "@/lib/ai/suggest";
 import { codePaneFiles } from "@/lib/projects/fenix2";
@@ -510,7 +511,7 @@ function CodePane({
       }),
     [list],
   );
-  const [active, setActive] = useState("src/App.tsx");
+  const [active, setActive] = useState("");
   const current = ordered.find((f) => f.path === active) ?? ordered[0];
 
   if (!current) {
@@ -522,25 +523,6 @@ function CodePane({
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-card">
-      <div className="flex shrink-0 gap-1 overflow-x-auto border-b border-border px-2 py-2">
-        {ordered.map((f) => (
-          <button
-            key={f.path}
-            type="button"
-            onClick={() => setActive(f.path)}
-            className={cn(
-              "rounded-full px-3 py-1.5 font-mono text-xs",
-              f.path === current.path ? "bg-raised text-foreground" : "text-muted-foreground",
-            )}
-          >
-            {f.path}
-          </button>
-        ))}
-      </div>
-      <pre className="min-h-0 flex-1 overflow-auto p-4 font-mono text-xs leading-relaxed text-muted-foreground whitespace-pre-wrap">
-        {current.content}
-      </pre>
-    </div>
+    <FileTree files={ordered} activePath={current.path} onSelect={setActive} />
   );
 }

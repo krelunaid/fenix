@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { uid } from "@/lib/utils";
 import type { ProjectFile } from "./files";
+import { projectFiles } from "./files";
 import { CREDITS_GRANT, CREDIT_COST } from "./credits";
 import { DEMOS } from "./demos";
 import { resolveProjectKind, isPhoneKind } from "./infer";
@@ -257,6 +258,7 @@ export const useProjectStore = create<ProjectStore>()(
               summary: demo.summary,
               palette: demo.palette,
               html: demo.html,
+              files: projectFiles({ html: demo.html }),
               messages: [
                 {
                   id: uid(),
@@ -536,6 +538,7 @@ export function applyBuildResult(
   useProjectStore.getState().updateProject(id, {
     ...result,
     html,
+    files: projectFiles({ html, files: result.files }),
     kind,
     requestedKind,
     status: nextStatus,

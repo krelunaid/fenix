@@ -78,6 +78,7 @@ describe("focus-visible and worker model", () => {
     assert.match(studio, /isPublishable/);
     assert.match(studio, /compact=\{Boolean\(project\.html\)\}/);
     assert.match(studio, /codePaneFiles/);
+    assert.match(studio, /FileTree/);
     assert.match(studio, /VersionsButton/);
     assert.match(studio, /RevisionPanel/);
     assert.doesNotMatch(studio, /fenix2Files\(seedFiveScreens/);
@@ -85,6 +86,18 @@ describe("focus-visible and worker model", () => {
     assert.match(versionsUi, /Versioni/);
     assert.match(versionsUi, /Ripristina/);
     assert.match(versionsUi, /Cotture precedenti/);
+    const treeUi = readFileSync(join(root, "src/components/file-tree.tsx"), "utf8");
+    assert.match(treeUi, /role="tree"/);
+    assert.match(treeUi, /Albero file/);
+    assert.match(treeUi, /min-h-11/);
+    const filesSrc = readFileSync(join(root, "src/lib/projects/files.ts"), "utf8");
+    assert.match(filesSrc, /export function ingestProjectFiles/);
+    assert.match(filesSrc, /authorizedPreviewHtml/);
+    const zipSrc = readFileSync(join(root, "src/lib/projects/zip.ts"), "utf8");
+    assert.match(zipSrc, /export function zipProject/);
+    assert.match(zipSrc, /fenix\.json/);
+    const publishPanel = readFileSync(join(root, "src/components/publish-panel.tsx"), "utf8");
+    assert.match(publishPanel, /zipProject/);
     const sito = readFileSync(join(root, "src/routes/sito.$projectId.tsx"), "utf8");
     assert.doesNotMatch(sito, /useProjectStore/);
     assert.match(sito, /loadPublished/);

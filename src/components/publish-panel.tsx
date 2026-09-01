@@ -3,7 +3,7 @@ import { Check, Copy, Download, ExternalLink, Globe, Smartphone, Tablet, X } fro
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { downloadBytes, downloadTextFile, slugify } from "@/lib/utils";
-import { zipFiles } from "@/lib/projects/zip";
+import { zipProject } from "@/lib/projects/zip";
 import type { ProjectFile } from "@/lib/projects/files";
 import { projectFiles } from "@/lib/projects/files";
 import type { Palette, ProjectKind } from "@/lib/projects/types";
@@ -173,7 +173,7 @@ export function PublishPanel({
 
   function downloadProject() {
     const bundle = projectFiles({ html, files });
-    downloadBytes(`${slugify(name)}.zip`, zipFiles(bundle), "application/zip");
+    downloadBytes(`${slugify(name)}.zip`, zipProject(bundle, { kind }), "application/zip");
     toast("Progetto scaricato. File, stile, dati e logica.");
   }
 

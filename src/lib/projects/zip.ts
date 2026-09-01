@@ -1,3 +1,5 @@
+import { ENTRYPOINT, entrypointOf, projectFiles, type ProjectFile } from "./files.ts";
+
 function crc32(data: Uint8Array) {
   let c = ~0 >>> 0;
   for (let i = 0; i < data.length; i++) {
@@ -21,6 +23,32 @@ function u32(n: number) {
   b[2] = (n >>> 16) & 255;
   b[3] = (n >>> 24) & 255;
   return b;
+}
+
+function fnv1a(text: string): string {
+  let h = 2166136261;
+  for (let i = 0; i < text.length; i++) {
+    h ^= text.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return (h >>> 0).toString(16).padStart(8, "0");
+}
+
+export type TreeManifest = {
+  v: 1;
+  entrypoint: string;
+  kind?: string;
+  files: { path: string; hash: string; bytes: number }[];
+};
+
+export function treeManifest(files: ProjectFile[], meta?: { kind?: string }): TreeManifest {
+  const tree = projectFiles({ files });
+  return {
+    v: 1,
+    entrypoint: entrypointOf(tree) || ENTRYPOINT,
+    ...(meta?.kind ? { kind: meta.kind } : {}),
+    files: tree.map((f) => ({ path: f.path, hash: fnv1a(f.content), bytes: f.content.length })),
+  };
 }
 
 export function zipFiles(files: { path: string; content: string }[]) {
@@ -76,4 +104,57 @@ export function zipFiles(files: { path: string; content: string }[]) {
   }
   out.set(end, p);
   return out;
+}
+
+/** Canonical tree + reproducible fenix.json. Never secrets, never prompt/messages. */
+export function zipProject(files: ProjectFile[], meta?: { kind?: string }): Uint8Array {
+  const tree = projectFiles({ files });
+  const manifest = treeManifest(tree, meta);
+  return zipFiles([
+    { path: "fenix.json", content: `${JSON.stringify(manifest, null, 2)}\n` },
+    ...tree.filter((f) => f.path !== "fenix.json"),
+  ]);
+}
+
+export function unzipFiles(buf: Uint8Array): { path: string; content: string }[] {
+  const dec = new TextDecoder();
+  const out: { path: string; content: string }[] = [];
+  let i = 0;
+  while (i + 30 <= buf.length) {
+    if (buf[i] !== 0x50 || buf[i + 1] !== 0x4b) break;
+    if (buf[i + 2] === 0x01 && buf[i + 3] === 0x02) break;
+    if (buf[i + 2] === 0x05 && buf[i + 3] === 0x06) break;
+    if (buf[i + 2] !== 0x03 || buf[i + 3] !== 0x04) break;
+    const nameLen = buf[i + 26]! | (buf[i + 27]! << 8);
+    const extraLen = buf[i + 28]! | (buf[i + 29]! << 8);
+    const bodyLen = buf[i + 22]! | (buf[i + 23]! << 8) | (buf[i + 24]! << 16) | (buf[i + 25]! << 24);
+    const nameStart = i + 30;
+    const name = dec.decode(buf.subarray(nameStart, nameStart + nameLen));
+    const bodyStart = nameStart + nameLen + extraLen;
+    const body = dec.decode(buf.subarray(bodyStart, bodyStart + bodyLen));
+    out.push({ path: name, content: body });
+    i = bodyStart + bodyLen;
+  }
+  return out;
+}
+
+export function unzipProject(buf: Uint8Array): {
+  files: ProjectFile[];
+  manifest: TreeManifest | null;
+} {
+  const raw = unzipFiles(buf);
+  const man = raw.find((f) => f.path === "fenix.json");
+  let manifest: TreeManifest | null = null;
+  if (man) {
+    try {
+      const parsed = JSON.parse(man.content) as TreeManifest;
+      if (parsed && parsed.v === 1 && typeof parsed.entrypoint === "string") manifest = parsed;
+    } catch {
+      manifest = null;
+    }
+  }
+  return {
+    files: projectFiles({ files: raw.filter((f) => f.path !== "fenix.json") }),
+    manifest,
+  };
 }

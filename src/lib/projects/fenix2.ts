@@ -1,6 +1,6 @@
 import type { Palette, ProjectKind } from "./types.ts";
 import type { ProjectFile } from "./files.ts";
-import { seedFiveScreens } from "./files.ts";
+import { projectFiles, seedFiveScreens } from "./files.ts";
 import { isPhoneKind } from "./infer.ts";
 
 const IDS = ["home", "new", "list", "stats", "more"] as const;
@@ -276,15 +276,15 @@ root.render(React.createElement(App));
 </html>`;
 }
 
-/** Code pane: phone kinds get the 5-tab React tree; desk kinds keep the real HTML. */
+/** Code pane: phone kinds get the 5-tab React tree; desk kinds keep the real HTML tree. */
 export function codePaneFiles(
   html: string,
   files: ProjectFile[] | undefined,
   opts: { name: string; palette: Palette; kind?: ProjectKind },
 ): ProjectFile[] {
   if (!isPhoneKind(opts.kind)) {
-    if (!html) return files && files.length > 0 ? files : [];
-    return [{ path: "index.html", content: html }];
+    const tree = projectFiles({ html, files });
+    return tree.filter((f) => !f.path.startsWith("src/") && !/^screens\//i.test(f.path));
   }
   const base =
     files && files.length > 0 ? files : html ? [{ path: "index.html", content: html }] : [];
