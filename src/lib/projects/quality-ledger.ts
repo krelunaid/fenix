@@ -135,6 +135,14 @@ export const QUALITY_LEDGER: LedgerRow[] = [
     ok: true,
   },
   {
+    id: "continuous-production-smoke",
+    claim:
+      "Ogni CI main riuscita innesca un controllo bounded: attende il deploy Git Netlify sullo SHA esatto, verifica root e asset hashed, contratto Edge /api/build, Railway grok-build-0.1 e SLO 8s senza secret.",
+    evidence:
+      ".github/workflows/production-smoke.yml + scripts/production-smoke.mjs + production-smoke.test.mjs",
+    ok: true,
+  },
+  {
     id: "project-activity-ledger",
     claim:
       "Ogni progetto conserva un registro operativo redatto e limitato: build, esiti, rimborsi, dati, versioni, rami, pubblicazioni ed export. I rami non ereditano la cronologia sorgente; prompt, messaggi, job id e segreti non entrano nel registro.",

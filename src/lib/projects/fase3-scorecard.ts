@@ -244,9 +244,17 @@ export const FASE3_SCORECARD: ScoreDimension[] = [
         reproduce:
           "npm test -- src/lib/projects/cloud-data.test.ts src/lib/projects/cloud-data-load.test.ts",
       },
+      {
+        id: "continuous-production-smoke",
+        points: 1,
+        claim:
+          "Dopo ogni CI main verde, un job bounded attende lo SHA Netlify esatto e verifica root, asset, Edge, Railway e SLO 8s.",
+        reproduce:
+          "FENIX_EXPECTED_SHA=$(git rev-parse HEAD) FENIX_SMOKE_ATTEMPTS=1 npm run smoke:production",
+      },
     ],
     remaining:
-      "TestFlight e Play internal richiedono account/ruoli/secret esterni; manca una prova continuativa di SLO e carico sul database di produzione configurato.",
+      "TestFlight e Play internal richiedono account/ruoli/secret esterni; manca il carico sul database di produzione, che non è configurato.",
   },
 ];
 

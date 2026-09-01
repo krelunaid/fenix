@@ -81,7 +81,7 @@ export const FASE3_GAPS: Fase3Gap[] = [
     area: "Osservabilità",
     emergent: "Monitoring di deploy/CI dichiarato; profondità non verificata qui.",
     fenix:
-      "Job visuale + release FSM e registro attività per progetto: build, esito, rimborsi, dati, versioni, rami, publish ed export. Max 64 eventi, testo redatto, metriche allowlist; niente prompt, messaggi, job id o segreti. Registro visibile D/T/M. Il data service ha un test bounded multi-soggetto/CAS, ma niente APM o SLO continuativo in produzione.",
+      "Job visuale + release FSM e registro attività per progetto: build, esito, rimborsi, dati, versioni, rami, publish ed export. Max 64 eventi, testo redatto, metriche allowlist; niente prompt, messaggi, job id o segreti. Registro visibile D/T/M. Il data service ha un test bounded multi-soggetto/CAS. Dopo ogni CI main verde, production-smoke attende lo SHA Netlify esatto e misura root, asset, Edge e Railway con SLO 8s; niente APM e niente carico sul DB produzione non configurato.",
     impact: "medium",
     cost: "medium",
     slice: "next",
