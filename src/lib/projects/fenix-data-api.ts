@@ -1,6 +1,6 @@
 /**
  * JSON-only collection API installed on the iframe bridge. Published apps can
- * switch to the cloud-private parent transport; shared data stays false.
+ * switch to cloud-private, or cloud-shared after an explicit capability exchange.
  * It deliberately exposes no network, credentials or arbitrary callbacks.
  * Mutations are serialized per collection so Promise.all cannot lose writes
  * inside one generated runtime.

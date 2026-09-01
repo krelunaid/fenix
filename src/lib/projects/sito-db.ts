@@ -10,10 +10,15 @@ type FenixDbMsg = {
 };
 
 type CloudReply =
-  | { state: "ok"; data: unknown; rev: number }
-  | { state: "conflict"; current: { data: unknown; rev: number } }
+  | { state: "ok"; data: unknown; rev: number; mode?: "cloud-shared"; role?: "viewer" | "editor" }
+  | {
+      state: "conflict";
+      current: { data: unknown; rev: number };
+      mode?: "cloud-shared";
+      role?: "viewer" | "editor";
+    }
   | { state: "unavailable" }
-  | { state: "error" };
+  | { state: "error"; mode?: "cloud-shared"; role?: "viewer" | "editor" };
 
 export type SiteDbCloudClient = {
   fetch?: typeof fetch;
@@ -55,6 +60,16 @@ function isCloudValue(value: unknown): value is { data: unknown; rev: number } {
   return Number.isSafeInteger(rec.rev) && Number(rec.rev) >= 0 && "data" in rec;
 }
 
+function sharedMeta(value: unknown): { mode: "cloud-shared"; role?: "viewer" | "editor" } | {} {
+  if (!value || typeof value !== "object") return {};
+  const rec = value as Record<string, unknown>;
+  if (rec.mode !== "cloud-shared" || rec.shared !== true) return {};
+  return {
+    mode: "cloud-shared",
+    ...(rec.role === "viewer" || rec.role === "editor" ? { role: rec.role } : {}),
+  };
+}
+
 async function postCloudData(
   fetcher: typeof fetch,
   projectId: string,
@@ -85,9 +100,9 @@ async function postCloudData(
   }
 }
 
-/** Cloud-private transport for a published app. Only a genuine outage or the
- *  explicit 503 "not configured" state can fall back to the local durable
- *  bridge; validation/auth/conflict errors stay fail-closed. */
+/** Private or capability-shared cloud transport for a published app. Only a
+ *  genuine outage or the explicit 503 "not configured" state can fall back
+ *  to the local durable bridge; validation/auth/conflict errors stay fail-closed. */
 export async function dispatchPublishedSiteCloudDb(
   msg: FenixDbMsg,
   projectId: string,
@@ -117,12 +132,17 @@ export async function dispatchPublishedSiteCloudDb(
   if (result.status === 409) {
     const body = result.body as { current?: unknown } | null;
     return body && isCloudValue(body.current)
-      ? { state: "conflict", current: body.current }
+      ? { state: "conflict", current: body.current, ...sharedMeta(result.body) }
       : { state: "error" };
   }
   return result.status === 200 && isCloudValue(result.body)
-    ? { state: "ok", data: result.body.data, rev: result.body.rev }
-    : { state: "error" };
+    ? {
+        state: "ok",
+        data: result.body.data,
+        rev: result.body.rev,
+        ...sharedMeta(result.body),
+      }
+    : { state: "error", ...sharedMeta(result.body) };
 }
 
 export function expectedSiteFrameWindow(
@@ -198,7 +218,8 @@ export function bindPublishedSiteDb(
           {
             t: "fenix-db",
             id: requestId,
-            mode: "cloud-private",
+            mode: cloud.mode ?? "cloud-private",
+            ...(cloud.role ? { role: cloud.role } : {}),
             v:
               msg.op === "load"
                 ? cloud.data
@@ -220,7 +241,8 @@ export function bindPublishedSiteDb(
           {
             t: "fenix-db",
             id: requestId,
-            mode: "cloud-private",
+            mode: cloud.mode ?? "cloud-private",
+            ...(cloud.role ? { role: cloud.role } : {}),
             v: { ok: false, conflict: true, current: cloud.current },
           },
           origin,
@@ -229,7 +251,13 @@ export function bindPublishedSiteDb(
       }
       if (cloud.state === "error") {
         target.postMessage(
-          { t: "fenix-db", id: requestId, mode: "cloud-private", v: { ok: false, durable: 0 } },
+          {
+            t: "fenix-db",
+            id: requestId,
+            mode: cloud.mode ?? "cloud-private",
+            ...(cloud.role ? { role: cloud.role } : {}),
+            v: { ok: false, durable: 0 },
+          },
           origin,
         );
         return;

@@ -32,6 +32,8 @@ Export + pull Fenix da GitHub (opzionale, server only): `GITHUB_APP_ID` (o `GITH
 
 Le app generate (Grottaglie, Catenaria, …) si scaricano da **Pubblica** (ZIP / `index.html`) e si caricano sul sito come HTML statico. **Pubblica** resta disabilitata finché il documento finale (srcdoc compreso il runtime) non è valido.
 
+Le app pubblicate possono usare **Collabora sui dati**: il titolare genera link revocabili in sola lettura o modifica per un archivio cloud condiviso. La capability viene mostrata una volta, conservata nel database soltanto come hash e scambiata con un cookie HttpOnly limitato all'API dati. Non servono account esterni; questi ruoli non equivalgono ancora al co-editing del progetto.
+
 ## Locale
 
 `npm install` poi `npm run dev`. `npm test` e `npm run typecheck`.

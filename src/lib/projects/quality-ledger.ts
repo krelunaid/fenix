@@ -121,7 +121,7 @@ export const QUALITY_LEDGER: LedgerRow[] = [
   {
     id: "data-api-local-first",
     claim:
-      "Le app generate hanno un'API JSON local-first query/list/get/insert/update/remove. Le mutazioni concorrenti nella stessa app sono serializzate per collezione; token riservati o traversal non raggiungono il bridge. Il runtime dichiara shared=false.",
+      "Le app generate hanno un'API JSON local-first query/list/get/insert/update/remove. Le mutazioni concorrenti nella stessa app sono serializzate per collezione; token riservati o traversal non raggiungono il bridge. Senza un invito esplicito il runtime resta privato.",
     evidence:
       "src/lib/projects/fenix-data-api.ts + fenix-browser.test.ts CRUD Promise.all, filtri, isolamento collezioni, remount e console 0",
     ok: true,
@@ -129,7 +129,7 @@ export const QUALITY_LEDGER: LedgerRow[] = [
   {
     id: "published-cloud-private-data",
     claim:
-      "Le app pubblicate passano al cloud-private quando DATABASE_URL è disponibile: cookie anonimo HttpOnly per sito, solo hash nel DB, JSON ≤256 KB, corpo HTTP interrotto prima del parsing oltre il limite, revisioni CAS e un solo vincitore concorrente. Il carico riproducibile prova 24 soggetti × 4 collezioni e un burst di 32 writer. Errori di validazione, autorizzazione e conflitto restano fail-closed; solo 503/rete ripiega sul locale. shared=false resta esplicito.",
+      "Le app pubblicate passano al cloud-private quando DATABASE_URL è disponibile: cookie anonimo HttpOnly per sito, solo hash nel DB, JSON ≤256 KB, corpo HTTP interrotto prima del parsing oltre il limite, revisioni CAS e un solo vincitore concorrente. Il carico riproducibile prova 24 soggetti × 4 collezioni e un burst di 32 writer. Errori di validazione, autorizzazione e conflitto restano fail-closed; solo 503/rete ripiega sul locale. Senza capability di collaborazione il dataset resta isolato per soggetto.",
     evidence:
       "migrations/0004_generated_app_data.sql + cloud-data.test.ts SQL/HTTP + cloud-data-load.test.ts 96 collezioni/32 writer + sito-db.test.ts trasporto, retry, conflitto e fallback",
     ok: true,
@@ -164,6 +164,14 @@ export const QUALITY_LEDGER: LedgerRow[] = [
       "Un albero esportato da Fenix può tornare da un repo/branch GitHub solo dopo un click esplicito. L'installation token resta server-only; tree troncati, repo estranei, blob non UTF-8/100644, limiti, secret e mismatch manifest/checksum fermano l'import. Il risultato è un progetto nuovo senza stato operativo ereditato.",
     evidence:
       "github/import.ts + github.test.ts round-trip/tamper/truncated/owner + github-browser.test.ts D/T/M, zero auto-POST, console e overflow puliti",
+    ok: true,
+  },
+  {
+    id: "published-data-collaboration",
+    claim:
+      "Il titolare può condividere i dati di un'app pubblicata con link viewer/editor revocabili. La capability a 256 bit appare una volta, viene salvata solo come hash e passa a un cookie HttpOnly scoped; il frammento sparisce prima del fetch del sito. Browser distinti vedono lo stesso dataset CAS, un viewer non scrive e una revoca ferma il token senza fallback privato ambiguo.",
+    evidence:
+      "app-collaboration.test.ts + cloud-data.test.ts shared roles/revoke/CAS + app-collaboration-browser.test.ts D/T/M, fragment scrub, HttpOnly e cloud-shared cross-browser",
     ok: true,
   },
   {

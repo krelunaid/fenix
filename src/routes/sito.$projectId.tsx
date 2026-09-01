@@ -7,6 +7,7 @@ import { prepareSrcDoc } from "@/lib/projects/color-scheme";
 import { loadPublished } from "@/lib/projects/publish-client";
 import type { PublishedSnapshot } from "@/lib/projects/published";
 import { bindPublishedSiteDb } from "@/lib/projects/sito-db";
+import { exchangeAppInviteFromFragment } from "@/lib/projects/collaboration-client";
 import { downloadTextFile } from "@/lib/utils";
 
 export const Route = createFileRoute("/sito/$projectId")({
@@ -18,10 +19,19 @@ function LiveSitePage() {
   const navigate = useNavigate();
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [snap, setSnap] = useState<PublishedSnapshot | null | undefined>(undefined);
+  const [accessError, setAccessError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
-    void loadPublished(projectId)
+    setAccessError(null);
+    void exchangeAppInviteFromFragment(projectId)
+      .catch((error: unknown) => {
+        if (!cancelled) {
+          setAccessError(error instanceof Error ? error.message : "Invito non valido.");
+        }
+        return null;
+      })
+      .then(() => loadPublished(projectId))
       .then((next) => {
         if (!cancelled) setSnap(next);
       })
@@ -65,9 +75,7 @@ function LiveSitePage() {
         <Button
           variant="ghost"
           size="icon-sm"
-          onClick={() =>
-            navigate({ to: "/studio/$projectId", params: { projectId } })
-          }
+          onClick={() => navigate({ to: "/studio/$projectId", params: { projectId } })}
           aria-label="Torna allo studio"
         >
           <ArrowLeft />
@@ -85,16 +93,19 @@ function LiveSitePage() {
           Scarica
         </Button>
       </header>
+      {accessError ? (
+        <p
+          className="border-b border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+          role="alert"
+        >
+          {accessError} Il sito resta aperto con dati privati di questo browser.
+        </p>
+      ) : null}
       <div className="relative min-h-0 w-full flex-1">
         <iframe
           ref={iframeRef}
           title={snap.name}
-          srcDoc={prepareSrcDoc(
-            snap.html,
-            snap.palette ?? { bg: "#ffffff" },
-            snap.id,
-            snap.kind,
-          )}
+          srcDoc={prepareSrcDoc(snap.html, snap.palette ?? { bg: "#ffffff" }, snap.id, snap.kind)}
           sandbox="allow-scripts allow-forms allow-modals"
           className="absolute inset-0 block h-full w-full border-0 bg-white"
         />

@@ -1,5 +1,10 @@
 import { createHash, randomBytes } from "node:crypto";
 import type { Sql } from "../db.ts";
+import {
+  resolveAppAccess,
+  sharedCloudSubjectHash,
+  type AppAccessResolution,
+} from "./app-collaboration.ts";
 import { readPublished } from "./published-store.ts";
 import { isPublishedId } from "./published.ts";
 
@@ -17,6 +22,7 @@ export type CloudDataDeps = {
   siteExists?: (siteId: string) => Promise<boolean>;
   randomSession?: () => string;
   durable?: boolean;
+  resolveAccess?: (sql: Sql, request: Request, siteId: string) => Promise<AppAccessResolution>;
 };
 
 function jsonClone(value: unknown): { json: string; value: unknown } | { error: string } {
@@ -133,7 +139,7 @@ async function readBoundedJson(
 function response(
   data: unknown,
   status = 200,
-  cookie?: { name: string; value: string; path: string },
+  cookie?: { name: string; value: string; path: string; maxAge?: number },
 ) {
   const headers = new Headers({
     "Cache-Control": "no-store",
@@ -143,7 +149,7 @@ function response(
   if (cookie) {
     headers.append(
       "Set-Cookie",
-      `${cookie.name}=${cookie.value}; Path=${cookie.path}; Max-Age=31536000; HttpOnly; Secure; SameSite=Strict`,
+      `${cookie.name}=${cookie.value}; Path=${cookie.path}; Max-Age=${cookie.maxAge ?? 31_536_000}; HttpOnly; Secure; SameSite=Strict`,
     );
   }
   return new Response(JSON.stringify(data), { status, headers });
@@ -222,27 +228,46 @@ export async function handleCloudDataRequest(
   const body = parsed.value;
   const collection = parseCloudCollection(body.col);
   if (!collection) return response({ error: "Collezione non valida." }, 400);
-  const session = sessionForRequest(request, siteId, deps.randomSession);
-  const subjectHash = cloudSubjectHash(siteId, session.value);
   const sql = deps.sql ?? (await (await import("../db.ts")).getSql());
-  const cookie = session.fresh
+  const access = await (deps.resolveAccess ?? resolveAppAccess)(sql, request, siteId);
+  if (access.state === "invalid") {
+    return response({ error: "Invito scaduto o revocato.", shared: false }, 401, {
+      name: access.cookieName,
+      value: "",
+      path: `/api/app-data/${siteId}`,
+      maxAge: 0,
+    });
+  }
+  const shared = access.state === "active";
+  const role = shared ? access.role : undefined;
+  const session = shared ? null : sessionForRequest(request, siteId, deps.randomSession);
+  const subjectHash = shared
+    ? sharedCloudSubjectHash(siteId)
+    : cloudSubjectHash(siteId, session!.value);
+  const cookie = session?.fresh
     ? { name: session.name, value: session.value, path: `/api/app-data/${siteId}` }
     : undefined;
+  const meta = shared
+    ? { mode: "cloud-shared", shared: true, role }
+    : { mode: "cloud-private", shared: false };
   if (body.op === "load") {
     const current = await readCloudCollection(sql, siteId, subjectHash, collection);
-    return response({ ok: true, mode: "cloud-private", shared: false, ...current }, 200, cookie);
+    return response({ ok: true, ...meta, ...current }, 200, cookie);
   }
   if (body.op !== "save") return response({ error: "Operazione non valida." }, 400, cookie);
+  if (shared && role !== "editor") {
+    return response({ error: "Invito in sola lettura.", ...meta }, 403);
+  }
   const rev = parseCloudRevision(body.rev);
   if (rev == null) return response({ error: "Revisione non valida." }, 400, cookie);
   const saved = await writeCloudCollection(sql, siteId, subjectHash, collection, rev, body.data);
   if ("error" in saved) return response({ error: saved.error }, 400, cookie);
   if ("conflict" in saved) {
     return response(
-      { error: "Conflitto dati.", conflict: true, current: saved.current },
+      { error: "Conflitto dati.", conflict: true, ...meta, current: saved.current },
       409,
       cookie,
     );
   }
-  return response({ ok: true, mode: "cloud-private", shared: false, ...saved }, 200, cookie);
+  return response({ ok: true, ...meta, ...saved }, 200, cookie);
 }

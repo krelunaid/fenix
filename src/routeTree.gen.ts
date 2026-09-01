@@ -18,6 +18,7 @@ import { Route as ApiPolishRouteImport } from './routes/api/polish'
 import { Route as ApiReleaseRouteImport } from './routes/api/release'
 import { Route as SitoProjectIdRouteImport } from './routes/sito.$projectId'
 import { Route as StudioProjectIdRouteImport } from './routes/studio.$projectId'
+import { Route as ApiAppAccessSiteIdRouteImport } from './routes/api/app-access.$siteId'
 import { Route as ApiAppDataSiteIdRouteImport } from './routes/api/app-data.$siteId'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiGithubCallbackRouteImport } from './routes/api/github.callback'
@@ -72,6 +73,11 @@ const SitoProjectIdRoute = SitoProjectIdRouteImport.update({
 const StudioProjectIdRoute = StudioProjectIdRouteImport.update({
   id: '/studio/$projectId',
   path: '/studio/$projectId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAppAccessSiteIdRoute = ApiAppAccessSiteIdRouteImport.update({
+  id: '/api/app-access/$siteId',
+  path: '/api/app-access/$siteId',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiAppDataSiteIdRoute = ApiAppDataSiteIdRouteImport.update({
@@ -135,6 +141,7 @@ export interface FileRoutesByFullPath {
   '/api/release': typeof ApiReleaseRouteWithChildren
   '/sito/$projectId': typeof SitoProjectIdRoute
   '/studio/$projectId': typeof StudioProjectIdRoute
+  '/api/app-access/$siteId': typeof ApiAppAccessSiteIdRoute
   '/api/app-data/$siteId': typeof ApiAppDataSiteIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/github/callback': typeof ApiGithubCallbackRoute
@@ -156,6 +163,7 @@ export interface FileRoutesByTo {
   '/api/release': typeof ApiReleaseRouteWithChildren
   '/sito/$projectId': typeof SitoProjectIdRoute
   '/studio/$projectId': typeof StudioProjectIdRoute
+  '/api/app-access/$siteId': typeof ApiAppAccessSiteIdRoute
   '/api/app-data/$siteId': typeof ApiAppDataSiteIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/github/callback': typeof ApiGithubCallbackRoute
@@ -178,6 +186,7 @@ export interface FileRoutesById {
   '/api/release': typeof ApiReleaseRouteWithChildren
   '/sito/$projectId': typeof SitoProjectIdRoute
   '/studio/$projectId': typeof StudioProjectIdRoute
+  '/api/app-access/$siteId': typeof ApiAppAccessSiteIdRoute
   '/api/app-data/$siteId': typeof ApiAppDataSiteIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/github/callback': typeof ApiGithubCallbackRoute
@@ -201,6 +210,7 @@ export interface FileRouteTypes {
     | '/api/release'
     | '/sito/$projectId'
     | '/studio/$projectId'
+    | '/api/app-access/$siteId'
     | '/api/app-data/$siteId'
     | '/api/auth/$'
     | '/api/github/callback'
@@ -222,6 +232,7 @@ export interface FileRouteTypes {
     | '/api/release'
     | '/sito/$projectId'
     | '/studio/$projectId'
+    | '/api/app-access/$siteId'
     | '/api/app-data/$siteId'
     | '/api/auth/$'
     | '/api/github/callback'
@@ -243,6 +254,7 @@ export interface FileRouteTypes {
     | '/api/release'
     | '/sito/$projectId'
     | '/studio/$projectId'
+    | '/api/app-access/$siteId'
     | '/api/app-data/$siteId'
     | '/api/auth/$'
     | '/api/github/callback'
@@ -265,6 +277,7 @@ export interface RootRouteChildren {
   ApiReleaseRoute: typeof ApiReleaseRouteWithChildren
   SitoProjectIdRoute: typeof SitoProjectIdRoute
   StudioProjectIdRoute: typeof StudioProjectIdRoute
+  ApiAppAccessSiteIdRoute: typeof ApiAppAccessSiteIdRoute
   ApiAppDataSiteIdRoute: typeof ApiAppDataSiteIdRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiJobsIdRoute: typeof ApiJobsIdRoute
@@ -334,6 +347,13 @@ declare module '@tanstack/react-router' {
       path: '/studio/$projectId'
       fullPath: '/studio/$projectId'
       preLoaderRoute: typeof StudioProjectIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/app-access/$siteId': {
+      id: '/api/app-access/$siteId'
+      path: '/api/app-access/$siteId'
+      fullPath: '/api/app-access/$siteId'
+      preLoaderRoute: typeof ApiAppAccessSiteIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/app-data/$siteId': {
@@ -451,6 +471,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiReleaseRoute: ApiReleaseRouteWithChildren,
   SitoProjectIdRoute: SitoProjectIdRoute,
   StudioProjectIdRoute: StudioProjectIdRoute,
+  ApiAppAccessSiteIdRoute: ApiAppAccessSiteIdRoute,
   ApiAppDataSiteIdRoute: ApiAppDataSiteIdRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiJobsIdRoute: ApiJobsIdRoute,

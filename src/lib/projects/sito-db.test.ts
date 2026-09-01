@@ -103,6 +103,63 @@ describe("published /sito Fenix db", () => {
     );
   });
 
+  it("propagates shared role metadata on success and fail-closed writes", async () => {
+    const editorFetch = (async () =>
+      new Response(
+        JSON.stringify({
+          ok: true,
+          rev: 3,
+          data: [{ id: "shared" }],
+          mode: "cloud-shared",
+          shared: true,
+          role: "editor",
+        }),
+        { status: 200 },
+      )) as typeof fetch;
+    assert.deepEqual(
+      await dispatchPublishedSiteCloudDb(
+        { t: "fenix-db", id: "shared-1", op: "load", projectId: "site-1", col: "items" },
+        "site-1",
+        undefined,
+        { fetch: editorFetch },
+      ),
+      {
+        state: "ok",
+        rev: 3,
+        data: [{ id: "shared" }],
+        mode: "cloud-shared",
+        role: "editor",
+      },
+    );
+
+    const viewerFetch = (async () =>
+      new Response(
+        JSON.stringify({
+          error: "Accesso in sola lettura.",
+          mode: "cloud-shared",
+          shared: true,
+          role: "viewer",
+        }),
+        { status: 403 },
+      )) as typeof fetch;
+    assert.deepEqual(
+      await dispatchPublishedSiteCloudDb(
+        {
+          t: "fenix-db",
+          id: "shared-2",
+          op: "save",
+          projectId: "site-1",
+          col: "items",
+          data: [],
+        },
+        "site-1",
+        3,
+        { fetch: viewerFetch },
+      ),
+      { state: "error", mode: "cloud-shared", role: "viewer" },
+    );
+  });
+
   it("binds cloud mode to the expected iframe and deduplicates retried request ids", async () => {
     const originalWindow = Object.getOwnPropertyDescriptor(globalThis, "window");
     let listener: ((event: MessageEvent) => void) | undefined;

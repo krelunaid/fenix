@@ -418,7 +418,7 @@ export function fenixRuntimeScript(projectId: string, kind?: string) {
       function on(e){
         var m = e.data;
         if (!m || m.t !== "fenix-db" || m.id !== id) return;
-        if (m.mode === "cloud-private" || m.mode === "local-first") dataRuntimeMode = m.mode;
+        if (m.mode === "cloud-private" || m.mode === "cloud-shared" || m.mode === "local-first") dataRuntimeMode = m.mode;
         finish(m.v);
       }
       window.addEventListener("message", on);

@@ -53,7 +53,7 @@ export const FASE3_GAPS: Fase3Gap[] = [
     area: "Backend / db / auth / API nelle app generate",
     emergent: "Auth (Google), DB, Stripe, API nel primo build.",
     fenix:
-      "Fenix.load/save e Fenix.data JSON (query/list/get/insert/update/remove) usano, sulle app pubblicate, un archivio Postgres cloud-private per sessione anonima HttpOnly con isolamento sito/collezione, limite 256 KB, corpo HTTP bounded e revisioni CAS; retry duplicati e conflitti non sovrascrivono il vincitore. Un carico deterministico copre 24 soggetti × 4 collezioni e 32 writer concorrenti. Se il database durevole è esplicitamente non configurato o irraggiungibile, resta il bridge IndexedDB/localStorage. API dichiara shared=false: niente identità cross-device, auth dell'utente finale o dati condivisi. Mock JSON nel tree, nessun server del progetto inventato.",
+      "Fenix.load/save e Fenix.data JSON (query/list/get/insert/update/remove) usano, sulle app pubblicate, un archivio Postgres cloud-private per sessione anonima HttpOnly con isolamento sito/collezione, limite 256 KB, corpo HTTP bounded e revisioni CAS. Il titolare può inoltre creare link viewer/editor revocabili per uno spazio cloud condiviso cross-device: capability a 256 bit mostrata una volta, solo hash nel DB, cookie HttpOnly scoped, viewer fail-closed sulle scritture. Retry duplicati e conflitti non sovrascrivono il vincitore. Un carico deterministico copre 24 soggetti × 4 collezioni e 32 writer concorrenti. Se il database durevole è non configurato o irraggiungibile, resta il bridge locale solo per la modalità privata. Niente OAuth degli utenti finali, API server del progetto o chiavi inventate.",
     impact: "high",
     cost: "high",
     slice: "next",
@@ -62,10 +62,11 @@ export const FASE3_GAPS: Fase3Gap[] = [
     id: "collab",
     area: "Collaborazione",
     emergent: "Workspace condivisi e ruoli (claim 2026; evidenza mista).",
-    fenix: "Un titolare per job/sito. Nessun workspace multi-utente sul progetto.",
+    fenix:
+      "Un titolare del progetto/sito. Sulle app pubblicate crea e revoca link viewer/editor per dati condivisi: frammento URL consumato e rimosso prima del fetch pubblico, token hash-only server-side, cookie HttpOnly, revoca immediata, screenshot D/T/M e prova cross-browser. Non è ancora co-editing del codice, presenza o workspace organizzativo.",
     impact: "medium",
     cost: "high",
-    slice: "later",
+    slice: "next",
   },
   {
     id: "integrations",

@@ -149,9 +149,17 @@ export const FASE3_SCORECARD: ScoreDimension[] = [
           "Le app pubblicate usano il cloud privato quando configurato, deduplicano i retry e ripiegano sul locale solo per indisponibilità esplicita.",
         reproduce: "npm test -- src/lib/projects/sito-db.test.ts",
       },
+      {
+        id: "shared-data-capability-roles",
+        points: 3,
+        claim:
+          "Dati cloud condivisi cross-device con link-capability viewer/editor, token hash-only, revoca immediata e CAS fail-closed.",
+        reproduce:
+          "npm test -- src/lib/projects/app-collaboration.test.ts src/lib/projects/cloud-data.test.ts src/lib/projects/app-collaboration-browser.test.ts",
+      },
     ],
     remaining:
-      "Fenix.data resta shared=false: niente identità cross-device, database condiviso tra utenti, auth degli utenti finali, API server generate o connettori applicativi.",
+      "La collaborazione dati usa capability revocabili, non account nominativi: mancano OAuth/magic-link degli utenti finali, API server generate e connettori applicativi.",
   },
   {
     id: "collaboration-operations",
@@ -179,9 +187,17 @@ export const FASE3_SCORECARD: ScoreDimension[] = [
           "Claim/lease del job visuale e recovery bounded sono coperti da concorrenza deterministica.",
         reproduce: "npm test -- src/lib/projects/visual-job.test.ts",
       },
+      {
+        id: "published-data-roles",
+        points: 3,
+        claim:
+          "Il titolare crea e revoca inviti sola lettura/modifica; browser distinti condividono lo stesso archivio senza copiare il token nel progetto.",
+        reproduce:
+          "npm test -- src/lib/projects/app-collaboration.test.ts src/lib/projects/app-collaboration-browser.test.ts",
+      },
     ],
     remaining:
-      "Mancano workspace condivisi, ruoli, presenza multi-utente e prove di carico distribuito.",
+      "I ruoli coprono i dati dell'app pubblicata; mancano co-editing del codice/progetto, presenza multi-utente e workspace organizzativi.",
   },
   {
     id: "generated-quality",

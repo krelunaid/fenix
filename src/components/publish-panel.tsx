@@ -1,5 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
-import { Check, Copy, Download, ExternalLink, Globe, Smartphone, Tablet, X } from "lucide-react";
+import {
+  Check,
+  Copy,
+  Download,
+  ExternalLink,
+  Globe,
+  Smartphone,
+  Tablet,
+  Users,
+  X,
+} from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { downloadBytes, downloadTextFile, slugify } from "@/lib/utils";
@@ -9,6 +19,13 @@ import { authorizedPreviewHtml, projectFiles } from "@/lib/projects/files";
 import type { Palette, ProjectKind } from "@/lib/projects/types";
 import { publishSnapshot, readPublishedId } from "@/lib/projects/publish-client";
 import type { PublishedSnapshot } from "@/lib/projects/published";
+import {
+  createAppInviteLink,
+  loadAppInvites,
+  revokeAppInviteLink,
+  type AppInvite,
+  type AppInviteRole,
+} from "@/lib/projects/collaboration-client";
 import {
   loadReleaseAccounts,
   loadReleaseJob,
@@ -68,6 +85,9 @@ export function PublishPanel({
   const [packageName, setPackageName] = useState("");
   const [job, setJob] = useState<PublicReleaseJob | null>(null);
   const [releasing, setReleasing] = useState(false);
+  const [invites, setInvites] = useState<AppInvite[]>([]);
+  const [shareUrl, setShareUrl] = useState("");
+  const [collaborationBusy, setCollaborationBusy] = useState(false);
 
   const defaults = useMemo(
     () => ({
@@ -77,6 +97,7 @@ export function PublishPanel({
     [name],
   );
   const publishedHtml = useMemo(() => authorizedPreviewHtml({ html, files }), [html, files]);
+  const activePublishedId = published?.id || readPublishedId(projectId);
 
   useEffect(() => {
     if (!open) return;
@@ -164,9 +185,26 @@ export function PublishPanel({
     };
   }, [open, job?.id, job?.status]);
 
+  useEffect(() => {
+    if (!open || !activePublishedId) return;
+    let cancelled = false;
+    setInvites([]);
+    setShareUrl("");
+    void loadAppInvites(activePublishedId)
+      .then((rows) => {
+        if (!cancelled) setInvites(rows);
+      })
+      .catch(() => {
+        if (!cancelled) setInvites([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [open, activePublishedId]);
+
   if (!open) return null;
 
-  const publicId = published?.id || readPublishedId(projectId);
+  const publicId = activePublishedId;
   const publicPath = `/sito/${publicId || projectId}`;
   const liveWeb =
     job?.tracks.web?.provider?.liveUrl ||
@@ -211,6 +249,43 @@ export function PublishPanel({
       toast("Link pubblico copiato.");
     } catch {
       toast(url);
+    }
+  }
+
+  async function createShareLink(role: AppInviteRole) {
+    if (!publicId || collaborationBusy) return;
+    setCollaborationBusy(true);
+    setError(null);
+    try {
+      const created = await createAppInviteLink(publicId, role);
+      setInvites((rows) => [created.invite, ...rows].slice(0, 24));
+      setShareUrl(created.url);
+      try {
+        await navigator.clipboard.writeText(created.url);
+        toast("Link di collaborazione copiato. Il token è mostrato una sola volta.");
+      } catch {
+        toast("Link creato. Copialo dal campo prima di chiudere.");
+      }
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Invito non creato.");
+    } finally {
+      setCollaborationBusy(false);
+    }
+  }
+
+  async function revokeShareLink(id: string) {
+    if (!publicId || collaborationBusy) return;
+    setCollaborationBusy(true);
+    setError(null);
+    try {
+      await revokeAppInviteLink(publicId, id);
+      setInvites((rows) => rows.filter((invite) => invite.id !== id));
+      setShareUrl("");
+      toast("Invito revocato.");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Invito non revocato.");
+    } finally {
+      setCollaborationBusy(false);
     }
   }
 
@@ -303,6 +378,95 @@ export function PublishPanel({
             {publicPath}
             {published && published.version > 1 ? ` · v${published.version}` : ""}
           </p>
+        ) : null}
+
+        {publicId ? (
+          <section
+            className="mt-5 space-y-3 border-t border-border pt-5"
+            aria-labelledby="app-collaboration"
+          >
+            <div className="flex items-start gap-3">
+              <Users className="mt-0.5 size-5 shrink-0 text-accent" aria-hidden="true" />
+              <div>
+                <h3 id="app-collaboration" className="font-display text-lg tracking-tight">
+                  Collabora sui dati
+                </h3>
+                <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                  Crea link revocabili per lo stesso archivio cloud. Il lettore non può salvare;
+                  l’editor usa revisioni anti-sovrascrittura. Nessun account esterno richiesto.
+                </p>
+              </div>
+            </div>
+            <div className="grid gap-2 sm:grid-cols-2">
+              <Button
+                variant="secondary"
+                className="min-h-11"
+                disabled={collaborationBusy}
+                onClick={() => void createShareLink("viewer")}
+              >
+                Link sola lettura
+              </Button>
+              <Button
+                variant="secondary"
+                className="min-h-11"
+                disabled={collaborationBusy}
+                onClick={() => void createShareLink("editor")}
+              >
+                Link modifica
+              </Button>
+            </div>
+            {shareUrl ? (
+              <div className="rounded-md border border-accent/40 bg-accent/10 p-3" role="status">
+                <p className="text-xs text-muted-foreground">
+                  Copialo ora: il token non viene conservato in chiaro.
+                </p>
+                <div className="mt-2 flex items-center gap-2">
+                  <input
+                    readOnly
+                    aria-label="Link di collaborazione appena creato"
+                    value={shareUrl}
+                    className="min-h-11 min-w-0 flex-1 rounded-md border border-border bg-background px-3 font-mono text-xs"
+                  />
+                  <Button
+                    variant="secondary"
+                    size="icon"
+                    aria-label="Copia link di collaborazione"
+                    onClick={() => void navigator.clipboard.writeText(shareUrl)}
+                  >
+                    <Copy />
+                  </Button>
+                </div>
+              </div>
+            ) : null}
+            {invites.length ? (
+              <ul className="space-y-2" aria-label="Inviti attivi">
+                {invites.map((invite) => (
+                  <li
+                    key={invite.id}
+                    className="flex items-center justify-between gap-3 rounded-md border border-border px-3 py-2"
+                  >
+                    <span className="min-w-0">
+                      <span className="block truncate text-sm">{invite.label}</span>
+                      <span className="block text-xs text-muted-foreground">
+                        {invite.role === "editor" ? "Modifica" : "Sola lettura"} · scade il{" "}
+                        {new Date(invite.expiresAt).toLocaleDateString("it-IT")}
+                      </span>
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      disabled={collaborationBusy}
+                      onClick={() => void revokeShareLink(invite.id)}
+                    >
+                      Revoca
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-xs text-muted-foreground">Nessun invito attivo.</p>
+            )}
+          </section>
         ) : null}
 
         <section

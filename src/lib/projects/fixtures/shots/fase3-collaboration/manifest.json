@@ -1,0 +1,32 @@
+{
+  "suite": "fase3-published-data-collaboration",
+  "reproduce": "node --experimental-strip-types --test src/lib/projects/app-collaboration-browser.test.ts",
+  "assertions": [
+    "owner creates an editor capability only after a click",
+    "raw token is absent from localStorage and returned only in the one-time link",
+    "fragment is scrubbed before the published-site request",
+    "exchange sets a scoped HttpOnly Secure SameSite=Strict cookie",
+    "a clean browser context resolves the shared dataset as cloud-shared/editor",
+    "desktop, tablet and mobile have no console errors or horizontal overflow"
+  ],
+  "screenshots": [
+    {
+      "file": "collaboration-D.png",
+      "viewport": "1440x900",
+      "bytes": 139510,
+      "sha256": "80519d5d007d72558257aa0201c38455abe86c4abdbd3bae9463c469a5b9d6a6"
+    },
+    {
+      "file": "collaboration-T.png",
+      "viewport": "768x1024",
+      "bytes": 126886,
+      "sha256": "921928ac31e9ccf6c34a95c3d34fec2de09467c0525768a0a0828e4a2c17a4e1"
+    },
+    {
+      "file": "collaboration-M.png",
+      "viewport": "390x844",
+      "bytes": 67688,
+      "sha256": "eb7e577809d577a22b7307193565d76dba9781abb7a4f18fc45eff47a14e8bf7"
+    }
+  ]
+}

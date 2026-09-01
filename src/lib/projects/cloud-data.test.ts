@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import { after, before, describe, it } from "node:test";
 import { PGlite } from "@electric-sql/pglite";
 import type { Sql } from "../db.ts";
+import { appAccessCookieName, createAppInvite, revokeAppInvite } from "./app-collaboration.ts";
 import {
   cloudSubjectHash,
   handleCloudDataRequest,
@@ -17,10 +18,9 @@ import {
 } from "./cloud-data.ts";
 
 const here = dirname(fileURLToPath(import.meta.url));
-const migration = readFileSync(
-  join(here, "../../../migrations/0004_generated_app_data.sql"),
-  "utf8",
-);
+const migration = ["0004_generated_app_data.sql", "0005_app_collaboration.sql"]
+  .map((name) => readFileSync(join(here, `../../../migrations/${name}`), "utf8"))
+  .join("\n");
 const siteId = "site-cloud-1234";
 const sessionA = "a".repeat(64);
 const sessionB = "b".repeat(64);
@@ -171,6 +171,89 @@ describe("generated app cloud data HTTP", () => {
     );
     assert.equal(stale.status, 409);
     assert.equal((await stale.json()).conflict, true);
+  });
+
+  it("shares one CAS dataset across devices while enforcing viewer/editor roles", async () => {
+    const createdAt = Date.now();
+    const editorToken = "d".repeat(64);
+    const viewerToken = "e".repeat(64);
+    await createAppInvite(sql, siteId, "editor", "Redazione", {
+      now: createdAt,
+      token: editorToken,
+      id: "shared-editor-01",
+    });
+    await createAppInvite(sql, siteId, "viewer", "Lettura", {
+      now: createdAt,
+      token: viewerToken,
+      id: "shared-viewer-01",
+    });
+    const cookieName = appAccessCookieName(siteId);
+    const editorCookie = `${cookieName}=${editorToken}`;
+    const viewerCookie = `${cookieName}=${viewerToken}`;
+
+    const loaded = await handleCloudDataRequest(
+      req({ op: "load", col: "agenda-condivisa" }, { cookie: editorCookie }),
+      siteId,
+      deps,
+    );
+    assert.deepEqual(await loaded.json(), {
+      ok: true,
+      mode: "cloud-shared",
+      shared: true,
+      role: "editor",
+      rev: 0,
+      data: null,
+    });
+    const saved = await handleCloudDataRequest(
+      req(
+        {
+          op: "save",
+          col: "agenda-condivisa",
+          rev: 0,
+          data: [{ id: "r1", titolo: "Forno" }],
+        },
+        { cookie: editorCookie },
+      ),
+      siteId,
+      deps,
+    );
+    assert.equal(saved.status, 200);
+    const otherDevice = await handleCloudDataRequest(
+      req({ op: "load", col: "agenda-condivisa" }, { cookie: viewerCookie }),
+      siteId,
+      deps,
+    );
+    assert.deepEqual(await otherDevice.json(), {
+      ok: true,
+      mode: "cloud-shared",
+      shared: true,
+      role: "viewer",
+      rev: 1,
+      data: [{ id: "r1", titolo: "Forno" }],
+    });
+    const forbidden = await handleCloudDataRequest(
+      req({ op: "save", col: "agenda-condivisa", rev: 1, data: [] }, { cookie: viewerCookie }),
+      siteId,
+      deps,
+    );
+    assert.equal(forbidden.status, 403);
+    assert.match(JSON.stringify(await forbidden.json()), /sola lettura/i);
+
+    const privateLoad = await handleCloudDataRequest(
+      req({ op: "load", col: "agenda-condivisa" }),
+      siteId,
+      deps,
+    );
+    assert.deepEqual((await privateLoad.json()).data, null, "anonymous data stays isolated");
+
+    assert.equal(await revokeAppInvite(sql, siteId, "shared-editor-01"), true);
+    const revoked = await handleCloudDataRequest(
+      req({ op: "load", col: "agenda-condivisa" }, { cookie: editorCookie }),
+      siteId,
+      deps,
+    );
+    assert.equal(revoked.status, 401);
+    assert.match(revoked.headers.get("set-cookie") || "", /Max-Age=0/);
   });
 
   it("fails closed on origin, missing site and missing durable SQL", async () => {
