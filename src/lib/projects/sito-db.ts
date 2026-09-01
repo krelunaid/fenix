@@ -16,20 +16,23 @@ export function bindPublishedSiteDb(projectId: string): () => void {
     const msg = event.data as FenixDbMsg;
     if (!msg || msg.t !== "fenix-db" || !msg.id || !msg.col || !msg.projectId) return;
     if (msg.projectId !== projectId) return;
+    const pid = msg.projectId;
+    const col = msg.col;
+    const reqId = msg.id;
     const source = event.source as Window | null;
     const reply = (value: unknown) => {
-      source?.postMessage({ t: "fenix-db", id: msg.id, v: value }, "*");
+      source?.postMessage({ t: "fenix-db", id: reqId, v: value }, "*");
     };
     void (async () => {
       const db = await readAllDurable();
-      const cols = db[msg.projectId] ?? {};
+      const cols = db[pid] ?? {};
       if (msg.op === "load") {
-        reply(cols[msg.col] ?? null);
+        reply(cols[col] ?? null);
         return;
       }
       if (msg.op === "save") {
         const next: AppDb = mergeAppDb(db, {
-          [msg.projectId]: { ...cols, [msg.col]: msg.data },
+          [pid]: { ...cols, [col]: msg.data },
         });
         await writeDurable(next);
         reply(msg.data);

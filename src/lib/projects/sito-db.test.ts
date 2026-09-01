@@ -111,8 +111,8 @@ init();
       });
       await page.goto("http://127.0.0.1/sito-db-harness", { waitUntil: "domcontentloaded" });
       const loadSrc = async () => {
-        await page.locator("#f").evaluate((el, srcDoc) => {
-          el.srcdoc = srcDoc;
+        await page.locator("#f").evaluate((el, srcDoc: string) => {
+          (el as HTMLIFrameElement).srcdoc = srcDoc;
         }, src);
       };
       await loadSrc();
