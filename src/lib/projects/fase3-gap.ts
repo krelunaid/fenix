@@ -53,7 +53,7 @@ export const FASE3_GAPS: Fase3Gap[] = [
     area: "Backend / db / auth / API nelle app generate",
     emergent: "Auth (Google), DB, Stripe, API nel primo build.",
     fenix:
-      "Fenix.load/save e Fenix.data JSON (query/list/get/insert/update/remove) usano, sulle app pubblicate, un archivio Postgres cloud-private per sessione anonima HttpOnly con isolamento sito/collezione, limite 256 KB e revisioni CAS; retry duplicati e conflitti non sovrascrivono il vincitore. Se il database durevole è esplicitamente non configurato o irraggiungibile, resta il bridge IndexedDB/localStorage. API dichiara shared=false: niente identità cross-device, auth dell'utente finale o dati condivisi. Mock JSON nel tree, nessun server del progetto inventato.",
+      "Fenix.load/save e Fenix.data JSON (query/list/get/insert/update/remove) usano, sulle app pubblicate, un archivio Postgres cloud-private per sessione anonima HttpOnly con isolamento sito/collezione, limite 256 KB, corpo HTTP bounded e revisioni CAS; retry duplicati e conflitti non sovrascrivono il vincitore. Un carico deterministico copre 24 soggetti × 4 collezioni e 32 writer concorrenti. Se il database durevole è esplicitamente non configurato o irraggiungibile, resta il bridge IndexedDB/localStorage. API dichiara shared=false: niente identità cross-device, auth dell'utente finale o dati condivisi. Mock JSON nel tree, nessun server del progetto inventato.",
     impact: "high",
     cost: "high",
     slice: "next",
@@ -81,7 +81,7 @@ export const FASE3_GAPS: Fase3Gap[] = [
     area: "Osservabilità",
     emergent: "Monitoring di deploy/CI dichiarato; profondità non verificata qui.",
     fenix:
-      "Job visuale + release FSM e registro attività per progetto: build, esito, rimborsi, dati, versioni, rami, publish ed export. Max 64 eventi, testo redatto, metriche allowlist; niente prompt, messaggi, job id o segreti. Registro visibile D/T/M. Niente APM cloud sulle app generate.",
+      "Job visuale + release FSM e registro attività per progetto: build, esito, rimborsi, dati, versioni, rami, publish ed export. Max 64 eventi, testo redatto, metriche allowlist; niente prompt, messaggi, job id o segreti. Registro visibile D/T/M. Il data service ha un test bounded multi-soggetto/CAS, ma niente APM o SLO continuativo in produzione.",
     impact: "medium",
     cost: "medium",
     slice: "next",

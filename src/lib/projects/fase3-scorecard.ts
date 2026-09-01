@@ -236,9 +236,17 @@ export const FASE3_SCORECARD: ScoreDimension[] = [
           "Pipeline iOS/Android e build Gradle reale sono coperte senza fingere account store.",
         reproduce: "npm test -- src/lib/release/fase2.test.ts src/lib/release/gradle-real.test.ts",
       },
+      {
+        id: "cloud-data-load-guard",
+        points: 1,
+        claim:
+          "Il servizio dati limita il corpo HTTP prima del parsing e prova 96 collezioni isolate più un burst CAS di 32 writer.",
+        reproduce:
+          "npm test -- src/lib/projects/cloud-data.test.ts src/lib/projects/cloud-data-load.test.ts",
+      },
     ],
     remaining:
-      "TestFlight e Play internal richiedono account/ruoli/secret esterni; manca inoltre una prova continuativa di carico e SLO produzione.",
+      "TestFlight e Play internal richiedono account/ruoli/secret esterni; manca una prova continuativa di SLO e carico sul database di produzione configurato.",
   },
 ];
 

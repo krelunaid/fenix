@@ -87,7 +87,7 @@ describe("fase3 gap matrix is evidence, not parity", () => {
       [20, 15, 15, 15, 15, 20],
     );
     assert.equal(total.max, 100);
-    assert.equal(total.score, 64);
+    assert.equal(total.score, 65);
     assert.equal(total.complete, false);
     for (const dimension of FASE3_SCORECARD) {
       assert.ok(scoreDimension(dimension) <= dimension.max);

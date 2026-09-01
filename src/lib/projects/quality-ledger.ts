@@ -129,9 +129,9 @@ export const QUALITY_LEDGER: LedgerRow[] = [
   {
     id: "published-cloud-private-data",
     claim:
-      "Le app pubblicate passano al cloud-private quando DATABASE_URL è disponibile: cookie anonimo HttpOnly per sito, solo hash nel DB, JSON ≤256 KB, revisioni CAS e un solo vincitore concorrente. Errori di validazione, autorizzazione e conflitto restano fail-closed; solo 503/rete ripiega sul locale. shared=false resta esplicito.",
+      "Le app pubblicate passano al cloud-private quando DATABASE_URL è disponibile: cookie anonimo HttpOnly per sito, solo hash nel DB, JSON ≤256 KB, corpo HTTP interrotto prima del parsing oltre il limite, revisioni CAS e un solo vincitore concorrente. Il carico riproducibile prova 24 soggetti × 4 collezioni e un burst di 32 writer. Errori di validazione, autorizzazione e conflitto restano fail-closed; solo 503/rete ripiega sul locale. shared=false resta esplicito.",
     evidence:
-      "migrations/0004_generated_app_data.sql + cloud-data.test.ts SQL/HTTP + sito-db.test.ts trasporto, retry, conflitto e fallback",
+      "migrations/0004_generated_app_data.sql + cloud-data.test.ts SQL/HTTP + cloud-data-load.test.ts 96 collezioni/32 writer + sito-db.test.ts trasporto, retry, conflitto e fallback",
     ok: true,
   },
   {

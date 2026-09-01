@@ -9,6 +9,7 @@ import {
   cloudSubjectHash,
   handleCloudDataRequest,
   MAX_CLOUD_COLLECTION_BYTES,
+  MAX_CLOUD_REQUEST_BYTES,
   parseCloudCollection,
   parseCloudRevision,
   readCloudCollection,
@@ -140,6 +141,7 @@ describe("generated app cloud data HTTP", () => {
   it("creates an HttpOnly anonymous app session, loads and saves by revision", async () => {
     const first = await handleCloudDataRequest(req({ op: "load", col: "ordini" }), siteId, deps);
     assert.equal(first.status, 200);
+    assert.equal(first.headers.get("x-content-type-options"), "nosniff");
     const cookie = cookiePair(first);
     assert.deepEqual(await first.json(), {
       ok: true,
@@ -209,5 +211,34 @@ describe("generated app cloud data HTTP", () => {
         .status,
       400,
     );
+  });
+
+  it("stops oversized request bodies before JSON parsing or SQL", async () => {
+    const declared = new Request(`https://fenix.test/api/app-data/${siteId}`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "content-length": String(MAX_CLOUD_REQUEST_BYTES + 1),
+        origin: "https://fenix.test",
+        "sec-fetch-site": "same-origin",
+      },
+      body: "{}",
+    });
+    const declaredResponse = await handleCloudDataRequest(declared, siteId, deps);
+    assert.equal(declaredResponse.status, 413);
+    assert.deepEqual(await declaredResponse.json(), { error: "Richiesta troppo grande." });
+
+    const streamedResponse = await handleCloudDataRequest(
+      req({
+        op: "save",
+        col: "oversized-http",
+        rev: 0,
+        data: "x".repeat(MAX_CLOUD_REQUEST_BYTES),
+      }),
+      siteId,
+      deps,
+    );
+    assert.equal(streamedResponse.status, 413);
+    assert.deepEqual(await streamedResponse.json(), { error: "Richiesta troppo grande." });
   });
 });

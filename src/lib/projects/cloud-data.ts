@@ -4,6 +4,7 @@ import { readPublished } from "./published-store.ts";
 import { isPublishedId } from "./published.ts";
 
 export const MAX_CLOUD_COLLECTION_BYTES = 256_000;
+export const MAX_CLOUD_REQUEST_BYTES = MAX_CLOUD_COLLECTION_BYTES + 4_096;
 export const CLOUD_COLLECTION_RE = /^[A-Za-z0-9._-]{1,80}$/;
 const SESSION_RE = /^[a-f0-9]{64}$/;
 
@@ -87,6 +88,48 @@ function sameOriginWrite(request: Request): boolean {
   return !site || site === "same-origin" || site === "same-site" || site === "none";
 }
 
+async function readBoundedJson(
+  request: Request,
+): Promise<
+  | { value: { op?: unknown; col?: unknown; data?: unknown; rev?: unknown } }
+  | { error: "invalid" | "too-large" }
+> {
+  const declared = request.headers.get("content-length");
+  if (declared) {
+    const bytes = Number(declared);
+    if (Number.isFinite(bytes) && bytes > MAX_CLOUD_REQUEST_BYTES) {
+      return { error: "too-large" };
+    }
+  }
+  if (!request.body) return { error: "invalid" };
+  const reader = request.body.getReader();
+  const decoder = new TextDecoder("utf-8", { fatal: true });
+  let bytes = 0;
+  let text = "";
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      bytes += value.byteLength;
+      if (bytes > MAX_CLOUD_REQUEST_BYTES) {
+        await reader.cancel();
+        return { error: "too-large" };
+      }
+      text += decoder.decode(value, { stream: true });
+    }
+    text += decoder.decode();
+    const parsed = JSON.parse(text) as unknown;
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      return { error: "invalid" };
+    }
+    return {
+      value: parsed as { op?: unknown; col?: unknown; data?: unknown; rev?: unknown },
+    };
+  } catch {
+    return { error: "invalid" };
+  }
+}
+
 function response(
   data: unknown,
   status = 200,
@@ -95,6 +138,7 @@ function response(
   const headers = new Headers({
     "Cache-Control": "no-store",
     "Content-Type": "application/json; charset=utf-8",
+    "X-Content-Type-Options": "nosniff",
   });
   if (cookie) {
     headers.append(
@@ -169,12 +213,13 @@ export async function handleCloudDataRequest(
     ? await deps.siteExists(siteId)
     : Boolean(await readPublished(siteId));
   if (!exists) return response({ error: "Sito non trovato." }, 404);
-  let body: { op?: unknown; col?: unknown; data?: unknown; rev?: unknown };
-  try {
-    body = (await request.json()) as typeof body;
-  } catch {
-    return response({ error: "JSON non valido." }, 400);
+  const parsed = await readBoundedJson(request);
+  if ("error" in parsed) {
+    return parsed.error === "too-large"
+      ? response({ error: "Richiesta troppo grande." }, 413)
+      : response({ error: "JSON non valido." }, 400);
   }
+  const body = parsed.value;
   const collection = parseCloudCollection(body.col);
   if (!collection) return response({ error: "Collezione non valida." }, 400);
   const session = sessionForRequest(request, siteId, deps.randomSession);
