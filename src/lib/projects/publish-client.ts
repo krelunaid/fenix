@@ -49,11 +49,16 @@ export function readPublishedId(originalId: string): string | null {
 
 /** Persist only after a migrated site is created. Never clobber an existing mapping. */
 export function rememberPublishedId(originalId: string, publishedId: string) {
+  writePublishedMap(originalId, publishedId, false);
+}
+
+function writePublishedMap(originalId: string, publishedId: string, overwrite: boolean) {
   if (!isPublishedId(originalId) || !isPublishedId(publishedId)) return;
   if (originalId === publishedId) return;
-  if (readPublishedId(originalId)) return;
+  if (!overwrite && readPublishedId(originalId)) return;
   try {
     const map = readPublishedMap();
+    if (map[originalId] === publishedId) return;
     map[originalId] = publishedId;
     localStorage.setItem(PUBLISHED_MAP_KEY, JSON.stringify(map));
   } catch {
@@ -74,20 +79,23 @@ export async function loadPublished(id: string): Promise<PublishedSnapshot | nul
 
 /**
  * Public /sito/ id for a studio project. GET is the source of truth.
+ * Candidates, unique, in order: mapped → persisted → original.
  * Never invents an id, never PUTs, never claims an ownerless snapshot.
  */
 export async function resolvePublishedId(
   originalId: string,
   persisted?: string | null,
 ): Promise<string | null> {
-  const mapped = readPublishedId(originalId);
-  const hinted =
-    mapped ||
-    (persisted && persisted !== originalId && isPublishedId(persisted) ? persisted : "") ||
-    originalId;
+  const candidates: string[] = [];
+  const push = (id: string | null | undefined) => {
+    if (!id || !isPublishedId(id) || candidates.includes(id)) return;
+    candidates.push(id);
+  };
+  push(readPublishedId(originalId));
+  push(persisted);
+  push(originalId);
 
   async function peek(id: string): Promise<string | null> {
-    if (!isPublishedId(id)) return null;
     try {
       const snap = await loadPublished(id);
       return snap?.id && snap.html ? snap.id : null;
@@ -96,12 +104,12 @@ export async function resolvePublishedId(
     }
   }
 
-  const found = await peek(hinted);
-  if (found) {
-    if (found !== originalId) rememberPublishedId(originalId, found);
+  for (const id of candidates) {
+    const found = await peek(id);
+    if (!found) continue;
+    if (found !== originalId) writePublishedMap(originalId, found, true);
     return found;
   }
-  if (hinted !== originalId) return peek(originalId);
   return null;
 }
 

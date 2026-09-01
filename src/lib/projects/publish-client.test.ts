@@ -56,6 +56,7 @@ type PutCall = { id: string; owner: string | null; ifMatch: string | null; html:
 
 function installFetch(sites: Map<string, { version: number; html: string; owner: string | null }>) {
   const puts: PutCall[] = [];
+  const gets: string[] = [];
   const orig = globalThis.fetch;
   globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input);
@@ -64,6 +65,7 @@ function installFetch(sites: Map<string, { version: number; html: string; owner:
     const headers = new Headers(init?.headers);
     const owner = headers.get(OWNER_HEADER);
     if (method === "GET") {
+      gets.push(id);
       const snap = sites.get(id);
       if (!snap) return new Response("missing", { status: 404 });
       return Response.json({
@@ -123,7 +125,7 @@ function installFetch(sites: Map<string, { version: number; html: string; owner:
     }
     return new Response("no", { status: 405 });
   }) as typeof fetch;
-  return { puts, restore: () => { globalThis.fetch = orig; } };
+  return { puts, gets, restore: () => { globalThis.fetch = orig; } };
 }
 
 const input = (html: string) => ({
@@ -264,22 +266,61 @@ describe("legacy publish id mapping", () => {
     rememberPublishedId(LEGACY_ID, published);
     assert.equal(await resolvePublishedId(LEGACY_ID), published);
     assert.equal(mock.puts.length, 0);
+    assert.deepEqual(mock.gets, [published]);
 
-    localStorage.removeItem(PUBLISHED_MAP_KEY);
+    mock.gets.length = 0;
     assert.equal(await resolvePublishedId(LEGACY_ID, published), published);
     assert.equal(readPublishedId(LEGACY_ID), published);
     assert.equal(mock.puts.length, 0);
+    assert.deepEqual(mock.gets, [published]);
 
     localStorage.removeItem(PUBLISHED_MAP_KEY);
     sites.delete(published);
     sites.set(LEGACY_ID, { version: 1, html: HTML_V1, owner: OWNER_A });
+    mock.gets.length = 0;
     assert.equal(await resolvePublishedId(LEGACY_ID, published), LEGACY_ID);
     assert.equal(mock.puts.length, 0);
+    assert.deepEqual(mock.gets, [published, LEGACY_ID]);
+  });
 
-    sites.clear();
-    localStorage.removeItem(PUBLISHED_MAP_KEY);
-    assert.equal(await resolvePublishedId(LEGACY_ID), null);
-    assert.equal(await resolvePublishedId(LEGACY_ID, published), null);
+  it("stale mapped 404 falls back to a valid persisted id and does not PUT", async () => {
+    const stale = "dddddddd-2222-4222-8222-bbbbbbbbbbbb";
+    const persisted = "c1d2e3f4-1111-4111-8111-aaaaaaaaaaaa";
+    const sites = new Map<string, { version: number; html: string; owner: string | null }>();
+    sites.set(persisted, { version: 1, html: HTML_V1, owner: OWNER_A });
+    const mock = installFetch(sites);
+    restoreFetch = mock.restore;
+
+    rememberPublishedId(LEGACY_ID, stale);
+    assert.equal(readPublishedId(LEGACY_ID), stale);
+    assert.equal(await resolvePublishedId(LEGACY_ID, persisted), persisted);
+    assert.equal(readPublishedId(LEGACY_ID), persisted);
     assert.equal(mock.puts.length, 0);
+    assert.deepEqual(mock.gets, [stale, persisted]);
+
+    mock.gets.length = 0;
+    assert.equal(await resolvePublishedId(LEGACY_ID, persisted), persisted);
+    assert.equal(readPublishedId(LEGACY_ID), persisted);
+    assert.equal(mock.puts.length, 0);
+    assert.deepEqual(mock.gets, [persisted]);
+  });
+
+  it("all missing candidates hide the public id, stay idempotent, never PUT", async () => {
+    const stale = "dddddddd-2222-4222-8222-bbbbbbbbbbbb";
+    const persisted = "c1d2e3f4-1111-4111-8111-aaaaaaaaaaaa";
+    const sites = new Map<string, { version: number; html: string; owner: string | null }>();
+    const mock = installFetch(sites);
+    restoreFetch = mock.restore;
+
+    rememberPublishedId(LEGACY_ID, stale);
+    assert.equal(await resolvePublishedId(LEGACY_ID, persisted), null);
+    assert.equal(readPublishedId(LEGACY_ID), stale);
+    assert.equal(mock.puts.length, 0);
+    assert.deepEqual(mock.gets, [stale, persisted, LEGACY_ID]);
+
+    mock.gets.length = 0;
+    assert.equal(await resolvePublishedId(LEGACY_ID, persisted), null);
+    assert.equal(mock.puts.length, 0);
+    assert.deepEqual(mock.gets, [stale, persisted, LEGACY_ID]);
   });
 });

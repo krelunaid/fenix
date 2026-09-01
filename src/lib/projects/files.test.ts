@@ -331,4 +331,3 @@ ${card}
     assert.equal(restored!.files?.find((f) => f.path === "src/components/Card.tsx")?.content, cardKept);
   });
 });
-

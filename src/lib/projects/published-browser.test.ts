@@ -483,4 +483,65 @@ describe("published site is server-side, not localStorage", () => {
       await browser.close();
     }
   });
+
+  it("Argilla 49c without a snapshot shows only Modifica, no /sito href", async () => {
+    const PREVIEW = await requirePreview();
+    const argillaId = "49c14680-a504-436d-a0db-84e4f3583dbe";
+    const missing = await fetch(`${PREVIEW}/api/sites/${argillaId}`, { cache: "no-store" });
+    assert.equal(missing.status, 404);
+
+    const browser = await chromium.launch({ headless: true, args: ["--no-sandbox"] });
+    try {
+      const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+      await page.addInitScript(
+        ({ pid, html, palette }: { pid: string; html: string; palette: typeof PALETTE }) => {
+          if (window !== window.parent) return;
+          localStorage.setItem("fenix.session", JSON.stringify({ email: "qa@fenix.test", name: "QA" }));
+          localStorage.removeItem("fenix.published-ids");
+          const now = Date.now();
+          localStorage.setItem(
+            "officina-projects",
+            JSON.stringify({
+              state: {
+                projects: [
+                  {
+                    id: pid,
+                    name: "Argilla Viva",
+                    tagline: "",
+                    prompt: "FORMATO: gestionale ufficio. kind=dashboard",
+                    kind: "dashboard",
+                    requestedKind: "dashboard",
+                    summary: "",
+                    palette,
+                    html,
+                    messages: [],
+                    buildLog: ["Pronto"],
+                    status: "ready",
+                    createdAt: now,
+                    updatedAt: now,
+                  },
+                ],
+                creditsRemaining: 46,
+                appDb: {},
+              },
+              version: 3,
+            }),
+          );
+        },
+        { pid: argillaId, html: ADAPTED, palette: PALETTE },
+      );
+      await page.goto(`${PREVIEW}/`, { waitUntil: "domcontentloaded", timeout: 20000 });
+      const article = page.locator("article").filter({ hasText: "Argilla Viva" });
+      await article.getByRole("heading", { name: "Argilla Viva" }).waitFor({ timeout: 12000 });
+      await article.getByRole("link", { name: /^Modifica$/ }).waitFor({ timeout: 8000 });
+      assert.equal(await article.getByRole("link", { name: /Apri/ }).count(), 0);
+      const hrefs = await article.locator("a").evaluateAll((nodes) =>
+        nodes.map((n) => (n as HTMLAnchorElement).getAttribute("href") || ""),
+      );
+      assert.equal(hrefs.some((h) => h.includes(`/sito/${argillaId}`)), false);
+      assert.equal(hrefs.some((h) => /\/sito\//.test(h)), false);
+    } finally {
+      await browser.close();
+    }
+  });
 });

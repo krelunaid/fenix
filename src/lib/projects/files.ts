@@ -15,7 +15,6 @@ export function utf8Bytes(text: string): number {
   return new TextEncoder().encode(text).byteLength;
 }
 
-
 export type FileReject = { path: string; reason: string };
 
 export type IngestResult = {
