@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { generateKeyPairSync } from "node:crypto";
+import { generateKeyPairSync, randomBytes } from "node:crypto";
 import { afterEach, beforeEach, describe, it } from "node:test";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -16,9 +16,19 @@ import {
 } from "./http.ts";
 import { githubAppConfig, setGitHubAppForTest } from "./secrets.server.ts";
 import {
+  CONNECT_COOKIE_NAME,
+  mintConnectCookie,
+  parseConnectCookie,
+  parseConnectState,
+} from "./state.ts";
+import {
+  consumeNonce,
+  createGitHubSqlForTest,
+  githubOwnerHash,
   readInstallation,
   saveInstallation,
   setGitHubBlobsForTest,
+  setGitHubSqlForTest,
   setGitHubStoreMemoryForTest,
 } from "./store.ts";
 import { parseBranch, parseRepo, exportFiles, contentHashOf } from "./tree.ts";
@@ -45,6 +55,34 @@ function ownerReq(method: string, url: string, owner?: string, body?: unknown) {
     headers,
     body: body !== undefined ? JSON.stringify(body) : undefined,
   });
+}
+
+function cookieHeader(res: Response): string {
+  return res.headers.get("set-cookie") || "";
+}
+
+function cookieValue(res: Response): string {
+  const raw = cookieHeader(res);
+  const prefix = `${CONNECT_COOKIE_NAME}=`;
+  if (!raw.toLowerCase().startsWith(prefix.toLowerCase())) return "";
+  return raw.slice(prefix.length).split(";")[0] || "";
+}
+
+function callbackReq(state: string, installationId: string, cookie?: string) {
+  const url = `https://fenix.test/api/github/callback?installation_id=${installationId}&setup_action=install&state=${encodeURIComponent(state)}`;
+  const headers = new Headers();
+  if (cookie) headers.set("cookie", `${CONNECT_COOKIE_NAME}=${cookie}`);
+  return new Request(url, { headers });
+}
+
+async function connectOwner(owner: string, returnTo = "/") {
+  const res = await handleGitHubCollection(
+    ownerReq("POST", "https://fenix.test/api/github", owner, { returnTo }),
+  );
+  const body = (await res.json()) as { url?: string; error?: string };
+  const url = body.url || "";
+  const state = url ? new URL(url).searchParams.get("state") || "" : "";
+  return { res, body, url, state, cookie: cookieValue(res), setCookie: cookieHeader(res) };
 }
 
 function installMock(opts?: { empty?: boolean; conflict?: boolean; extraRepo?: boolean }) {
@@ -208,6 +246,7 @@ describe("github export helpers", () => {
 describe("github app http", () => {
   beforeEach(() => {
     setGitHubStoreMemoryForTest(true);
+    setGitHubSqlForTest(null);
     setGitHubAppForTest(null);
     setGitHubFetchForTest(null);
     setGitHubBlobsForTest(null);
@@ -216,6 +255,7 @@ describe("github app http", () => {
     setGitHubAppForTest(null);
     setGitHubFetchForTest(null);
     setGitHubBlobsForTest(null);
+    setGitHubSqlForTest(null);
     setGitHubStoreMemoryForTest(false);
   });
 
@@ -239,7 +279,7 @@ describe("github app http", () => {
     assert.equal(githubAppConfig(), null);
   });
 
-  it("connect requires owner; callback rejects bad state, other app, replay", async () => {
+  it("connect sets HttpOnly cookie; callback rejects bad state, other app, replay", async () => {
     setGitHubAppForTest({ appId: "12345", privateKey: pem, slug: "fenix-export" });
     installMock();
     const noOwner = await handleGitHubCollection(
@@ -247,58 +287,147 @@ describe("github app http", () => {
     );
     assert.equal(noOwner.status, 401);
 
-    const connect = await handleGitHubCollection(
-      ownerReq("POST", "https://fenix.test/api/github", OWNER_A, { returnTo: "/studio/argilla" }),
-    );
-    assert.equal(connect.status, 200);
-    const { url } = (await connect.json()) as { url: string };
-    assert.match(url, /^https:\/\/github\.com\/apps\/fenix-export\/installations\/new\?state=/);
-    const state = new URL(url).searchParams.get("state") || "";
+    const connect = await connectOwner(OWNER_A, "/studio/argilla");
+    assert.equal(connect.res.status, 200);
+    assert.match(connect.url, /^https:\/\/github\.com\/apps\/fenix-export\/installations\/new\?state=/);
+    assert.match(connect.setCookie, new RegExp(`^${CONNECT_COOKIE_NAME}=`));
+    assert.match(connect.setCookie, /HttpOnly/i);
+    assert.match(connect.setCookie, /Secure/i);
+    assert.match(connect.setCookie, /SameSite=Lax/i);
+    assert.match(connect.setCookie, /Path=\/api\/github\/callback/);
+    assert.match(connect.setCookie, /Max-Age=600/);
+    assert.equal("cookie" in connect.body, false);
+    assert.equal("state" in connect.body, false);
+    assert.doesNotMatch(JSON.stringify(connect.body), /fenix_gh/);
+    assert.ok(parseConnectState(connect.state));
+    assert.ok(parseConnectCookie(connect.cookie));
+    assert.equal(parseConnectState(connect.cookie), null);
 
-    const bad = await handleGitHubCallback(
-      new Request("https://fenix.test/api/github/callback?installation_id=99&setup_action=install&state=nope"),
-    );
+    const bad = await handleGitHubCallback(callbackReq("nope", "99", connect.cookie));
     assert.equal(bad.status, 400);
+    assert.match(cookieHeader(bad), /Max-Age=0/);
 
-    const other = await handleGitHubCallback(
-      new Request(
-        `https://fenix.test/api/github/callback?installation_id=77&setup_action=install&state=${encodeURIComponent(state)}`,
-      ),
-    );
+    const other = await handleGitHubCallback(callbackReq(connect.state, "77", connect.cookie));
     assert.equal(other.status, 400);
+    assert.equal(await readInstallation(githubOwnerHash(OWNER_A)), null);
 
-    const connect2 = await handleGitHubCollection(
-      ownerReq("POST", "https://fenix.test/api/github", OWNER_A, { returnTo: "/studio/argilla" }),
-    );
-    const state2 = new URL(((await connect2.json()) as { url: string }).url).searchParams.get("state") || "";
-    const ok = await handleGitHubCallback(
-      new Request(
-        `https://fenix.test/api/github/callback?installation_id=99&setup_action=install&state=${encodeURIComponent(state2)}`,
-      ),
-    );
+    const connect2 = await connectOwner(OWNER_A, "/studio/argilla");
+    const ok = await handleGitHubCallback(callbackReq(connect2.state, "99", connect2.cookie));
     assert.equal(ok.status, 302);
     assert.match(ok.headers.get("location") || "", /github=ok/);
+    assert.match(cookieHeader(ok), /Max-Age=0/);
 
-    const replay = await handleGitHubCallback(
-      new Request(
-        `https://fenix.test/api/github/callback?installation_id=99&setup_action=install&state=${encodeURIComponent(state2)}`,
-      ),
-    );
+    const replay = await handleGitHubCallback(callbackReq(connect2.state, "99", connect2.cookie));
     assert.equal(replay.status, 400);
+  });
+
+  it("attacker state on a victim browser is rejected before save", async () => {
+    setGitHubAppForTest({ appId: "12345", privateKey: pem, slug: "fenix-export" });
+    installMock();
+    const attacker = await connectOwner(OWNER_A, "/stolen");
+    const victim = await connectOwner(OWNER_B, "/own");
+
+    const noCookie = await handleGitHubCallback(callbackReq(attacker.state, "99"));
+    assert.equal(noCookie.status, 400);
+    assert.match(await noCookie.text(), /Sessione assente o non valida/);
+    assert.equal(await readInstallation(githubOwnerHash(OWNER_A)), null);
+    assert.equal(await readInstallation(githubOwnerHash(OWNER_B)), null);
+
+    const mismatch = await handleGitHubCallback(callbackReq(attacker.state, "99", victim.cookie));
+    assert.equal(mismatch.status, 400);
+    assert.match(await mismatch.text(), /Sessione assente o non valida/);
+    assert.equal(await readInstallation(githubOwnerHash(OWNER_A)), null);
+
+    const expired = mintConnectCookie(
+      githubOwnerHash(OWNER_A),
+      parseConnectState(attacker.state)?.nonce || "",
+      Date.now() - 1000,
+    );
+    const stale = await handleGitHubCallback(callbackReq(attacker.state, "99", expired || undefined));
+    assert.equal(stale.status, 400);
+
+    const legit = await handleGitHubCallback(callbackReq(attacker.state, "99", attacker.cookie));
+    assert.equal(legit.status, 302);
+    const row = await readInstallation(githubOwnerHash(OWNER_A));
+    assert.equal(row?.installationId, "99");
+    assert.equal(await readInstallation(githubOwnerHash(OWNER_B)), null);
+  });
+
+  it("callback without cookie does not consume the nonce", async () => {
+    setGitHubAppForTest({ appId: "12345", privateKey: pem, slug: "fenix-export" });
+    installMock();
+    const connect = await connectOwner(OWNER_A);
+    const missing = await handleGitHubCallback(callbackReq(connect.state, "99"));
+    assert.equal(missing.status, 400);
+    const ok = await handleGitHubCallback(callbackReq(connect.state, "99", connect.cookie));
+    assert.equal(ok.status, 302);
+  });
+
+  it("parallel callbacks: one 302, one 400, one installation", async () => {
+    setGitHubAppForTest({ appId: "12345", privateKey: pem, slug: "fenix-export" });
+    installMock();
+    const connect = await connectOwner(OWNER_A);
+    const [a, b] = await Promise.all([
+      handleGitHubCallback(callbackReq(connect.state, "99", connect.cookie)),
+      handleGitHubCallback(callbackReq(connect.state, "99", connect.cookie)),
+    ]);
+    const statuses = [a.status, b.status].sort();
+    assert.deepEqual(statuses, [302, 400]);
+    const row = await readInstallation(githubOwnerHash(OWNER_A));
+    assert.equal(row?.installationId, "99");
+  });
+
+  it("SQL UNIQUE: two parallel consumeNonce, one winner", async () => {
+    setGitHubStoreMemoryForTest(false);
+    const pg = await createGitHubSqlForTest();
+    setGitHubSqlForTest(pg.sql);
+    try {
+      const nonce = randomBytes(16).toString("hex");
+      const ownerHash = githubOwnerHash(OWNER_A);
+      const exp = Date.now() + 60_000;
+      const [x, y] = await Promise.all([
+        consumeNonce(nonce, ownerHash, exp),
+        consumeNonce(nonce, ownerHash, exp),
+      ]);
+      assert.equal([x, y].filter(Boolean).length, 1);
+      assert.equal(await consumeNonce(nonce, ownerHash, exp), false);
+    } finally {
+      setGitHubSqlForTest(null);
+      await pg.close();
+    }
+  });
+
+  it("blobs never claim a nonce; Netlify without SQL fails closed", async () => {
+    setGitHubStoreMemoryForTest(false);
+    const bag = new Map<string, unknown>();
+    setGitHubBlobsForTest({
+      async get(key) {
+        return bag.has(key) ? bag.get(key) : null;
+      },
+      async setJSON(key, value) {
+        bag.set(key, value);
+      },
+      async delete(key) {
+        bag.delete(key);
+      },
+    });
+    const prev = process.env.NETLIFY;
+    process.env.NETLIFY = "1";
+    try {
+      const nonce = randomBytes(16).toString("hex");
+      assert.equal(await consumeNonce(nonce, githubOwnerHash(OWNER_A), Date.now() + 60_000), false);
+      assert.equal([...bag.keys()].some((k) => k.includes("nonce")), false);
+    } finally {
+      if (prev === undefined) delete process.env.NETLIFY;
+      else process.env.NETLIFY = prev;
+    }
   });
 
   it("lists only installation repos; other owner is disconnected", async () => {
     setGitHubAppForTest({ appId: "12345", privateKey: pem, slug: "fenix-export" });
     installMock({ extraRepo: true });
-    const connect = await handleGitHubCollection(
-      ownerReq("POST", "https://fenix.test/api/github", OWNER_A, { returnTo: "/" }),
-    );
-    const state = new URL(((await connect.json()) as { url: string }).url).searchParams.get("state") || "";
-    await handleGitHubCallback(
-      new Request(
-        `https://fenix.test/api/github/callback?installation_id=99&setup_action=install&state=${encodeURIComponent(state)}`,
-      ),
-    );
+    const connect = await connectOwner(OWNER_A);
+    await handleGitHubCallback(callbackReq(connect.state, "99", connect.cookie));
     const list = await handleGitHubRepos(ownerReq("GET", "https://fenix.test/api/github/repos", OWNER_A));
     assert.equal(list.status, 200);
     const payload = (await list.json()) as { repos: { fullName: string }[] };
@@ -310,15 +439,8 @@ describe("github app http", () => {
   it("export is blob→tree→commit→ref force=false, idempotent, redacted", async () => {
     setGitHubAppForTest({ appId: "12345", privateKey: pem, slug: "fenix-export" });
     const mock = installMock();
-    const connect = await handleGitHubCollection(
-      ownerReq("POST", "https://fenix.test/api/github", OWNER_A, { returnTo: "/" }),
-    );
-    const state = new URL(((await connect.json()) as { url: string }).url).searchParams.get("state") || "";
-    await handleGitHubCallback(
-      new Request(
-        `https://fenix.test/api/github/callback?installation_id=99&setup_action=install&state=${encodeURIComponent(state)}`,
-      ),
-    );
+    const connect = await connectOwner(OWNER_A);
+    await handleGitHubCallback(callbackReq(connect.state, "99", connect.cookie));
 
     const body = {
       repo: "krelunaid/argilla",
@@ -358,15 +480,8 @@ describe("github app http", () => {
   it("invalid branch and foreign repo are rejected; conflict does not force", async () => {
     setGitHubAppForTest({ appId: "12345", privateKey: pem, slug: "fenix-export" });
     const mock = installMock({ conflict: true });
-    const connect = await handleGitHubCollection(
-      ownerReq("POST", "https://fenix.test/api/github", OWNER_A, { returnTo: "/" }),
-    );
-    const state = new URL(((await connect.json()) as { url: string }).url).searchParams.get("state") || "";
-    await handleGitHubCallback(
-      new Request(
-        `https://fenix.test/api/github/callback?installation_id=99&setup_action=install&state=${encodeURIComponent(state)}`,
-      ),
-    );
+    const connect = await connectOwner(OWNER_A);
+    await handleGitHubCallback(callbackReq(connect.state, "99", connect.cookie));
     const badBranch = await handleGitHubExport(
       ownerReq("POST", "https://fenix.test/api/github/export", OWNER_A, {
         repo: "krelunaid/argilla",
@@ -402,15 +517,8 @@ describe("github app http", () => {
   it("empty repo seeds README then exports without inventing force", async () => {
     setGitHubAppForTest({ appId: "12345", privateKey: pem, slug: "fenix-export" });
     const mock = installMock({ empty: true });
-    const connect = await handleGitHubCollection(
-      ownerReq("POST", "https://fenix.test/api/github", OWNER_A, { returnTo: "/" }),
-    );
-    const state = new URL(((await connect.json()) as { url: string }).url).searchParams.get("state") || "";
-    await handleGitHubCallback(
-      new Request(
-        `https://fenix.test/api/github/callback?installation_id=99&setup_action=install&state=${encodeURIComponent(state)}`,
-      ),
-    );
+    const connect = await connectOwner(OWNER_A);
+    await handleGitHubCallback(callbackReq(connect.state, "99", connect.cookie));
     const res = await handleGitHubExport(
       ownerReq("POST", "https://fenix.test/api/github/export", OWNER_A, {
         repo: "krelunaid/argilla",
@@ -442,15 +550,8 @@ describe("github app http", () => {
     assert.equal(jwtPkcs1.split(".").length, 3);
     setGitHubAppForTest({ appId: "12345", privateKey: pem, slug: "fenix-export" });
     installMock();
-    const connect = await handleGitHubCollection(
-      ownerReq("POST", "https://fenix.test/api/github", OWNER_A, { returnTo: "/" }),
-    );
-    const state = new URL(((await connect.json()) as { url: string }).url).searchParams.get("state") || "";
-    await handleGitHubCallback(
-      new Request(
-        `https://fenix.test/api/github/callback?installation_id=99&setup_action=install&state=${encodeURIComponent(state)}`,
-      ),
-    );
+    const connect = await connectOwner(OWNER_A);
+    await handleGitHubCallback(callbackReq(connect.state, "99", connect.cookie));
     const status = await handleGitHubCollection(ownerReq("GET", "https://fenix.test/api/github", OWNER_A));
     const text = await status.text();
     assert.doesNotMatch(text, /ghs_/);

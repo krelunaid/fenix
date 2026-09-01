@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import { mkdirSync, readFileSync, renameSync, unlinkSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { GITHUB_STORE, type StoredExportJob, type StoredInstallation } from "./types.ts";
 
 function githubDir() {
@@ -14,6 +15,10 @@ function hashOwner(ownerId: string): string {
 export function githubOwnerHash(ownerId: string): string {
   return hashOwner(ownerId);
 }
+
+export type GitHubSql = {
+  query<T = Record<string, unknown>>(text: string, params?: unknown[]): Promise<T[]>;
+};
 
 type Memory = {
   installations: Map<string, StoredInstallation>;
@@ -30,6 +35,7 @@ const memory: Memory = {
 };
 
 let useMemory = false;
+let testSql: GitHubSql | null = null;
 
 export function setGitHubStoreMemoryForTest(on = true) {
   useMemory = on;
@@ -39,6 +45,10 @@ export function setGitHubStoreMemoryForTest(on = true) {
     memory.jobs.clear();
     memory.keys.clear();
   }
+}
+
+export function setGitHubSqlForTest(sql: GitHubSql | null) {
+  testSql = sql;
 }
 
 type BlobStore = {
@@ -55,6 +65,17 @@ export function setGitHubBlobsForTest(store: BlobStore | null) {
 
 function onNetlifyRuntime() {
   return Boolean(process.env.NETLIFY || process.env.NETLIFY_BLOBS_CONTEXT);
+}
+
+async function liveSql(): Promise<GitHubSql | null> {
+  if (testSql) return testSql;
+  if (!process.env.DATABASE_URL?.trim()) return null;
+  try {
+    const { getSql } = await import("../db.ts");
+    return await getSql();
+  } catch {
+    return null;
+  }
 }
 
 async function blobsStore(): Promise<BlobStore | null> {
@@ -106,7 +127,7 @@ function keyPath(key: string) {
   return join(githubDir(), `key-${key.slice(0, 40)}.json`);
 }
 
-function blobKey(kind: "inst" | "nonce" | "job" | "key", id: string): string {
+function blobKey(kind: "inst" | "job" | "key", id: string): string {
   return `${kind}-${id}`.slice(0, 80);
 }
 
@@ -178,33 +199,58 @@ export async function deleteInstallation(ownerHash: string): Promise<void> {
   }
 }
 
-export async function consumeNonce(nonce: string, exp: number): Promise<boolean> {
+/** Atomic single-use nonce. UNIQUE insert in SQL; never Blobs. */
+export async function consumeNonce(nonce: string, ownerHash: string, exp: number): Promise<boolean> {
+  if (!/^[a-f0-9]{32}$/.test(nonce) || !ownerHash) return false;
   if (useMemory) {
     if (memory.nonces.has(nonce)) return false;
     memory.nonces.set(nonce, exp);
     return true;
   }
-  const blobs = await blobsStore();
-  if (blobs) {
-    const key = blobKey("nonce", nonce);
+  const sql = await liveSql();
+  if (sql) {
     try {
-      const existing = await blobs.get(key, { type: "json" });
-      if (existing) return false;
+      const rows = await sql.query<{ nonce: string }>(
+        `INSERT INTO github_connect_nonces (nonce, owner_hash, exp)
+         VALUES ($1, $2, $3)
+         ON CONFLICT (nonce) DO NOTHING
+         RETURNING nonce`,
+        [nonce, ownerHash, exp],
+      );
+      return Boolean(rows[0]?.nonce);
     } catch {
-      /* missing is first use */
+      return false;
     }
-    await blobs.setJSON(key, { exp });
-    return true;
   }
   if (onNetlifyRuntime()) return false;
   const path = noncePath(nonce);
   try {
     mkdirSync(githubDir(), { recursive: true });
-    writeFileSync(path, JSON.stringify({ exp }), { encoding: "utf8", flag: "wx" });
+    writeFileSync(path, JSON.stringify({ nonce, ownerHash, exp }), { encoding: "utf8", flag: "wx" });
     return true;
   } catch {
     return false;
   }
+}
+
+export async function createGitHubSqlForTest(): Promise<{ sql: GitHubSql; close: () => Promise<void> }> {
+  const { PGlite } = await import("@electric-sql/pglite");
+  const pg = new PGlite();
+  await pg.waitReady;
+  const ddlPath = join(dirname(fileURLToPath(import.meta.url)), "../../../migrations/0003_github_connect_nonces.sql");
+  await pg.exec(readFileSync(ddlPath, "utf8"));
+  const sql: GitHubSql = {
+    async query<T>(text: string, params: unknown[] = []) {
+      const res = await pg.query<T>(text, params);
+      return res.rows as T[];
+    },
+  };
+  return {
+    sql,
+    close: async () => {
+      await pg.close();
+    },
+  };
 }
 
 export async function saveExportJob(job: StoredExportJob): Promise<StoredExportJob> {

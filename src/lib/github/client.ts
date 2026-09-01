@@ -24,6 +24,7 @@ export async function startGitHubConnect(returnTo: string): Promise<{ url: strin
   const res = await fetch("/api/github", {
     method: "POST",
     cache: "no-store",
+    credentials: "same-origin",
     headers: { "Content-Type": "application/json", ...ownerHeaders() },
     body: JSON.stringify({ returnTo }),
   });

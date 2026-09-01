@@ -3,7 +3,17 @@ import { redactSecrets } from "../release/redact.ts";
 import { getInstallation, isGhError, listInstallationRepos, mintInstallationToken, dropToken } from "./api.ts";
 import { exportToGitHub, previewExport } from "./export.ts";
 import { githubAppConfig, githubConfigured } from "./secrets.server.ts";
-import { mintConnectState, parseConnectState, safeReturnTo } from "./state.ts";
+import {
+  clearConnectCookieHeader,
+  cookieMatchesState,
+  mintConnectCookie,
+  mintConnectState,
+  parseConnectCookie,
+  parseConnectState,
+  readConnectCookie,
+  safeReturnTo,
+  setConnectCookieHeader,
+} from "./state.ts";
 import {
   consumeNonce,
   deleteInstallation,
@@ -15,11 +25,10 @@ import { parseInstallationId } from "./tree.ts";
 import { GITHUB_NOT_CONFIGURED } from "./types.ts";
 import type { ProjectFile } from "../projects/files.ts";
 
-function json(data: unknown, status = 200) {
-  return Response.json(data, {
-    status,
-    headers: { "Cache-Control": "no-store" },
-  });
+function json(data: unknown, status = 200, extra?: HeadersInit) {
+  const headers = new Headers(extra);
+  headers.set("Cache-Control", "no-store");
+  return Response.json(data, { status, headers });
 }
 
 const HINT_MISSING =
@@ -64,10 +73,13 @@ export async function handleGitHubConnect(request: Request): Promise<Response> {
   } catch {
     returnTo = "/";
   }
-  const minted = mintConnectState(githubOwnerHash(owner), returnTo);
+  const ownerHash = githubOwnerHash(owner);
+  const minted = mintConnectState(ownerHash, returnTo);
   if (!minted) return json({ error: GITHUB_NOT_CONFIGURED }, 503);
+  const cookie = mintConnectCookie(ownerHash, minted.nonce, minted.exp);
+  if (!cookie) return json({ error: GITHUB_NOT_CONFIGURED }, 503);
   const url = `https://github.com/apps/${encodeURIComponent(cfg.slug)}/installations/new?state=${encodeURIComponent(minted.state)}`;
-  return json({ url });
+  return json({ url }, 200, { "Set-Cookie": setConnectCookieHeader(cookie) });
 }
 
 export async function handleGitHubDisconnect(request: Request): Promise<Response> {
@@ -84,10 +96,14 @@ export async function handleGitHubCallback(request: Request): Promise<Response> 
   const state = parseConnectState(url.searchParams.get("state"));
   const installationId = parseInstallationId(url.searchParams.get("installation_id"));
   const setup = String(url.searchParams.get("setup_action") || "install");
+  const bound = parseConnectCookie(readConnectCookie(request));
   if (!state || !installationId || (setup !== "install" && setup !== "update")) {
     return htmlErr("Collegamento GitHub rifiutato. Stato o installazione non validi.");
   }
-  const first = await consumeNonce(state.nonce, state.exp);
+  if (!bound || !cookieMatchesState(bound, state)) {
+    return htmlErr("Collegamento GitHub rifiutato. Sessione assente o non valida.");
+  }
+  const first = await consumeNonce(state.nonce, state.ownerHash, state.exp);
   if (!first) return htmlErr("Collegamento GitHub già usato. Stato non valido.");
   const inst = await getInstallation(installationId);
   if (isGhError(inst)) return htmlErr("Installazione GitHub non valida.");
@@ -107,14 +123,28 @@ export async function handleGitHubCallback(request: Request): Promise<Response> 
   }
   const dest = new URL(state.returnTo, url.origin);
   dest.searchParams.set("github", "ok");
-  return Response.redirect(dest.toString(), 302);
+  return new Response(null, {
+    status: 302,
+    headers: {
+      Location: dest.toString(),
+      "Cache-Control": "no-store",
+      "Set-Cookie": clearConnectCookieHeader(),
+    },
+  });
 }
 
 function htmlErr(message: string): Response {
   const safe = redactSecrets(message).replace(/[<>&]/g, "");
   return new Response(
     `<!doctype html><html lang="it"><meta charset="utf-8"><title>Fenix</title><body style="font-family:sans-serif;background:#07041a;color:#f4f1ff;padding:2rem"><p>${safe}</p><p><a href="/" style="color:#8b7cff">Torna a Fenix</a></p></body></html>`,
-    { status: 400, headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" } },
+    {
+      status: 400,
+      headers: {
+        "content-type": "text/html; charset=utf-8",
+        "cache-control": "no-store",
+        "Set-Cookie": clearConnectCookieHeader(),
+      },
+    },
   );
 }
 

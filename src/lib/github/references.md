@@ -22,6 +22,22 @@ Emergent resta un benchmark, non un modello da copiare.
 - Header `X-GitHub-Api-Version: 2026-03-10`
 - Permessi minimi: **Contents** read/write, **Metadata** read.
 
+## CSRF / session binding
+
+`POST /api/github` (connect) firma lo `state` HMAC (`fenix-github-state`) e imposta
+il cookie `fenix_gh` HttpOnly Secure SameSite=Lax Path=/api/github/callback Max-Age=600,
+HMAC `fenix-github-cookie` su ownerHash+nonce. Scopi HMAC distinti: il cookie non è
+riusabile come state. SameSite=Lax è richiesto (Strict cadrebbe sul GET top-level
+da github.com). Il client usa `credentials: "same-origin"`.
+
+`GET /api/github/callback` verifica cookie contro state.ownerHash+nonce, poi
+cancella sempre il cookie. Senza cookie, cookie di altro owner/nonce, scaduto o
+replay: 400 prima di `saveInstallation`.
+
+Nonce monouso: `INSERT INTO github_connect_nonces … ON CONFLICT (nonce) DO NOTHING
+RETURNING nonce` (Postgres/PGlite). Su Netlify senza SQL il claim fallisce chiuso.
+Blobs `fenix-github` restano per installazioni e job, non per i nonce.
+
 ## Variabili server-only
 
 ```

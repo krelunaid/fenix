@@ -40,7 +40,7 @@ export const FASE3_GAPS: Fase3Gap[] = [
     id: "github-export",
     area: "Git / GitHub export",
     emergent: "Sync su repo dell'utente (Standard+), push/pull VS Code.",
-    fenix: "GitHub App server-only (Contents + Metadata): install/connect/status/disconnect owner-bound, token breve mai persistito. Export Git Data API blob→tree→commit→ref force=false su repo esistenti. ZIP locale resta. Senza App: «GitHub non configurato». Niente pull VS Code, niente token nel browser.",
+    fenix: "GitHub App server-only (Contents + Metadata): install/connect/status/disconnect owner-bound, cookie HttpOnly CSRF, nonce UNIQUE SQL. Token breve mai persistito. Export Git Data API blob→tree→commit→ref force=false su repo esistenti. ZIP locale resta. Senza App: «GitHub non configurato». Niente pull VS Code, niente token nel browser.",
     impact: "high",
     cost: "medium",
     slice: "now",
