@@ -14,10 +14,12 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as VetrinaRouteImport } from './routes/vetrina'
 import { Route as ApiBuildRouteImport } from './routes/api/build'
 import { Route as ApiPolishRouteImport } from './routes/api/polish'
+import { Route as ApiReleaseRouteImport } from './routes/api/release'
 import { Route as SitoProjectIdRouteImport } from './routes/sito.$projectId'
 import { Route as StudioProjectIdRouteImport } from './routes/studio.$projectId'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiJobsIdRouteImport } from './routes/api/jobs.$id'
+import { Route as ApiReleaseIdRouteImport } from './routes/api/release.$id'
 import { Route as ApiSitesIdRouteImport } from './routes/api/sites.$id'
 
 const IndexRoute = IndexRouteImport.update({
@@ -45,6 +47,11 @@ const ApiPolishRoute = ApiPolishRouteImport.update({
   path: '/api/polish',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiReleaseRoute = ApiReleaseRouteImport.update({
+  id: '/api/release',
+  path: '/api/release',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SitoProjectIdRoute = SitoProjectIdRouteImport.update({
   id: '/sito/$projectId',
   path: '/sito/$projectId',
@@ -65,6 +72,11 @@ const ApiJobsIdRoute = ApiJobsIdRouteImport.update({
   path: '/api/jobs/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiReleaseIdRoute = ApiReleaseIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => ApiReleaseRoute,
+} as any)
 const ApiSitesIdRoute = ApiSitesIdRouteImport.update({
   id: '/api/sites/$id',
   path: '/api/sites/$id',
@@ -77,10 +89,12 @@ export interface FileRoutesByFullPath {
   '/vetrina': typeof VetrinaRoute
   '/api/build': typeof ApiBuildRoute
   '/api/polish': typeof ApiPolishRoute
+  '/api/release': typeof ApiReleaseRouteWithChildren
   '/sito/$projectId': typeof SitoProjectIdRoute
   '/studio/$projectId': typeof StudioProjectIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/jobs/$id': typeof ApiJobsIdRoute
+  '/api/release/$id': typeof ApiReleaseIdRoute
   '/api/sites/$id': typeof ApiSitesIdRoute
 }
 export interface FileRoutesByTo {
@@ -89,10 +103,12 @@ export interface FileRoutesByTo {
   '/vetrina': typeof VetrinaRoute
   '/api/build': typeof ApiBuildRoute
   '/api/polish': typeof ApiPolishRoute
+  '/api/release': typeof ApiReleaseRouteWithChildren
   '/sito/$projectId': typeof SitoProjectIdRoute
   '/studio/$projectId': typeof StudioProjectIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/jobs/$id': typeof ApiJobsIdRoute
+  '/api/release/$id': typeof ApiReleaseIdRoute
   '/api/sites/$id': typeof ApiSitesIdRoute
 }
 export interface FileRoutesById {
@@ -102,10 +118,12 @@ export interface FileRoutesById {
   '/vetrina': typeof VetrinaRoute
   '/api/build': typeof ApiBuildRoute
   '/api/polish': typeof ApiPolishRoute
+  '/api/release': typeof ApiReleaseRouteWithChildren
   '/sito/$projectId': typeof SitoProjectIdRoute
   '/studio/$projectId': typeof StudioProjectIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/jobs/$id': typeof ApiJobsIdRoute
+  '/api/release/$id': typeof ApiReleaseIdRoute
   '/api/sites/$id': typeof ApiSitesIdRoute
 }
 export interface FileRouteTypes {
@@ -116,10 +134,12 @@ export interface FileRouteTypes {
     | '/vetrina'
     | '/api/build'
     | '/api/polish'
+    | '/api/release'
     | '/sito/$projectId'
     | '/studio/$projectId'
     | '/api/auth/$'
     | '/api/jobs/$id'
+    | '/api/release/$id'
     | '/api/sites/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -128,10 +148,12 @@ export interface FileRouteTypes {
     | '/vetrina'
     | '/api/build'
     | '/api/polish'
+    | '/api/release'
     | '/sito/$projectId'
     | '/studio/$projectId'
     | '/api/auth/$'
     | '/api/jobs/$id'
+    | '/api/release/$id'
     | '/api/sites/$id'
   id:
     | '__root__'
@@ -140,10 +162,12 @@ export interface FileRouteTypes {
     | '/vetrina'
     | '/api/build'
     | '/api/polish'
+    | '/api/release'
     | '/sito/$projectId'
     | '/studio/$projectId'
     | '/api/auth/$'
     | '/api/jobs/$id'
+    | '/api/release/$id'
     | '/api/sites/$id'
   fileRoutesById: FileRoutesById
 }
@@ -153,6 +177,7 @@ export interface RootRouteChildren {
   VetrinaRoute: typeof VetrinaRoute
   ApiBuildRoute: typeof ApiBuildRoute
   ApiPolishRoute: typeof ApiPolishRoute
+  ApiReleaseRoute: typeof ApiReleaseRouteWithChildren
   SitoProjectIdRoute: typeof SitoProjectIdRoute
   StudioProjectIdRoute: typeof StudioProjectIdRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
@@ -197,6 +222,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPolishRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/release': {
+      id: '/api/release'
+      path: '/api/release'
+      fullPath: '/api/release'
+      preLoaderRoute: typeof ApiReleaseRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/sito/$projectId': {
       id: '/sito/$projectId'
       path: '/sito/$projectId'
@@ -225,6 +257,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiJobsIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/release/$id': {
+      id: '/api/release/$id'
+      path: '/$id'
+      fullPath: '/api/release/$id'
+      preLoaderRoute: typeof ApiReleaseIdRouteImport
+      parentRoute: typeof ApiReleaseRoute
+    }
     '/api/sites/$id': {
       id: '/api/sites/$id'
       path: '/api/sites/$id'
@@ -235,12 +274,25 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface ApiReleaseRouteChildren {
+  ApiReleaseIdRoute: typeof ApiReleaseIdRoute
+}
+
+const ApiReleaseRouteChildren: ApiReleaseRouteChildren = {
+  ApiReleaseIdRoute: ApiReleaseIdRoute,
+}
+
+const ApiReleaseRouteWithChildren = ApiReleaseRoute._addFileChildren(
+  ApiReleaseRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   LoginRoute: LoginRoute,
   VetrinaRoute: VetrinaRoute,
   ApiBuildRoute: ApiBuildRoute,
   ApiPolishRoute: ApiPolishRoute,
+  ApiReleaseRoute: ApiReleaseRouteWithChildren,
   SitoProjectIdRoute: SitoProjectIdRoute,
   StudioProjectIdRoute: StudioProjectIdRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,

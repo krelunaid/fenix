@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { Check, Copy, Download, ExternalLink, Globe, X } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Check, Copy, Download, ExternalLink, Globe, Smartphone, Tablet, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { downloadBytes, downloadTextFile, slugify } from "@/lib/utils";
@@ -8,6 +8,23 @@ import type { ProjectFile } from "@/lib/projects/files";
 import type { Palette, ProjectKind } from "@/lib/projects/types";
 import { publishSnapshot, readPublishedId } from "@/lib/projects/publish-client";
 import type { PublishedSnapshot } from "@/lib/projects/published";
+import {
+  loadReleaseAccounts,
+  resumeReleaseJob,
+  startRelease,
+  suggestedBundleId,
+  suggestedPackageName,
+  type Platform,
+  type PublicReleaseJob,
+  type ReleaseAccounts,
+} from "@/lib/release/client";
+import { REVIEW_NOTE } from "@/lib/release/types";
+
+const PLATFORM_META: { id: Platform; label: string; blurb: string }[] = [
+  { id: "web", label: "Web", blurb: "Netlify production dopo HTML valido." },
+  { id: "ios", label: "iOS", blurb: "TestFlight. La store pubblica resta in review." },
+  { id: "android", label: "Android", blurb: "Internal testing. La scheda pubblica resta in review." },
+];
 
 export function PublishPanel({
   open,
@@ -37,6 +54,20 @@ export function PublishPanel({
   const [published, setPublished] = useState<PublishedSnapshot | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [accounts, setAccounts] = useState<ReleaseAccounts | null>(null);
+  const [platforms, setPlatforms] = useState<Platform[]>(["web"]);
+  const [bundleId, setBundleId] = useState("");
+  const [packageName, setPackageName] = useState("");
+  const [job, setJob] = useState<PublicReleaseJob | null>(null);
+  const [releasing, setReleasing] = useState(false);
+
+  const defaults = useMemo(
+    () => ({
+      bundleId: suggestedBundleId(name),
+      packageName: suggestedPackageName(name),
+    }),
+    [name],
+  );
 
   useEffect(() => {
     if (!open) return;
@@ -52,6 +83,9 @@ export function PublishPanel({
     let cancelled = false;
     setBusy(true);
     setError(null);
+    setJob(null);
+    setBundleId((b) => b || defaults.bundleId);
+    setPackageName((p) => p || defaults.packageName);
     void publishSnapshot({
       id: projectId,
       name,
@@ -71,15 +105,32 @@ export function PublishPanel({
         setBusy(false);
         setError(err instanceof Error ? err.message : "Pubblicazione rifiutata.");
       });
+    void loadReleaseAccounts()
+      .then((a) => {
+        if (!cancelled) setAccounts(a);
+      })
+      .catch(() => {
+        if (!cancelled) setAccounts(null);
+      });
     return () => {
       cancelled = true;
     };
-  }, [open, projectId, name, html, kind, palette, tagline, summary]);
+  }, [open, projectId, name, html, kind, palette, tagline, summary, defaults.bundleId, defaults.packageName]);
 
   if (!open) return null;
 
   const publicId = published?.id || readPublishedId(projectId);
   const publicPath = `/sito/${publicId || projectId}`;
+
+  function togglePlatform(id: Platform) {
+    setPlatforms((prev) => {
+      if (prev.includes(id)) {
+        const next = prev.filter((p) => p !== id);
+        return next.length ? next : prev;
+      }
+      return [...prev, id];
+    });
+  }
 
   function downloadSite() {
     downloadTextFile("index.html", html, "text/html;charset=utf-8");
@@ -117,6 +168,47 @@ export function PublishPanel({
     }
   }
 
+  async function launchRelease() {
+    if (releasing || busy || !published) return;
+    setReleasing(true);
+    setError(null);
+    try {
+      const next = await startRelease({
+        projectId: publicId || projectId,
+        name,
+        html,
+        kind,
+        palette,
+        tagline,
+        summary,
+        platforms,
+        bundleId: bundleId.trim() || defaults.bundleId,
+        packageName: packageName.trim() || defaults.packageName,
+      });
+      setJob(next);
+      if (next.status === "err") setError(next.error || "Rilascio interrotto.");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Rilascio rifiutato.");
+    } finally {
+      setReleasing(false);
+    }
+  }
+
+  async function resumeJob() {
+    if (!job || releasing) return;
+    setReleasing(true);
+    setError(null);
+    try {
+      const next = await resumeReleaseJob(job.id);
+      setJob(next);
+      if (next.status === "err") setError(next.error || "Rilascio interrotto.");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Ripresa rifiutata.");
+    } finally {
+      setReleasing(false);
+    }
+  }
+
   return (
     <div
       className="fixed inset-0 z-50 grid place-items-end bg-background/80 p-3 sm:place-items-center sm:p-6"
@@ -126,7 +218,7 @@ export function PublishPanel({
         role="dialog"
         aria-modal="true"
         aria-labelledby="publish-title"
-        className="w-full max-w-lg rounded-xl border border-border bg-card p-5 shadow-soft sm:p-6"
+        className="max-h-[92vh] w-full max-w-xl overflow-y-auto rounded-xl border border-border bg-card p-5 shadow-soft sm:p-6"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start justify-between gap-3">
@@ -150,12 +242,14 @@ export function PublishPanel({
           {busy
             ? "Salvo lo snapshot sul server. Il link funziona anche da un altro browser."
             : published
-              ? `${name} è pubblicato. Chiunque apra il link vede questa versione, non la bozza locale.`
-              : `${name} è un progetto: interfaccia, logica e dati. Scarichi lo ZIP, o un unico HTML già pronto per il dominio.`}
+              ? `${name} è pubblicato. Web, TestFlight e Play internal partono da questo HTML, solo se è valido.`
+              : `${name} è un progetto: interfaccia, logica e dati.`}
         </p>
 
         {error ? (
-          <p className="mt-3 text-sm text-destructive">{error}</p>
+          <p className="mt-3 text-sm text-destructive" role="alert">
+            {error}
+          </p>
         ) : null}
 
         {publicId ? (
@@ -165,37 +259,148 @@ export function PublishPanel({
           </p>
         ) : null}
 
-        <ol className="mt-5 space-y-3 border-t border-border pt-5">
-          {[
-            {
-              n: "01",
-              t: "Snapshot sul server",
-              d: "Dopo il controllo, Fenix salva html, palette e versione. Non usa il localStorage di chi guarda.",
-            },
-            {
-              n: "02",
-              t: "Apri il link pubblico",
-              d: "Funziona in incognito e su un altro computer. Pubblica di nuovo per aggiornare.",
-            },
-            {
-              n: "03",
-              t: "Oppure scarica",
-              d: "ZIP o HTML per il tuo hosting, se vuoi il dominio tuo.",
-            },
-          ].map((step) => (
-            <li key={step.n} className="flex gap-3">
-              <span className="font-mono text-xs text-faint">{step.n}</span>
-              <span>
-                <span className="block text-sm text-foreground">{step.t}</span>
-                <span className="mt-0.5 block text-sm text-muted-foreground">{step.d}</span>
-              </span>
-            </li>
-          ))}
-        </ol>
+        <section className="mt-5 space-y-3 border-t border-border pt-5" aria-labelledby="release-accounts">
+          <h3 id="release-accounts" className="font-display text-lg tracking-tight">
+            Account
+          </h3>
+          <p className="text-sm text-muted-foreground">
+            Una connessione sul server, poi la guida qui. Mai token o certificati nel browser.
+          </p>
+          <ul className="space-y-2">
+            {(
+              [
+                ["web", "Netlify", accounts?.web],
+                ["ios", "App Store Connect", accounts?.ios],
+                ["android", "Google Play", accounts?.android],
+              ] as const
+            ).map(([id, label, row]) => (
+              <li
+                key={id}
+                className="flex items-start justify-between gap-3 rounded-md border border-border px-3 py-2"
+              >
+                <span>
+                  <span className="block text-sm text-foreground">{label}</span>
+                  <span className="mt-0.5 block text-xs text-muted-foreground">
+                    {row?.hint || "Controllo il collegamento…"}
+                  </span>
+                </span>
+                <span className="shrink-0 font-mono text-[10px] tracking-[0.12em] uppercase text-faint">
+                  {row?.connected ? "Collegato" : row?.fixture ? "Banco prova" : "Da collegare"}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+
+        <section className="mt-5 space-y-3 border-t border-border pt-5" aria-labelledby="release-config">
+          <h3 id="release-config" className="font-display text-lg tracking-tight">
+            App
+          </h3>
+          <fieldset className="space-y-2">
+            <legend className="sr-only">Piattaforme</legend>
+            <div className="flex flex-wrap gap-2">
+              {PLATFORM_META.map((p) => {
+                const on = platforms.includes(p.id);
+                return (
+                  <button
+                    key={p.id}
+                    type="button"
+                    aria-pressed={on}
+                    onClick={() => togglePlatform(p.id)}
+                    className={`min-h-11 rounded-full border px-3.5 text-sm ${
+                      on
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : "border-border bg-card text-foreground"
+                    }`}
+                  >
+                    {p.id === "web" ? <Globe className="mr-1 inline size-3.5" /> : null}
+                    {p.id === "ios" ? <Smartphone className="mr-1 inline size-3.5" /> : null}
+                    {p.id === "android" ? <Tablet className="mr-1 inline size-3.5" /> : null}
+                    {p.label}
+                  </button>
+                );
+              })}
+            </div>
+          </fieldset>
+          <label className="block text-xs text-muted-foreground">
+            Bundle ID iOS
+            <input
+              value={bundleId}
+              onChange={(e) => setBundleId(e.target.value)}
+              className="mt-1 min-h-11 w-full rounded-md border border-border bg-raised px-3 font-mono text-sm text-foreground"
+              autoComplete="off"
+              spellCheck={false}
+            />
+          </label>
+          <label className="block text-xs text-muted-foreground">
+            Package Android
+            <input
+              value={packageName}
+              onChange={(e) => setPackageName(e.target.value)}
+              className="mt-1 min-h-11 w-full rounded-md border border-border bg-raised px-3 font-mono text-sm text-foreground"
+              autoComplete="off"
+              spellCheck={false}
+            />
+          </label>
+        </section>
+
+        <section className="mt-5 space-y-3 border-t border-border pt-5" aria-labelledby="release-run">
+          <h3 id="release-run" className="font-display text-lg tracking-tight">
+            Compila, firma, carica
+          </h3>
+          <p className="text-sm text-muted-foreground">{REVIEW_NOTE}</p>
+          <Button
+            variant="ink"
+            size="lg"
+            className="w-full"
+            disabled={busy || releasing || !published}
+            onClick={() => void launchRelease()}
+          >
+            Pubblica su {platforms.map((p) => PLATFORM_META.find((m) => m.id === p)?.label).join(", ")}
+          </Button>
+          {job ? (
+            <div className="rounded-md border border-border bg-raised p-3">
+              <p className="font-mono text-[10px] tracking-[0.14em] uppercase text-faint">
+                {job.status === "ok" ? "Pronto" : job.status === "err" ? "Errore" : "In corso"} · {job.step}
+              </p>
+              <ul className="mt-2 space-y-1">
+                {job.platforms.map((p) => {
+                  const t = job.tracks[p];
+                  return (
+                    <li key={p} className="flex justify-between gap-2 text-sm">
+                      <span className="capitalize">{p}</span>
+                      <span className="text-muted-foreground">
+                        {t?.step}
+                        {t?.fixture ? " · banco prova" : ""}
+                        {t?.status === "ok" ? " · ok" : ""}
+                        {t?.error ? ` · ${t.error}` : ""}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+              <ol className="mt-3 max-h-32 space-y-1 overflow-y-auto font-mono text-[11px] leading-relaxed text-faint">
+                {job.log.slice(-12).map((line, i) => (
+                  <li key={`${i}-${line}`}>{line}</li>
+                ))}
+              </ol>
+              {job.status === "err" ? (
+                <Button
+                  variant="secondary"
+                  className="mt-3 w-full"
+                  disabled={releasing}
+                  onClick={() => void resumeJob()}
+                >
+                  Riprendi. Niente doppio upload.
+                </Button>
+              ) : null}
+            </div>
+          ) : null}
+        </section>
 
         <div className="mt-6 flex flex-col gap-2">
           <Button
-            variant="ink"
+            variant="default"
             size="lg"
             onClick={() => {
               if (publicId) {
@@ -228,8 +433,11 @@ export function PublishPanel({
 
         <p className="mt-4 flex items-start gap-2 text-xs leading-relaxed text-faint">
           <Check className="mt-0.5 size-3.5 shrink-0" />
-          Bozza nello studio, snapshot pubblico a parte. Pubblica modifiche sostituisce in modo atomico.
+          Bozza nello studio, snapshot pubblico a parte. Il preflight blocca l'upload se l'HTML non è valido.
         </p>
+        <button type="button" className="sr-only" onClick={downloadSite}>
+          Scarica HTML
+        </button>
       </div>
     </div>
   );

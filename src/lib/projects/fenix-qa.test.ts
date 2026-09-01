@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, it } from "node:test";
@@ -255,6 +255,48 @@ describe("focus-visible and worker model", () => {
     assert.match(resume, /SITE_POLISH_INSTRUCTION/);
     assert.doesNotMatch(runBuild, /JOB_STILL_RUNNING \|\| \/Riprendi rifinitura/);
     assert.match(runBuild, /if \(workerError === JOB_STILL_RUNNING\)/);
+    const releaseClient = readFileSync(join(root, "src/lib/release/client.ts"), "utf8");
+    const releasePanel = readFileSync(join(root, "src/components/publish-panel.tsx"), "utf8");
+    const releaseSecrets = readFileSync(join(root, "src/lib/release/secrets.server.ts"), "utf8");
+    const releaseHttp = readFileSync(join(root, "src/lib/release/http.ts"), "utf8");
+    const releaseEngine = readFileSync(join(root, "src/lib/release/engine.ts"), "utf8");
+    const releaseFn = readFileSync(join(root, "netlify/functions/release.ts"), "utf8");
+    assert.match(releasePanel, /startRelease/);
+    assert.match(releasePanel, /App Store Connect/);
+    assert.match(releasePanel, /TestFlight/);
+    assert.doesNotMatch(releasePanel, /secrets\.server/);
+    assert.doesNotMatch(releasePanel, /APPLE_PRIVATE_KEY/);
+    assert.doesNotMatch(releasePanel, /BEGIN PRIVATE KEY/);
+    assert.doesNotMatch(releaseClient, /process\.env/);
+    assert.doesNotMatch(releaseClient, /secrets\.server/);
+    assert.match(releaseSecrets, /APPLE_PRIVATE_KEY/);
+    assert.match(releaseSecrets, /GOOGLE_PLAY_SERVICE_ACCOUNT/);
+    assert.match(releaseHttp, /handleReleaseCollection/);
+    assert.match(releaseEngine, /gateHtml/);
+    assert.match(releaseFn, /path: "\/api\/release"/);
+    const storeApi = readFileSync(join(root, "src/lib/release/store-api.ts"), "utf8");
+    assert.match(storeApi, /applePreflight/);
+    assert.match(storeApi, /googlePreflight/);
+    assert.doesNotMatch(releaseClient, /store-api/);
+    assert.doesNotMatch(releasePanel, /store-api/);
+    const envExample = readFileSync(join(root, ".env.example"), "utf8");
+    assert.match(envExample, /APPLE_ISSUER_ID=/);
+    assert.doesNotMatch(envExample, /BEGIN PRIVATE KEY/);
+    const clientRoots = [join(root, "dist/assets"), join(root, ".output/public/assets")];
+    for (const dir of clientRoots) {
+      if (!existsSync(dir)) continue;
+      for (const name of readdirSync(dir)) {
+        if (!/\.(js|mjs|css|html)$/.test(name)) continue;
+        const text = readFileSync(join(dir, name), "utf8");
+        assert.doesNotMatch(text, /APPLE_PRIVATE_KEY/, name);
+        assert.doesNotMatch(text, /BEGIN PRIVATE KEY/, name);
+        assert.doesNotMatch(text, /GOOGLE_PLAY_SERVICE_ACCOUNT/, name);
+        assert.doesNotMatch(text, /secrets\.server/, name);
+      }
+    }
+    const modelSrc = readFileSync(join(root, "src/lib/ai/model.ts"), "utf8");
+    assert.match(modelSrc, /FENIX_MODEL = "grok-build-0.1"/);
+    assert.doesNotMatch(modelSrc, /reasoningEffort/);
   });
 
   it("suggests nav in alto for a site, not five phone tabs", async () => {
