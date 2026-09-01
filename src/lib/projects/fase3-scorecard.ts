@@ -233,9 +233,17 @@ export const FASE3_SCORECARD: ScoreDimension[] = [
         reproduce:
           "npm test -- src/lib/ai/build-contract-browser.test.ts src/lib/projects/visual-quality.test.ts",
       },
+      {
+        id: "six-product-functional-benchmark",
+        points: 3,
+        claim:
+          "Sei prodotti distinti eseguono 18 percorsi funzionali D/T/M con screenshot sha256, console pulita, overflow, focus e target verificati.",
+        reproduce:
+          "npm test -- src/lib/ai/build-contract.test.ts src/lib/ai/build-contract-browser.test.ts",
+      },
     ],
     remaining:
-      "Servono più benchmark reali indipendenti e una valutazione comparativa cieca su categorie diverse.",
+      "La dimensione è al massimo verificabile definito; resta utile una valutazione comparativa cieca esterna, che non viene simulata nel repository.",
   },
   {
     id: "reliability-deploy",

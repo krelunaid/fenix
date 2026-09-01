@@ -14,7 +14,7 @@ export const QUALITY_LEDGER: LedgerRow[] = [
     id: "contract-schema",
     claim:
       "BuildContract v1 tipizzato: kind, intent, screens/route, entità, journeys, acceptance, visual DNA, a11y/sicurezza/responsive, file tree.",
-    evidence: "src/lib/ai/build-contract.test.ts · parseContract(planContract) su 3 famiglie",
+    evidence: "src/lib/ai/build-contract.test.ts · parseContract(planContract) su 6 prodotti",
     ok: true,
   },
   {
@@ -97,7 +97,7 @@ export const QUALITY_LEDGER: LedgerRow[] = [
   {
     id: "browser-dtm",
     claim:
-      "D/T/M: console 0, overflow ≤8, focus visibile (outline/box-shadow) e target ≥24px misurati in Chromium sul srcdoc (runtime Fenix + kit preview). Screenshot + manifest sha256 in src/lib/ai/fixtures/dtm (presenza e peso, non pixel-hash in CI). Claim ridotto da 44px: 24px è la soglia asserita.",
+      "Sei prodotti distinti eseguono 18 percorsi funzionali D/T/M: console 0, overflow ≤8, focus visibile (outline/box-shadow) e target ≥24px misurati in Chromium sul srcdoc. Screenshot + manifest sha256 in src/lib/ai/fixtures/dtm (presenza e peso, non pixel-hash in CI).",
     evidence:
       "src/lib/ai/build-contract-browser.test.ts viewports 1280/768/390 + fixtures/dtm/manifest.json",
     ok: true,

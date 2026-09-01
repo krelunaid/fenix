@@ -8,7 +8,7 @@ import { describe, it } from "node:test";
 import { chromium, type Page } from "playwright";
 import { prepareSrcDoc } from "../projects/color-scheme.ts";
 import { waitForFenixReady } from "../../../scripts/fenix-ready.mjs";
-import { loadContractFixtures } from "./contract-fixtures.ts";
+import { loadContractFixtures, type ContractFixtureId } from "./contract-fixtures.ts";
 import { evaluateContract, planContract } from "./build-contract.ts";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -40,11 +40,60 @@ async function shot(page: Page, name: string) {
   return dest;
 }
 
+async function exerciseJourney(page: Page, id: ContractFixtureId): Promise<string> {
+  if (id === "utility-calculator") {
+    await page.locator("#t").fill("Traghetto");
+    await page.locator("#a").fill("16");
+    await page.locator('[data-act="add"]').click();
+    await page.getByText("Traghetto · Anna").waitFor({ state: "visible" });
+    await page.locator('[data-view="saldi"]').click();
+    await page.getByText("Quota 30.00 € su 120.00 €").waitFor({ state: "visible" });
+    return "aggiungi spesa → saldi ricalcolati";
+  }
+  if (id === "interactive-game") {
+    const cards = page.locator("button.card");
+    assert.equal(await cards.count(), 16);
+    await cards.nth(0).click();
+    await cards.nth(1).click();
+    await page.getByText("1 mosse").waitFor({ state: "visible" });
+    return "gira due carte → contatore mosse";
+  }
+  if (id === "portfolio-contact") {
+    await page.locator('input[name="nome"]').fill("Ada Lovelace");
+    await page.locator('input[name="mail"]').fill("ada@example.test");
+    await page.locator('textarea[name="msg"]').fill("Fotografia del nuovo padiglione");
+    await page.getByRole("button", { name: "Invia" }).click();
+    await page.locator("#ok").waitFor({ state: "visible" });
+    return "invia richiesta → conferma persistita";
+  }
+  const tabs = page.locator("button[data-view]");
+  assert.ok((await tabs.count()) >= 3, `${id}: meno di 3 viste`);
+  const target = tabs.nth(1);
+  const view = (await target.getAttribute("data-view")) || "seconda";
+  await target.click();
+  const selected = await target.evaluate((el) => {
+    const cls = String((el as HTMLElement).className || "");
+    return (
+      /(?:^|\s)(?:on|active|selected)(?:\s|$)/i.test(cls) ||
+      el.getAttribute("aria-selected") === "true" ||
+      el.getAttribute("aria-pressed") === "true"
+    );
+  });
+  assert.equal(selected, true, `${id}: vista ${view} non attiva dopo click`);
+  return `apri vista ${view}`;
+}
+
 describe("contract fixtures in the browser D/T/M", () => {
-  it("console zero, no horizontal overflow, visible focus and 24px target on 3 families", async () => {
+  it("runs functional journeys with console zero, no overflow, visible focus and 24px targets on 6 products", async () => {
     const fixtures = loadContractFixtures();
     const browser = await launch();
-    const manifest: { files: { name: string; sha256: string; bytes: number }[] } = { files: [] };
+    const manifest: {
+      benchmark: { fixtures: number; viewports: number; journeys: string[] };
+      files: { name: string; sha256: string; bytes: number }[];
+    } = {
+      benchmark: { fixtures: fixtures.length, viewports: VIEWPORTS.length, journeys: [] },
+      files: [],
+    };
     try {
       for (const fix of fixtures) {
         const evaluation = evaluateContract({
@@ -63,6 +112,8 @@ describe("contract fixtures in the browser D/T/M", () => {
           const src = prepareSrcDoc(fix.html, fix.palette, fix.id, evaluation.kind);
           await page.setContent(src, { waitUntil: "domcontentloaded", timeout: 15000 });
           await waitForFenixReady(page, 8000);
+          const journey = await exerciseJourney(page, fix.id);
+          manifest.benchmark.journeys.push(`${fix.id}/${vp}: ${journey}`);
           const metrics = await page.evaluate(() => {
             const doc = document.documentElement;
             const nodes = [...document.querySelectorAll<HTMLElement>("button, a[href], input, [tabindex]")];
@@ -116,7 +167,9 @@ describe("contract fixtures in the browser D/T/M", () => {
     }
     mkdirSync(DTM, { recursive: true });
     writeFileSync(join(DTM, "manifest.json"), `${JSON.stringify(manifest, null, 2)}\n`);
-    assert.equal(manifest.files.length, 9);
+    assert.equal(manifest.benchmark.fixtures, 6);
+    assert.equal(manifest.benchmark.journeys.length, 18);
+    assert.equal(manifest.files.length, 18);
     for (const row of manifest.files) {
       const path = join(DTM, row.name);
       assert.equal(existsSync(path), true, row.name);

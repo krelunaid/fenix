@@ -1,49 +1,118 @@
 {
+  "benchmark": {
+    "fixtures": 6,
+    "viewports": 3,
+    "journeys": [
+      "gestionale-crud/D: apri vista risk",
+      "gestionale-crud/T: apri vista risk",
+      "gestionale-crud/M: apri vista risk",
+      "consumer-mobile/D: apri vista pezzi",
+      "consumer-mobile/T: apri vista pezzi",
+      "consumer-mobile/M: apri vista pezzi",
+      "dashboard-multifile/D: apri vista risk",
+      "dashboard-multifile/T: apri vista risk",
+      "dashboard-multifile/M: apri vista risk",
+      "utility-calculator/D: aggiungi spesa → saldi ricalcolati",
+      "utility-calculator/T: aggiungi spesa → saldi ricalcolati",
+      "utility-calculator/M: aggiungi spesa → saldi ricalcolati",
+      "interactive-game/D: gira due carte → contatore mosse",
+      "interactive-game/T: gira due carte → contatore mosse",
+      "interactive-game/M: gira due carte → contatore mosse",
+      "portfolio-contact/D: invia richiesta → conferma persistita",
+      "portfolio-contact/T: invia richiesta → conferma persistita",
+      "portfolio-contact/M: invia richiesta → conferma persistita"
+    ]
+  },
   "files": [
     {
       "name": "gestionale-crud-D.png",
-      "sha256": "88abe0638c28ce982ebdaefb43eb37099fb2e1b6feba1a3d31099adaa6137453",
-      "bytes": 65143
+      "sha256": "d767e735b2553da5f64723ba44c69ad7b72b5701ee9a4dbf49489ce1d428ca15",
+      "bytes": 56300
     },
     {
       "name": "gestionale-crud-T.png",
-      "sha256": "9458ea5470fca732b0faeabc192d4f338329a1c57ec95823434189f55b2b9fff",
-      "bytes": 58675
+      "sha256": "a2de941cd8836833c89849ddf0d3e3fb711f46ef3bbc06fa6108dea195156174",
+      "bytes": 53867
     },
     {
       "name": "gestionale-crud-M.png",
-      "sha256": "86caf09a0b3103054876d7cee6ef6298ef78a721bf4451fbda1c13857bf348a9",
-      "bytes": 41523
+      "sha256": "0912713a80c40caf26236021577f68d86b47ffb50a9bef15debec57b2da74270",
+      "bytes": 50513
     },
     {
       "name": "consumer-mobile-D.png",
-      "sha256": "c7c0af31e3a2c4932e5004a543e2e5b2e48c574411fd217ec734852ab06a4169",
-      "bytes": 61709
+      "sha256": "2027ebf8b10f966f3cac224e4ebcdf9f6a57e7626e907ede2716a8aa70f6db98",
+      "bytes": 73321
     },
     {
       "name": "consumer-mobile-T.png",
-      "sha256": "509d92dd83293a4148d17083b22b11efe06ce25294df1f6f59c41ffdb8a050b6",
-      "bytes": 68081
+      "sha256": "a55b0436813b37f024ac0287c4ff87cd3e2e41faf44c4e03a39e5f4385bd51e7",
+      "bytes": 77263
     },
     {
       "name": "consumer-mobile-M.png",
-      "sha256": "18af626940c079f7fe464ce047dc4e74d66a58bf4b2f8ec53d780d9ce595f1a9",
-      "bytes": 47719
+      "sha256": "4241085fcf47aa9c2110a89ce805f04ddf7bd21d7c092010cd43696f29657f08",
+      "bytes": 53481
     },
     {
       "name": "dashboard-multifile-D.png",
-      "sha256": "88abe0638c28ce982ebdaefb43eb37099fb2e1b6feba1a3d31099adaa6137453",
-      "bytes": 65143
+      "sha256": "d767e735b2553da5f64723ba44c69ad7b72b5701ee9a4dbf49489ce1d428ca15",
+      "bytes": 56300
     },
     {
       "name": "dashboard-multifile-T.png",
-      "sha256": "9458ea5470fca732b0faeabc192d4f338329a1c57ec95823434189f55b2b9fff",
-      "bytes": 58675
+      "sha256": "a2de941cd8836833c89849ddf0d3e3fb711f46ef3bbc06fa6108dea195156174",
+      "bytes": 53867
     },
     {
       "name": "dashboard-multifile-M.png",
-      "sha256": "86caf09a0b3103054876d7cee6ef6298ef78a721bf4451fbda1c13857bf348a9",
-      "bytes": 41523
+      "sha256": "0912713a80c40caf26236021577f68d86b47ffb50a9bef15debec57b2da74270",
+      "bytes": 50513
+    },
+    {
+      "name": "utility-calculator-D.png",
+      "sha256": "f6373cc3dda0a11e69a9e9b869022ad64f3c93f0584950202fdf84882d5e8c66",
+      "bytes": 28451
+    },
+    {
+      "name": "utility-calculator-T.png",
+      "sha256": "b9f5724095fbbf1d45ebe0e48462f602d1003771e837845c68fe2a0d20b569f2",
+      "bytes": 27868
+    },
+    {
+      "name": "utility-calculator-M.png",
+      "sha256": "2b298d4a6967c2ee28c02c5e3029b72632593b94cd7a028e9e4c9d5b7624403c",
+      "bytes": 24953
+    },
+    {
+      "name": "interactive-game-D.png",
+      "sha256": "0ea0332aa16a10cda786903369e54dccdaaedf4fbf46255ad3db13eb3a71de36",
+      "bytes": 17023
+    },
+    {
+      "name": "interactive-game-T.png",
+      "sha256": "47d191886b5353be7810cb84b6e2dda3889d126f62141e50c2b4ec09f1e19415",
+      "bytes": 16720
+    },
+    {
+      "name": "interactive-game-M.png",
+      "sha256": "04774cb524e04087b5aa4aadae83dd05653da90cefdb5a443f7ad4001168ebbd",
+      "bytes": 14468
+    },
+    {
+      "name": "portfolio-contact-D.png",
+      "sha256": "edc3df69c50f26f9c73bf15880c54f41c6f29009bc2b041377ccf7e65fd09fd4",
+      "bytes": 32366
+    },
+    {
+      "name": "portfolio-contact-T.png",
+      "sha256": "ad524c6015367f1e45e399d8cb008ede0ba5bde07a618ab42228f4b851a6b0b3",
+      "bytes": 35609
+    },
+    {
+      "name": "portfolio-contact-M.png",
+      "sha256": "642d9c4d14b056621fccc9eea2771f0c155e05a06de3c9c52414ec47738e76f7",
+      "bytes": 27639
     }
   ]
 }

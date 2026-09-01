@@ -229,7 +229,7 @@ export const DEMOS: Record<string, DemoSeed> = {
   * { box-sizing:border-box; margin:0; }
   body { background:var(--bg); color:var(--ink); font-family:"IBM Plex Mono",ui-monospace,monospace; min-height:100svh; }
   header { display:flex; justify-content:space-between; align-items:center; padding:16px 20px; border-bottom:1px solid var(--line); }
-  .nav { background:transparent; border:0; color:var(--muted); font:600 12px "IBM Plex Mono",monospace; letter-spacing:.06em; text-transform:uppercase; cursor:pointer; }
+  .nav { min-height:32px; padding:4px; background:transparent; border:0; color:var(--muted); font:600 12px "IBM Plex Mono",monospace; letter-spacing:.06em; text-transform:uppercase; cursor:pointer; }
   .nav.on { color:var(--ink); }
   main { max-width:420px; margin:0 auto; padding:28px 20px 64px; }
   h1 { font-size:32px; letter-spacing:-.04em; font-weight:600; }
@@ -355,7 +355,7 @@ export const DEMOS: Record<string, DemoSeed> = {
   html { color-scheme:dark; scroll-behavior:smooth; }
   body { background:var(--bg); color:var(--fg); font-family:"IBM Plex Sans",system-ui,sans-serif; }
   header { position:fixed; inset:0 0 auto; z-index:2; display:flex; justify-content:space-between; padding:18px 24px; font-size:13px; font-family:"Instrument Serif",serif; }
-  nav a { color:var(--muted); margin-left:16px; text-decoration:none; font-family:"IBM Plex Sans",sans-serif; }
+  nav a { display:inline-flex; min-height:32px; align-items:center; color:var(--muted); margin-left:16px; text-decoration:none; font-family:"IBM Plex Sans",sans-serif; }
   .shot { min-height:100svh; position:relative; }
   .shot svg { width:100%; height:100svh; display:block; }
   .cap { position:absolute; left:24px; bottom:28px; }
@@ -477,7 +477,7 @@ export const DEMOS: Record<string, DemoSeed> = {
   * { box-sizing:border-box; margin:0; }
   body { background:var(--bg); color:var(--ink); font-family:"IBM Plex Mono",ui-monospace,monospace; min-height:100svh; color-scheme:dark; }
   header { display:flex; justify-content:space-between; padding:16px; }
-  .nav { background:transparent; border:0; color:var(--muted); font:600 11px "IBM Plex Mono",monospace; letter-spacing:.08em; text-transform:uppercase; cursor:pointer; }
+  .nav { min-height:32px; padding:4px; background:transparent; border:0; color:var(--muted); font:600 11px "IBM Plex Mono",monospace; letter-spacing:.08em; text-transform:uppercase; cursor:pointer; }
   .nav.on { color:var(--ink); }
   main { max-width:420px; margin:0 auto; padding:12px 16px 48px; text-align:center; }
   h1 { font-family:"Playfair Display",serif; font-size:40px; letter-spacing:-.04em; font-weight:600; }

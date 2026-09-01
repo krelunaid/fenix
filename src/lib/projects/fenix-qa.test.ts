@@ -561,7 +561,7 @@ describe("focus-visible and worker model", () => {
     const gap = readFileSync(join(root, "src/lib/projects/fase3-gap.ts"), "utf8");
     assert.match(gap, /id: "quality"/);
     assert.match(gap, /planner deterministico/);
-    assert.match(gap, /Evaluator su 3 fixture/);
+    assert.match(gap, /Evaluator su 6 fixture/);
     assert.doesNotMatch(gap, /feature-complete|uguale a Emergent/);
     const overlay = readFileSync(join(root, "src/components/build-overlay.tsx"), "utf8");
     assert.doesNotMatch(overlay, /Officina/);

@@ -189,6 +189,195 @@
           "blocking": true
         }
       ]
+    },
+    {
+      "id": "utility-calculator",
+      "family": "utility/calcolatore",
+      "kind": "app",
+      "ok": true,
+      "checks": [
+        {
+          "id": "html",
+          "ok": true,
+          "blocking": true
+        },
+        {
+          "id": "kind-lock",
+          "ok": true,
+          "blocking": true
+        },
+        {
+          "id": "srcdoc",
+          "ok": true,
+          "blocking": true
+        },
+        {
+          "id": "files",
+          "ok": true,
+          "blocking": true
+        },
+        {
+          "id": "crud",
+          "ok": true,
+          "blocking": true
+        },
+        {
+          "id": "security",
+          "ok": true,
+          "blocking": true
+        },
+        {
+          "id": "overflow",
+          "ok": true,
+          "blocking": true
+        },
+        {
+          "id": "aa",
+          "ok": true,
+          "blocking": true
+        },
+        {
+          "id": "visual-dna",
+          "ok": true,
+          "blocking": true
+        },
+        {
+          "id": "a11y-focus",
+          "ok": false,
+          "blocking": false
+        },
+        {
+          "id": "routes",
+          "ok": true,
+          "blocking": true
+        }
+      ]
+    },
+    {
+      "id": "interactive-game",
+      "family": "gioco interattivo",
+      "kind": "app",
+      "ok": true,
+      "checks": [
+        {
+          "id": "html",
+          "ok": true,
+          "blocking": true
+        },
+        {
+          "id": "kind-lock",
+          "ok": true,
+          "blocking": true
+        },
+        {
+          "id": "srcdoc",
+          "ok": true,
+          "blocking": true
+        },
+        {
+          "id": "files",
+          "ok": true,
+          "blocking": true
+        },
+        {
+          "id": "crud",
+          "ok": true,
+          "blocking": true
+        },
+        {
+          "id": "security",
+          "ok": true,
+          "blocking": true
+        },
+        {
+          "id": "overflow",
+          "ok": true,
+          "blocking": true
+        },
+        {
+          "id": "aa",
+          "ok": true,
+          "blocking": true
+        },
+        {
+          "id": "visual-dna",
+          "ok": true,
+          "blocking": true
+        },
+        {
+          "id": "a11y-focus",
+          "ok": false,
+          "blocking": false
+        },
+        {
+          "id": "routes",
+          "ok": true,
+          "blocking": true
+        }
+      ]
+    },
+    {
+      "id": "portfolio-contact",
+      "family": "portfolio/editoriale",
+      "kind": "site",
+      "ok": true,
+      "checks": [
+        {
+          "id": "html",
+          "ok": true,
+          "blocking": true
+        },
+        {
+          "id": "kind-lock",
+          "ok": true,
+          "blocking": true
+        },
+        {
+          "id": "srcdoc",
+          "ok": true,
+          "blocking": true
+        },
+        {
+          "id": "files",
+          "ok": true,
+          "blocking": true
+        },
+        {
+          "id": "crud",
+          "ok": true,
+          "blocking": true
+        },
+        {
+          "id": "security",
+          "ok": true,
+          "blocking": true
+        },
+        {
+          "id": "overflow",
+          "ok": true,
+          "blocking": true
+        },
+        {
+          "id": "aa",
+          "ok": true,
+          "blocking": true
+        },
+        {
+          "id": "visual-dna",
+          "ok": true,
+          "blocking": true
+        },
+        {
+          "id": "a11y-focus",
+          "ok": false,
+          "blocking": false
+        },
+        {
+          "id": "routes",
+          "ok": true,
+          "blocking": true
+        }
+      ]
     }
   ]
 }

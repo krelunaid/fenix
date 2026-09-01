@@ -90,17 +90,32 @@ describe("BuildContract planner (deterministic, no LLM)", () => {
   });
 });
 
-describe("deterministic evaluator on 3 distinct fixtures", () => {
-  it("contract→output passes on gestionale, mobile, dashboard multi-file", () => {
+describe("deterministic evaluator on 6 distinct fixtures", () => {
+  it("contract→output passes on operational, consumer, utility, game and editorial products", () => {
     const fixtures = loadContractFixtures();
-    assert.equal(fixtures.length, 3);
+    assert.equal(fixtures.length, 6);
     assert.deepEqual(
       fixtures.map((f) => f.id),
-      ["gestionale-crud", "consumer-mobile", "dashboard-multifile"],
+      [
+        "gestionale-crud",
+        "consumer-mobile",
+        "dashboard-multifile",
+        "utility-calculator",
+        "interactive-game",
+        "portfolio-contact",
+      ],
     );
     const reports = fixtures.map((fix) => {
       const contract = planContract(fix.brief);
-      assert.equal(contract.kind, fix.id === "consumer-mobile" ? "app" : "dashboard");
+      const expectedKinds = {
+        "gestionale-crud": "dashboard",
+        "consumer-mobile": "app",
+        "dashboard-multifile": "dashboard",
+        "utility-calculator": "app",
+        "interactive-game": "app",
+        "portfolio-contact": "site",
+      } as const;
+      assert.equal(contract.kind, expectedKinds[fix.id]);
       const evaluation = evaluateContract({
         html: fix.html,
         files: fix.files,
