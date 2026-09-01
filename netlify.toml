@@ -1,6 +1,6 @@
 [build]
-  command = "node scripts/with-app-env.mjs ./node_modules/.bin/vite build && node scripts/copy-pglite-assets.mjs && node scripts/sync-static-publish.mjs && node scripts/migrate.mjs"
-  publish = "dist"
+  command = "rm -rf dist && node scripts/with-app-env.mjs ./node_modules/.bin/vite build && node scripts/copy-pglite-assets.mjs && node scripts/sync-static-publish.mjs && node scripts/migrate.mjs"
+  publish = ".output/public"
 
 [build.environment]
   VITE_AUTH_ENABLED = "true"
@@ -10,7 +10,6 @@
   to = "https://fenix-production-d9f5.up.railway.app/:splat"
   status = 200
   force = true
-
 
 [[edge_functions]]
   path = "/api/build"

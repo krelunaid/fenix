@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   playCommitInternal,
@@ -52,8 +52,12 @@ export async function runAndroidStep(
 
   if (step === "build") {
     const { root, aab } = materializeAndroid(job);
+    if (existsSync(aab)) {
+      await persist({ provider: { ...track.provider, aabPath: aab } });
+      return { ok: true, step, fixture, artifact: aab, reconciled: true };
+    }
     await persist({
-      provider: { ...track.provider, aabPath: aab, intentId: `${job.id}:android:bundle` },
+      provider: { ...track.provider, aabPath: aab, intentId: `${job.id}:android:bundle`, inflight: "bundle" },
     });
     const result = await run("gradle", ["bundleRelease"], { cwd: root });
     if (!result.ok) {
@@ -69,12 +73,19 @@ export async function runAndroidStep(
         };
       }
     }
+    await persist({ provider: { ...track.provider, aabPath: aab, inflight: undefined } });
     return { ok: true, step, fixture, artifact: aab };
   }
 
   if (step === "sign") {
     const aab = track.provider?.aabPath || materializeAndroid(job).aab;
     const signed = aab.replace(/\.aab$/, "-signed.aab");
+    if (existsSync(signed)) {
+      await persist({
+        provider: { ...track.provider, signedAabPath: signed, aabPath: aab },
+      });
+      return { ok: true, step, fixture, artifact: signed, reconciled: true };
+    }
     if (!fixture && !opts.keystorePath) {
       return {
         ok: false,
@@ -83,6 +94,7 @@ export async function runAndroidStep(
         error: "Manca il keystore di upload Android sul server. Non si inventa un certificato.",
       };
     }
+    await persist({ provider: { ...track.provider, inflight: "sign" } });
     const result = await run("jarsigner", ["-signedjar", signed, aab, "upload"]);
     if (!result.ok && !fixture) {
       return {
@@ -92,10 +104,16 @@ export async function runAndroidStep(
         error: "Firma AAB non riuscita. Controlla il keystore sul server.",
       };
     }
+    const artifact = existsSync(signed) ? signed : aab;
     await persist({
-      provider: { ...track.provider, signedAabPath: fixture ? aab : signed, aabPath: aab },
+      provider: {
+        ...track.provider,
+        signedAabPath: artifact,
+        aabPath: aab,
+        inflight: undefined,
+      },
     });
-    return { ok: true, step, fixture, artifact: fixture ? aab : signed };
+    return { ok: true, step, fixture, artifact };
   }
 
   if (step === "upload") {
@@ -109,8 +127,14 @@ export async function runAndroidStep(
       };
     }
     if (fixture) {
+      if (track.provider?.inflight === "upload") {
+        const uploadId = `play-internal:${pkg}:${job.id}`;
+        await persist({ provider: { ...track.provider, uploadId, inflight: undefined } });
+        return { ok: true, step, fixture, artifact: uploadId, reconciled: true };
+      }
+      await persist({ provider: { ...track.provider, inflight: "upload" } });
       const uploadId = `play-internal:${pkg}:${job.id}`;
-      await persist({ provider: { ...track.provider, uploadId } });
+      await persist({ provider: { ...track.provider, uploadId, inflight: undefined } });
       return { ok: true, step, fixture, artifact: uploadId };
     }
     if (!opts.serviceJson) {
@@ -118,6 +142,24 @@ export async function runAndroidStep(
     }
     const aabPath = track.provider?.signedAabPath || track.provider?.aabPath;
     if (!aabPath) return { ok: false, step, fixture: false, error: "AAB assente. Riprendi dalla compilazione." };
+    if (
+      track.provider?.inflight === "play-commit" &&
+      track.provider.editId &&
+      track.provider.versionCode
+    ) {
+      const committed = await playCommitInternal(
+        opts.serviceJson,
+        pkg,
+        track.provider.editId,
+        track.provider.versionCode,
+      );
+      if (!committed.ok) return { ok: false, step, fixture: false, error: committed.error };
+      const uploadId = `play-internal:${pkg}:${track.provider.editId}`;
+      await persist({
+        provider: { ...track.provider, uploadId, inflight: undefined },
+      });
+      return { ok: true, step, fixture: false, artifact: uploadId, reconciled: true };
+    }
     let bytes: Uint8Array;
     try {
       bytes = new Uint8Array(readFileSync(aabPath));
@@ -127,7 +169,7 @@ export async function runAndroidStep(
     const edit = await playInsertEdit(opts.serviceJson, pkg, track.provider?.editId);
     if (!edit.ok) return { ok: false, step, fixture: false, error: edit.error };
     if (!edit.id) return { ok: false, step, fixture: false, error: "Play Console ha aperto un edit senza id." };
-    await persist({ provider: { ...track.provider, editId: edit.id } });
+    await persist({ provider: { ...track.provider, editId: edit.id, inflight: "play-upload" } });
     const uploaded = await playUploadBundle(
       opts.serviceJson,
       pkg,
@@ -138,12 +180,14 @@ export async function runAndroidStep(
     if (!uploaded.ok) return { ok: false, step, fixture: false, error: uploaded.error };
     if (!uploaded.id) return { ok: false, step, fixture: false, error: "Play Console ha caricato un AAB senza versionCode." };
     await persist({
-      provider: { ...track.provider, editId: edit.id, versionCode: uploaded.id },
+      provider: { ...track.provider, editId: edit.id, versionCode: uploaded.id, inflight: "play-commit" },
     });
     const committed = await playCommitInternal(opts.serviceJson, pkg, edit.id, uploaded.id);
     if (!committed.ok) return { ok: false, step, fixture: false, error: committed.error };
     const uploadId = `play-internal:${pkg}:${edit.id}`;
-    await persist({ provider: { ...track.provider, uploadId, editId: edit.id } });
+    await persist({
+      provider: { ...track.provider, uploadId, editId: edit.id, inflight: undefined },
+    });
     return { ok: true, step, fixture: false, artifact: uploadId };
   }
 

@@ -280,6 +280,9 @@ describe("focus-visible and worker model", () => {
     assert.match(releaseEngine, /claimReleaseKey/);
     assert.match(releaseEngine, /withLease/);
     assert.match(releaseEngine, /result\.reconciled/);
+    assert.match(releaseEngine, /jobIdFromKey/);
+    assert.match(releaseEngine, /createsInflight/);
+    assert.match(releaseEngine, /asHexKey/);
     assert.match(releaseFn, /path: "\/api\/release"/);
     const storeApi = readFileSync(join(root, "src/lib/release/store-api.ts"), "utf8");
     assert.match(storeApi, /applePreflight/);
@@ -299,8 +302,10 @@ describe("focus-visible and worker model", () => {
     assert.match(androidSrc, /playInsertEdit/);
     assert.match(androidSrc, /playUploadBundle/);
     assert.match(androidSrc, /playCommitInternal/);
+    assert.match(androidSrc, /inflight === "play-commit"/);
     const webSrc = readFileSync(join(root, "src/lib/release/web.ts"), "utf8");
     assert.match(webSrc, /netlifyFindOrCreateSite/);
+    assert.match(webSrc, /netlifyListDeploys/);
     assert.match(webSrc, /netlifyCreateDeploy/);
     assert.match(webSrc, /netlifyGetDeploy/);
     const runnerSrc = readFileSync(join(root, "src/lib/release/runner.ts"), "utf8");
@@ -308,7 +313,8 @@ describe("focus-visible and worker model", () => {
     assert.match(runnerSrc, /xcodebuild/);
     const netlifyToml = readFileSync(join(root, "netlify.toml"), "utf8");
     assert.match(netlifyToml, /sync-static-publish\.mjs/);
-    assert.match(netlifyToml, /publish = "dist"/);
+    assert.match(netlifyToml, /publish = "\.output\/public"/);
+    assert.doesNotMatch(netlifyToml, /publish = "dist"/);
     const pkgJson = readFileSync(join(root, "package.json"), "utf8");
     assert.match(pkgJson, /sync-static-publish\.mjs/);
     const envExample = readFileSync(join(root, ".env.example"), "utf8");

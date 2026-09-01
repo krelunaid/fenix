@@ -71,8 +71,21 @@ export function releaseIdempotencyKey(parts: {
   return createHash("sha256").update(text).digest("hex");
 }
 
+/** One key → one job id. Concurrent POSTs cannot mint a second UUID. */
+export function jobIdFromKey(key: string): string {
+  const h = key.replace(/[^a-f0-9]/gi, "").toLowerCase().padEnd(32, "0").slice(0, 32);
+  return `${h.slice(0, 8)}-${h.slice(8, 12)}-4${h.slice(13, 16)}-8${h.slice(17, 20)}-${h.slice(20, 32)}`;
+}
+
 function htmlHash(html: string): string {
   return createHash("sha256").update(html).digest("hex").slice(0, 16);
+}
+
+/** Only a 32+ hex digest may replace the computed key. UI headers are not keys. */
+function asHexKey(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const t = value.trim().toLowerCase();
+  return /^[a-f0-9]{32,}$/.test(t) ? t : null;
 }
 
 function appendLog(job: StoredReleaseJob, line: string) {
@@ -286,6 +299,72 @@ export async function resumeReleaseJob(
   return continueJob(job, access);
 }
 
+const createsInflight = new Map<string, Promise<PublicReleaseJob | { error: string; status: number }>>();
+
+export function resetReleaseCreatesForTest() {
+  createsInflight.clear();
+}
+
+async function createReleaseJobUnlocked(
+  raw: ReleaseInput,
+  access: { ownerId: string; idempotencyKey?: string | null },
+  key: string,
+  parsed: {
+    name: string;
+    tagline: string;
+    kind: string;
+    summary: string;
+    palette: StoredReleaseJob["palette"];
+    html: string;
+  },
+  platforms: Platform[],
+  bundle: string,
+  pkg: string,
+  siteName: string,
+  h: string,
+): Promise<PublicReleaseJob | { error: string; status: number }> {
+  const ownerHash = hashOwner(access.ownerId);
+  const id = jobIdFromKey(key);
+  const claim = await claimReleaseKey(key, id);
+  if (!claim.won) {
+    const existing = (await waitReleaseByKey(key)) || (await readReleaseJob(claim.id));
+    if (!existing) return { error: "Job in creazione. Riprova.", status: 409 };
+    return continueJob(existing, access);
+  }
+
+  const already = await readReleaseJob(id);
+  if (already) return continueJob(already, access);
+
+  const tracks = {} as StoredReleaseJob["tracks"];
+  for (const p of PLATFORMS) tracks[p] = emptyTrack(p);
+  const now = Date.now();
+  const token = randomUUID();
+  const job: StoredReleaseJob = {
+    id,
+    projectId: String(raw.projectId || "").trim(),
+    ownerHash,
+    platforms,
+    status: "run",
+    step: "connect",
+    log: ["Partito. Controllo HTML e record."],
+    tracks,
+    config: { bundleId: bundle, packageName: pkg, siteName, appName: parsed.name },
+    htmlHash: h,
+    idempotencyKey: key,
+    createdAt: now,
+    updatedAt: now,
+    kind: parseKind(parsed.kind) || parsed.kind,
+    name: parsed.name,
+    tagline: parsed.tagline,
+    summary: parsed.summary,
+    html: parsed.html,
+    palette: parsed.palette,
+  };
+  const saved = await writeReleaseJob(withLease(job, token));
+  const done = await runReleaseToIdle(saved, access, 24, token);
+  return publicReleaseJob(done);
+}
+
 export async function createReleaseJob(
   raw: ReleaseInput,
   access: { ownerId: string; idempotencyKey?: string | null },
@@ -321,58 +400,38 @@ export async function createReleaseJob(
       ? raw.siteName.trim().slice(0, 80)
       : parsed.name;
   const h = htmlHash(parsed.html);
-  const key =
-    (typeof raw.idempotencyKey === "string" && raw.idempotencyKey.trim().length >= 16
-      ? raw.idempotencyKey.trim().toLowerCase()
-      : null) ||
-    (access.idempotencyKey && access.idempotencyKey.trim().length >= 16
-      ? access.idempotencyKey.trim().toLowerCase()
-      : null) ||
-    releaseIdempotencyKey({
-      ownerHash,
-      projectId,
-      platforms,
-      htmlHash: h,
-      bundleId: bundle,
-      packageName: pkg,
-    });
-
-  const id = randomUUID();
-  const claim = await claimReleaseKey(key, id);
-  if (!claim.won) {
-    const existing = (await waitReleaseByKey(key)) || (await readReleaseJob(claim.id));
-    if (!existing) return { error: "Job in creazione. Riprova.", status: 409 };
-    return continueJob(existing, access);
-  }
-
-  const tracks = {} as StoredReleaseJob["tracks"];
-  for (const p of PLATFORMS) tracks[p] = emptyTrack(p);
-  const now = Date.now();
-  const token = randomUUID();
-  const job: StoredReleaseJob = {
-    id,
-    projectId,
+  const computed = releaseIdempotencyKey({
     ownerHash,
+    projectId,
     platforms,
-    status: "run",
-    step: "connect",
-    log: ["Partito. Controllo HTML e record."],
-    tracks,
-    config: { bundleId: bundle, packageName: pkg, siteName, appName: parsed.name },
     htmlHash: h,
-    idempotencyKey: key,
-    createdAt: now,
-    updatedAt: now,
-    kind,
-    name: parsed.name,
-    tagline: parsed.tagline,
-    summary: parsed.summary,
-    html: parsed.html,
-    palette: parsed.palette,
-  };
-  const saved = await writeReleaseJob(withLease(job, token));
-  const done = await runReleaseToIdle(saved, access, 24, token);
-  return publicReleaseJob(done);
+    bundleId: bundle,
+    packageName: pkg,
+  });
+  const override = asHexKey(raw.idempotencyKey) || asHexKey(access.idempotencyKey);
+  const key = override || computed;
+
+  const pending = createsInflight.get(key);
+  if (pending) return pending;
+  const work = createReleaseJobUnlocked(
+    raw,
+    access,
+    key,
+    parsed,
+    platforms,
+    bundle,
+    pkg,
+    siteName,
+    h,
+  );
+  createsInflight.set(key, work);
+  try {
+    return await work;
+  } finally {
+    queueMicrotask(() => {
+      /* keep resolved promise so a late twin joins */
+    });
+  }
 }
 
 export async function loadReleaseJob(

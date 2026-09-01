@@ -31,7 +31,14 @@ type BlobStore = {
   setJSON: (key: string, value: unknown) => Promise<void>;
 };
 
+let testBlobs: BlobStore | null = null;
+
+export function setReleaseBlobsForTest(store: BlobStore | null) {
+  testBlobs = store;
+}
+
 async function blobsStore(): Promise<BlobStore | null> {
+  if (testBlobs) return testBlobs;
   if (!onNetlifyRuntime() && !process.env.NETLIFY_SITE_ID) return null;
   try {
     const mod = (await import("@netlify/blobs")) as {
@@ -66,7 +73,7 @@ function readFileJob(id: string): StoredReleaseJob | null {
 function writeFileJob(job: StoredReleaseJob) {
   mkdirSync(releaseDir(), { recursive: true });
   const target = filePath(job.id);
-  const tmp = `${target}.${process.pid}.tmp`;
+  const tmp = `${target}.${process.pid}.${randomUUID().slice(0, 8)}.tmp`;
   writeFileSync(tmp, JSON.stringify(job), "utf8");
   renameSync(tmp, target);
 }
@@ -159,24 +166,53 @@ export async function readReleaseByKey(key: string): Promise<StoredReleaseJob | 
   return id ? readFileJob(id) : null;
 }
 
+const claimsInflight = new Map<string, Promise<{ won: boolean; id: string }>>();
+
+export function resetReleaseClaimsForTest() {
+  claimsInflight.clear();
+  testBlobs = null;
+}
+
+async function claimBlobs(
+  blobs: BlobStore,
+  key: string,
+  id: string,
+): Promise<{ won: boolean; id: string }> {
+  const slot = `key-${key}`;
+  const token = randomUUID();
+  const existing = (await blobs.get(slot, { type: "json" }).catch(() => null)) as
+    | { id?: string }
+    | null;
+  if (existing?.id && existing.id !== id) return { won: false, id: existing.id };
+  if (existing?.id === id) return { won: true, id };
+  await blobs.setJSON(slot, { id, token, claimedAt: Date.now() });
+  const confirm = (await blobs.get(slot, { type: "json" })) as
+    | { id?: string; token?: string }
+    | null;
+  if (confirm?.id && confirm.id !== id) return { won: false, id: confirm.id };
+  if (confirm?.token && confirm.token !== token) {
+    return { won: confirm.id === id, id: confirm.id || id };
+  }
+  return { won: true, id };
+}
+
 export async function claimReleaseKey(
   key: string,
   id: string,
 ): Promise<{ won: boolean; id: string }> {
-  const blobs = await blobsStore();
-  if (blobs) {
-    const existing = (await blobs.get(`key-${key}`, { type: "json" }).catch(() => null)) as
-      | { id?: string }
-      | null;
-    if (existing?.id && existing.id !== id) return { won: false, id: existing.id };
-    if (existing?.id === id) return { won: true, id };
-    await blobs.setJSON(`key-${key}`, { id, claimedAt: Date.now() });
-    const confirm = (await blobs.get(`key-${key}`, { type: "json" })) as { id?: string } | null;
-    if (confirm?.id && confirm.id !== id) return { won: false, id: confirm.id };
-    return { won: true, id };
+  const pending = claimsInflight.get(key);
+  if (pending) {
+    const result = await pending;
+    return { won: result.id === id, id: result.id };
   }
-  if (onNetlifyRuntime()) throw new Error("Archivio release non disponibile.");
-  return claimFileKey(key, id);
+  const work = (async () => {
+    const blobs = await blobsStore();
+    if (blobs) return claimBlobs(blobs, key, id);
+    if (onNetlifyRuntime()) throw new Error("Archivio release non disponibile.");
+    return claimFileKey(key, id);
+  })();
+  claimsInflight.set(key, work);
+  return work;
 }
 
 export async function waitReleaseByKey(key: string, tries = 25): Promise<StoredReleaseJob | null> {

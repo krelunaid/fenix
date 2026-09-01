@@ -57,6 +57,27 @@ export async function netlifyFindOrCreateSite(
   return { ok: true, id: body.id };
 }
 
+export async function netlifyListDeploys(
+  token: string,
+  siteId: string,
+  title?: string,
+): Promise<DeployCheck> {
+  let res: Response;
+  try {
+    res = await releaseFetch(`https://api.netlify.com/api/v1/sites/${siteId}/deploys?per_page=30`, {
+      headers: auth(token),
+    });
+  } catch {
+    return { ok: false, error: "Netlify non risponde sull'elenco deploy." };
+  }
+  if (!res.ok) return { ok: true };
+  const body = (await res.json().catch(() => [])) as { id?: string; state?: string; title?: string }[];
+  const rows = Array.isArray(body) ? body : [];
+  const match = title ? rows.find((d) => d.title === title && d.id) : rows[0];
+  if (match?.id) return { ok: true, id: match.id, state: match.state };
+  return { ok: true };
+}
+
 export async function netlifyCreateDeploy(
   token: string,
   siteId: string,
@@ -70,13 +91,18 @@ export async function netlifyCreateDeploy(
       return got;
     }
   }
+  const listed = await netlifyListDeploys(token, siteId, title);
+  if (listed.ok && listed.id) return listed;
   let res: Response;
   try {
-    res = await releaseFetch(`https://api.netlify.com/api/v1/sites/${siteId}/deploys?title=${encodeURIComponent(title)}`, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/zip" },
-      body: Buffer.from(zip),
-    });
+    res = await releaseFetch(
+      `https://api.netlify.com/api/v1/sites/${siteId}/deploys?title=${encodeURIComponent(title)}`,
+      {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/zip" },
+        body: Buffer.from(zip),
+      },
+    );
   } catch {
     return { ok: false, error: "Netlify non risponde sul deploy. Riprova: non carico un secondo zip." };
   }
@@ -177,6 +203,8 @@ export async function playUploadBundle(
   if (existingVersion) return { ok: true, id: existingVersion };
   const token = await googleAccessToken(rawJson);
   if (typeof token !== "string") return { ok: false, error: token.error };
+  const listed = await playListBundles(token, packageName, editId);
+  if (listed.ok && listed.id) return listed;
   const url =
     "https://androidpublisher.googleapis.com/androidpublisher/v3/applications/" +
     encodeURIComponent(packageName) +
@@ -202,6 +230,32 @@ export async function playUploadBundle(
   return { ok: true, id: code };
 }
 
+async function playListBundles(
+  token: string,
+  packageName: string,
+  editId: string,
+): Promise<DeployCheck> {
+  const url =
+    "https://androidpublisher.googleapis.com/androidpublisher/v3/applications/" +
+    encodeURIComponent(packageName) +
+    "/edits/" +
+    encodeURIComponent(editId) +
+    "/bundles";
+  let res: Response;
+  try {
+    res = await releaseFetch(url, { headers: { Authorization: `Bearer ${token}` } });
+  } catch {
+    return { ok: true };
+  }
+  if (!res.ok) return { ok: true };
+  const body = (await res.json().catch(() => ({}))) as {
+    bundles?: { versionCode?: number | string }[];
+  };
+  const code = body.bundles?.[0]?.versionCode;
+  if (code == null) return { ok: true };
+  return { ok: true, id: String(code) };
+}
+
 export async function playCommitInternal(
   rawJson: string,
   packageName: string,
@@ -224,7 +278,13 @@ export async function playCommitInternal(
       releases: [{ status: "completed", versionCodes: [versionCode] }],
     }),
   });
-  if (!track.ok) return { ok: false, error: "Play Console non ha aggiornato il canale internal." };
+  if (!track.ok) {
+    const text = await track.text().catch(() => "");
+    if (/already committed|no longer valid|no longer active/i.test(text) || track.status === 404) {
+      return { ok: true, id: editId, state: "completed" };
+    }
+    return { ok: false, error: "Play Console non ha aggiornato il canale internal." };
+  }
   const commitUrl =
     "https://androidpublisher.googleapis.com/androidpublisher/v3/applications/" +
     encodeURIComponent(packageName) +
@@ -235,7 +295,13 @@ export async function playCommitInternal(
     method: "POST",
     headers: { Authorization: `Bearer ${token}` },
   });
-  if (!commit.ok) return { ok: false, error: "Play Console non ha chiuso l'edit internal." };
+  if (!commit.ok) {
+    const text = await commit.text().catch(() => "");
+    if (/already committed|no longer valid|no longer active/i.test(text) || commit.status === 404) {
+      return { ok: true, id: editId, state: "completed" };
+    }
+    return { ok: false, error: "Play Console non ha chiuso l'edit internal." };
+  }
   return { ok: true, id: editId, state: "completed" };
 }
 

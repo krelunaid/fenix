@@ -226,9 +226,14 @@ child.on("exit", (c) => process.exit(c ?? 0));
     });
     const code = await new Promise((resolve) => restart.on("exit", resolve));
     assert.equal(code, 0, "clone B preview.mjs restart failed");
+    const deadBy = Date.now() + 8000;
+    while (alive(leaderPid) && Date.now() < deadBy) await sleep(50);
     assert.equal(alive(leaderPid), false, "clone A leader still alive");
-    if (childPid) assert.equal(alive(childPid), false, "clone A vite.js child still alive");
-    assert.equal(await probePort(), true, "clone B did not take 8081");
+    if (childPid) {
+      while (alive(childPid) && Date.now() < deadBy) await sleep(50);
+      assert.equal(alive(childPid), false, "clone A vite.js child still alive");
+    }
+    assert.equal(await waitHeld(12000), true, "clone B did not take 8081");
     const body = await fetch("http://127.0.0.1:8081/").then((r) => r.text());
     assert.notEqual(body, "clone-a");
     if (existsSync(PID_FILE)) {

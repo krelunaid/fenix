@@ -39,6 +39,7 @@ export async function startRelease(input: {
     headers: {
       "Content-Type": "application/json",
       [OWNER_HEADER]: owner,
+      "x-fenix-idempotency": input.projectId + ":" + input.platforms.slice().sort().join(","),
     },
     cache: "no-store",
     body: JSON.stringify({

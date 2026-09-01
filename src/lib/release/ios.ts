@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { appleListLatestBuild } from "./deploy-api.ts";
 import { missingStoreRecord } from "./ids.ts";
@@ -49,7 +49,13 @@ export async function runIosStep(
   if (step === "build") {
     const { root } = materializeIos(job, opts.teamId);
     const archivePath = join(root, `${bundle}.xcarchive`);
-    await persist({ provider: { ...track.provider, archivePath, intentId: `${job.id}:ios:archive` } });
+    if (existsSync(join(archivePath, "Info.plist")) || existsSync(archivePath + "/Info.plist")) {
+      await persist({ provider: { ...track.provider, archivePath } });
+      return { ok: true, step, fixture, artifact: archivePath, reconciled: true };
+    }
+    await persist({
+      provider: { ...track.provider, archivePath, intentId: `${job.id}:ios:archive`, inflight: "archive" },
+    });
     const result = await run(
       "xcodebuild",
       [
@@ -75,6 +81,7 @@ export async function runIosStep(
           : "xcodebuild archive non è riuscito. Serve un worker macOS con Xcode (ruolo App Manager).",
       };
     }
+    await persist({ provider: { ...track.provider, archivePath, inflight: undefined } });
     return { ok: true, step, fixture, artifact: archivePath };
   }
 
@@ -82,6 +89,11 @@ export async function runIosStep(
     const root = materializeIos(job, opts.teamId).root;
     const archivePath = track.provider?.archivePath || join(root, `${bundle}.xcarchive`);
     const exportPath = join(root, "export");
+    const ipaPath = join(exportPath, "Fenix.ipa");
+    if (existsSync(ipaPath)) {
+      await persist({ provider: { ...track.provider, archivePath, ipaPath } });
+      return { ok: true, step, fixture, artifact: ipaPath, reconciled: true };
+    }
     if (!fixture && !opts.teamId) {
       return {
         ok: false,
@@ -90,7 +102,7 @@ export async function runIosStep(
         error: "Manca il Team ID Apple sul server per esportare l'IPA.",
       };
     }
-    await persist({ provider: { ...track.provider, archivePath } });
+    await persist({ provider: { ...track.provider, archivePath, inflight: "export" } });
     const result = await run(
       "xcodebuild",
       [
@@ -114,8 +126,7 @@ export async function runIosStep(
           : "xcodebuild -exportArchive non è riuscito. Controlla certificati e Team ID.",
       };
     }
-    const ipaPath = join(exportPath, "Fenix.ipa");
-    await persist({ provider: { ...track.provider, ipaPath } });
+    await persist({ provider: { ...track.provider, ipaPath, inflight: undefined } });
     return { ok: true, step, fixture, artifact: ipaPath };
   }
 
@@ -129,11 +140,31 @@ export async function runIosStep(
         reconciled: true,
       };
     }
-    if (!fixture && opts.creds && track.provider?.appId && track.provider?.intentId) {
+    const intent = track.provider?.intentId || `${job.id}:ios:upload`;
+    if (track.provider?.inflight === "upload") {
+      if (!fixture && opts.creds && track.provider?.appId) {
+        const existing = await appleListLatestBuild(opts.creds, track.provider.appId);
+        if (existing.ok && existing.id) {
+          await persist({
+            provider: {
+              ...track.provider,
+              uploadId: existing.id,
+              buildId: existing.id,
+              inflight: undefined,
+            },
+          });
+          return { ok: true, step, fixture: false, artifact: existing.id, reconciled: true };
+        }
+      }
+      const uploadId = `asc:${bundle}:${intent}`;
+      await persist({ provider: { ...track.provider, uploadId, intentId: intent, inflight: undefined } });
+      return { ok: true, step, fixture, artifact: uploadId, reconciled: true };
+    }
+    if (!fixture && opts.creds && track.provider?.appId) {
       const existing = await appleListLatestBuild(opts.creds, track.provider.appId);
       if (existing.ok && existing.id) {
         await persist({
-          provider: { ...track.provider, uploadId: existing.id, buildId: existing.id },
+          provider: { ...track.provider, uploadId: existing.id, buildId: existing.id, intentId: intent },
         });
         return { ok: true, step, fixture: false, artifact: existing.id, reconciled: true };
       }
@@ -142,8 +173,7 @@ export async function runIosStep(
     if (!ipaPath && !fixture) {
       return { ok: false, step, fixture: false, error: "IPA assente. Riprendi dalla firma." };
     }
-    const intent = track.provider?.intentId || `${job.id}:ios:upload`;
-    await persist({ provider: { ...track.provider, intentId: intent } });
+    await persist({ provider: { ...track.provider, intentId: intent, inflight: "upload" } });
     if (!fixture && opts.creds) {
       const result = await run("xcrun", [
         "altool",
@@ -179,7 +209,7 @@ export async function runIosStep(
       }
     }
     const uploadId = `asc:${bundle}:${intent}`;
-    await persist({ provider: { ...track.provider, uploadId } });
+    await persist({ provider: { ...track.provider, uploadId, inflight: undefined } });
     return { ok: true, step, fixture, artifact: uploadId };
   }
 

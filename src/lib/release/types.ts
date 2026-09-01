@@ -29,6 +29,7 @@ export type ProviderIds = {
   siteId?: string;
   deployId?: string;
   intentId?: string;
+  inflight?: string;
 };
 
 export type TrackState = {

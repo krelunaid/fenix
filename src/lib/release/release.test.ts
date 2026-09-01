@@ -9,8 +9,8 @@ import { ensureFenixAdapter } from "../projects/fenix-adapter.ts";
 import { OWNER_HEADER } from "../projects/publish-owner.ts";
 import { setReleaseAdaptersForTest, type ReleaseAdapter } from "./adapters.ts";
 import { runAndroidStep } from "./android.ts";
-import { netlifyCreateDeploy, netlifyFindOrCreateSite } from "./deploy-api.ts";
-import { createReleaseJob, releaseIdempotencyKey, resumeReleaseJob } from "./engine.ts";
+import { netlifyCreateDeploy, netlifyFindOrCreateSite, netlifyListDeploys } from "./deploy-api.ts";
+import { createReleaseJob, jobIdFromKey, releaseIdempotencyKey, resetReleaseCreatesForTest, resumeReleaseJob } from "./engine.ts";
 import { handleReleaseCollection, handleReleaseItem } from "./http.ts";
 import { suggestedBundleId, validateBundleId, validatePackageName } from "./ids.ts";
 import { runIosStep } from "./ios.ts";
@@ -25,6 +25,7 @@ import {
 } from "./store-api.ts";
 import type { PersistTrack, StoredReleaseJob, TrackState } from "./types.ts";
 import { runWebStep } from "./web.ts";
+import { claimReleaseKey, resetReleaseClaimsForTest, setReleaseBlobsForTest } from "./store.ts";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const SITE = readFileSync(join(here, "../projects/fixtures/music-site-no-fenix.html"), "utf8");
@@ -104,7 +105,11 @@ describe("release engine", () => {
     if (prevRel === undefined) delete process.env.FENIX_RELEASE_DIR;
     else process.env.FENIX_RELEASE_DIR = prevRel;
   });
-  afterEach(() => setReleaseAdaptersForTest(null));
+  afterEach(() => {
+    setReleaseAdaptersForTest(null);
+    resetReleaseCreatesForTest();
+    resetReleaseClaimsForTest();
+  });
 
   it("runs iOS fixture to TestFlight without a second upload on retry", async () => {
     let uploads = 0;
@@ -843,4 +848,312 @@ describe("release real pipelines behind mocks", () => {
     assert.equal(deploy.ok, true);
     if (deploy.ok) assert.equal(deploy.id, "dep-old");
   });
+
+  it("crash after altool success before uploadId write is reconciled without a second altool", async () => {
+    let altool = 0;
+    const job = sampleJob({ id: "job-ios-inflight" });
+    const track: TrackState = {
+      platform: "ios",
+      step: "upload",
+      status: "run",
+      fixture: true,
+      uploads: 0,
+      provider: {
+        ipaPath: join(rel, "work", job.id, "ios", "export", "Fenix.ipa"),
+        intentId: `${job.id}:ios:upload`,
+        inflight: "upload",
+      },
+    };
+    const again = await runIosStep("upload", job, track, persistInto(track), {
+      fixture: true,
+      creds: null,
+      commands: async (file, args, opts) => {
+        if (file === "xcrun" && args[0] === "altool") altool += 1;
+        return fixtureCommand(file, args, opts);
+      },
+    });
+    assert.equal(again.ok, true);
+    assert.equal(again.reconciled, true);
+    assert.equal(altool, 0);
+    assert.match(track.provider?.uploadId || "", /asc:/);
+  });
+
+  it("Play commit already-committed is success, not a second edit", async () => {
+    const { privateKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
+    const pem = privateKey.export({ type: "pkcs8", format: "pem" }).toString();
+    const json = JSON.stringify({ client_email: "play@fenix.test", private_key: pem });
+    let commits = 0;
+    let inserts = 0;
+    setReleaseFetchForTest(async (input, init) => {
+      const url = String(input);
+      const method = String(init?.method || "GET").toUpperCase();
+      if (url.includes("oauth2.googleapis.com/token")) {
+        return Response.json({ access_token: "ya29.not-a-real-token-value" });
+      }
+      if (url.endsWith("/edits") && method === "POST") {
+        inserts += 1;
+        return Response.json({ id: "edit-2" });
+      }
+      if (url.includes("/bundles") && method === "POST") {
+        return Response.json({ versionCode: 9 });
+      }
+      if (url.includes("/tracks/internal") && method === "PUT") {
+        return new Response("The edit is no longer valid because it has already been committed", {
+          status: 400,
+        });
+      }
+      if (url.includes(":commit") && method === "POST") {
+        commits += 1;
+        return new Response("already committed", { status: 400 });
+      }
+      return Response.json({});
+    });
+    const aab = join(rel, "work", "job-play2", "android", "app/build/outputs/bundle/release/app-release.aab");
+    await fixtureCommand("gradle", ["bundleRelease"], {
+      cwd: join(rel, "work", "job-play2", "android"),
+    });
+    const job = sampleJob({ id: "job-play2", platforms: ["android"] });
+    const track: TrackState = {
+      platform: "android",
+      step: "upload",
+      status: "run",
+      fixture: false,
+      uploads: 0,
+      provider: { aabPath: aab, signedAabPath: aab, editId: "edit-2", versionCode: "9" },
+    };
+    const first = await runAndroidStep("upload", job, track, persistInto(track), {
+      fixture: false,
+      serviceJson: json,
+      keystorePath: "/tmp/upload.keystore",
+    });
+    assert.equal(first.ok, true, first.error);
+    assert.equal(inserts, 0);
+    assert.match(track.provider?.uploadId || "", /play-internal/);
+  });
+
+  it("Netlify lists deploys by title after a crash before persist", async () => {
+    process.env.NETLIFY_AUTH_TOKEN = "nfp_testtokenvaluexx";
+    let deploys = 0;
+    setReleaseFetchForTest(async (input, init) => {
+      const url = String(input);
+      const method = String(init?.method || "GET").toUpperCase();
+      if (url.includes("/deploys") && method === "POST") {
+        deploys += 1;
+        return Response.json({ id: "dep-new", state: "ready" });
+      }
+      if (url.includes("/deploys") && method === "GET") {
+        return Response.json([{ id: "dep-old", title: "job-web-crash:abcd", state: "ready" }]);
+      }
+      if (url.includes("/api/v1/sites") && method === "POST") {
+        return Response.json({ id: "site-crash" });
+      }
+      if (url.includes("/api/v1/sites")) {
+        return Response.json([{ id: "site-crash", name: "fenix-onda" }]);
+      }
+      return new Response("no", { status: 404 });
+    });
+    const listed = await netlifyListDeploys("nfp_testtokenvaluexx", "site-crash", "job-web-crash:abcd");
+    assert.equal(listed.ok, true);
+    if (listed.ok) assert.equal(listed.id, "dep-old");
+    const job = sampleJob({
+      id: "job-web-crash",
+      platforms: ["web"],
+      projectId: "onda-rel-netlify-crash",
+    });
+    job.htmlHash = "abcd";
+    const track: TrackState = {
+      platform: "web",
+      step: "upload",
+      status: "run",
+      fixture: false,
+      uploads: 0,
+      provider: { siteId: "site-crash", intentId: "job-web-crash:abcd" },
+    };
+    const first = await runWebStep("upload", job, track, persistInto(track), { ownerId: OWNER_A });
+    assert.equal(first.ok, true, first.error);
+    assert.equal(first.reconciled, true);
+    assert.equal(deploys, 0);
+    assert.equal(track.provider?.deployId, "dep-old");
+  });
+
+  it("in-process + blob claim: two ids, one winner", async () => {
+    resetReleaseClaimsForTest();
+    const mem = new Map<string, unknown>();
+    setReleaseBlobsForTest({
+      async get(key) {
+        return mem.get(key) ?? null;
+      },
+      async setJSON(key, value) {
+        mem.set(key, value);
+      },
+    });
+    const key = "a".repeat(64);
+    const [a, b] = await Promise.all([
+      claimReleaseKey(key, "11111111-1111-4111-8111-111111111111"),
+      claimReleaseKey(key, "22222222-2222-4222-8222-222222222222"),
+    ]);
+    assert.equal(a.id, b.id);
+    assert.equal([a, b].filter((x) => x.won).length, 1);
+    resetReleaseClaimsForTest();
+  });
+
+  it("Play lists existing bundles after crash and does not POST a second AAB", async () => {
+    const { privateKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
+    const pem = privateKey.export({ type: "pkcs8", format: "pem" }).toString();
+    const json = JSON.stringify({ client_email: "play@fenix.test", private_key: pem });
+    let uploads = 0;
+    let lists = 0;
+    setReleaseFetchForTest(async (input, init) => {
+      const url = String(input);
+      const method = String(init?.method || "GET").toUpperCase();
+      if (url.includes("oauth2.googleapis.com/token")) {
+        return Response.json({ access_token: "ya29.not-a-real-token-value" });
+      }
+      if (url.endsWith("/edits") && method === "POST") {
+        return Response.json({ id: "edit-3" });
+      }
+      if (url.includes("/bundles") && method === "GET") {
+        lists += 1;
+        return Response.json({ bundles: [{ versionCode: 11 }] });
+      }
+      if (url.includes("/bundles") && method === "POST") {
+        uploads += 1;
+        return Response.json({ versionCode: 12 });
+      }
+      if (url.includes("/tracks/internal") && method === "PUT") {
+        return Response.json({ track: "internal" });
+      }
+      if (url.includes(":commit") && method === "POST") {
+        return Response.json({ id: "edit-3" });
+      }
+      return Response.json({});
+    });
+    const aab = join(
+      rel,
+      "work",
+      "job-play3",
+      "android",
+      "app/build/outputs/bundle/release/app-release.aab",
+    );
+    await fixtureCommand("gradle", ["bundleRelease"], {
+      cwd: join(rel, "work", "job-play3", "android"),
+    });
+    const job = sampleJob({ id: "job-play3", platforms: ["android"] });
+    const track: TrackState = {
+      platform: "android",
+      step: "upload",
+      status: "run",
+      fixture: false,
+      uploads: 0,
+      provider: {
+        aabPath: aab,
+        signedAabPath: aab,
+        editId: "edit-3",
+        inflight: "play-upload",
+      },
+    };
+    const first = await runAndroidStep("upload", job, track, persistInto(track), {
+      fixture: false,
+      serviceJson: json,
+      keystorePath: "/tmp/upload.keystore",
+    });
+    assert.equal(first.ok, true, first.error);
+    assert.equal(lists, 1);
+    assert.equal(uploads, 0);
+    assert.equal(track.provider?.versionCode, "11");
+  });
+
+  it("Play inflight commit does not insert a second edit", async () => {
+    const { privateKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
+    const pem = privateKey.export({ type: "pkcs8", format: "pem" }).toString();
+    const json = JSON.stringify({ client_email: "play@fenix.test", private_key: pem });
+    let inserts = 0;
+    let uploads = 0;
+    setReleaseFetchForTest(async (input, init) => {
+      const url = String(input);
+      const method = String(init?.method || "GET").toUpperCase();
+      if (url.includes("oauth2.googleapis.com/token")) {
+        return Response.json({ access_token: "ya29.not-a-real-token-value" });
+      }
+      if (url.endsWith("/edits") && method === "POST") {
+        inserts += 1;
+        return Response.json({ id: "edit-4" });
+      }
+      if (url.includes("/bundles") && method === "POST") {
+        uploads += 1;
+        return Response.json({ versionCode: 13 });
+      }
+      if (url.includes("/tracks/internal") && method === "PUT") {
+        return new Response("already committed", { status: 400 });
+      }
+      if (url.includes(":commit") && method === "POST") {
+        return new Response("already committed", { status: 400 });
+      }
+      return Response.json({});
+    });
+    const aab = join(
+      rel,
+      "work",
+      "job-play4",
+      "android",
+      "app/build/outputs/bundle/release/app-release.aab",
+    );
+    await fixtureCommand("gradle", ["bundleRelease"], {
+      cwd: join(rel, "work", "job-play4", "android"),
+    });
+    const job = sampleJob({ id: "job-play4", platforms: ["android"] });
+    const track: TrackState = {
+      platform: "android",
+      step: "upload",
+      status: "run",
+      fixture: false,
+      uploads: 0,
+      provider: {
+        aabPath: aab,
+        signedAabPath: aab,
+        editId: "edit-4",
+        versionCode: "13",
+        inflight: "play-commit",
+      },
+    };
+    const first = await runAndroidStep("upload", job, track, persistInto(track), {
+      fixture: false,
+      serviceJson: json,
+      keystorePath: "/tmp/upload.keystore",
+    });
+    assert.equal(first.ok, true, first.error);
+    assert.equal(first.reconciled, true);
+    assert.equal(inserts, 0);
+    assert.equal(uploads, 0);
+    assert.match(track.provider?.uploadId || "", /play-internal/);
+  });
+
+  it("job id is derived from the idempotency key", () => {
+    const key = releaseIdempotencyKey({
+      ownerHash: "aa",
+      projectId: "onda-rel-01",
+      platforms: ["ios"],
+      htmlHash: "h1",
+      bundleId: "it.fenix.onda",
+      packageName: "it.fenix.onda",
+    });
+    const id = jobIdFromKey(key);
+    assert.match(id, /^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-8[a-f0-9]{3}-[a-f0-9]{12}$/);
+    assert.equal(jobIdFromKey(key), id);
+  });
+
+  it("non-hex Idempotency header does not replace the html-hash key", async () => {
+    const body = input({ projectId: "onda-rel-hdr", platforms: ["web"] });
+    const first = await createReleaseJob(body, {
+      ownerId: OWNER_A,
+      idempotencyKey: "onda-rel-hdr:web",
+    });
+    const second = await createReleaseJob(
+      { ...body, html: ADAPTED.replace("</body>", "<!--v2--></body>") },
+      { ownerId: OWNER_A, idempotencyKey: "onda-rel-hdr:web" },
+    );
+    assert.equal("id" in first && "id" in second, true);
+    assert.notEqual((first as { id: string }).id, (second as { id: string }).id);
+  });
 });
+

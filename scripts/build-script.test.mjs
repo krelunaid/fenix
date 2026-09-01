@@ -17,6 +17,7 @@ test("pnpm-only environments can run the production build without npm", () => {
   assert.match(pkg.scripts.build, /node scripts\/migrate\.mjs/);
   assert.match(netlify, /node scripts\/migrate\.mjs/);
   assert.match(netlify, /node scripts\/sync-static-publish\.mjs/);
-  assert.match(netlify, /publish = "dist"/);
+  assert.match(netlify, /publish = "\.output\/public"/);
+  assert.doesNotMatch(netlify, /publish = "dist"/);
   assert.doesNotMatch(netlify, /npm run db:migrate/);
 });
