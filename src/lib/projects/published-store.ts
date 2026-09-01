@@ -130,6 +130,16 @@ export async function writePublished(
   if (!isPublishedId(id)) return { error: "Identità non valida.", status: 400 };
   const ownerId = parseOwnerId(access?.ownerId);
   if (!ownerId) return { error: "Identità assente.", status: 401 };
+  const ownerHash = hashOwner(ownerId);
+  const existing = await readPublished(id);
+  if (existing) {
+    if (!existing.ownerHash) {
+      return { error: "Sito pubblico senza titolare: immutabile.", status: 409 };
+    }
+    if (existing.ownerHash !== ownerHash) {
+      return { error: "Non sei il titolare di questo sito.", status: 403 };
+    }
+  }
   const parsed = parsePublishInput(input);
   if ("error" in parsed) return { error: parsed.error, status: 400 };
   const html = scrubCraftMedia(parsed.html);
@@ -144,16 +154,8 @@ export async function writePublished(
       status: 422,
     };
   }
-  const ownerHash = hashOwner(ownerId);
   const hash = snapshotHash(html, parsed.kind, parsed.name);
-  const existing = await readPublished(id);
   if (existing) {
-    if (!existing.ownerHash) {
-      return { error: "Sito pubblico senza titolare: immutabile.", status: 409 };
-    }
-    if (existing.ownerHash !== ownerHash) {
-      return { error: "Non sei il titolare di questo sito.", status: 403 };
-    }
     if (existing.hash === hash) {
       return publicSnapshot(existing);
     }

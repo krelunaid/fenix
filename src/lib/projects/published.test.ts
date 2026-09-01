@@ -244,6 +244,52 @@ describe("published store", () => {
     assert.equal("error" in noMatch, true);
     if ("error" in noMatch) assert.equal(noMatch.status, 409);
   });
+
+  it("other owner and ownerless freeze win before HTML validation", async () => {
+    const short = {
+      name: "Probe",
+      kind: "site" as const,
+      palette: PALETTE,
+      html: "<!DOCTYPE html><html lang=\"it\"><head><meta charset=\"utf-8\"/><title>x</title></head><body><p>HTML abbastanza lungo per il gate ma senza sezioni o viste.</p></body></html>",
+    };
+    const owned = "onda-site-owner-first";
+    const created = await writePublished(
+      owned,
+      { name: "Onda", kind: "site", palette: PALETTE, html: ADAPTED },
+      access(OWNER_A),
+    );
+    assert.equal("error" in created, false);
+    const other = await writePublished(owned, short, access(OWNER_B));
+    assert.equal("error" in other, true);
+    if ("error" in other) {
+      assert.equal(other.status, 403);
+      assert.match(other.error, /titolare/i);
+    }
+
+    const legacyId = "onda-site-legacy-short";
+    const html = scrubCraftMedia(ADAPTED);
+    writeFileSync(
+      join(dir, `${legacyId}.json`),
+      JSON.stringify({
+        id: legacyId,
+        name: "Onda",
+        tagline: "",
+        kind: "site",
+        summary: "",
+        palette: PALETTE,
+        html,
+        version: 1,
+        hash: snapshotHash(html, "site", "Onda"),
+        publishedAt: 1,
+      }),
+    );
+    const freeze = await writePublished(legacyId, short, access(OWNER_B));
+    assert.equal("error" in freeze, true);
+    if ("error" in freeze) {
+      assert.equal(freeze.status, 409);
+      assert.match(freeze.error, /immutabile/);
+    }
+  });
 });
 
 describe("sites HTTP handler", () => {

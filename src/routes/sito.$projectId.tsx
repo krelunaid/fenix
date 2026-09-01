@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { prepareSrcDoc } from "@/lib/projects/color-scheme";
 import { loadPublished } from "@/lib/projects/publish-client";
 import type { PublishedSnapshot } from "@/lib/projects/published";
+import { bindPublishedSiteDb } from "@/lib/projects/sito-db";
 import { downloadTextFile } from "@/lib/utils";
 
 export const Route = createFileRoute("/sito/$projectId")({
@@ -30,6 +31,8 @@ function LiveSitePage() {
       cancelled = true;
     };
   }, [projectId]);
+
+  useEffect(() => bindPublishedSiteDb(projectId), [projectId]);
 
   if (snap === undefined) {
     return (

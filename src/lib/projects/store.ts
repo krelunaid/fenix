@@ -404,6 +404,10 @@ if (typeof window !== "undefined" && !(window as Window & { __fenixDbBound?: boo
     };
     const apply = async () => {
       const store = useProjectStore.getState();
+      const known =
+        Boolean(store.getProject(msg.projectId!)) ||
+        Object.prototype.hasOwnProperty.call(store.appDb, msg.projectId!);
+      if (!known) return;
       let value: unknown = null;
       if (msg.op === "load") {
         idbSnap = mergeAppDb(idbSnap, await readIndexedDb());

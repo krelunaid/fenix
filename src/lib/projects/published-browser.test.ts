@@ -31,6 +31,7 @@ describe("published site is server-side, not localStorage", () => {
     assert.doesNotMatch(src, /useProjectStore/);
     assert.doesNotMatch(src, /officina-projects/);
     assert.match(src, /loadPublished/);
+    assert.match(src, /bindPublishedSiteDb/);
     assert.doesNotMatch(src, /allow-same-origin/);
     const client = readFileSync(join(root, "src/lib/projects/publish-client.ts"), "utf8");
     assert.match(client, /\/api\/sites\//);

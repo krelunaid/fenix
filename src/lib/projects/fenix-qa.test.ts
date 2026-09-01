@@ -71,6 +71,7 @@ describe("focus-visible and worker model", () => {
     assert.match(store, /recoverPersistedProject/);
     assert.match(store, /MAX_PROJECTS = 48/);
     assert.match(store, /stripPhoneChromeFromSite/);
+    assert.match(store, /if \(!known\) return/);
     const studio = readFileSync(join(root, "src/routes/studio.$projectId.tsx"), "utf8");
     assert.match(studio, /isPublishable/);
     assert.match(studio, /compact=\{Boolean\(project\.html\)\}/);
@@ -79,6 +80,7 @@ describe("focus-visible and worker model", () => {
     const sito = readFileSync(join(root, "src/routes/sito.$projectId.tsx"), "utf8");
     assert.doesNotMatch(sito, /useProjectStore/);
     assert.match(sito, /loadPublished/);
+    assert.match(sito, /bindPublishedSiteDb/);
     const sitesApi = readFileSync(join(root, "src/routes/api/sites.$id.ts"), "utf8");
     assert.match(sitesApi, /handleSiteRequest/);
     const sitesFn = readFileSync(join(root, "netlify/functions/sites.ts"), "utf8");
