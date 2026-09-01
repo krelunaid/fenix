@@ -18,8 +18,8 @@ async function waitOk(url, ms = 30000) {
   let last = null;
   while (Date.now() - t0 < ms) {
     const res = await probe(url, 1500);
-    if (res) return res;
-    last = `no listener for ${url}`;
+    if (res?.ok) return res;
+    last = res ? `status ${res.status} for ${url}` : `no listener for ${url}`;
     await new Promise((r) => setTimeout(r, 400));
   }
   throw new Error(last || `timeout ${url}`);
@@ -41,9 +41,11 @@ test("pnpm preview serves home and studio with HTTP 200", async (t) => {
     });
   }
   try {
-    const home = existing?.ok ? existing : await waitOk(`${PREVIEW}/`);
+    // Clone B (preview-cross-clone) can kill :8081 between probes. Never fetch
+    // without a timeout, and never trust a single existing 200.
+    const home = await waitOk(`${PREVIEW}/`);
     assert.equal(home.status, 200, `home ${home.status}`);
-    const studio = await fetch(`${PREVIEW}/studio/preview-smoke`, { redirect: "manual" });
+    const studio = await waitOk(`${PREVIEW}/studio/preview-smoke`);
     assert.equal(studio.status, 200, `studio ${studio.status}`);
   } finally {
     if (child?.pid) {
