@@ -6,6 +6,7 @@ import { describe, it } from "node:test";
 import { chromium, type Page } from "playwright";
 import { ensureFenixAdapter } from "./fenix-adapter.ts";
 import { requirePreview } from "./ensure-preview.ts";
+import { appendProjectActivity } from "./activity.ts";
 import { commitIfChanged } from "./revisions.ts";
 import { DEFAULT_PALETTE, type Project } from "./types.ts";
 
@@ -71,9 +72,26 @@ function readyProject(): Project {
     { ...base, html: OLDER, files: [{ path: "index.html", content: OLDER }] },
     { source: "build", label: "Pronto", id: "rev-old", at: now - 50_000 },
   );
-  return commitIfChanged(
+  const ready = commitIfChanged(
     { ...first, html: ADAPTED, files: base.files, name: "Onda" },
     { source: "polish", label: "Rifinitura", id: "rev-new", at: now - 5_000 },
+  );
+  return appendProjectActivity(
+    appendProjectActivity(ready, {
+      kind: "build",
+      outcome: "run",
+      label: "Build avviata",
+      metrics: { credits: 4 },
+      at: now - 40_000,
+    }),
+    {
+      kind: "ready",
+      outcome: "ok",
+      label: "Build pronta",
+      detail: "Controlli completati",
+      metrics: { files: 2, revisions: 2 },
+      at: now - 4_000,
+    },
   );
 }
 
@@ -105,6 +123,16 @@ describe("studio version branches and rollback", () => {
         await shot(page, `versions-${name}.png`);
         assert.ok(await dialog.getByText("Rifinitura").count());
         assert.ok(await dialog.getByText("Pronto").count());
+        const activityTab = dialog.getByRole("tab", { name: /Attività · 2/i });
+        const activityBox = await activityTab.boundingBox();
+        assert.ok(activityBox && activityBox.height >= 44, `${name} Attività target too small`);
+        await activityTab.click();
+        const ledger = dialog.getByRole("list", { name: "Registro attività" });
+        await ledger.waitFor({ timeout: 3000 });
+        assert.ok(await ledger.getByText("Build pronta").count());
+        assert.ok(await ledger.getByText("Build avviata").count());
+        assert.match((await ledger.textContent()) || "", /files 2|revisions 2/);
+        await dialog.getByRole("tab", { name: /Versioni · 2/i }).click();
         const branchButton = dialog.getByRole("button", { name: /Crea ramo da Pronto/i });
         const branchBox = await branchButton.boundingBox();
         assert.ok(branchBox && branchBox.height >= 44, `${name} Ramo target too small`);

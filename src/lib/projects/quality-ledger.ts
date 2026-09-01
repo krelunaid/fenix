@@ -127,6 +127,14 @@ export const QUALITY_LEDGER: LedgerRow[] = [
     ok: true,
   },
   {
+    id: "project-activity-ledger",
+    claim:
+      "Ogni progetto conserva un registro operativo redatto e limitato: build, esiti, rimborsi, dati, versioni, rami, pubblicazioni ed export. I rami non ereditano la cronologia sorgente; prompt, messaggi, job id e segreti non entrano nel registro.",
+    evidence:
+      "activity.ts + revisions.test.ts redazione/dedupe/cap/isolamento + revisions-browser.test.ts registro accessibile D/T/M",
+    ok: true,
+  },
+  {
     id: "emergent",
     claim: "Emergent resta solo un banco di prova. Nessun claim di completezza sul prodotto.",
     evidence: "src/lib/projects/fase3-gap.ts quality.slice=now; revisions.test.ts now list",

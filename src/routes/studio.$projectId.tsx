@@ -47,6 +47,7 @@ function StudioPage() {
   const restoreRevision = useProjectStore((s) => s.restoreRevision);
   const branchRevision = useProjectStore((s) => s.branchRevision);
   const updateProject = useProjectStore((s) => s.updateProject);
+  const recordActivity = useProjectStore((s) => s.recordActivity);
   const [device, setDevice] = useState<Device>(previewDevice(project?.kind));
   const [pane, setPane] = useState<Pane>("preview");
   const [draft, setDraft] = useState("");
@@ -358,7 +359,15 @@ function StudioPage() {
         tagline={project.tagline}
         summary={project.summary}
         files={project.files}
-        onPublished={(id) => updateProject(project.id, { publishedId: id })}
+        onPublished={(id) => {
+          updateProject(project.id, { publishedId: id });
+          recordActivity(project.id, {
+            kind: "publish",
+            outcome: "ok",
+            label: "Snapshot pubblicato",
+            detail: "Web Fenix aggiornato",
+          });
+        }}
         onOpenSite={(siteId) => {
           setPublishOpen(false);
           void navigate({ to: "/sito/$projectId", params: { projectId: siteId } });

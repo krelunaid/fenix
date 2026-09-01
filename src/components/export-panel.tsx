@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { downloadBytes, slugify } from "@/lib/utils";
 import { zipProject } from "@/lib/projects/zip";
 import { projectFiles, utf8Bytes, type ProjectFile } from "@/lib/projects/files";
+import { useProjectStore } from "@/lib/projects/store";
 import type { ProjectKind } from "@/lib/projects/types";
 import {
   disconnectGitHub,
@@ -35,6 +36,7 @@ export function ExportPanel({
   kind: ProjectKind;
   files?: ProjectFile[];
 }) {
+  const recordActivity = useProjectStore((state) => state.recordActivity);
   const [status, setStatus] = useState<GitHubStatus | null>(null);
   const [repos, setRepos] = useState<GitHubRepo[]>([]);
   const [repo, setRepo] = useState("");
@@ -101,6 +103,12 @@ export function ExportPanel({
 
   function downloadZip() {
     downloadBytes(`${slugify(name)}.zip`, zipProject(tree, { kind }), "application/zip");
+    recordActivity(projectId, {
+      kind: "export",
+      outcome: "ok",
+      label: "ZIP esportato",
+      metrics: { files: tree.length },
+    });
     toast("Progetto scaricato. File, stile, dati e logica.");
   }
 
@@ -167,6 +175,17 @@ export function ExportPanel({
         files,
       });
       setJob(next);
+      recordActivity(projectId, {
+        kind: "export",
+        outcome: next.status === "err" ? "err" : "ok",
+        label: "Export GitHub",
+        detail: next.unchanged
+          ? "Albero invariato"
+          : next.status === "err"
+            ? "Export interrotto"
+            : "Commit creato",
+        metrics: { files: next.files?.length ?? tree.length },
+      });
       if (next.status === "err") setError(next.error || "Export interrotto.");
       else toast(next.unchanged ? "Stesso albero: nessun commit nuovo." : "Export su GitHub.");
     } catch (err: unknown) {

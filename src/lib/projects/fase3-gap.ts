@@ -80,10 +80,11 @@ export const FASE3_GAPS: Fase3Gap[] = [
     id: "observability",
     area: "Osservabilità",
     emergent: "Monitoring di deploy/CI dichiarato; profondità non verificata qui.",
-    fenix: "Job visuale + release FSM con log redatti. Niente APM sulle app generate.",
+    fenix:
+      "Job visuale + release FSM e registro attività per progetto: build, esito, rimborsi, dati, versioni, rami, publish ed export. Max 64 eventi, testo redatto, metriche allowlist; niente prompt, messaggi, job id o segreti. Registro visibile D/T/M. Niente APM cloud sulle app generate.",
     impact: "medium",
     cost: "medium",
-    slice: "later",
+    slice: "next",
   },
   {
     id: "durable-jobs",

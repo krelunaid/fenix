@@ -26,6 +26,7 @@ import {
   type ProjectKind,
 } from "./types";
 import { branchProjectRevision, commitIfChanged, restoreProjectRevision } from "./revisions";
+import { appendProjectActivity, type ActivityInput } from "./activity";
 
 import {
   APP_DB_KEY,
@@ -76,6 +77,7 @@ type ProjectStore = {
     collection: string,
     data: unknown,
   ) => Promise<{ ok: boolean; v: unknown; durable: number }>;
+  recordActivity: (projectId: string, input: ActivityInput) => void;
 };
 
 let idbSnap: AppDb = {};
@@ -145,31 +147,63 @@ function trimList(projects: Project[]) {
   return [...projects].sort((a, b) => b.updatedAt - a.updatedAt).slice(0, MAX_PROJECTS);
 }
 
+function withStatusActivity(previous: Project, next: Project): Project {
+  if (previous.status === next.status) return next;
+  if (next.status === "ready") {
+    return appendProjectActivity(next, {
+      kind: "ready",
+      outcome: "ok",
+      label: "Build pronta",
+      metrics: {
+        files: projectFiles({ html: next.html, files: next.files }).length,
+        revisions: next.revisions?.length ?? 0,
+      },
+    });
+  }
+  if (next.status === "error") {
+    return appendProjectActivity(next, {
+      kind: "error",
+      outcome: "err",
+      label: "Build interrotta",
+      detail: next.error || "Controllo non superato",
+    });
+  }
+  return next;
+}
+
 function blankProject(prompt: string, kind: ProjectKind = "app"): Project {
   const now = Date.now();
-  return {
-    id: uid(),
-    name: "Nuovo studio",
-    tagline: "",
-    prompt,
-    kind,
-    requestedKind: kind,
-    summary: "",
-    palette: DEFAULT_PALETTE,
-    html: "",
-    messages: [
-      {
-        id: uid(),
-        role: "user",
-        content: prompt,
-        at: now,
-      },
-    ],
-    buildLog: [],
-    status: "building",
-    createdAt: now,
-    updatedAt: now,
-  };
+  return appendProjectActivity(
+    {
+      id: uid(),
+      name: "Nuovo studio",
+      tagline: "",
+      prompt,
+      kind,
+      requestedKind: kind,
+      summary: "",
+      palette: DEFAULT_PALETTE,
+      html: "",
+      messages: [
+        {
+          id: uid(),
+          role: "user",
+          content: prompt,
+          at: now,
+        },
+      ],
+      buildLog: [],
+      status: "building",
+      createdAt: now,
+      updatedAt: now,
+    },
+    {
+      kind: "created",
+      outcome: "info",
+      label: "Progetto creato",
+      at: now,
+    },
+  );
 }
 
 export const useProjectStore = create<ProjectStore>()(
@@ -196,6 +230,13 @@ export const useProjectStore = create<ProjectStore>()(
       },
       loadAppData: (projectId, collection) => {
         return loadCollection(projectId, collection, get().appDb, get().projects);
+      },
+      recordActivity: (projectId, input) => {
+        set((s) => ({
+          projects: s.projects.map((project) =>
+            project.id === projectId ? appendProjectActivity(project, input) : project,
+          ),
+        }));
       },
       saveAppData: async (projectId, collection, data) => {
         const current = await readAllDurable();
@@ -256,6 +297,14 @@ export const useProjectStore = create<ProjectStore>()(
         const expected = countItems(chosen);
         const proof = await verifyDurableBytes(projectId, collection, expected);
         publishDiag(projectId, collection, { save: 1, durable: proof.durable, rev: incoming.rev });
+        get().recordActivity(projectId, {
+          kind: "data",
+          outcome: proof.ok ? "ok" : "err",
+          label: `Dati · ${collection}`,
+          detail: proof.ok ? "Scrittura durevole verificata" : "Scrittura non verificata",
+          metrics: { rows: expected, durable: proof.durable },
+          dedupe: `data:${collection}`,
+        });
         return { ok: proof.ok, v: proof.ok ? chosen : null, durable: proof.durable };
       },
       createFromBrief: ({ prompt, kind }) => {
@@ -293,7 +342,20 @@ export const useProjectStore = create<ProjectStore>()(
               demoId,
             }
           : blankProject("Esempio");
-        const stored = commitIfChanged(project, { source: "create", label: "Esempio" });
+        const stored = demo
+          ? appendProjectActivity(
+              commitIfChanged(project, { source: "create", label: "Esempio" }),
+              {
+                kind: "ready",
+                outcome: "ok",
+                label: "Esempio pronto",
+                metrics: {
+                  files: projectFiles({ html: project.html, files: project.files }).length,
+                },
+                at: now,
+              },
+            )
+          : project;
         set((s) => ({ projects: trimList([stored, ...s.projects]) }));
         return stored;
       },
@@ -302,10 +364,12 @@ export const useProjectStore = create<ProjectStore>()(
           projects: s.projects.map((p) => {
             if (p.id !== id) return p;
             const next: Project = { ...p, ...patch, updatedAt: Date.now() };
-            if (next.status !== "ready" || !String(next.html || "").trim()) return next;
+            if (next.status !== "ready" || !String(next.html || "").trim()) {
+              return withStatusActivity(p, next);
+            }
             const source = (p.revisions?.length ?? 0) > 0 ? "polish" : "build";
             const label = source === "polish" ? "Rifinitura" : p.demoId ? "Esempio" : "Pronto";
-            return commitIfChanged(next, { source, label });
+            return withStatusActivity(p, commitIfChanged(next, { source, label }));
           }),
         }));
       },
@@ -315,7 +379,20 @@ export const useProjectStore = create<ProjectStore>()(
         const next = restoreProjectRevision(current, revisionId);
         if (!next) return false;
         set((s) => ({
-          projects: s.projects.map((p) => (p.id === id ? { ...next, updatedAt: Date.now() } : p)),
+          projects: s.projects.map((p) =>
+            p.id === id
+              ? appendProjectActivity(
+                  { ...next, updatedAt: Date.now() },
+                  {
+                    kind: "restore",
+                    outcome: "ok",
+                    label: "Versione ripristinata",
+                    detail: next.revisions?.find((revision) => revision.id === revisionId)?.label,
+                    metrics: { revisions: next.revisions?.length ?? 0 },
+                  },
+                )
+              : p,
+          ),
         }));
         return true;
       },
@@ -324,8 +401,29 @@ export const useProjectStore = create<ProjectStore>()(
         if (!current) return null;
         const branch = branchProjectRevision(current, revisionId);
         if (!branch) return null;
-        set((s) => ({ projects: trimList([branch, ...s.projects]) }));
-        return branch;
+        const branchWithActivity = appendProjectActivity(branch, {
+          kind: "branch",
+          outcome: "ok",
+          label: "Ramo indipendente creato",
+          detail: `Da ${current.name} · ${revisionId.slice(0, 8)}`,
+          metrics: { files: projectFiles({ html: branch.html, files: branch.files }).length },
+        });
+        set((s) => ({
+          projects: trimList([
+            branchWithActivity,
+            ...s.projects.map((project) =>
+              project.id === id
+                ? appendProjectActivity(project, {
+                    kind: "branch",
+                    outcome: "ok",
+                    label: "Ramo creato",
+                    detail: branchWithActivity.name,
+                  })
+                : project,
+            ),
+          ]),
+        }));
+        return branchWithActivity;
       },
       addMessage: (id, message) => {
         const full: ChatMessage = {
@@ -488,6 +586,12 @@ export function refundBuildCredit(projectId: string, n?: number) {
   if (!project || project.creditRefunded) return false;
   store.refundCredit(n);
   store.updateProject(projectId, { creditRefunded: true });
+  store.recordActivity(projectId, {
+    kind: "refund",
+    outcome: "ok",
+    label: "Credito rimborsato",
+    metrics: { credits: Math.max(1, n ?? CREDIT_COST) },
+  });
   return true;
 }
 

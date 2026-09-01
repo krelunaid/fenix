@@ -4,6 +4,14 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, it } from "node:test";
 import { projectFiles } from "./files.ts";
+import {
+  MAX_PROJECT_ACTIVITY,
+  activityHasOnlySafeKeys,
+  appendProjectActivity,
+  formatActivityAge,
+  listProjectActivity,
+  redactActivityText,
+} from "./activity.ts";
 import { FASE3_GAPS, fase3NowGaps } from "./fase3-gap.ts";
 import {
   MAX_REVISIONS,
@@ -66,6 +74,73 @@ describe("fase3 gap matrix is evidence, not parity", () => {
     assert.equal(github?.slice, "now");
     assert.match(github?.fenix || "", /GitHub App|non configurato|ZIP/i);
     assert.doesNotMatch(github?.fenix || "", /parit[aà]|feature-complete/i);
+    const observability = FASE3_GAPS.find((g) => g.id === "observability");
+    assert.equal(observability?.slice, "next");
+    assert.match(observability?.fenix || "", /registro|redatt|attivit/i);
+  });
+});
+
+describe("project activity evidence", () => {
+  it("redacts secrets, allowlists metrics, deduplicates bursts and stays bounded", () => {
+    let project = appendProjectActivity(sample(), {
+      kind: "error",
+      outcome: "err",
+      label: "Worker error",
+      detail: "Authorization: Bearer xai-secretvalue token=abc123456 password=hunter2",
+      metrics: { rows: 4.4, durable: 3, ignored: 99 },
+      at: 1,
+      id: "first",
+    });
+    assert.doesNotMatch(JSON.stringify(project.activity), /secretvalue|abc123456|hunter2/);
+    assert.deepEqual(project.activity?.[0]?.metrics, { durable: 3, rows: 4 });
+    assert.equal(activityHasOnlySafeKeys(project.activity![0]!), true);
+    project = appendProjectActivity(project, {
+      kind: "data",
+      outcome: "ok",
+      label: "Dati · clienti",
+      detail: "Scrittura durevole verificata",
+      metrics: { rows: 1 },
+      dedupe: "data:clienti",
+      at: 10,
+    });
+    project = appendProjectActivity(project, {
+      kind: "data",
+      outcome: "ok",
+      label: "Dati · clienti",
+      detail: "Scrittura durevole verificata",
+      metrics: { rows: 8 },
+      dedupe: "data:clienti",
+      at: 11,
+    });
+    assert.equal(project.activity?.length, 2);
+    assert.equal(project.activity?.at(-1)?.metrics?.rows, 8);
+    for (let i = 0; i < MAX_PROJECT_ACTIVITY + 8; i += 1) {
+      project = appendProjectActivity(project, {
+        kind: "build",
+        outcome: "run",
+        label: `Build ${i}`,
+        at: 10_000 + i * 3_000,
+      });
+    }
+    assert.equal(project.activity?.length, MAX_PROJECT_ACTIVITY);
+    assert.equal(listProjectActivity(project)[0]?.label, `Build ${MAX_PROJECT_ACTIVITY + 7}`);
+    assert.equal(formatActivityAge(1_000, 121_000), "2 min fa");
+    assert.equal(redactActivityText("api_key=hello-secret"), "api_key=[redacted]");
+  });
+
+  it("does not copy source activity into a pure revision branch", () => {
+    let source = appendProjectActivity(sample(), {
+      kind: "publish",
+      outcome: "ok",
+      label: "Snapshot pubblicato",
+      detail: "private operational history",
+      at: 1,
+    });
+    source = commitIfChanged(source, { source: "build", label: "Pronto", id: "activity-rev" });
+    const branch = branchProjectRevision(source, "activity-rev", { id: "activity-branch", at: 2 });
+    assert.ok(branch);
+    assert.equal(branch!.activity, undefined);
+    assert.doesNotMatch(JSON.stringify(branch), /private operational history/);
   });
 });
 

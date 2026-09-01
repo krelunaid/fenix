@@ -714,6 +714,13 @@ export async function runBuild(projectId: string, instruction?: string) {
     return;
   }
 
+  store.recordActivity(projectId, {
+    kind: "build",
+    outcome: "run",
+    label: instruction ? "Modifica avviata" : "Build avviata",
+    metrics: { credits: cost },
+  });
+
   store.updateProject(projectId, {
     status: "building",
     error: undefined,

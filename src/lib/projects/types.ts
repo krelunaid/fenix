@@ -20,6 +20,33 @@ export type ChatMessage = {
 
 export type BuildStatus = "draft" | "building" | "ready" | "error";
 
+export type ProjectActivityKind =
+  | "created"
+  | "build"
+  | "ready"
+  | "error"
+  | "refund"
+  | "data"
+  | "restore"
+  | "branch"
+  | "publish"
+  | "export";
+
+export type ProjectActivityOutcome = "info" | "run" | "ok" | "err";
+
+/** Bounded, redacted operational evidence. Never prompts, messages, job ids or secrets. */
+export type ProjectActivity = {
+  id: string;
+  at: number;
+  kind: ProjectActivityKind;
+  outcome: ProjectActivityOutcome;
+  label: string;
+  detail?: string;
+  metrics?: Partial<
+    Record<"credits" | "files" | "revisions" | "rows" | "durable" | "version", number>
+  >;
+};
+
 export type RevisionSource = "create" | "build" | "polish" | "restore" | "manual";
 
 /** Snapshot of the project tree. Never secrets, never job ids, never messages. */
@@ -71,6 +98,8 @@ export type Project = {
   revisionId?: string;
   /** Provenienza di un ramo. Solo identificatori locali, mai dati o credenziali. */
   branchFrom?: { projectId: string; revisionId: string };
+  /** Registro operativo locale, redatto e limitato. Non viene copiato nei rami. */
+  activity?: ProjectActivity[];
   /** Snapshot pubblico dopo una pubblicazione riuscita. Mai inventato. */
   publishedId?: string;
 };
