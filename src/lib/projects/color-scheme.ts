@@ -178,7 +178,7 @@ nav::-webkit-scrollbar{display:none}
 nav ul{display:flex;flex-wrap:nowrap;align-items:center;gap:4px 8px;margin:0;padding:0;list-style:none}
 nav a,nav button{border:0;background:none;color:var(--fg,#1c1712);font:650 13px/1.2 system-ui,sans-serif;padding:10px 6px;white-space:nowrap;flex:0 0 auto;min-height:44px;display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box}
 nav a:focus-visible,nav button:focus-visible,.btn:focus-visible,a.btn:focus-visible,button[type=submit]:focus-visible{outline:2px solid var(--accent,#b85c38);outline-offset:2px}
-.logo,.brand,header .logo,nav .logo{flex:0 1 auto;white-space:nowrap;max-width:32vw;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.logo,.brand,header .logo,nav .logo,.brand-full,.brand-short,.logo span{flex:0 0 auto;white-space:nowrap;overflow:visible;max-width:none;text-overflow:clip}
 nav a.logo,.logo{min-width:0;justify-content:flex-start;padding-left:0}
 .logo h1,nav .logo h1,header .logo h1{font-size:1rem;margin:0;line-height:1.15}
 .hero,section.hero,.hero-band{position:relative;width:100%;max-width:none!important;aspect-ratio:auto;margin:0}
