@@ -438,4 +438,57 @@ describe("focus-visible and worker model", () => {
     assert.match(leaked, /\.fk-sheet\{/);
     assert.match(leaked, /<main class="fk-main"/);
   });
+
+  it("github export is server-only GitHub App, ZIP stays, no parity claim", () => {
+    const client = readFileSync(join(root, "src/lib/github/client.ts"), "utf8");
+    const panel = readFileSync(join(root, "src/components/export-panel.tsx"), "utf8");
+    const studio = readFileSync(join(root, "src/routes/studio.$projectId.tsx"), "utf8");
+    const api = readFileSync(join(root, "src/lib/github/api.ts"), "utf8");
+    const types = readFileSync(join(root, "src/lib/github/types.ts"), "utf8");
+    const jwt = readFileSync(join(root, "src/lib/github/jwt.ts"), "utf8");
+    const secrets = readFileSync(join(root, "src/lib/github/secrets.server.ts"), "utf8");
+    const http = readFileSync(join(root, "src/lib/github/http.ts"), "utf8");
+    const refs = readFileSync(join(root, "src/lib/github/references.md"), "utf8");
+    const envExample = readFileSync(join(root, ".env.example"), "utf8");
+    const fn = readFileSync(join(root, "netlify/functions/github.ts"), "utf8");
+    const fnExport = readFileSync(join(root, "netlify/functions/github-export.ts"), "utf8");
+    const gap = readFileSync(join(root, "src/lib/projects/fase3-gap.ts"), "utf8");
+    assert.doesNotMatch(client, /secrets\.server/);
+    assert.doesNotMatch(client, /GITHUB_APP_PRIVATE_KEY/);
+    assert.doesNotMatch(client, /process\.env/);
+    assert.doesNotMatch(panel, /secrets\.server/);
+    assert.doesNotMatch(panel, /GITHUB_APP_PRIVATE_KEY/);
+    assert.match(panel, /GitHub non configurato/);
+    assert.match(panel, /Scarica \.zip/);
+    assert.match(panel, /Connetti GitHub/);
+    assert.match(studio, /ExportPanel/);
+    assert.match(studio, /aria-label="Esporta"/);
+    assert.match(api, /force: false/);
+    assert.match(api, /GITHUB_API_VERSION/);
+    assert.match(types, /2026-03-10/);
+    assert.match(jwt, /RS256/);
+    assert.match(jwt, /now - 60/);
+    assert.match(secrets, /GITHUB_APP_PRIVATE_KEY/);
+    assert.match(http, /GitHub non configurato/);
+    assert.match(fn, /path: "\/api\/github"/);
+    assert.match(fnExport, /path: "\/api\/github\/export"/);
+    assert.match(envExample, /GITHUB_APP_ID=/);
+    assert.match(envExample, /GITHUB_APP_SLUG=/);
+    assert.doesNotMatch(envExample, /VITE_GITHUB/);
+    assert.match(refs, /2026-03-10/);
+    assert.match(refs, /force/);
+    assert.match(gap, /github-export/);
+    assert.match(gap, /GitHub App server-only/);
+    assert.doesNotMatch(gap, /feature-complete|uguale a Emergent/);
+    const clientRoots = [join(root, "dist/assets"), join(root, ".output/public/assets")];
+    for (const dir of clientRoots) {
+      if (!existsSync(dir)) continue;
+      for (const name of readdirSync(dir)) {
+        if (!/\.(js|mjs|css|html)$/.test(name)) continue;
+        const text = readFileSync(join(dir, name), "utf8");
+        assert.doesNotMatch(text, /GITHUB_APP_PRIVATE_KEY/, name);
+        assert.doesNotMatch(text, /VITE_GITHUB/, name);
+      }
+    }
+  });
 });

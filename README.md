@@ -28,6 +28,8 @@ La chiave è esclusivamente server-side. Mai `VITE_XAI_API_KEY`, mai nel fronten
 
 Se il secret non è configurato, Fenix risponde chiaramente: `Manca XAI_API_KEY sul server`.
 
+Export GitHub (opzionale, server only): `GITHUB_APP_ID`, `GITHUB_APP_PRIVATE_KEY`, `GITHUB_APP_SLUG`. Setup URL della App: `https://fenix.kreluna.it/api/github/callback`. Permessi minimi Contents + Metadata. Senza queste variabili Studio mostra **GitHub non configurato**. ZIP locale resta. Dettagli: [`src/lib/github/references.md`](src/lib/github/references.md).
+
 Le app generate (Grottaglie, Catenaria, …) si scaricano da **Pubblica** (ZIP / `index.html`) e si caricano sul sito come HTML statico. **Pubblica** resta disabilitata finché il documento finale (srcdoc compreso il runtime) non è valido.
 
 ## Locale

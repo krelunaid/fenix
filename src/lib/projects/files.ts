@@ -46,7 +46,7 @@ const ALLOWED_EXT = new Set([
 ]);
 
 const SECRETISH =
-  /-----BEGIN[\s\S]+?PRIVATE KEY|-----BEGIN [\s\S]+?-----|"private_key"\s*:|Bearer\s+[A-Za-z0-9._\-+/=]{16,}|\bsk-[A-Za-z0-9]{8,}|\bxai-[A-Za-z0-9]{8,}|\bnf_[A-Za-z0-9]{12,}/i;
+  /-----BEGIN[\s\S]+?PRIVATE KEY|-----BEGIN [\s\S]+?-----|"private_key"\s*:|Bearer\s+[A-Za-z0-9._\-+/=]{16,}|\bsk-[A-Za-z0-9]{8,}|\bxai-[A-Za-z0-9]{8,}|\bnf_[A-Za-z0-9]{12,}|\bghs_[A-Za-z0-9._\-]{10,}|\bgithub_pat_[A-Za-z0-9_]{10,}/i;
 
 export function canonicalizePath(raw: string): { ok: true; path: string } | { ok: false; reason: string } {
   let p = String(raw ?? "").replace(/\\/g, "/").trim();

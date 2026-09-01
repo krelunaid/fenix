@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { ArrowLeft, Check, Code2, Globe, Monitor, Smartphone, Tablet } from "lucide-react";
+import { ArrowLeft, Check, Code2, FolderGit2, Globe, Monitor, Smartphone, Tablet } from "lucide-react";
 import { BuildOverlay } from "@/components/build-overlay";
 import { PreviewFrame, type Device } from "@/components/preview-frame";
 import { PublishPanel } from "@/components/publish-panel";
+import { ExportPanel } from "@/components/export-panel";
 import { RevisionPanel, VersionsButton } from "@/components/revision-panel";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -40,6 +41,7 @@ function StudioPage() {
   const [pane, setPane] = useState<Pane>("preview");
   const [draft, setDraft] = useState("");
   const [publishOpen, setPublishOpen] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
   const [versionsOpen, setVersionsOpen] = useState(false);
   const threadRef = useRef<HTMLDivElement>(null);
 
@@ -150,6 +152,16 @@ function StudioPage() {
         >
           <Code2 />
           Codice
+        </Button>
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() => setExportOpen(true)}
+          disabled={!project.html}
+          aria-label="Esporta"
+        >
+          <FolderGit2 />
+          <span className="hidden sm:inline">Esporta</span>
         </Button>
         <Button
           variant="default"
@@ -317,6 +329,15 @@ function StudioPage() {
         onRestore={(revisionId) => {
           if (restoreRevision(project.id, revisionId)) setVersionsOpen(false);
         }}
+      />
+      <ExportPanel
+        open={exportOpen}
+        onClose={() => setExportOpen(false)}
+        projectId={project.id}
+        name={project.name}
+        html={project.html}
+        kind={project.kind}
+        files={project.files}
       />
       <PublishPanel
         open={publishOpen}

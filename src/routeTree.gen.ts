@@ -13,11 +13,15 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as VetrinaRouteImport } from './routes/vetrina'
 import { Route as ApiBuildRouteImport } from './routes/api/build'
+import { Route as ApiGithubRouteImport } from './routes/api/github'
 import { Route as ApiPolishRouteImport } from './routes/api/polish'
 import { Route as ApiReleaseRouteImport } from './routes/api/release'
 import { Route as SitoProjectIdRouteImport } from './routes/sito.$projectId'
 import { Route as StudioProjectIdRouteImport } from './routes/studio.$projectId'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
+import { Route as ApiGithubCallbackRouteImport } from './routes/api/github.callback'
+import { Route as ApiGithubExportRouteImport } from './routes/api/github.export'
+import { Route as ApiGithubReposRouteImport } from './routes/api/github.repos'
 import { Route as ApiJobsIdRouteImport } from './routes/api/jobs.$id'
 import { Route as ApiReleaseIdRouteImport } from './routes/api/release.$id'
 import { Route as ApiReleaseCallbackRouteImport } from './routes/api/release.callback'
@@ -41,6 +45,11 @@ const VetrinaRoute = VetrinaRouteImport.update({
 const ApiBuildRoute = ApiBuildRouteImport.update({
   id: '/api/build',
   path: '/api/build',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiGithubRoute = ApiGithubRouteImport.update({
+  id: '/api/github',
+  path: '/api/github',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPolishRoute = ApiPolishRouteImport.update({
@@ -68,6 +77,21 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   path: '/api/auth/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiGithubCallbackRoute = ApiGithubCallbackRouteImport.update({
+  id: '/callback',
+  path: '/callback',
+  getParentRoute: () => ApiGithubRoute,
+} as any)
+const ApiGithubExportRoute = ApiGithubExportRouteImport.update({
+  id: '/export',
+  path: '/export',
+  getParentRoute: () => ApiGithubRoute,
+} as any)
+const ApiGithubReposRoute = ApiGithubReposRouteImport.update({
+  id: '/repos',
+  path: '/repos',
+  getParentRoute: () => ApiGithubRoute,
+} as any)
 const ApiJobsIdRoute = ApiJobsIdRouteImport.update({
   id: '/api/jobs/$id',
   path: '/api/jobs/$id',
@@ -94,11 +118,15 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/vetrina': typeof VetrinaRoute
   '/api/build': typeof ApiBuildRoute
+  '/api/github': typeof ApiGithubRouteWithChildren
   '/api/polish': typeof ApiPolishRoute
   '/api/release': typeof ApiReleaseRouteWithChildren
   '/sito/$projectId': typeof SitoProjectIdRoute
   '/studio/$projectId': typeof StudioProjectIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/github/callback': typeof ApiGithubCallbackRoute
+  '/api/github/export': typeof ApiGithubExportRoute
+  '/api/github/repos': typeof ApiGithubReposRoute
   '/api/jobs/$id': typeof ApiJobsIdRoute
   '/api/release/$id': typeof ApiReleaseIdRoute
   '/api/release/callback': typeof ApiReleaseCallbackRoute
@@ -109,11 +137,15 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/vetrina': typeof VetrinaRoute
   '/api/build': typeof ApiBuildRoute
+  '/api/github': typeof ApiGithubRouteWithChildren
   '/api/polish': typeof ApiPolishRoute
   '/api/release': typeof ApiReleaseRouteWithChildren
   '/sito/$projectId': typeof SitoProjectIdRoute
   '/studio/$projectId': typeof StudioProjectIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/github/callback': typeof ApiGithubCallbackRoute
+  '/api/github/export': typeof ApiGithubExportRoute
+  '/api/github/repos': typeof ApiGithubReposRoute
   '/api/jobs/$id': typeof ApiJobsIdRoute
   '/api/release/$id': typeof ApiReleaseIdRoute
   '/api/release/callback': typeof ApiReleaseCallbackRoute
@@ -125,11 +157,15 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/vetrina': typeof VetrinaRoute
   '/api/build': typeof ApiBuildRoute
+  '/api/github': typeof ApiGithubRouteWithChildren
   '/api/polish': typeof ApiPolishRoute
   '/api/release': typeof ApiReleaseRouteWithChildren
   '/sito/$projectId': typeof SitoProjectIdRoute
   '/studio/$projectId': typeof StudioProjectIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/github/callback': typeof ApiGithubCallbackRoute
+  '/api/github/export': typeof ApiGithubExportRoute
+  '/api/github/repos': typeof ApiGithubReposRoute
   '/api/jobs/$id': typeof ApiJobsIdRoute
   '/api/release/$id': typeof ApiReleaseIdRoute
   '/api/release/callback': typeof ApiReleaseCallbackRoute
@@ -142,11 +178,15 @@ export interface FileRouteTypes {
     | '/login'
     | '/vetrina'
     | '/api/build'
+    | '/api/github'
     | '/api/polish'
     | '/api/release'
     | '/sito/$projectId'
     | '/studio/$projectId'
     | '/api/auth/$'
+    | '/api/github/callback'
+    | '/api/github/export'
+    | '/api/github/repos'
     | '/api/jobs/$id'
     | '/api/release/$id'
     | '/api/release/callback'
@@ -157,11 +197,15 @@ export interface FileRouteTypes {
     | '/login'
     | '/vetrina'
     | '/api/build'
+    | '/api/github'
     | '/api/polish'
     | '/api/release'
     | '/sito/$projectId'
     | '/studio/$projectId'
     | '/api/auth/$'
+    | '/api/github/callback'
+    | '/api/github/export'
+    | '/api/github/repos'
     | '/api/jobs/$id'
     | '/api/release/$id'
     | '/api/release/callback'
@@ -172,11 +216,15 @@ export interface FileRouteTypes {
     | '/login'
     | '/vetrina'
     | '/api/build'
+    | '/api/github'
     | '/api/polish'
     | '/api/release'
     | '/sito/$projectId'
     | '/studio/$projectId'
     | '/api/auth/$'
+    | '/api/github/callback'
+    | '/api/github/export'
+    | '/api/github/repos'
     | '/api/jobs/$id'
     | '/api/release/$id'
     | '/api/release/callback'
@@ -188,6 +236,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   VetrinaRoute: typeof VetrinaRoute
   ApiBuildRoute: typeof ApiBuildRoute
+  ApiGithubRoute: typeof ApiGithubRouteWithChildren
   ApiPolishRoute: typeof ApiPolishRoute
   ApiReleaseRoute: typeof ApiReleaseRouteWithChildren
   SitoProjectIdRoute: typeof SitoProjectIdRoute
@@ -227,6 +276,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiBuildRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/github': {
+      id: '/api/github'
+      path: '/api/github'
+      fullPath: '/api/github'
+      preLoaderRoute: typeof ApiGithubRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/polish': {
       id: '/api/polish'
       path: '/api/polish'
@@ -262,6 +318,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/github/callback': {
+      id: '/api/github/callback'
+      path: '/callback'
+      fullPath: '/api/github/callback'
+      preLoaderRoute: typeof ApiGithubCallbackRouteImport
+      parentRoute: typeof ApiGithubRoute
+    }
+    '/api/github/export': {
+      id: '/api/github/export'
+      path: '/export'
+      fullPath: '/api/github/export'
+      preLoaderRoute: typeof ApiGithubExportRouteImport
+      parentRoute: typeof ApiGithubRoute
+    }
+    '/api/github/repos': {
+      id: '/api/github/repos'
+      path: '/repos'
+      fullPath: '/api/github/repos'
+      preLoaderRoute: typeof ApiGithubReposRouteImport
+      parentRoute: typeof ApiGithubRoute
+    }
     '/api/jobs/$id': {
       id: '/api/jobs/$id'
       path: '/api/jobs/$id'
@@ -293,6 +370,22 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface ApiGithubRouteChildren {
+  ApiGithubCallbackRoute: typeof ApiGithubCallbackRoute
+  ApiGithubExportRoute: typeof ApiGithubExportRoute
+  ApiGithubReposRoute: typeof ApiGithubReposRoute
+}
+
+const ApiGithubRouteChildren: ApiGithubRouteChildren = {
+  ApiGithubCallbackRoute: ApiGithubCallbackRoute,
+  ApiGithubExportRoute: ApiGithubExportRoute,
+  ApiGithubReposRoute: ApiGithubReposRoute,
+}
+
+const ApiGithubRouteWithChildren = ApiGithubRoute._addFileChildren(
+  ApiGithubRouteChildren,
+)
+
 interface ApiReleaseRouteChildren {
   ApiReleaseIdRoute: typeof ApiReleaseIdRoute
   ApiReleaseCallbackRoute: typeof ApiReleaseCallbackRoute
@@ -312,6 +405,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   VetrinaRoute: VetrinaRoute,
   ApiBuildRoute: ApiBuildRoute,
+  ApiGithubRoute: ApiGithubRouteWithChildren,
   ApiPolishRoute: ApiPolishRoute,
   ApiReleaseRoute: ApiReleaseRouteWithChildren,
   SitoProjectIdRoute: SitoProjectIdRoute,
