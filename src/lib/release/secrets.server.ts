@@ -49,6 +49,21 @@ export function androidKeystorePath(): string | null {
   return p.length > 2 ? p : null;
 }
 
+export function androidKeyAlias(): string | null {
+  const a = process.env.ANDROID_KEY_ALIAS?.trim() || "";
+  return a.length > 0 ? a : null;
+}
+
+export function androidStorePassword(): string | null {
+  const p = process.env.ANDROID_STORE_PASSWORD?.trim() || process.env.ANDROID_KEYSTORE_PASSWORD?.trim() || "";
+  return p.length > 0 ? p : null;
+}
+
+export function androidKeyPassword(): string | null {
+  const p = process.env.ANDROID_KEY_PASSWORD?.trim() || process.env.ANDROID_STORE_PASSWORD?.trim() || "";
+  return p.length > 0 ? p : null;
+}
+
 export function googleServiceAccount(): string | null {
   const raw =
     process.env.GOOGLE_PLAY_SERVICE_ACCOUNT?.trim() || process.env.GOOGLE_PLAY_JSON?.trim() || "";

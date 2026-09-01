@@ -30,6 +30,11 @@ export type ProviderIds = {
   deployId?: string;
   intentId?: string;
   inflight?: string;
+  runId?: string;
+  workflowRunId?: string;
+  liveUrl?: string;
+  cfBundleVersion?: string;
+  versionName?: string;
 };
 
 export type TrackState = {
@@ -48,6 +53,9 @@ export type ReleaseConfig = {
   packageName: string;
   siteName: string;
   appName: string;
+  iosBuildNumber?: string;
+  androidVersionCode?: number;
+  versionName?: string;
 };
 
 export type AccountStatus = {
@@ -96,6 +104,8 @@ export type StoredReleaseJob = {
   };
   leaseOwner?: string;
   leaseUntil?: number;
+  /** Optimistic lock. Incremented on every durable write. */
+  version?: number;
 };
 
 /** Public GET. Never ownerHash, never html, never secrets, never lease. */

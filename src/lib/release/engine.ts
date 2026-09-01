@@ -2,6 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { hashOwner } from "../projects/published-store.ts";
 import { isPublishedId, parsePublishInput } from "../projects/published.ts";
 import { adapterFor, nextStep, STEP_ORDER, type WebUploadOwner } from "./adapters.ts";
+import { assignBuildNumbers } from "./build-id.ts";
 import {
   suggestedBundleId,
   suggestedPackageName,
@@ -11,6 +12,7 @@ import {
 import { accountsSnapshot, gateHtml, gatePlatform, parseKind } from "./preflight.ts";
 import { redactSecrets } from "./redact.ts";
 import {
+  acquireReleaseLease,
   canTakeLease,
   claimReleaseKey,
   publicReleaseJob,
@@ -114,7 +116,7 @@ function snapTracks(job: StoredReleaseJob): string {
   return job.platforms
     .map((p) => {
       const t = job.tracks[p];
-      return `${p}:${t?.step}:${t?.status}:${t?.uploads}:${t?.provider?.uploadId || t?.provider?.deployId || ""}`;
+      return `${p}:${t?.step}:${t?.status}:${t?.uploads}:${t?.provider?.uploadId || t?.provider?.deployId || t?.provider?.runId || ""}`;
     })
     .join("|");
 }
@@ -268,6 +270,12 @@ async function continueJob(
   }
   const token = randomUUID();
   if (job.status === "ok") return publicReleaseJob(job);
+  const leased = await acquireReleaseLease(job.id, token);
+  if (!leased && job.status !== "err") {
+    const live = (await readReleaseJob(job.id)) || job;
+    return publicReleaseJob(live);
+  }
+  job = leased || withLease(job, token);
   if (job.status !== "err" && !canTakeLease(job, token)) {
     return publicReleaseJob(job);
   }
@@ -333,7 +341,7 @@ async function createReleaseJobUnlocked(
   }
 
   const already = await readReleaseJob(id);
-  if (already) return continueJob(already, access);
+  if (already && already.html) return continueJob(already, access);
 
   const tracks = {} as StoredReleaseJob["tracks"];
   for (const p of PLATFORMS) tracks[p] = emptyTrack(p);
@@ -359,7 +367,9 @@ async function createReleaseJobUnlocked(
     summary: parsed.summary,
     html: parsed.html,
     palette: parsed.palette,
+    version: already?.version || 1,
   };
+  assignBuildNumbers(job);
   const saved = await writeReleaseJob(withLease(job, token));
   const done = await runReleaseToIdle(saved, access, 24, token);
   return publicReleaseJob(done);

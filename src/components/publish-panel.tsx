@@ -148,6 +148,12 @@ export function PublishPanel({
 
   const publicId = published?.id || readPublishedId(projectId);
   const publicPath = `/sito/${publicId || projectId}`;
+  const liveWeb =
+    job?.tracks.web?.provider?.liveUrl ||
+    (job?.tracks.web?.artifact && /^https?:\/\//.test(job.tracks.web.artifact)
+      ? job.tracks.web.artifact
+      : "");
+
 
   function togglePlatform(id: Platform) {
     setPlatforms((prev) => {
@@ -186,7 +192,7 @@ export function PublishPanel({
   }
 
   async function copyLink() {
-    const url = `${window.location.origin}/sito/${publicId || projectId}`;
+    const url = liveWeb || `${window.location.origin}/sito/${publicId || projectId}`;
     try {
       await navigator.clipboard.writeText(url);
       toast("Link pubblico copiato.");
@@ -401,6 +407,9 @@ export function PublishPanel({
                         {t?.fixture ? " · banco prova" : ""}
                         {t?.status === "ok" ? " · ok" : ""}
                         {t?.error ? ` · ${t.error}` : ""}
+                        {p === "web" && (t?.provider?.liveUrl || (t?.artifact && /^https?:\/\//.test(t.artifact)))
+                          ? ` · ${t.provider?.liveUrl || t.artifact}`
+                          : ""}
                       </span>
                     </li>
                   );

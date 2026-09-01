@@ -774,6 +774,15 @@ describe("release real pipelines behind mocks", () => {
         inserts += 1;
         return Response.json({ id: "edit-1" });
       }
+      if (url.includes("/edits/") && url.includes("/tracks/internal") && method === "GET") {
+        return Response.json({ track: "internal", releases: [] });
+      }
+      if (url.includes("/edits/") && method === "DELETE") {
+        return new Response(null, { status: 204 });
+      }
+      if (url.includes("/bundles") && method === "GET") {
+        return Response.json({ bundles: [] });
+      }
       if (url.includes("/bundles") && method === "POST") {
         uploads += 1;
         return Response.json({ versionCode: 7 });
@@ -805,15 +814,16 @@ describe("release real pipelines behind mocks", () => {
       keystorePath: "/tmp/upload.keystore",
     });
     assert.equal(first.ok, true, first.error);
-    assert.equal(inserts, 1);
+    assert.ok(inserts >= 1);
     assert.equal(uploads, 1);
+    const insertsAfterFirst = inserts;
     const second = await runAndroidStep("upload", job, track, persistInto(track), {
       fixture: false,
       serviceJson: json,
       keystorePath: "/tmp/upload.keystore",
     });
     assert.equal(second.reconciled, true);
-    assert.equal(inserts, 1);
+    assert.equal(inserts, insertsAfterFirst);
     assert.equal(uploads, 1);
   });
 
@@ -884,6 +894,7 @@ describe("release real pipelines behind mocks", () => {
     const json = JSON.stringify({ client_email: "play@fenix.test", private_key: pem });
     let commits = 0;
     let inserts = 0;
+    let bundles = 0;
     setReleaseFetchForTest(async (input, init) => {
       const url = String(input);
       const method = String(init?.method || "GET").toUpperCase();
@@ -895,12 +906,22 @@ describe("release real pipelines behind mocks", () => {
         return Response.json({ id: "edit-2" });
       }
       if (url.includes("/bundles") && method === "POST") {
+        bundles += 1;
         return Response.json({ versionCode: 9 });
       }
       if (url.includes("/tracks/internal") && method === "PUT") {
         return new Response("The edit is no longer valid because it has already been committed", {
           status: 400,
         });
+      }
+      if (url.includes("/tracks/internal") && method === "GET") {
+        return Response.json({
+          track: "internal",
+          releases: [{ status: "completed", versionCodes: ["9"] }],
+        });
+      }
+      if (url.includes("/edits/") && method === "DELETE") {
+        return new Response(null, { status: 204 });
       }
       if (url.includes(":commit") && method === "POST") {
         commits += 1;
@@ -927,7 +948,9 @@ describe("release real pipelines behind mocks", () => {
       keystorePath: "/tmp/upload.keystore",
     });
     assert.equal(first.ok, true, first.error);
-    assert.equal(inserts, 0);
+    assert.equal(commits, 0);
+    assert.equal(bundles, 0);
+    assert.ok(inserts >= 1);
     assert.match(track.provider?.uploadId || "", /play-internal/);
   });
 
@@ -1016,6 +1039,12 @@ describe("release real pipelines behind mocks", () => {
         lists += 1;
         return Response.json({ bundles: [{ versionCode: 11 }] });
       }
+      if (url.includes("/tracks/internal") && method === "GET") {
+        return Response.json({ track: "internal", releases: [] });
+      }
+      if (url.includes("/edits/") && method === "DELETE") {
+        return new Response(null, { status: 204 });
+      }
       if (url.includes("/bundles") && method === "POST") {
         uploads += 1;
         return Response.json({ versionCode: 12 });
@@ -1038,7 +1067,18 @@ describe("release real pipelines behind mocks", () => {
     await fixtureCommand("gradle", ["bundleRelease"], {
       cwd: join(rel, "work", "job-play3", "android"),
     });
-    const job = sampleJob({ id: "job-play3", platforms: ["android"] });
+    const job = sampleJob({
+      id: "job-play3",
+      platforms: ["android"],
+      config: {
+        bundleId: "it.fenix.onda",
+        packageName: "it.fenix.onda",
+        siteName: "Onda",
+        appName: "Onda",
+        androidVersionCode: 11,
+        versionName: "1.0",
+      },
+    });
     const track: TrackState = {
       platform: "android",
       step: "upload",
@@ -1086,6 +1126,15 @@ describe("release real pipelines behind mocks", () => {
       if (url.includes("/tracks/internal") && method === "PUT") {
         return new Response("already committed", { status: 400 });
       }
+      if (url.includes("/tracks/internal") && method === "GET") {
+        return Response.json({
+          track: "internal",
+          releases: [{ status: "completed", versionCodes: ["13"] }],
+        });
+      }
+      if (url.includes("/edits/") && method === "DELETE") {
+        return new Response(null, { status: 204 });
+      }
       if (url.includes(":commit") && method === "POST") {
         return new Response("already committed", { status: 400 });
       }
@@ -1123,7 +1172,6 @@ describe("release real pipelines behind mocks", () => {
     });
     assert.equal(first.ok, true, first.error);
     assert.equal(first.reconciled, true);
-    assert.equal(inserts, 0);
     assert.equal(uploads, 0);
     assert.match(track.provider?.uploadId || "", /play-internal/);
   });
@@ -1156,4 +1204,3 @@ describe("release real pipelines behind mocks", () => {
     assert.notEqual((first as { id: string }).id, (second as { id: string }).id);
   });
 });
-

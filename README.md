@@ -48,3 +48,7 @@ XAI_API_KEY=… npm start
 Su Railway/Fly: stesso comando, porta `PORT`. Health: `GET /health` risponde `{ ok, model: "grok-build-0.1" }`. Poi su Netlify aggiungi `VISUAL_WORKER_URL` = URL del worker, solo server.
 
 Senza questa variabile Fenix resta sui due sguardi nell’anteprima (html2canvas).
+
+## Rilascio iOS / Android
+
+Build e firma **non** girano nella Function Netlify. Il job è su Postgres (`release_jobs`, `idempotency_key` unique). iOS va su un runner macOS con Xcode, Android su Linux con JDK/SDK. Dettagli e secret: [`workers/release/README.md`](workers/release/README.md). Web resta nella Function; dopo il deploy si mostra `ssl_url` Netlify.

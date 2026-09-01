@@ -20,6 +20,7 @@ import { Route as StudioProjectIdRouteImport } from './routes/studio.$projectId'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiJobsIdRouteImport } from './routes/api/jobs.$id'
 import { Route as ApiReleaseIdRouteImport } from './routes/api/release.$id'
+import { Route as ApiReleaseCallbackRouteImport } from './routes/api/release.callback'
 import { Route as ApiSitesIdRouteImport } from './routes/api/sites.$id'
 
 const IndexRoute = IndexRouteImport.update({
@@ -77,6 +78,11 @@ const ApiReleaseIdRoute = ApiReleaseIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => ApiReleaseRoute,
 } as any)
+const ApiReleaseCallbackRoute = ApiReleaseCallbackRouteImport.update({
+  id: '/callback',
+  path: '/callback',
+  getParentRoute: () => ApiReleaseRoute,
+} as any)
 const ApiSitesIdRoute = ApiSitesIdRouteImport.update({
   id: '/api/sites/$id',
   path: '/api/sites/$id',
@@ -95,6 +101,7 @@ export interface FileRoutesByFullPath {
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/jobs/$id': typeof ApiJobsIdRoute
   '/api/release/$id': typeof ApiReleaseIdRoute
+  '/api/release/callback': typeof ApiReleaseCallbackRoute
   '/api/sites/$id': typeof ApiSitesIdRoute
 }
 export interface FileRoutesByTo {
@@ -109,6 +116,7 @@ export interface FileRoutesByTo {
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/jobs/$id': typeof ApiJobsIdRoute
   '/api/release/$id': typeof ApiReleaseIdRoute
+  '/api/release/callback': typeof ApiReleaseCallbackRoute
   '/api/sites/$id': typeof ApiSitesIdRoute
 }
 export interface FileRoutesById {
@@ -124,6 +132,7 @@ export interface FileRoutesById {
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/jobs/$id': typeof ApiJobsIdRoute
   '/api/release/$id': typeof ApiReleaseIdRoute
+  '/api/release/callback': typeof ApiReleaseCallbackRoute
   '/api/sites/$id': typeof ApiSitesIdRoute
 }
 export interface FileRouteTypes {
@@ -140,6 +149,7 @@ export interface FileRouteTypes {
     | '/api/auth/$'
     | '/api/jobs/$id'
     | '/api/release/$id'
+    | '/api/release/callback'
     | '/api/sites/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -154,6 +164,7 @@ export interface FileRouteTypes {
     | '/api/auth/$'
     | '/api/jobs/$id'
     | '/api/release/$id'
+    | '/api/release/callback'
     | '/api/sites/$id'
   id:
     | '__root__'
@@ -168,6 +179,7 @@ export interface FileRouteTypes {
     | '/api/auth/$'
     | '/api/jobs/$id'
     | '/api/release/$id'
+    | '/api/release/callback'
     | '/api/sites/$id'
   fileRoutesById: FileRoutesById
 }
@@ -264,6 +276,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiReleaseIdRouteImport
       parentRoute: typeof ApiReleaseRoute
     }
+    '/api/release/callback': {
+      id: '/api/release/callback'
+      path: '/callback'
+      fullPath: '/api/release/callback'
+      preLoaderRoute: typeof ApiReleaseCallbackRouteImport
+      parentRoute: typeof ApiReleaseRoute
+    }
     '/api/sites/$id': {
       id: '/api/sites/$id'
       path: '/api/sites/$id'
@@ -276,10 +295,12 @@ declare module '@tanstack/react-router' {
 
 interface ApiReleaseRouteChildren {
   ApiReleaseIdRoute: typeof ApiReleaseIdRoute
+  ApiReleaseCallbackRoute: typeof ApiReleaseCallbackRoute
 }
 
 const ApiReleaseRouteChildren: ApiReleaseRouteChildren = {
   ApiReleaseIdRoute: ApiReleaseIdRoute,
+  ApiReleaseCallbackRoute: ApiReleaseCallbackRoute,
 }
 
 const ApiReleaseRouteWithChildren = ApiReleaseRoute._addFileChildren(

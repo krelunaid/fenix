@@ -20,6 +20,14 @@ function siteSlug(job: StoredReleaseJob): string {
   return `fenix-${raw || "app"}`;
 }
 
+function liveUrl(track: TrackState, job: StoredReleaseJob, fallback?: string): string {
+  return (
+    track.provider?.liveUrl ||
+    fallback ||
+    `/sito/${job.projectId}`
+  );
+}
+
 export async function runWebStep(
   step: TrackState["step"],
   job: StoredReleaseJob,
@@ -41,7 +49,7 @@ export async function runWebStep(
         ok: true,
         step,
         fixture,
-        artifact: track.artifact || `/sito/${job.projectId}`,
+        artifact: liveUrl(track, job, track.artifact),
         reconciled: true,
       };
     }
@@ -73,21 +81,37 @@ export async function runWebStep(
     if (!site.ok) return { ok: false, step, fixture: false, error: site.error };
     if (!site.id) return { ok: false, step, fixture: false, error: "Netlify ha creato un sito senza id." };
     const title = track.provider?.intentId || `${job.id}:${job.htmlHash}`;
-    await persist({ provider: { ...track.provider, siteId: site.id, intentId: title } });
+    await persist({
+      provider: {
+        ...track.provider,
+        siteId: site.id,
+        intentId: title,
+        liveUrl: site.url || track.provider?.liveUrl,
+      },
+    });
     const listed = await netlifyListDeploys(token, site.id, title);
     if (listed.ok && listed.id) {
+      const url = listed.url || site.url || track.provider?.liveUrl;
       await persist({
-        provider: { ...track.provider, siteId: site.id, deployId: listed.id, intentId: title, inflight: undefined },
+        provider: {
+          ...track.provider,
+          siteId: site.id,
+          deployId: listed.id,
+          intentId: title,
+          inflight: undefined,
+          liveUrl: url,
+        },
       });
-      return { ok: true, step, fixture: false, artifact: fenixUrl, reconciled: true };
+      return { ok: true, step, fixture: false, artifact: url || fenixUrl, reconciled: true };
     }
     await persist({
-      provider: { ...track.provider, siteId: site.id, intentId: title, inflight: "deploy" },
+      provider: { ...track.provider, siteId: site.id, intentId: title, inflight: "deploy", liveUrl: site.url },
     });
     const zip = zipFiles([{ path: "index.html", content: job.html }]);
     const deploy = await netlifyCreateDeploy(token, site.id, zip, title, track.provider?.deployId);
     if (!deploy.ok) return { ok: false, step, fixture: false, error: deploy.error };
     if (!deploy.id) return { ok: false, step, fixture: false, error: "Netlify ha avviato un deploy senza id." };
+    const url = deploy.url || site.url;
     await persist({
       provider: {
         ...track.provider,
@@ -95,9 +119,10 @@ export async function runWebStep(
         deployId: deploy.id,
         intentId: title,
         inflight: undefined,
+        liveUrl: url,
       },
     });
-    return { ok: true, step, fixture: false, artifact: fenixUrl };
+    return { ok: true, step, fixture: false, artifact: url || fenixUrl };
   }
 
   if (step === "processing") {
@@ -117,7 +142,9 @@ export async function runWebStep(
         error: "Netlify ha rifiutato il deploy. Riprendi: non duplico lo zip.",
       };
     }
-    return { ok: true, step, fixture: false, artifact: `/sito/${job.projectId}` };
+    const url = got.url || track.provider.liveUrl;
+    if (url) await persist({ provider: { ...track.provider, liveUrl: url } });
+    return { ok: true, step, fixture: false, artifact: url || `/sito/${job.projectId}` };
   }
 
   if (step === "ready") {
@@ -125,7 +152,7 @@ export async function runWebStep(
       ok: true,
       step: "ready",
       fixture: !netlifyToken(),
-      artifact: `/sito/${job.projectId}`,
+      artifact: liveUrl(track, job),
     };
   }
 

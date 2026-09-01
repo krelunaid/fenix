@@ -1,0 +1,44 @@
+name: fenix-release-ios
+
+on:
+  workflow_dispatch:
+    inputs:
+      job_id:
+        required: true
+        type: string
+      platform:
+        required: false
+        default: ios
+        type: string
+      step:
+        required: true
+        type: string
+      intent_id:
+        required: true
+        type: string
+
+run-name: fenix-release ${{ inputs.intent_id }}
+
+jobs:
+  ios:
+    runs-on: macos-latest
+    timeout-minutes: 45
+    env:
+      FENIX_RELEASE_WORKER: ios
+      FENIX_NATIVE_DISPATCH: "0"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --ignore-scripts
+      - name: Run iOS step on macOS + Xcode
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          APPLE_ISSUER_ID: ${{ secrets.APPLE_ISSUER_ID }}
+          APPLE_KEY_ID: ${{ secrets.APPLE_KEY_ID }}
+          APPLE_PRIVATE_KEY: ${{ secrets.APPLE_PRIVATE_KEY }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          FENIX_RELEASE_CALLBACK_SECRET: ${{ secrets.FENIX_RELEASE_CALLBACK_SECRET }}
+          FENIX_RELEASE_CALLBACK_URL: ${{ secrets.FENIX_RELEASE_CALLBACK_URL }}
+        run: node --experimental-strip-types workers/release/run.mjs --job "${{ inputs.job_id }}" --platform ios --step "${{ inputs.step }}" --intent "${{ inputs.intent_id }}"

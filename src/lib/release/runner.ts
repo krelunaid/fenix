@@ -1,13 +1,14 @@
 import { spawn } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
+import { redactSecrets } from "./redact.ts";
 
 export type RunResult = { ok: boolean; code: number; stdout: string; stderr: string };
 
 export type CommandRunner = (
   file: string,
   args: string[],
-  opts?: { cwd?: string },
+  opts?: { cwd?: string; env?: Record<string, string> },
 ) => Promise<RunResult>;
 
 let customRunner: CommandRunner | null = null;
@@ -25,7 +26,7 @@ function argValue(args: string[], flag: string): string | undefined {
 export async function fixtureCommand(
   file: string,
   args: string[],
-  opts?: { cwd?: string },
+  opts?: { cwd?: string; env?: Record<string, string> },
 ): Promise<RunResult> {
   const base = file.split(/[/\\]/).pop() || file;
   const cwd = opts?.cwd || process.cwd();
@@ -52,7 +53,8 @@ export async function fixtureCommand(
     return { ok: true, code: 0, stdout: `BUNDLE_OK ${aab}`, stderr: "" };
   }
   if (base === "jarsigner" || base === "apksigner") {
-    const signed = args[args.indexOf("-signedjar") + 1] || join(cwd, "signed.aab");
+    const idx = args.indexOf("-signedjar");
+    const signed = idx >= 0 ? args[idx + 1] : join(cwd, "signed.aab");
     mkdirSync(dirname(signed), { recursive: true });
     writeFileSync(signed, "aab-signed");
     return { ok: true, code: 0, stdout: `SIGN_OK ${signed}`, stderr: "" };
@@ -63,13 +65,15 @@ export async function fixtureCommand(
 export async function realCommand(
   file: string,
   args: string[],
-  opts?: { cwd?: string },
+  opts?: { cwd?: string; env?: Record<string, string> },
 ): Promise<RunResult> {
   return await new Promise((resolve) => {
+    const env = opts?.env ? { ...process.env, ...opts.env } : process.env;
     const child = spawn(file, args, {
       cwd: opts?.cwd,
       shell: false,
       stdio: ["ignore", "pipe", "pipe"],
+      env,
     });
     let stdout = "";
     let stderr = "";
@@ -83,18 +87,27 @@ export async function realCommand(
       resolve({
         ok: false,
         code: 127,
-        stdout,
-        stderr: err.message,
+        stdout: redactSecrets(stdout),
+        stderr: redactSecrets(err.message),
       });
     });
     child.on("close", (code) => {
       const n = code ?? 1;
-      resolve({ ok: n === 0, code: n, stdout, stderr });
+      resolve({
+        ok: n === 0,
+        code: n,
+        stdout: redactSecrets(stdout),
+        stderr: redactSecrets(stderr),
+      });
     });
   });
 }
 
-export function runCommand(file: string, args: string[], opts?: { cwd?: string }): Promise<RunResult> {
+export function runCommand(
+  file: string,
+  args: string[],
+  opts?: { cwd?: string; env?: Record<string, string> },
+): Promise<RunResult> {
   if (customRunner) return customRunner(file, args, opts);
   return realCommand(file, args, opts);
 }

@@ -4,7 +4,10 @@ import {
   appleConnected,
   appleCredentials,
   appleTeamId,
+  androidKeyAlias,
+  androidKeyPassword,
   androidKeystorePath,
+  androidStorePassword,
   googleConnected,
   googleServiceAccount,
   netlifyConnected,
@@ -96,6 +99,9 @@ export const androidAdapter: ReleaseAdapter = {
       fixture,
       serviceJson: json,
       keystorePath: androidKeystorePath() || undefined,
+      keyAlias: androidKeyAlias() || undefined,
+      storePassword: androidStorePassword() || undefined,
+      keyPassword: androidKeyPassword() || undefined,
     });
   },
 };

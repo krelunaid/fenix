@@ -1,8 +1,20 @@
 const SECRETISH =
   /(-----BEGIN[\s\S]+?-----END[^-]+-----)|(Bearer\s+[A-Za-z0-9._\-+/=]{12,})|(eyJ[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{10,})|("private_key"\s*:\s*"[^"]+")|(sk-[A-Za-z0-9]{8,})|(nf_[A-Za-z0-9]{12,})/g;
 
+const SECRET_FLAGS = /^-{0,2}(storepass|keypass|storePassword|keyPassword|password)$/i;
+
 export function redactSecrets(text: string): string {
   return String(text || "").replace(SECRETISH, "[redacted]");
+}
+
+export function redactArgs(args: string[]): string[] {
+  const out = args.map((a) => String(a));
+  for (let i = 0; i < out.length; i++) {
+    if (SECRET_FLAGS.test(out[i]!) && out[i + 1]) {
+      out[i + 1] = "[redacted]";
+    }
+  }
+  return out.map((a) => redactSecrets(a));
 }
 
 export function looksLikeSecret(text: string): boolean {

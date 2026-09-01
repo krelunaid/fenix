@@ -1,0 +1,49 @@
+name: fenix-release-android
+
+on:
+  workflow_dispatch:
+    inputs:
+      job_id:
+        required: true
+        type: string
+      platform:
+        required: false
+        default: android
+        type: string
+      step:
+        required: true
+        type: string
+      intent_id:
+        required: true
+        type: string
+
+run-name: fenix-release ${{ inputs.intent_id }}
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      FENIX_RELEASE_WORKER: android
+      FENIX_NATIVE_DISPATCH: "0"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - run: npm install --ignore-scripts
+      - name: Run Android step on Linux + JDK
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          GOOGLE_PLAY_SERVICE_ACCOUNT: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT }}
+          ANDROID_KEYSTORE_PATH: ${{ secrets.ANDROID_KEYSTORE_PATH }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          FENIX_RELEASE_CALLBACK_SECRET: ${{ secrets.FENIX_RELEASE_CALLBACK_SECRET }}
+          FENIX_RELEASE_CALLBACK_URL: ${{ secrets.FENIX_RELEASE_CALLBACK_URL }}
+        run: node --experimental-strip-types workers/release/run.mjs --job "${{ inputs.job_id }}" --platform android --step "${{ inputs.step }}" --intent "${{ inputs.intent_id }}"

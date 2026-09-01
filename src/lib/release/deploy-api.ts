@@ -1,9 +1,20 @@
 import { appleJwt, googleAccessToken, releaseFetch } from "./store-api.ts";
 
-export type DeployCheck = { ok: true; id?: string; state?: string } | { ok: false; error: string };
+export { setReleaseFetchForTest } from "./store-api.ts";
+
+export type DeployCheck = {
+  ok: true;
+  id?: string;
+  state?: string;
+  url?: string;
+} | { ok: false; error: string };
 
 function auth(token: string): HeadersInit {
   return { Authorization: `Bearer ${token}`, Accept: "application/json" };
+}
+
+function asUrl(body: { ssl_url?: string; url?: string; deploy_ssl_url?: string }): string | undefined {
+  return body.ssl_url || body.deploy_ssl_url || body.url || undefined;
 }
 
 export async function netlifyFindOrCreateSite(
@@ -15,7 +26,10 @@ export async function netlifyFindOrCreateSite(
     const got = await releaseFetch(`https://api.netlify.com/api/v1/sites/${existingId}`, {
       headers: auth(token),
     });
-    if (got.ok) return { ok: true, id: existingId };
+    if (got.ok) {
+      const body = (await got.json().catch(() => ({}))) as { id?: string; ssl_url?: string; url?: string };
+      return { ok: true, id: existingId, url: asUrl(body) };
+    }
   }
   let list: Response;
   try {
@@ -32,9 +46,14 @@ export async function netlifyFindOrCreateSite(
     };
   }
   if (list.ok) {
-    const sites = (await list.json().catch(() => [])) as { id?: string; name?: string }[];
+    const sites = (await list.json().catch(() => [])) as {
+      id?: string;
+      name?: string;
+      ssl_url?: string;
+      url?: string;
+    }[];
     const match = Array.isArray(sites) ? sites.find((s) => s.name === name) : undefined;
-    if (match?.id) return { ok: true, id: match.id };
+    if (match?.id) return { ok: true, id: match.id, url: asUrl(match) };
   }
   let created: Response;
   try {
@@ -52,9 +71,9 @@ export async function netlifyFindOrCreateSite(
       error: "Netlify non ha creato il sito. Serve ruolo Owner o Developer.",
     };
   }
-  const body = (await created.json().catch(() => ({}))) as { id?: string };
+  const body = (await created.json().catch(() => ({}))) as { id?: string; ssl_url?: string; url?: string };
   if (!body.id) return { ok: false, error: "Netlify ha creato un sito senza id." };
-  return { ok: true, id: body.id };
+  return { ok: true, id: body.id, url: asUrl(body) };
 }
 
 export async function netlifyListDeploys(
@@ -71,10 +90,16 @@ export async function netlifyListDeploys(
     return { ok: false, error: "Netlify non risponde sull'elenco deploy." };
   }
   if (!res.ok) return { ok: true };
-  const body = (await res.json().catch(() => [])) as { id?: string; state?: string; title?: string }[];
+  const body = (await res.json().catch(() => [])) as {
+    id?: string;
+    state?: string;
+    title?: string;
+    ssl_url?: string;
+    url?: string;
+  }[];
   const rows = Array.isArray(body) ? body : [];
-  const match = title ? rows.find((d) => d.title === title && d.id) : rows[0];
-  if (match?.id) return { ok: true, id: match.id, state: match.state };
+  const match = title ? rows.find((d) => d.title === title && d.id) : undefined;
+  if (match?.id) return { ok: true, id: match.id, state: match.state, url: asUrl(match) };
   return { ok: true };
 }
 
@@ -115,9 +140,14 @@ export async function netlifyCreateDeploy(
   if (!res.ok) {
     return { ok: false, error: `Netlify deploy ${res.status}. Riprova senza duplicare.` };
   }
-  const body = (await res.json().catch(() => ({}))) as { id?: string; state?: string };
+  const body = (await res.json().catch(() => ({}))) as {
+    id?: string;
+    state?: string;
+    ssl_url?: string;
+    url?: string;
+  };
   if (!body.id) return { ok: false, error: "Netlify ha avviato un deploy senza id." };
-  return { ok: true, id: body.id, state: body.state };
+  return { ok: true, id: body.id, state: body.state, url: asUrl(body) };
 }
 
 export async function netlifyGetDeploy(token: string, deployId: string): Promise<DeployCheck> {
@@ -130,13 +160,19 @@ export async function netlifyGetDeploy(token: string, deployId: string): Promise
     return { ok: false, error: "Netlify non risponde sullo stato del deploy." };
   }
   if (!res.ok) return { ok: false, error: `Netlify deploy ${res.status}.` };
-  const body = (await res.json().catch(() => ({}))) as { id?: string; state?: string };
-  return { ok: true, id: body.id || deployId, state: body.state };
+  const body = (await res.json().catch(() => ({}))) as {
+    id?: string;
+    state?: string;
+    ssl_url?: string;
+    url?: string;
+  };
+  return { ok: true, id: body.id || deployId, state: body.state, url: asUrl(body) };
 }
 
 export async function appleListLatestBuild(
   creds: { issuerId: string; keyId: string; privateKey: string },
   appId: string,
+  identity?: { versionName?: string; build?: string },
 ): Promise<DeployCheck> {
   let token: string;
   try {
@@ -144,8 +180,12 @@ export async function appleListLatestBuild(
   } catch {
     return { ok: false, error: "Chiave API Apple non valida sul poll TestFlight." };
   }
-  const url =
-    "https://api.appstoreconnect.apple.com/v1/builds?limit=1&filter[app]=" + encodeURIComponent(appId);
+  const params = new URLSearchParams();
+  params.set("filter[app]", appId);
+  params.set("limit", "20");
+  if (identity?.build) params.set("filter[version]", identity.build);
+  if (identity?.versionName) params.set("filter[preReleaseVersion.version]", identity.versionName);
+  const url = "https://api.appstoreconnect.apple.com/v1/builds?" + params.toString();
   let res: Response;
   try {
     res = await releaseFetch(url, {
@@ -158,11 +198,14 @@ export async function appleListLatestBuild(
     return { ok: false, error: `App Store Connect processing ${res.status}.` };
   }
   const body = (await res.json().catch(() => ({}))) as {
-    data?: { id?: string; attributes?: { processingState?: string } }[];
+    data?: { id?: string; attributes?: { processingState?: string; version?: string } }[];
   };
-  const row = body.data?.[0];
-  const state = row?.attributes?.processingState;
-  return { ok: true, id: row?.id, state };
+  const rows = Array.isArray(body.data) ? body.data : [];
+  const match = identity?.build
+    ? rows.find((r) => String(r.attributes?.version || "") === String(identity.build))
+    : undefined;
+  if (!match) return { ok: true };
+  return { ok: true, id: match.id, state: match.attributes?.processingState };
 }
 
 export async function playInsertEdit(
@@ -193,17 +236,61 @@ export async function playInsertEdit(
   return { ok: true, id: body.id };
 }
 
+export async function playDeleteEdit(rawJson: string, packageName: string, editId: string): Promise<void> {
+  const token = await googleAccessToken(rawJson);
+  if (typeof token !== "string") return;
+  const url =
+    "https://androidpublisher.googleapis.com/androidpublisher/v3/applications/" +
+    encodeURIComponent(packageName) +
+    "/edits/" +
+    encodeURIComponent(editId);
+  try {
+    await releaseFetch(url, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } });
+  } catch {
+    /* let the edit expire */
+  }
+}
+
+async function playListBundles(
+  token: string,
+  packageName: string,
+  editId: string,
+  expectedVersion?: string,
+): Promise<DeployCheck> {
+  const url =
+    "https://androidpublisher.googleapis.com/androidpublisher/v3/applications/" +
+    encodeURIComponent(packageName) +
+    "/edits/" +
+    encodeURIComponent(editId) +
+    "/bundles";
+  let res: Response;
+  try {
+    res = await releaseFetch(url, { headers: { Authorization: `Bearer ${token}` } });
+  } catch {
+    return { ok: true };
+  }
+  if (!res.ok) return { ok: true };
+  const body = (await res.json().catch(() => ({}))) as {
+    bundles?: { versionCode?: number | string }[];
+  };
+  const bundles = Array.isArray(body.bundles) ? body.bundles : [];
+  if (expectedVersion) {
+    const hit = bundles.find((b) => String(b.versionCode) === String(expectedVersion));
+    if (hit?.versionCode != null) return { ok: true, id: String(hit.versionCode) };
+  }
+  return { ok: true };
+}
+
 export async function playUploadBundle(
   rawJson: string,
   packageName: string,
   editId: string,
   aab: Uint8Array,
-  existingVersion?: string,
+  expectedVersion?: string,
 ): Promise<DeployCheck> {
-  if (existingVersion) return { ok: true, id: existingVersion };
   const token = await googleAccessToken(rawJson);
   if (typeof token !== "string") return { ok: false, error: token.error };
-  const listed = await playListBundles(token, packageName, editId);
+  const listed = await playListBundles(token, packageName, editId, expectedVersion);
   if (listed.ok && listed.id) return listed;
   const url =
     "https://androidpublisher.googleapis.com/androidpublisher/v3/applications/" +
@@ -226,34 +313,59 @@ export async function playUploadBundle(
   }
   if (!res.ok) return { ok: false, error: "Play Console ha rifiutato l'AAB. Ruolo Release Manager." };
   const body = (await res.json().catch(() => ({}))) as { versionCode?: number | string };
-  const code = body.versionCode != null ? String(body.versionCode) : "1";
+  const code = body.versionCode != null ? String(body.versionCode) : undefined;
+  if (!code) return { ok: false, error: "Play Console ha caricato un AAB senza versionCode." };
   return { ok: true, id: code };
 }
 
-async function playListBundles(
-  token: string,
+function trackHasVersion(
+  body: { releases?: { status?: string; versionCodes?: (string | number)[] }[] },
+  versionCode: string,
+): { found: boolean; status?: string } {
+  const releases = Array.isArray(body.releases) ? body.releases : [];
+  for (const rel of releases) {
+    const codes = (rel.versionCodes || []).map((c) => String(c));
+    if (codes.includes(String(versionCode))) return { found: true, status: rel.status };
+  }
+  return { found: false };
+}
+
+export async function playGetInternalTrack(
+  rawJson: string,
   packageName: string,
-  editId: string,
+  versionCode?: string,
 ): Promise<DeployCheck> {
+  const token = await googleAccessToken(rawJson);
+  if (typeof token !== "string") return { ok: false, error: token.error };
+  const edit = await playInsertEdit(rawJson, packageName);
+  if (!edit.ok) return edit;
+  if (!edit.id) return { ok: false, error: "Play Console ha aperto un edit senza id." };
   const url =
     "https://androidpublisher.googleapis.com/androidpublisher/v3/applications/" +
     encodeURIComponent(packageName) +
     "/edits/" +
-    encodeURIComponent(editId) +
-    "/bundles";
+    encodeURIComponent(edit.id) +
+    "/tracks/internal";
   let res: Response;
   try {
     res = await releaseFetch(url, { headers: { Authorization: `Bearer ${token}` } });
   } catch {
-    return { ok: true };
+    await playDeleteEdit(rawJson, packageName, edit.id);
+    return { ok: false, error: "Play Console non risponde sul canale internal." };
   }
-  if (!res.ok) return { ok: true };
   const body = (await res.json().catch(() => ({}))) as {
-    bundles?: { versionCode?: number | string }[];
+    releases?: { status?: string; versionCodes?: (string | number)[] }[];
   };
-  const code = body.bundles?.[0]?.versionCode;
-  if (code == null) return { ok: true };
-  return { ok: true, id: String(code) };
+  await playDeleteEdit(rawJson, packageName, edit.id);
+  if (res.status === 404) return { ok: true, state: "pending" };
+  if (!res.ok) return { ok: false, error: `Play internal ${res.status}.` };
+  if (versionCode) {
+    const hit = trackHasVersion(body, versionCode);
+    if (!hit.found) return { ok: true, state: "pending" };
+    return { ok: true, state: hit.status || "completed", id: versionCode };
+  }
+  const status = body.releases?.[0]?.status || "pending";
+  return { ok: true, state: status };
 }
 
 export async function playCommitInternal(
@@ -279,11 +391,12 @@ export async function playCommitInternal(
     }),
   });
   if (!track.ok) {
-    const text = await track.text().catch(() => "");
-    if (/already committed|no longer valid|no longer active/i.test(text) || track.status === 404) {
-      return { ok: true, id: editId, state: "completed" };
-    }
-    return { ok: false, error: "Play Console non ha aggiornato il canale internal." };
+    const verified = await playGetInternalTrack(rawJson, packageName, versionCode);
+    if (verified.ok && verified.state === "completed") return verified;
+    return {
+      ok: false,
+      error: "Play Console non ha aggiornato il canale internal con questo versionCode.",
+    };
   }
   const commitUrl =
     "https://androidpublisher.googleapis.com/androidpublisher/v3/applications/" +
@@ -296,36 +409,9 @@ export async function playCommitInternal(
     headers: { Authorization: `Bearer ${token}` },
   });
   if (!commit.ok) {
-    const text = await commit.text().catch(() => "");
-    if (/already committed|no longer valid|no longer active/i.test(text) || commit.status === 404) {
-      return { ok: true, id: editId, state: "completed" };
-    }
-    return { ok: false, error: "Play Console non ha chiuso l'edit internal." };
+    const verified = await playGetInternalTrack(rawJson, packageName, versionCode);
+    if (verified.ok && verified.state === "completed") return verified;
+    return { ok: false, error: "Play Console non ha chiuso l'edit internal con questo versionCode." };
   }
   return { ok: true, id: editId, state: "completed" };
-}
-
-export async function playGetInternalTrack(
-  rawJson: string,
-  packageName: string,
-): Promise<DeployCheck> {
-  const token = await googleAccessToken(rawJson);
-  if (typeof token !== "string") return { ok: false, error: token.error };
-  const url =
-    "https://androidpublisher.googleapis.com/androidpublisher/v3/applications/" +
-    encodeURIComponent(packageName) +
-    "/tracks/internal";
-  let res: Response;
-  try {
-    res = await releaseFetch(url, { headers: { Authorization: `Bearer ${token}` } });
-  } catch {
-    return { ok: false, error: "Play Console non risponde sul canale internal." };
-  }
-  if (res.status === 404) return { ok: true, state: "pending" };
-  if (!res.ok) return { ok: false, error: `Play internal ${res.status}.` };
-  const body = (await res.json().catch(() => ({}))) as {
-    releases?: { status?: string }[];
-  };
-  const status = body.releases?.[0]?.status || "completed";
-  return { ok: true, state: status };
 }
