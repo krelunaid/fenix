@@ -1,4 +1,4 @@
-import { History, RotateCcw, X } from "lucide-react";
+import { GitFork, History, RotateCcw, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatRevisionAge, listRevisions } from "@/lib/projects/revisions";
 import type { Project } from "@/lib/projects/types";
@@ -9,11 +9,13 @@ export function RevisionPanel({
   onClose,
   project,
   onRestore,
+  onBranch,
 }: {
   open: boolean;
   onClose: () => void;
   project: Project;
   onRestore: (revisionId: string) => void;
+  onBranch: (revisionId: string) => void;
 }) {
   if (!open) return null;
   const revisions = listRevisions(project);
@@ -35,11 +37,15 @@ export function RevisionPanel({
             <p className="font-mono text-xs tracking-[0.16em] text-muted-foreground uppercase">
               Versioni
             </p>
-            <h2 id="versions-title" className="mt-2 font-display text-2xl tracking-tight sm:text-3xl">
+            <h2
+              id="versions-title"
+              className="mt-2 font-display text-2xl tracking-tight sm:text-3xl"
+            >
               Cotture precedenti
             </h2>
             <p className="mt-2 max-w-prose text-sm text-muted-foreground">
-              Ripristina se la rifinitura ha preso una piega sbagliata. L'attuale resta in elenco.
+              Ripristina qui oppure crea un ramo indipendente. Il ramo copia codice e file, non
+              dati, messaggi o deploy.
             </p>
           </div>
           <Button variant="ghost" size="icon-sm" onClick={onClose} aria-label="Chiudi versioni">
@@ -72,17 +78,29 @@ export function RevisionPanel({
                         {` · ${rev.files.length} file`}
                       </p>
                     </div>
-                    <Button
-                      variant={current ? "ghost" : "secondary"}
-                      size="sm"
-                      className="min-h-11 shrink-0"
-                      disabled={current}
-                      onClick={() => onRestore(rev.id)}
-                      aria-label={current ? "Versione in uso" : `Ripristina ${rev.label}`}
-                    >
-                      <RotateCcw />
-                      Ripristina
-                    </Button>
+                    <div className="flex shrink-0 flex-col gap-2 sm:flex-row">
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        className="min-h-11"
+                        onClick={() => onBranch(rev.id)}
+                        aria-label={`Crea ramo da ${rev.label}`}
+                      >
+                        <GitFork />
+                        Ramo
+                      </Button>
+                      <Button
+                        variant={current ? "ghost" : "secondary"}
+                        size="sm"
+                        className="min-h-11"
+                        disabled={current}
+                        onClick={() => onRestore(rev.id)}
+                        aria-label={current ? "Versione in uso" : `Ripristina ${rev.label}`}
+                      >
+                        <RotateCcw />
+                        Ripristina
+                      </Button>
+                    </div>
                   </div>
                 </li>
               );

@@ -4,7 +4,19 @@ import type { Palette, Project, ProjectRevision, RevisionSource } from "./types.
 
 export const MAX_REVISIONS = 16;
 
-const REVISION_KEYS = ["id", "at", "source", "label", "hash", "html", "files", "name", "tagline", "summary", "palette"] as const;
+const REVISION_KEYS = [
+  "id",
+  "at",
+  "source",
+  "label",
+  "hash",
+  "html",
+  "files",
+  "name",
+  "tagline",
+  "summary",
+  "palette",
+] as const;
 
 export type CommitMeta = {
   source: RevisionSource;
@@ -22,15 +34,25 @@ function fnv1a(text: string): string {
   return (h >>> 0).toString(16).padStart(8, "0");
 }
 
-export function revisionHash(input: { html: string; files: ProjectFile[]; name: string; palette: Palette }): string {
+export function revisionHash(input: {
+  html: string;
+  files: ProjectFile[];
+  name: string;
+  palette: Palette;
+}): string {
   const files = [...input.files]
     .map((f) => `${f.path}\n${f.content}`)
     .sort()
     .join("\n--\n");
-  return fnv1a(`${input.name}\n${input.palette.bg}\n${input.palette.accent}\n${input.html}\n${files}`);
+  return fnv1a(
+    `${input.name}\n${input.palette.bg}\n${input.palette.accent}\n${input.html}\n${files}`,
+  );
 }
 
-export function captureRevision(project: Pick<Project, "html" | "files" | "name" | "tagline" | "summary" | "palette">, meta: CommitMeta): ProjectRevision | null {
+export function captureRevision(
+  project: Pick<Project, "html" | "files" | "name" | "tagline" | "summary" | "palette">,
+  meta: CommitMeta,
+): ProjectRevision | null {
   const html = String(project.html || "").trim();
   if (!html) return null;
   const files = projectFiles({ html, files: project.files });
@@ -85,6 +107,44 @@ export function restoreProjectRevision(project: Project, revisionId: string): Pr
   return commitIfChanged(applied, {
     source: "restore",
     label: `Ripristino · ${match.label}`,
+  });
+}
+
+/**
+ * Fork one immutable cottura into a clean project branch. Code and files move
+ * together; chat, app data, worker state and deploy identity intentionally do not.
+ */
+export function branchProjectRevision(
+  project: Project,
+  revisionId: string,
+  meta: { id?: string; at?: number } = {},
+): Project | null {
+  const match = (project.revisions || []).find((revision) => revision.id === revisionId);
+  if (!match) return null;
+  const at = meta.at ?? Date.now();
+  const branch: Project = {
+    id: meta.id || uid(),
+    name: `${match.name || project.name} · ramo`,
+    tagline: match.tagline,
+    prompt: project.prompt,
+    kind: project.kind,
+    requestedKind: project.requestedKind || project.kind,
+    summary: match.summary,
+    direction: project.direction,
+    palette: { ...match.palette },
+    html: match.html,
+    files: match.files.map((file) => ({ ...file })),
+    messages: [],
+    buildLog: [],
+    status: "ready",
+    createdAt: at,
+    updatedAt: at,
+    branchFrom: { projectId: project.id, revisionId: match.id },
+  };
+  return commitIfChanged(branch, {
+    source: "manual",
+    label: `Ramo · ${match.label}`,
+    at,
   });
 }
 

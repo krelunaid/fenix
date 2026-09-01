@@ -12,13 +12,15 @@ export type LedgerRow = {
 export const QUALITY_LEDGER: LedgerRow[] = [
   {
     id: "contract-schema",
-    claim: "BuildContract v1 tipizzato: kind, intent, screens/route, entità, journeys, acceptance, visual DNA, a11y/sicurezza/responsive, file tree.",
+    claim:
+      "BuildContract v1 tipizzato: kind, intent, screens/route, entità, journeys, acceptance, visual DNA, a11y/sicurezza/responsive, file tree.",
     evidence: "src/lib/ai/build-contract.test.ts · parseContract(planContract) su 3 famiglie",
     ok: true,
   },
   {
     id: "roles",
-    claim: "Ruoli planner/visual/builder/critic/repairer sullo stesso grok-build-0.1. Ricevute sintetiche, niente CoT, niente reasoningEffort.",
+    claim:
+      "Ruoli planner/visual/builder/critic/repairer sullo stesso grok-build-0.1. Ricevute sintetiche, niente CoT, niente reasoningEffort.",
     evidence: "src/lib/ai/build-contract.ts ROLE_LABEL + fenix-qa.test.ts grok-build-0.1",
     ok: true,
   },
@@ -30,8 +32,10 @@ export const QUALITY_LEDGER: LedgerRow[] = [
   },
   {
     id: "shared-protocol",
-    claim: "Prompt e contratto condivisi tra API build e Netlify Edge. Repair max 2. Worker resta grok-build-0.1 senza chiamate extra.",
-    evidence: "prompts.shared.ts PLAN/REPAIR; api/build.ts + edge build.ts planContract; BOOT_REPAIR_MAX=2",
+    claim:
+      "Prompt e contratto condivisi tra API build e Netlify Edge. Repair max 2. Worker resta grok-build-0.1 senza chiamate extra.",
+    evidence:
+      "prompts.shared.ts PLAN/REPAIR; api/build.ts + edge build.ts planContract; BOOT_REPAIR_MAX=2",
     ok: true,
   },
   {
@@ -48,50 +52,70 @@ export const QUALITY_LEDGER: LedgerRow[] = [
   },
   {
     id: "eval-multifile",
-    claim: "Dashboard multi-file: index.html collega css/theme.css e js/app.js; il runtime legge data/ordini.json, niente secret.",
+    claim:
+      "Dashboard multi-file: index.html collega css/theme.css e js/app.js; il runtime legge data/ordini.json, niente secret.",
     evidence: "src/lib/ai/build-contract.test.ts fixture dashboard-multifile (DASHBOARD_MOCK)",
     ok: true,
   },
   {
     id: "eval-negative",
-    claim: "Gate negativi: secret, eval, kind-lock tabbar su dashboard, iOS cheap. Contratto blocking ferma t:ok/ready/Pubblica.",
-    evidence: "src/lib/ai/build-contract.test.ts rejects + false-positive gates closed (eval/secret/CRUD)",
+    claim:
+      "Gate negativi: secret, eval, kind-lock tabbar su dashboard, iOS cheap. Contratto blocking ferma t:ok/ready/Pubblica.",
+    evidence:
+      "src/lib/ai/build-contract.test.ts rejects + false-positive gates closed (eval/secret/CRUD)",
     ok: true,
   },
   {
     id: "files-tree",
-    claim: "File obbligatori del contratto devono esistere. CSS, JS e dati mock sono richiesti solo se il brief domanda dati mock/API locale/multi-file. La sola parola «ordini» non inventa file. Un runtime incompleto fallisce; l'albero completo passa.",
+    claim:
+      "File obbligatori del contratto devono esistere. CSS, JS e dati mock sono richiesti solo se il brief domanda dati mock/API locale/multi-file. La sola parola «ordini» non inventa file. Un runtime incompleto fallisce; l'albero completo passa.",
     evidence: "src/lib/ai/build-contract.test.ts requested runtime files missing/complete",
     ok: true,
   },
   {
     id: "multifile-runtime",
-    claim: "CSS/JS locali referenziati da index.html e fetch di dati del tree diventano un artifact singolo riproducibile. Script non referenziati, traversal e URL esterni non vengono incorporati.",
-    evidence: "src/lib/projects/files.test.ts bundle multi-file + src/components/publish-panel.tsx publishedHtml",
+    claim:
+      "CSS/JS locali referenziati da index.html e fetch di dati del tree diventano un artifact singolo riproducibile. Script non referenziati, traversal e URL esterni non vengono incorporati.",
+    evidence:
+      "src/lib/projects/files.test.ts bundle multi-file + src/components/publish-panel.tsx publishedHtml",
     ok: true,
   },
   {
     id: "aa-fail-closed",
-    claim: "AA fail-closed: palette assente o contrasto < 4.5 (anche body #777/#777) blocca. Niente 'palette assente ⇒ ok'.",
+    claim:
+      "AA fail-closed: palette assente o contrasto < 4.5 (anche body #777/#777) blocca. Niente 'palette assente ⇒ ok'.",
     evidence: "src/lib/ai/build-contract.test.ts AA fail-closed; extractColorPair",
     ok: true,
   },
   {
     id: "budget",
-    claim: "Critic LLM saltato se i gate statici passano; desk e iterate non pagano un secondo giro. Planner 0 token.",
+    claim:
+      "Critic LLM saltato se i gate statici passano; desk e iterate non pagano un secondo giro. Planner 0 token.",
     evidence: "src/lib/ai/build-contract.test.ts criticBudget static-ok/desk/iterate",
     ok: true,
   },
   {
     id: "browser-dtm",
-    claim: "D/T/M: console 0, overflow ≤8, focus visibile (outline/box-shadow) e target ≥24px misurati in Chromium sul srcdoc (runtime Fenix + kit preview). Screenshot + manifest sha256 in src/lib/ai/fixtures/dtm (presenza e peso, non pixel-hash in CI). Claim ridotto da 44px: 24px è la soglia asserita.",
-    evidence: "src/lib/ai/build-contract-browser.test.ts viewports 1280/768/390 + fixtures/dtm/manifest.json",
+    claim:
+      "D/T/M: console 0, overflow ≤8, focus visibile (outline/box-shadow) e target ≥24px misurati in Chromium sul srcdoc (runtime Fenix + kit preview). Screenshot + manifest sha256 in src/lib/ai/fixtures/dtm (presenza e peso, non pixel-hash in CI). Claim ridotto da 44px: 24px è la soglia asserita.",
+    evidence:
+      "src/lib/ai/build-contract-browser.test.ts viewports 1280/768/390 + fixtures/dtm/manifest.json",
     ok: true,
   },
   {
     id: "generated-ui-regressions",
-    claim: "Output generato: CSS visibile bloccato e riparato per selettori generici; gestionali con schema coerente e controlli rifiniti; app con tabbar fissa, altezza invariabile, safe area e palette calda fangosa normalizzata.",
-    evidence: "validate-html.test.ts generic CSS leak · dashboard-crud.test.ts client schema/style · preview-contrast.test.ts 5 tab × 390/430",
+    claim:
+      "Output generato: CSS visibile bloccato e riparato per selettori generici; gestionali con schema coerente e controlli rifiniti; app con tabbar fissa, altezza invariabile, safe area e palette calda fangosa normalizzata.",
+    evidence:
+      "validate-html.test.ts generic CSS leak · dashboard-crud.test.ts client schema/style · preview-contrast.test.ts 5 tab × 390/430",
+    ok: true,
+  },
+  {
+    id: "revision-branches",
+    claim:
+      "Qualsiasi cottura crea un progetto ramo indipendente con HTML e file esatti. Dati, chat, job e identità di deploy restano nel progetto sorgente.",
+    evidence:
+      "revisions.test.ts branch isolation + revisions-browser.test.ts D/T/M branch and rollback",
     ok: true,
   },
   {

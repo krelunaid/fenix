@@ -69,6 +69,8 @@ export type Project = {
   revisions?: ProjectRevision[];
   /** Id della revisione attualmente in anteprima. */
   revisionId?: string;
+  /** Provenienza di un ramo. Solo identificatori locali, mai dati o credenziali. */
+  branchFrom?: { projectId: string; revisionId: string };
   /** Snapshot pubblico dopo una pubblicazione riuscita. Mai inventato. */
   publishedId?: string;
 };

@@ -1,6 +1,15 @@
 import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { ArrowLeft, Check, Code2, FolderGit2, Globe, Monitor, Smartphone, Tablet } from "lucide-react";
+import {
+  ArrowLeft,
+  Check,
+  Code2,
+  FolderGit2,
+  Globe,
+  Monitor,
+  Smartphone,
+  Tablet,
+} from "lucide-react";
 import { BuildOverlay } from "@/components/build-overlay";
 import { PreviewFrame, type Device } from "@/components/preview-frame";
 import { PublishPanel } from "@/components/publish-panel";
@@ -36,6 +45,7 @@ function StudioPage() {
   const project = useProjectStore((s) => s.projects.find((p) => p.id === projectId));
   const addMessage = useProjectStore((s) => s.addMessage);
   const restoreRevision = useProjectStore((s) => s.restoreRevision);
+  const branchRevision = useProjectStore((s) => s.branchRevision);
   const updateProject = useProjectStore((s) => s.updateProject);
   const [device, setDevice] = useState<Device>(previewDevice(project?.kind));
   const [pane, setPane] = useState<Pane>("preview");
@@ -76,10 +86,7 @@ function StudioPage() {
     if (project?.kind) setDevice(previewDevice(project.kind));
   }, [project?.kind]);
 
-  const paletteStrip = useMemo(
-    () => (project ? Object.values(project.palette) : []),
-    [project],
-  );
+  const paletteStrip = useMemo(() => (project ? Object.values(project.palette) : []), [project]);
 
   function handleIterate(text = draft) {
     const next = text.trim();
@@ -190,9 +197,7 @@ function StudioPage() {
                 : []
             }
             onSuggest={handleIterate}
-            onRetry={() =>
-              canResume ? void resumePolish(project.id) : void runBuild(project.id)
-            }
+            onRetry={() => (canResume ? void resumePolish(project.id) : void runBuild(project.id))}
             retryLabel={canResume ? "Riprendi rifinitura" : "Riprova. Lo ricostruisco."}
             threadRef={threadRef}
             palette={paletteStrip}
@@ -248,16 +253,16 @@ function StudioPage() {
               building={building}
               errored={project.status === "error"}
               onSubmit={handleIterate}
-            suggestions={
-              project.status === "ready" && !building
-                ? suggestEdits(project.prompt, project.name)
-                : []
-            }
-            onSuggest={handleIterate}
+              suggestions={
+                project.status === "ready" && !building
+                  ? suggestEdits(project.prompt, project.name)
+                  : []
+              }
+              onSuggest={handleIterate}
               onRetry={() =>
-              canResume ? void resumePolish(project.id) : void runBuild(project.id)
-            }
-            retryLabel={canResume ? "Riprendi rifinitura" : "Riprova. Lo ricostruisco."}
+                canResume ? void resumePolish(project.id) : void runBuild(project.id)
+              }
+              retryLabel={canResume ? "Riprendi rifinitura" : "Riprova. Lo ricostruisco."}
               threadRef={threadRef}
               palette={paletteStrip}
               buildLog={project.buildLog ?? []}
@@ -312,10 +317,7 @@ function StudioPage() {
             key={id}
             type="button"
             onClick={() => setPane(id)}
-            className={cn(
-              "flex-1 text-sm text-muted-foreground",
-              pane === id && "text-foreground",
-            )}
+            className={cn("flex-1 text-sm text-muted-foreground", pane === id && "text-foreground")}
           >
             {label}
           </button>
@@ -328,6 +330,12 @@ function StudioPage() {
         project={project}
         onRestore={(revisionId) => {
           if (restoreRevision(project.id, revisionId)) setVersionsOpen(false);
+        }}
+        onBranch={(revisionId) => {
+          const branch = branchRevision(project.id, revisionId);
+          if (!branch) return;
+          setVersionsOpen(false);
+          void navigate({ to: "/studio/$projectId", params: { projectId: branch.id } });
         }}
       />
       <ExportPanel
@@ -499,7 +507,12 @@ function ChatColumn({
             }}
           />
           <div className="mt-1 flex justify-end">
-            <Button type="submit" variant="ink" size="sm" disabled={building || emptyCredits || draft.trim().length < 2}>
+            <Button
+              type="submit"
+              variant="ink"
+              size="sm"
+              disabled={building || emptyCredits || draft.trim().length < 2}
+            >
               Invia
             </Button>
           </div>
@@ -545,7 +558,5 @@ function CodePane({
     );
   }
 
-  return (
-    <FileTree files={ordered} activePath={current.path} onSelect={setActive} />
-  );
+  return <FileTree files={ordered} activePath={current.path} onSelect={setActive} />;
 }

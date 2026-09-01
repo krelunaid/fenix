@@ -77,8 +77,8 @@ function readyProject(): Project {
   );
 }
 
-describe("studio versions rollback", () => {
-  it("restores an older cottura from the Versioni panel on desktop, tablet and phone", async () => {
+describe("studio version branches and rollback", () => {
+  it("branches and restores an older cottura on desktop, tablet and phone", async () => {
     await requirePreview();
     const browser = await chromium.launch({ headless: true, args: ["--no-sandbox"] });
     const project = readyProject();
@@ -91,7 +91,10 @@ describe("studio versions rollback", () => {
       ] as const) {
         const page = await browser.newPage({ viewport });
         await seed(page, project);
-        await page.goto(`${PREVIEW}/studio/${project.id}`, { waitUntil: "domcontentloaded", timeout: 20000 });
+        await page.goto(`${PREVIEW}/studio/${project.id}`, {
+          waitUntil: "domcontentloaded",
+          timeout: 20000,
+        });
         const versions = page.getByRole("button", { name: /^Versioni$/ });
         await versions.waitFor({ timeout: 8000 });
         const box = await versions.boundingBox();
@@ -102,7 +105,54 @@ describe("studio versions rollback", () => {
         await shot(page, `versions-${name}.png`);
         assert.ok(await dialog.getByText("Rifinitura").count());
         assert.ok(await dialog.getByText("Pronto").count());
-        const restore = dialog.getByRole("button", { name: /Ripristina Pronto/i });
+        const branchButton = dialog.getByRole("button", { name: /Crea ramo da Pronto/i });
+        const branchBox = await branchButton.boundingBox();
+        assert.ok(branchBox && branchBox.height >= 44, `${name} Ramo target too small`);
+        await branchButton.click();
+        await page.waitForURL(
+          (url) => url.pathname.startsWith("/studio/") && !url.pathname.endsWith(project.id),
+          {
+            timeout: 5000,
+          },
+        );
+        const branchProof = await page.evaluate((sourceId) => {
+          const raw = localStorage.getItem("officina-projects");
+          if (!raw) return null;
+          const parsed = JSON.parse(raw) as {
+            state?: {
+              projects?: Array<{
+                id: string;
+                html: string;
+                files?: Array<{ path: string }>;
+                branchFrom?: { projectId: string; revisionId: string };
+              }>;
+            };
+          };
+          const projects = parsed.state?.projects || [];
+          const branch = projects.find((candidate) => candidate.branchFrom?.projectId === sourceId);
+          return branch
+            ? {
+                count: projects.length,
+                html: branch.html,
+                paths: (branch.files || []).map((file) => file.path),
+                from: branch.branchFrom,
+              }
+            : null;
+        }, project.id);
+        assert.ok(branchProof);
+        assert.equal(branchProof!.count, 2);
+        assert.match(branchProof!.html, /Prima cottura, prima della rifinitura/);
+        assert.deepEqual(branchProof!.paths, ["index.html"]);
+        assert.deepEqual(branchProof!.from, { projectId: project.id, revisionId: "rev-old" });
+
+        await page.goto(`${PREVIEW}/studio/${project.id}`, {
+          waitUntil: "domcontentloaded",
+          timeout: 20000,
+        });
+        await page.getByRole("button", { name: /^Versioni$/ }).click();
+        const restoredDialog = page.getByRole("dialog", { name: /Cotture precedenti/i });
+        await restoredDialog.waitFor({ timeout: 5000 });
+        const restore = restoredDialog.getByRole("button", { name: /Ripristina Pronto/i });
         await restore.click();
         await page.waitForTimeout(300);
         const html = await page.evaluate(() => {

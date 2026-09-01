@@ -7,6 +7,7 @@ import { projectFiles } from "./files.ts";
 import { FASE3_GAPS, fase3NowGaps } from "./fase3-gap.ts";
 import {
   MAX_REVISIONS,
+  branchProjectRevision,
   captureRevision,
   commitIfChanged,
   formatRevisionAge,
@@ -19,7 +20,10 @@ import { recoverPersistedProject } from "./recover.ts";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const SITE_A = readFileSync(join(here, "fixtures/music-site-no-fenix.html"), "utf8");
-const SITE_B = SITE_A.replace("Onda", "Onda Live").replace("Carica e ascolta i tuoi brani.", "Ascolta dal vivo.");
+const SITE_B = SITE_A.replace("Onda", "Onda Live").replace(
+  "Carica e ascolta i tuoi brani.",
+  "Ascolta dal vivo.",
+);
 
 function sample(over: Partial<Project> = {}): Project {
   const now = 1_720_000_000_000;
@@ -78,7 +82,12 @@ describe("project tree and revisions", () => {
   it("skips an identical second commit and caps the log", () => {
     let project = commitIfChanged(sample(), { source: "build", label: "Pronto", id: "r1", at: 1 });
     assert.equal(project.revisions?.length, 1);
-    const again = commitIfChanged(project, { source: "polish", label: "Rifinitura", id: "r2", at: 2 });
+    const again = commitIfChanged(project, {
+      source: "polish",
+      label: "Rifinitura",
+      id: "r2",
+      at: 2,
+    });
     assert.equal(again.revisions?.length, 1);
     assert.equal(again.revisionId, "r1");
     for (let i = 0; i < MAX_REVISIONS + 4; i++) {
@@ -92,8 +101,16 @@ describe("project tree and revisions", () => {
   });
 
   it("restore keeps later cotture so you can go forward again", () => {
-    let project = commitIfChanged(sample({ html: SITE_A }), { source: "build", label: "Pronto", id: "old", at: 1 });
-    project = commitIfChanged({ ...project, html: SITE_B, name: "Onda Live" }, { source: "polish", label: "Rifinitura", id: "new", at: 2 });
+    let project = commitIfChanged(sample({ html: SITE_A }), {
+      source: "build",
+      label: "Pronto",
+      id: "old",
+      at: 1,
+    });
+    project = commitIfChanged(
+      { ...project, html: SITE_B, name: "Onda Live" },
+      { source: "polish", label: "Rifinitura", id: "new", at: 2 },
+    );
     assert.equal(project.revisions?.length, 2);
     const restored = restoreProjectRevision(project, "old");
     assert.ok(restored);
@@ -108,10 +125,16 @@ describe("project tree and revisions", () => {
   });
 
   it("captures only the allowlisted keys and never job ids or messages", () => {
-    const rev = captureRevision(sample({ visualJobId: "job-secret", messages: [{ id: "m", role: "user", content: "sk-abc", at: 1 }] }), {
-      source: "build",
-      label: "Pronto",
-    });
+    const rev = captureRevision(
+      sample({
+        visualJobId: "job-secret",
+        messages: [{ id: "m", role: "user", content: "sk-abc", at: 1 }],
+      }),
+      {
+        source: "build",
+        label: "Pronto",
+      },
+    );
     assert.ok(rev);
     assert.equal(revisionHasOnlySafeKeys(rev!), true);
     assert.equal("visualJobId" in rev!, false);
@@ -120,6 +143,50 @@ describe("project tree and revisions", () => {
     const a = revisionHash({ html: SITE_A, files: [], name: "Onda", palette: DEFAULT_PALETTE });
     const b = revisionHash({ html: SITE_B, files: [], name: "Onda", palette: DEFAULT_PALETTE });
     assert.notEqual(a, b);
+  });
+
+  it("branches an exact cottura without copying data, chat, jobs or deploy identity", () => {
+    let source = commitIfChanged(sample({ html: SITE_A }), {
+      source: "build",
+      label: "Pronto",
+      id: "branch-old",
+      at: 1,
+    });
+    source = commitIfChanged(
+      {
+        ...source,
+        html: SITE_B,
+        files: [{ path: "index.html", content: SITE_B }],
+        messages: [{ id: "secret-message", role: "user", content: "dato privato", at: 2 }],
+        appData: { items: [{ private: true }] },
+        visualJobId: "worker-job",
+        visualJobStatus: "ok",
+        publishedId: "live-site",
+      },
+      { source: "polish", label: "Rifinitura", id: "branch-new", at: 2 },
+    );
+    const branch = branchProjectRevision(source, "branch-old", {
+      id: "project-branch",
+      at: 3,
+    });
+    assert.ok(branch);
+    assert.equal(branch!.id, "project-branch");
+    assert.deepEqual(branch!.branchFrom, {
+      projectId: source.id,
+      revisionId: "branch-old",
+    });
+    assert.equal(branch!.html, SITE_A.trim());
+    assert.equal(branch!.name, "Onda · ramo");
+    assert.equal(branch!.status, "ready");
+    assert.deepEqual(branch!.messages, []);
+    assert.deepEqual(branch!.buildLog, []);
+    assert.equal(branch!.appData, undefined);
+    assert.equal(branch!.visualJobId, undefined);
+    assert.equal(branch!.visualJobStatus, undefined);
+    assert.equal(branch!.publishedId, undefined);
+    assert.equal(branch!.revisions?.length, 1);
+    assert.match(branch!.revisions?.[0]?.label || "", /^Ramo · Pronto$/);
+    assert.equal(source.html, SITE_B);
   });
 
   it("recover keeps revisions on a ready project", () => {

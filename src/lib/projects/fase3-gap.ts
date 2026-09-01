@@ -22,7 +22,8 @@ export const FASE3_GAPS: Fase3Gap[] = [
     id: "revisions",
     area: "Iterazione / versioni / rollback",
     emergent: "Rollback e Fork: Ctrl+Z sulla cottura AI, duplica senza toccare il main.",
-    fenix: "Cotture fotografate (html+files). Ripristino CAS, max 16, niente job/secret nel log.",
+    fenix:
+      "Cotture fotografate (html+files). Ripristino CAS e ramo indipendente da qualsiasi cottura, max 16. Il ramo copia codice/file ma non dati, chat, job o deploy; niente secret nel log.",
     impact: "high",
     cost: "medium",
     slice: "now",
@@ -31,7 +32,8 @@ export const FASE3_GAPS: Fase3Gap[] = [
     id: "project-tree",
     area: "Progetti multi-file / full-stack",
     emergent: "Albero React/Next + backend Node/FastAPI + Mongo, file veri.",
-    fenix: "Albero POSIX durevole: ingest (no .., no assoluti, no secret/binari, 48 file / 1.5MB). Entrypoint index.html, migrazione HTML-only senza perdere kind/storage/publish. ZIP+fenix.json. Studio ispeziona l'albero D/T/M. CSS/JS locali esplicitamente referenziati e dati fetch vengono assemblati in un unico artifact validabile per preview, pubblicazione e wrapper nativi; file non referenziati non vengono eseguiti. Nessun server generato.",
+    fenix:
+      "Albero POSIX durevole: ingest (no .., no assoluti, no secret/binari, 48 file / 1.5MB). Entrypoint index.html, migrazione HTML-only senza perdere kind/storage/publish. ZIP+fenix.json. Studio ispeziona l'albero D/T/M. CSS/JS locali esplicitamente referenziati e dati fetch vengono assemblati in un unico artifact validabile per preview, pubblicazione e wrapper nativi; file non referenziati non vengono eseguiti. Nessun server generato.",
     impact: "high",
     cost: "high",
     slice: "now",
@@ -40,7 +42,8 @@ export const FASE3_GAPS: Fase3Gap[] = [
     id: "github-export",
     area: "Git / GitHub export",
     emergent: "Sync su repo dell'utente (Standard+), push/pull VS Code.",
-    fenix: "GitHub App server-only (Contents + Metadata): install/connect/status/disconnect owner-bound, cookie HttpOnly CSRF, nonce UNIQUE SQL. Token breve mai persistito. Export Git Data API blob→tree→commit→ref force=false su repo esistenti. ZIP locale resta. Pronto solo con App + DATABASE_URL (migrazione 0003); altrimenti «GitHub non configurato». Niente pull VS Code, niente token nel browser.",
+    fenix:
+      "GitHub App server-only (Contents + Metadata): install/connect/status/disconnect owner-bound, cookie HttpOnly CSRF, nonce UNIQUE SQL. Token breve mai persistito. Export Git Data API blob→tree→commit→ref force=false su repo esistenti. ZIP locale resta. Pronto solo con App + DATABASE_URL (migrazione 0003); altrimenti «GitHub non configurato». Niente pull VS Code, niente token nel browser.",
     impact: "high",
     cost: "medium",
     slice: "now",
@@ -49,7 +52,8 @@ export const FASE3_GAPS: Fase3Gap[] = [
     id: "backend-auth-api",
     area: "Backend / db / auth / API nelle app generate",
     emergent: "Auth (Google), DB, Stripe, API nel primo build.",
-    fenix: "Fenix.load/save IndexedDB nel runtime. Auth Fenix è del titolare, non dell'app generata. Mock JSON nel tree, niente server inventato.",
+    fenix:
+      "Fenix.load/save IndexedDB nel runtime. Auth Fenix è del titolare, non dell'app generata. Mock JSON nel tree, niente server inventato.",
     impact: "high",
     cost: "high",
     slice: "later",
@@ -94,7 +98,8 @@ export const FASE3_GAPS: Fase3Gap[] = [
     id: "quality",
     area: "Qualità generata",
     emergent: "Agente di test che ripara; output lento (45–60 min in prove terze).",
-    fenix: "Contratto di build v1 (planner deterministico, 0 token) + ruoli grok-build-0.1 con ricevute, niente CoT. Evaluator su 3 fixture (kiln CRUD, grottaglie mobile, kiln+mock multi-file). Gate condiviso API/Edge: blocking ContractCheck ferma t:ok/ready/Pubblica. File extra solo se il brief li chiede. AA fail-closed. Critic LLM saltato se i gate statici passano. Repair max 2. Regressivi visivi: CSS generico mai visibile, gestionali con entità/form coerenti e controlli rifiniti, tabbar app fissa e invariabile D/T/M, normalizzazione palette fangose. Ledger in quality-ledger.ts.",
+    fenix:
+      "Contratto di build v1 (planner deterministico, 0 token) + ruoli grok-build-0.1 con ricevute, niente CoT. Evaluator su 3 fixture (kiln CRUD, grottaglie mobile, kiln+mock multi-file). Gate condiviso API/Edge: blocking ContractCheck ferma t:ok/ready/Pubblica. File extra solo se il brief li chiede. AA fail-closed. Critic LLM saltato se i gate statici passano. Repair max 2. Regressivi visivi: CSS generico mai visibile, gestionali con entità/form coerenti e controlli rifiniti, tabbar app fissa e invariabile D/T/M, normalizzazione palette fangose. Ledger in quality-ledger.ts.",
     impact: "high",
     cost: "medium",
     slice: "now",

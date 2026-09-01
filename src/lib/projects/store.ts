@@ -10,7 +10,12 @@ import { validatePublishable, type HtmlReport } from "./validate-html";
 import { blocksPublish } from "../ai/build-contract";
 import { recoverPersistedProject, STALE_BUILD_MS, RESUME_ERROR } from "./recover";
 import { polishDashboardHtml, scrubTechMessages, shouldRepairDashboard } from "./dashboard-crud";
-import { replaceAppleTabIcons, rewriteIosWidgetHome, stripPhoneChromeFromSite, ensureMainElementId } from "./craft-icons";
+import {
+  replaceAppleTabIcons,
+  rewriteIosWidgetHome,
+  stripPhoneChromeFromSite,
+  ensureMainElementId,
+} from "./craft-icons";
 import { repairLeakedCss } from "./color-scheme";
 import {
   DEFAULT_PALETTE,
@@ -20,7 +25,7 @@ import {
   type Project,
   type ProjectKind,
 } from "./types";
-import { commitIfChanged, restoreProjectRevision } from "./revisions";
+import { branchProjectRevision, commitIfChanged, restoreProjectRevision } from "./revisions";
 
 import {
   APP_DB_KEY,
@@ -59,6 +64,7 @@ type ProjectStore = {
   openDemo: (demoId: string) => Project;
   updateProject: (id: string, patch: Partial<Project>) => void;
   restoreRevision: (id: string, revisionId: string) => boolean;
+  branchRevision: (id: string, revisionId: string) => Project | null;
   addMessage: (id: string, message: Omit<ChatMessage, "id" | "at"> & { id?: string }) => void;
   removeProject: (id: string) => void;
   getProject: (id: string) => Project | undefined;
@@ -103,7 +109,11 @@ function loadCollection(
 ): unknown {
   const durableDb = mergeAppDb(idbSnap, readWebStorage());
   const embedded = projects.find((p) => p.id === projectId)?.appData;
-  const best = pickAliased(projectId, collection, [durableDb, appDb, embedded ? { [projectId]: embedded } : undefined]);
+  const best = pickAliased(projectId, collection, [
+    durableDb,
+    appDb,
+    embedded ? { [projectId]: embedded } : undefined,
+  ]);
   if (asBox(best)?.rev) return best;
   if (!isEmptyVal(unwrapItems(best))) return best;
   return best ?? null;
@@ -132,9 +142,7 @@ function publishDiag(
 }
 
 function trimList(projects: Project[]) {
-  return [...projects]
-    .sort((a, b) => b.updatedAt - a.updatedAt)
-    .slice(0, MAX_PROJECTS);
+  return [...projects].sort((a, b) => b.updatedAt - a.updatedAt).slice(0, MAX_PROJECTS);
 }
 
 function blankProject(prompt: string, kind: ProjectKind = "app"): Project {
@@ -201,7 +209,11 @@ export const useProjectStore = create<ProjectStore>()(
         if (!boxed && !Array.isArray(data)) {
           const proof = await verifyDurableBytes(projectId, collection, countItems(existingRaw));
           publishDiag(projectId, collection, { save: 1, keep: 1, durable: proof.durable });
-          return { ok: proof.ok || countItems(existingRaw) > 0, v: existingRaw, durable: proof.durable };
+          return {
+            ok: proof.ok || countItems(existingRaw) > 0,
+            v: existingRaw,
+            durable: proof.durable,
+          };
         }
         const incoming = boxed ?? {
           rev: (existing?.rev ?? 0) + 1,
@@ -211,16 +223,22 @@ export const useProjectStore = create<ProjectStore>()(
         };
         const stale = Boolean(
           existing &&
-            (incoming.rev < existing.rev ||
-              (incoming.rev === existing.rev &&
-                incoming.writer &&
-                existing.writer &&
-                incoming.writer !== existing.writer &&
-                incoming.items.length < existing.items.length)),
+          (incoming.rev < existing.rev ||
+            (incoming.rev === existing.rev &&
+              incoming.writer &&
+              existing.writer &&
+              incoming.writer !== existing.writer &&
+              incoming.items.length < existing.items.length)),
         );
         const chosen = stale
           ? existingRaw
-          : { _fenix: 1 as const, rev: incoming.rev, items: incoming.items, writer: incoming.writer, at: incoming.at };
+          : {
+              _fenix: 1 as const,
+              rev: incoming.rev,
+              items: incoming.items,
+              writer: incoming.writer,
+              at: incoming.at,
+            };
         current[projectId] = { ...(current[projectId] ?? {}) };
         for (const k of keys) current[projectId][k] = chosen;
         await writeDurable(current);
@@ -301,6 +319,14 @@ export const useProjectStore = create<ProjectStore>()(
         }));
         return true;
       },
+      branchRevision: (id, revisionId) => {
+        const current = get().getProject(id);
+        if (!current) return null;
+        const branch = branchProjectRevision(current, revisionId);
+        if (!branch) return null;
+        set((s) => ({ projects: trimList([branch, ...s.projects]) }));
+        return branch;
+      },
       addMessage: (id, message) => {
         const full: ChatMessage = {
           id: message.id ?? uid(),
@@ -310,9 +336,7 @@ export const useProjectStore = create<ProjectStore>()(
         };
         set((s) => ({
           projects: s.projects.map((p) =>
-            p.id === id
-              ? { ...p, messages: [...p.messages, full], updatedAt: Date.now() }
-              : p,
+            p.id === id ? { ...p, messages: [...p.messages, full], updatedAt: Date.now() } : p,
           ),
         }));
       },
@@ -343,7 +367,9 @@ export const useProjectStore = create<ProjectStore>()(
       }),
       merge: (persisted, current) => {
         const incoming = (persisted ?? {}) as Partial<ProjectStore>;
-        const projects = (incoming.projects ?? current.projects).map((p) => recoverPersistedProject(p));
+        const projects = (incoming.projects ?? current.projects).map((p) =>
+          recoverPersistedProject(p),
+        );
         return {
           ...current,
           ...incoming,
@@ -365,7 +391,8 @@ export const useProjectStore = create<ProjectStore>()(
                 ...recovered,
                 messages: scrubTechMessages(p.messages),
                 palette:
-                  recovered.kind === "dashboard" && /argilla|ceram|viva/i.test(`${p.name} ${p.prompt}`)
+                  recovered.kind === "dashboard" &&
+                  /argilla|ceram|viva/i.test(`${p.name} ${p.prompt}`)
                     ? {
                         bg: "#f3eadc",
                         surface: "#fbf6ee",
@@ -374,7 +401,7 @@ export const useProjectStore = create<ProjectStore>()(
                         accent: "#b85c38",
                         line: "#d7c4b0",
                       }
-                    : recovered.palette ?? p.palette,
+                    : (recovered.palette ?? p.palette),
               };
             });
             if (typeof state.creditsRemaining !== "number") {
@@ -407,7 +434,10 @@ export const useProjectStore = create<ProjectStore>()(
   ),
 );
 
-if (typeof window !== "undefined" && !(window as Window & { __fenixDbBound?: boolean }).__fenixDbBound) {
+if (
+  typeof window !== "undefined" &&
+  !(window as Window & { __fenixDbBound?: boolean }).__fenixDbBound
+) {
   (window as Window & { __fenixDbBound?: boolean }).__fenixDbBound = true;
   window.addEventListener("message", (event: MessageEvent) => {
     const msg = event.data as {
