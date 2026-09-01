@@ -89,6 +89,9 @@ describe("injectHero / materializeHero", () => {
     assert.doesNotMatch(gallery, /unsplash/i);
     assert.match(gallery, /alt="Scaffali"/);
     assert.match(gallery, /alt="Brocca"/);
+    assert.match(gallery, /\/craft-shelf\.jpg|\/craft-vase\.jpg|\/craft-bowl\.jpg|\/craft-plate\.jpg|\/craft-pitcher\.jpg/);
+    const srcs = [...gallery.matchAll(/src="(\/craft-[a-z-]+\.jpg)"/g)].map((m) => m[1]);
+    assert.ok(new Set(srcs).size >= 2, `gallery srcs ${srcs.join(",")}`);
     assert.equal(scrubCraftMedia(gallery), gallery);
   });
 });

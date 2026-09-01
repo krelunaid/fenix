@@ -1,19 +1,26 @@
+import { CRAFT_GALLERY_FILES } from "./craft-media.ts";
+
 const XAI_IMAGES = "https://api.x.ai/v1/images/generations";
 const HERO_MAX_BYTES = 900_000;
 
 /** Versioned ceramic still-life in /public. Never a page screenshot, never a remote CDN. */
 export const CRAFT_HERO_SRC = "/craft-hero.jpg";
+export const CRAFT_GALLERY_SRC = CRAFT_GALLERY_FILES.map((file) => `/${file}`);
 
 export const CRAFT_HERO_MARKUP = `<img class="fk-hero fk-hero-craft" src="${CRAFT_HERO_SRC}" alt="Ceramiche in terracotta al tornio" width="1600" height="900" style="width:100%;height:min(52vh,560px);min-height:280px;object-fit:cover;display:block;background:#cbb392"/>`;
+
+export function nextCraftGallerySrc(index: number) {
+  return CRAFT_GALLERY_SRC[index % CRAFT_GALLERY_SRC.length];
+}
 
 const DEAD_UNSPLASH: Array<[RegExp, string]> = [
   [
     /https:\/\/images\.unsplash\.com\/photo-1595878715977-2e8f8df18ea7[^"'\s]*/g,
-    CRAFT_HERO_SRC,
+    CRAFT_GALLERY_SRC[3],
   ],
   [
     /https:\/\/images\.unsplash\.com\/photo-1610701596007-11502861dcfa[^"'\s]*/g,
-    CRAFT_HERO_SRC,
+    CRAFT_GALLERY_SRC[0],
   ],
 ];
 
@@ -110,11 +117,12 @@ export function injectHero(html: string, url: string) {
   return placeHeroMarkup(html, img);
 }
 
-/** Drop page-screenshot data heroes and stock Unsplash. Idempotent. */
+/** Drop page-screenshot data heroes and stock Unsplash. Distinct local crafts, never six copies of the hero. */
 export function scrubCraftMedia(html: string) {
   if (!html) return html;
   let next = html;
-  next = next.replace(/https:\/\/images\.unsplash\.com\/[^"'>\s]+/gi, CRAFT_HERO_SRC);
+  let gallery = 0;
+  next = next.replace(/https:\/\/images\.unsplash\.com\/[^"'>\s]+/gi, () => nextCraftGallerySrc(gallery++));
   for (const [re, live] of DEAD_UNSPLASH) next = next.replace(re, live);
   if (isPhoneApp(next)) return next;
   next = next.replace(/<img\b([^>]*class=["'][^"']*fk-hero[^"']*["'][^>]*)>/gi, (tag, attrs: string) => {
@@ -128,6 +136,13 @@ export function scrubCraftMedia(html: string) {
   next = next.replace(/<svg[^>]*fk-hero[^>]*>[\s\S]*?<\/svg>/gi, (tag) => {
     if (/\bfk-hero-craft\b/.test(tag) && /<img\b/i.test(CRAFT_HERO_MARKUP)) return CRAFT_HERO_MARKUP;
     return tag;
+  });
+  gallery = 0;
+  next = next.replace(/<img\b[^>]*>/gi, (tag) => {
+    if (/\bfk-hero/.test(tag)) return tag;
+    if (!/\/craft-hero\.jpg/.test(tag)) return tag;
+    const src = nextCraftGallerySrc(gallery++);
+    return tag.replace(/src=(["'])[^"']*\/craft-hero\.jpg[^"']*\1/i, `src=$1${src}$1`);
   });
   return next;
 }

@@ -225,6 +225,9 @@ describe("focus-visible and worker model", () => {
     assert.match(hero, /\/craft-hero\.jpg/);
     assert.match(hero, /CRAFT_HERO_SRC = "\/craft-hero\.jpg"/);
     assert.equal(existsSync(join(root, "public/craft-hero.jpg")), true);
+    for (const file of ["craft-shelf.jpg", "craft-vase.jpg", "craft-bowl.jpg", "craft-plate.jpg", "craft-pitcher.jpg"]) {
+      assert.equal(existsSync(join(root, "public", file)), true, file);
+    }
     const storeSrc = readFileSync(join(root, "src/lib/projects/published-store.ts"), "utf8");
     assert.match(storeSrc, /Sito pubblico senza titolare: immutabile/);
     const publishClient = readFileSync(join(root, "src/lib/projects/publish-client.ts"), "utf8");

@@ -822,12 +822,12 @@ function previewOrigin() {
   return "";
 }
 
-/** srcdoc has opaque origin: relative /craft-hero.jpg would not load. */
+/** srcdoc has opaque origin: relative /craft-*.jpg would not load. */
 export function absolutizeCraftHero(html: string, origin = previewOrigin()) {
   if (!html) return html;
   const base = String(origin || "").replace(/\/$/, "");
   if (!base) return html;
-  return html.replace(/(src=["'])\/craft-hero\.jpg/gi, `$1${base}/craft-hero.jpg`);
+  return html.replace(/(src=["'])\/(craft-[a-z0-9-]+\.jpg)/gi, `$1${base}/$2`);
 }
 
 export function prepareSrcDoc(

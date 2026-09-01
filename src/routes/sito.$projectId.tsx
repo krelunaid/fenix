@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { ArrowLeft, Download } from "lucide-react";
 import { toast } from "sonner";
@@ -16,6 +16,7 @@ export const Route = createFileRoute("/sito/$projectId")({
 function LiveSitePage() {
   const { projectId } = Route.useParams();
   const navigate = useNavigate();
+  const iframeRef = useRef<HTMLIFrameElement>(null);
   const [snap, setSnap] = useState<PublishedSnapshot | null | undefined>(undefined);
 
   useEffect(() => {
@@ -32,7 +33,7 @@ function LiveSitePage() {
     };
   }, [projectId]);
 
-  useEffect(() => bindPublishedSiteDb(projectId), [projectId]);
+  useEffect(() => bindPublishedSiteDb(projectId, iframeRef), [projectId]);
 
   if (snap === undefined) {
     return (
@@ -86,6 +87,7 @@ function LiveSitePage() {
       </header>
       <div className="relative min-h-0 w-full flex-1">
         <iframe
+          ref={iframeRef}
           title={snap.name}
           srcDoc={prepareSrcDoc(
             snap.html,

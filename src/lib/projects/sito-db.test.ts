@@ -6,6 +6,12 @@ import { describe, it } from "node:test";
 import { chromium } from "playwright";
 import { prepareSrcDoc } from "./color-scheme.ts";
 import { APP_DB_KEY } from "./durable-db.ts";
+import {
+  bindPublishedSiteDb,
+  dispatchPublishedSiteDb,
+  parseSiteDbRequest,
+  siteDbReplyOrigin,
+} from "./sito-db.ts";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const root = join(here, "../../..");
@@ -14,12 +20,57 @@ describe("published /sito Fenix db", () => {
   it("sito route binds durable db without the project store", () => {
     const sito = readFileSync(join(root, "src/routes/sito.$projectId.tsx"), "utf8");
     const db = readFileSync(join(here, "sito-db.ts"), "utf8");
-    assert.match(sito, /bindPublishedSiteDb/);
+    assert.match(sito, /bindPublishedSiteDb\(projectId, iframeRef\)/);
+    assert.match(sito, /useRef<HTMLIFrameElement>/);
+    assert.match(sito, /ref=\{iframeRef\}/);
     assert.doesNotMatch(sito, /useProjectStore/);
     assert.match(db, /readAllDurable/);
     assert.match(db, /writeDurable/);
+    assert.match(db, /iframeRef\?\.current\?\.contentWindow/);
+    assert.match(db, /event\.source !== expectedSource/);
     assert.doesNotMatch(db, /useProjectStore/);
     assert.doesNotMatch(db, /allow-same-origin/);
+  });
+
+  it("accepts only load/save from the expected iframe window", () => {
+    const iframe = { postMessage() {} } as unknown as Window;
+    const evil = { postMessage() {} } as unknown as Window;
+    const save = {
+      t: "fenix-db",
+      id: "req-1",
+      op: "save",
+      projectId: "p1",
+      col: "messages",
+      data: [{ name: "Anna" }],
+    };
+    const ok = dispatchPublishedSiteDb(
+      { data: save, source: iframe, origin: "https://fenix.kreluna.it" },
+      "p1",
+      iframe,
+      {},
+    );
+    assert.equal(ok.replied?.origin, "https://fenix.kreluna.it");
+    assert.equal(ok.replied?.source, iframe);
+    assert.deepEqual((ok.db.p1?.messages as { name: string }[])[0], { name: "Anna" });
+
+    const hack = dispatchPublishedSiteDb(
+      {
+        data: { ...save, id: "req-2", data: [{ name: "HACK" }] },
+        source: evil,
+        origin: "https://evil.example",
+      },
+      "p1",
+      iframe,
+      ok.db,
+    );
+    assert.equal(hack.replied, null);
+    assert.deepEqual((hack.db.p1?.messages as { name: string }[])[0], { name: "Anna" });
+
+    assert.equal(parseSiteDbRequest({ ...save, op: "wipe" }, "p1"), null);
+    assert.equal(parseSiteDbRequest({ ...save, col: "../x" }, "p1"), null);
+    assert.equal(parseSiteDbRequest({ ...save, projectId: "other" }, "p1"), null);
+    assert.equal(siteDbReplyOrigin("null"), "*");
+    assert.equal(bindPublishedSiteDb("p1", { current: null }) instanceof Function, true);
   });
 
   it("parent officina-appdb keeps a contact message after iframe remount", async () => {
@@ -84,22 +135,31 @@ init();
     const src = prepareSrcDoc(html, { bg: "#1a1612", fg: "#e6dcc8" }, "sito-db-demo", "site");
     const parentHtml = `<!DOCTYPE html><html><body>
 <iframe id="f" style="width:1100px;height:800px;border:0"></iframe>
+<iframe id="evil" style="width:10px;height:10px;border:0"></iframe>
 <script>
+  window.__evilReplies = 0;
+  var iframe = document.getElementById("f");
   window.addEventListener("message", function (e) {
     var m = e.data;
     if (!m || m.t !== "fenix-db" || !m.id || !m.col || !m.projectId) return;
+    if (e.source !== iframe.contentWindow) {
+      window.__ignoredEvil = (window.__ignoredEvil || 0) + 1;
+      return;
+    }
+    if (m.op !== "load" && m.op !== "save") return;
     var key = ${JSON.stringify(APP_DB_KEY)};
     var db = {};
     try { db = JSON.parse(localStorage.getItem(key) || "{}") || {}; } catch (err) { db = {}; }
     var cols = db[m.projectId] || {};
+    var origin = /^https?:\\/\\//.test(e.origin) ? e.origin : "*";
     if (m.op === "save") {
       cols[m.col] = m.data;
       db[m.projectId] = cols;
       localStorage.setItem(key, JSON.stringify(db));
-      e.source.postMessage({ t: "fenix-db", id: m.id, v: m.data }, "*");
+      e.source.postMessage({ t: "fenix-db", id: m.id, v: m.data }, origin);
       return;
     }
-    e.source.postMessage({ t: "fenix-db", id: m.id, v: cols[m.col] || null }, "*");
+    e.source.postMessage({ t: "fenix-db", id: m.id, v: cols[m.col] || null }, origin);
   });
 </script>
 </body></html>`;
@@ -127,6 +187,40 @@ init();
       await frame.getByText("Anna della Luna — Prenoto sabato.").waitFor({ timeout: 8000 });
       const stored = await page.evaluate((key) => localStorage.getItem(key), APP_DB_KEY);
       assert.match(String(stored), /Anna della Luna/);
+      await page.locator("#evil").evaluate((el) => {
+        (el as HTMLIFrameElement).srcdoc = `<!DOCTYPE html><html><body><script>
+window.addEventListener("message", function (e) {
+  document.title = "GOT:" + JSON.stringify(e.data);
+});
+parent.postMessage({
+  t: "fenix-db",
+  id: "evil-1",
+  op: "save",
+  projectId: "sito-db-demo",
+  col: "messages",
+  data: [{ name: "HACK", message: "pwned" }]
+}, "*");
+</script></body></html>`;
+      });
+      await page.waitForTimeout(400);
+      const afterEvil = await page.evaluate((key) => {
+        const w = window as Window & { __ignoredEvil?: number };
+        return {
+          stored: localStorage.getItem(key),
+          ignored: w.__ignoredEvil || 0,
+          evilTitle: [...document.querySelectorAll("iframe")].map((f) => {
+            try {
+              return f.contentDocument?.title || "";
+            } catch {
+              return "";
+            }
+          }),
+        };
+      }, APP_DB_KEY);
+      assert.doesNotMatch(String(afterEvil.stored), /HACK/);
+      assert.match(String(afterEvil.stored), /Anna della Luna/);
+      assert.ok(afterEvil.ignored >= 1, "evil source must be ignored");
+      assert.equal(afterEvil.evilTitle.some((t) => t.startsWith("GOT:")), false);
     } finally {
       await browser.close();
     }
