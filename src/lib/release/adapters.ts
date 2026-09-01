@@ -3,9 +3,11 @@ import { runIosStep } from "./ios.ts";
 import {
   appleConnected,
   appleCredentials,
+  appleDistributionP12,
   appleTeamId,
   androidKeyAlias,
   androidKeyPassword,
+  androidKeystoreBase64,
   androidKeystorePath,
   androidStorePassword,
   googleConnected,
@@ -13,11 +15,13 @@ import {
   netlifyConnected,
   releaseFixtureAllowed,
 } from "./secrets.server.ts";
+import { nextStep, STEP_ORDER } from "./steps.ts";
 import type { AdapterResult, PersistTrack, Platform, ReleaseStep, StoredReleaseJob, TrackState } from "./types.ts";
 import { runWebStep, type WebOwner } from "./web.ts";
 
 export type { AdapterResult } from "./types.ts";
 export type { PersistTrack } from "./types.ts";
+export { nextStep, STEP_ORDER };
 
 export type ReleaseAdapter = {
   platform: Platform;
@@ -29,21 +33,6 @@ export type ReleaseAdapter = {
     persist: PersistTrack,
   ): Promise<AdapterResult>;
 };
-
-export const STEP_ORDER: ReleaseStep[] = [
-  "preflight",
-  "build",
-  "sign",
-  "upload",
-  "processing",
-  "ready",
-];
-
-export function nextStep(step: ReleaseStep): ReleaseStep {
-  const i = STEP_ORDER.indexOf(step);
-  if (i < 0 || i >= STEP_ORDER.length - 1) return "ready";
-  return STEP_ORDER[i + 1]!;
-}
 
 export type WebUploadOwner = WebOwner;
 
@@ -76,6 +65,7 @@ export const iosAdapter: ReleaseAdapter = {
       fixture,
       creds,
       teamId: appleTeamId() || undefined,
+      p12: appleDistributionP12() || undefined,
     });
   },
 };
@@ -99,6 +89,7 @@ export const androidAdapter: ReleaseAdapter = {
       fixture,
       serviceJson: json,
       keystorePath: androidKeystorePath() || undefined,
+      keystoreBase64: androidKeystoreBase64() || undefined,
       keyAlias: androidKeyAlias() || undefined,
       storePassword: androidStorePassword() || undefined,
       keyPassword: androidKeyPassword() || undefined,

@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { withAppleApiKey } from "./apple-key.ts";
+import { withAppleApiKey, withIosCodeSign, type IosP12 } from "./apple-key.ts";
 import { iosIdentity } from "./build-id.ts";
 import { appleListLatestBuild } from "./deploy-api.ts";
 import { dispatchOrPoll, shouldDispatchNative } from "./dispatch.ts";
@@ -16,6 +16,16 @@ function runner(fixture: boolean, override?: CommandRunner): CommandRunner {
   return runCommand;
 }
 
+function teamArgs(teamId?: string): string[] {
+  if (!teamId) return [];
+  return [`DEVELOPMENT_TEAM=${teamId}`, "CODE_SIGN_STYLE=Automatic"];
+}
+
+function ghaWorkflowRunId(): string | undefined {
+  const id = process.env.GITHUB_RUN_ID?.trim();
+  return id && /^\d+$/.test(id) ? id : undefined;
+}
+
 export async function runIosStep(
   step: TrackState["step"],
   job: StoredReleaseJob,
@@ -25,16 +35,19 @@ export async function runIosStep(
     fixture: boolean;
     creds: { issuerId: string; keyId: string; privateKey: string } | null;
     teamId?: string;
+    p12?: IosP12;
+    local?: boolean;
     commands?: CommandRunner;
   },
 ): Promise<AdapterResult> {
   const fixture = opts.fixture;
-  if (shouldDispatchNative("ios", step, fixture)) {
+  if (!opts.local && shouldDispatchNative("ios", step, fixture)) {
     return dispatchOrPoll("ios", step, job, track, persist);
   }
   const run = runner(fixture, opts.commands);
   const bundle = job.config.bundleId;
   const identity = iosIdentity(job);
+  const wf = ghaWorkflowRunId();
 
   if (step === "preflight") {
     if (missingStoreRecord(bundle)) {
@@ -55,6 +68,7 @@ export async function runIosStep(
             appId: check.appId,
             cfBundleVersion: identity.build,
             versionName: identity.versionName,
+            workflowRunId: wf || track.provider?.workflowRunId,
           },
         });
       }
@@ -75,7 +89,7 @@ export async function runIosStep(
     const archivePath = join(root, `${bundle}.xcarchive`);
     if (existsSync(join(archivePath, "Info.plist")) || existsSync(archivePath + "/Info.plist")) {
       await persist({
-        provider: { ...track.provider, archivePath, cfBundleVersion: identity.build },
+        provider: { ...track.provider, archivePath, cfBundleVersion: identity.build, workflowRunId: wf || track.provider?.workflowRunId },
       });
       return { ok: true, step, fixture, artifact: archivePath, reconciled: true };
     }
@@ -83,26 +97,32 @@ export async function runIosStep(
       provider: {
         ...track.provider,
         archivePath,
-        intentId: `${job.id}:ios:archive`,
+        intentId: track.provider?.intentId || `${job.id}:ios:native`,
         inflight: "archive",
         cfBundleVersion: identity.build,
+        workflowRunId: wf || track.provider?.workflowRunId,
       },
     });
-    const result = await run(
-      "xcodebuild",
-      [
-        "-project",
-        join(root, "Fenix.xcodeproj"),
-        "-scheme",
-        "Fenix",
-        "-destination",
-        "generic/platform=iOS",
-        "-archivePath",
-        archivePath,
-        "archive",
-      ],
-      { cwd: root },
-    );
+    const archiveArgs = [
+      "-project",
+      join(root, "Fenix.xcodeproj"),
+      "-scheme",
+      "Fenix",
+      "-destination",
+      "generic/platform=iOS",
+      "-archivePath",
+      archivePath,
+      "archive",
+      ...teamArgs(opts.teamId),
+    ];
+    const archiveOnce = async (extra: string[], env?: Record<string, string>) =>
+      run("xcodebuild", [...archiveArgs, ...extra], { cwd: root, env });
+    const result =
+      !fixture && opts.creds
+        ? await withIosCodeSign(opts.creds, opts.p12, run, (ctx) =>
+            archiveOnce(ctx.authArgs, ctx.env),
+          )
+        : await archiveOnce(fixture ? [] : ["-allowProvisioningUpdates"]);
     if (!result.ok) {
       return {
         ok: false,
@@ -126,6 +146,15 @@ export async function runIosStep(
       await persist({ provider: { ...track.provider, archivePath, ipaPath } });
       return { ok: true, step, fixture, artifact: ipaPath, reconciled: true };
     }
+    if (opts.local && !fixture && !existsSync(join(archivePath, "Info.plist")) && !existsSync(archivePath)) {
+      return {
+        ok: false,
+        step,
+        fixture: false,
+        error:
+          "L'archivio iOS non è su questo runner. Build, firma e upload devono girare nello stesso workflow.",
+      };
+    }
     if (!fixture && !opts.teamId) {
       return {
         ok: false,
@@ -135,19 +164,24 @@ export async function runIosStep(
       };
     }
     await persist({ provider: { ...track.provider, archivePath, inflight: "export" } });
-    const result = await run(
-      "xcodebuild",
-      [
-        "-exportArchive",
-        "-archivePath",
-        archivePath,
-        "-exportPath",
-        exportPath,
-        "-exportOptionsPlist",
-        join(root, "ExportOptions.plist"),
-      ],
-      { cwd: root },
-    );
+    const exportArgs = [
+      "-exportArchive",
+      "-archivePath",
+      archivePath,
+      "-exportPath",
+      exportPath,
+      "-exportOptionsPlist",
+      join(root, "ExportOptions.plist"),
+      ...teamArgs(opts.teamId),
+    ];
+    const exportOnce = async (extra: string[], env?: Record<string, string>) =>
+      run("xcodebuild", [...exportArgs, ...extra], { cwd: root, env });
+    const result =
+      !fixture && opts.creds
+        ? await withIosCodeSign(opts.creds, opts.p12, run, (ctx) =>
+            exportOnce(ctx.authArgs, ctx.env),
+          )
+        : await exportOnce(fixture ? [] : ["-allowProvisioningUpdates"]);
     if (!result.ok) {
       return {
         ok: false,
@@ -175,7 +209,7 @@ export async function runIosStep(
         };
       }
     }
-    const intent = track.provider?.intentId || `${job.id}:ios:upload`;
+    const intent = track.provider?.intentId || `${job.id}:ios:native`;
     if (!fixture && opts.creds && track.provider?.appId) {
       const existing = await appleListLatestBuild(opts.creds, track.provider.appId, identity);
       if (existing.ok && existing.id) {
@@ -202,7 +236,14 @@ export async function runIosStep(
     }
     const ipaPath = track.provider?.ipaPath;
     if (!ipaPath && !fixture) {
-      return { ok: false, step, fixture: false, error: "IPA assente. Riprendi dalla firma." };
+      return {
+        ok: false,
+        step,
+        fixture: false,
+        error: opts.local
+          ? "IPA assente su questo runner. Build, firma e upload devono girare nello stesso workflow."
+          : "IPA assente. Riprendi dalla firma.",
+      };
     }
     await persist({
       provider: {
@@ -213,7 +254,7 @@ export async function runIosStep(
       },
     });
     if (!fixture && opts.creds) {
-      const result = await withAppleApiKey(opts.creds, async (env) =>
+      const result = await withAppleApiKey(opts.creds, async (ctx) =>
         run(
           "xcrun",
           [
@@ -228,7 +269,7 @@ export async function runIosStep(
             "--apiIssuer",
             opts.creds!.issuerId,
           ],
-          { env },
+          { env: ctx.env },
         ),
       );
       if (!result.ok) {

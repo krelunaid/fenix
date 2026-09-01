@@ -1,14 +1,24 @@
 #!/usr/bin/env node
 /**
- * Native release worker. Runs on macOS (iOS/Xcode) or Linux (Android/Gradle).
- * Reads the job from Postgres, executes one step, posts a signed callback.
+ * Native release worker. Runs the full iOS or Android FSM (build → sign → upload)
+ * on THIS runner, persists provider IDs after each side effect, posts signed callbacks.
  * Secrets stay in the runner env. Never log PEM, passwords, or tokens.
  */
-import { readReleaseJob, writeReleaseJob } from "../../src/lib/release/store.ts";
-import { runIosStep } from "../../src/lib/release/ios.ts";
-import { runAndroidStep } from "../../src/lib/release/android.ts";
-import { appleCredentials, appleTeamId, androidKeyAlias, androidKeyPassword, androidKeystorePath, androidStorePassword, googleServiceAccount } from "../../src/lib/release/secrets.server.ts";
+import { artifactHashOf } from "../../src/lib/release/callback.ts";
 import { callbackSecret, signReleaseCallback } from "../../src/lib/release/dispatch.ts";
+import { runNativePipeline } from "../../src/lib/release/pipeline.ts";
+import {
+  androidKeyAlias,
+  androidKeyPassword,
+  androidKeystoreBase64,
+  androidKeystorePath,
+  androidStorePassword,
+  appleCredentials,
+  appleDistributionP12,
+  appleTeamId,
+  googleServiceAccount,
+} from "../../src/lib/release/secrets.server.ts";
+import { readReleaseJob, writeReleaseJob } from "../../src/lib/release/store.ts";
 
 function arg(name) {
   const i = process.argv.indexOf(`--${name}`);
@@ -17,11 +27,13 @@ function arg(name) {
 
 const jobId = arg("job");
 const platform = arg("platform") || "ios";
-const step = arg("step") || "build";
-const intent = arg("intent") || `${jobId}:${platform}:${step}`;
+const intent = arg("intent") || `${jobId}:${platform}:native`;
+const workflowRunId = process.env.GITHUB_RUN_ID && /^\d+$/.test(process.env.GITHUB_RUN_ID)
+  ? process.env.GITHUB_RUN_ID
+  : undefined;
 
 if (!jobId) {
-  console.error("usage: run.mjs --job <id> --platform ios|android --step <step>");
+  console.error("usage: run.mjs --job <id> --platform ios|android --intent <intent>");
   process.exit(2);
 }
 
@@ -33,49 +45,63 @@ if (!job) {
 
 const track = job.tracks[platform] || {
   platform,
-  step,
+  step: "build",
   status: "run",
   fixture: false,
   uploads: 0,
   provider: { intentId: intent },
 };
+track.provider = {
+  ...track.provider,
+  intentId: track.provider?.intentId || intent,
+  runId: track.provider?.runId || `gha:${intent}`,
+  workflowRunId: workflowRunId || track.provider?.workflowRunId,
+};
 
 const persist = async (patch) => {
+  const live = (await readReleaseJob(jobId)) || job;
+  const prev = live.tracks[platform] || track;
   const next = {
-    ...track,
+    ...prev,
     ...patch,
-    provider: { ...track.provider, ...patch.provider },
+    provider: { ...prev.provider, ...patch.provider },
   };
   Object.assign(track, next);
+  track.provider = { ...next.provider };
+  live.tracks[platform] = track;
+  Object.assign(job, live);
   job.tracks[platform] = track;
-  await writeReleaseJob(job);
+  await writeReleaseJob(live);
   return track;
 };
 
-let result;
-if (platform === "ios") {
-  result = await runIosStep(step, job, track, persist, {
-    fixture: false,
-    creds: appleCredentials(),
-    teamId: appleTeamId() || undefined,
-  });
-} else {
-  result = await runAndroidStep(step, job, track, persist, {
-    fixture: false,
-    serviceJson: googleServiceAccount(),
-    keystorePath: androidKeystorePath() || undefined,
-    keyAlias: androidKeyAlias() || undefined,
-    storePassword: androidStorePassword() || undefined,
-    keyPassword: androidKeyPassword() || undefined,
-  });
-}
+await persist({
+  provider: {
+    ...track.provider,
+    intentId: intent,
+    runId: track.provider.runId || `gha:${intent}`,
+    workflowRunId: workflowRunId || track.provider.workflowRunId,
+  },
+});
 
-const status = result.ok ? (result.pending ? "run" : "ok") : "err";
-const secret = callbackSecret();
-const callbackUrl = process.env.FENIX_RELEASE_CALLBACK_URL;
-if (secret && callbackUrl) {
+async function sendCallback(step, result) {
+  const secret = callbackSecret();
+  const callbackUrl = process.env.FENIX_RELEASE_CALLBACK_URL;
+  if (!secret || !callbackUrl) return;
+  const status = result.ok ? (result.pending ? "run" : "ok") : "err";
   const runId = track.provider?.runId || `gha:${intent}`;
-  const signature = signReleaseCallback({ jobId, runId, status, secret });
+  const ts = Date.now();
+  const artifactHash = artifactHashOf(result.artifact);
+  const signature = signReleaseCallback({
+    jobId,
+    platform,
+    step,
+    runId,
+    status,
+    artifactHash,
+    ts,
+    secret,
+  });
   await fetch(callbackUrl, {
     method: "POST",
     headers: {
@@ -90,9 +116,40 @@ if (secret && callbackUrl) {
       status,
       artifact: result.artifact,
       error: result.error,
+      ts,
+      artifactHash,
+      workflowRunId: workflowRunId || track.provider?.workflowRunId,
     }),
   });
 }
+
+const result = await runNativePipeline(
+  platform === "android" ? "android" : "ios",
+  job,
+  track,
+  persist,
+  platform === "android"
+    ? {
+        fixture: false,
+        android: {
+          serviceJson: googleServiceAccount(),
+          keystorePath: androidKeystorePath() || undefined,
+          keystoreBase64: androidKeystoreBase64() || undefined,
+          keyAlias: androidKeyAlias() || undefined,
+          storePassword: androidStorePassword() || undefined,
+          keyPassword: androidKeyPassword() || undefined,
+        },
+      }
+    : {
+        fixture: false,
+        ios: {
+          creds: appleCredentials(),
+          teamId: appleTeamId() || undefined,
+          p12: appleDistributionP12() || undefined,
+        },
+      },
+  { onStep: sendCallback },
+);
 
 if (!result.ok) {
   console.error(result.error || "worker failed");

@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { nextStep, STEP_ORDER } from "./steps.ts";
+import { isNativePipelineStep, nextStep, STEP_ORDER } from "./steps.ts";
 import { verifyReleaseCallback } from "./dispatch.ts";
 import { readReleaseJob, writeReleaseJobIfStep } from "./store.ts";
 import type { Platform, ProviderIds, ReleaseStep, StoredReleaseJob, TrackState } from "./types.ts";
@@ -145,11 +145,12 @@ export function applyCallbackToJob(job: StoredReleaseJob, body: ReleaseCallbackB
   }
   track.artifact = body.artifact || track.artifact;
   track.error = undefined;
-  track.provider = { ...provider, inflight: undefined };
   const nxt = nextStep(body.step);
   track.step = nxt;
   if (body.step === "upload") track.uploads = Math.max(track.uploads, 1);
   track.status = nxt === "ready" ? "ok" : "run";
+  const keepDispatch = isNativePipelineStep(nxt);
+  track.provider = { ...provider, inflight: keepDispatch ? "dispatch" : undefined };
   return patchTrack(job, body.platform, track);
 }
 

@@ -2,9 +2,10 @@ import { mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { randomUUID } from "node:crypto";
-import { LEASE_MS, PLATFORMS, RELEASE_STORE, type Platform, type PublicReleaseJob, type StoredReleaseJob } from "./types.ts";
+import { LEASE_MS, PLATFORMS, RELEASE_STORE, type Platform, type PublicReleaseJob, type ReleaseStep, type StoredReleaseJob, type TrackState } from "./types.ts";
 import { REVIEW_NOTE } from "./types.ts";
 import { redactSecrets } from "./redact.ts";
+import { STEP_ORDER } from "./steps.ts";
 
 export type ReleaseSql = {
   query<T = Record<string, unknown>>(text: string, params?: unknown[]): Promise<T[]>;
@@ -156,36 +157,97 @@ export function publicReleaseJob(job: StoredReleaseJob): PublicReleaseJob {
   };
 }
 
-function mergeProvider(
-  prev: StoredReleaseJob | null,
-  next: StoredReleaseJob,
-): StoredReleaseJob {
+const STEP_RANK: ReleaseStep[] = ["connect", "configure", ...STEP_ORDER];
+
+export function stepRank(step: ReleaseStep | undefined): number {
+  const i = STEP_RANK.indexOf(step || "connect");
+  return i < 0 ? -1 : i;
+}
+
+function mergeProviderMaps(
+  prev?: TrackState["provider"],
+  next?: TrackState["provider"],
+): TrackState["provider"] {
+  const out: Record<string, unknown> = { ...(prev || {}) };
+  for (const [key, value] of Object.entries(next || {})) {
+    if (value === "") {
+      delete out[key];
+    } else if (value !== undefined) {
+      out[key] = value;
+    }
+  }
+  return out as TrackState["provider"];
+}
+
+function mergeTrack(prev: TrackState | undefined, next: TrackState | undefined): TrackState | undefined {
+  if (!prev) return next;
+  if (!next) return prev;
+  const prevI = stepRank(prev.step);
+  const nextI = stepRank(next.step);
+  const later = nextI >= prevI ? next : prev;
+  const earlier = later === next ? prev : next;
+  let status = later.status;
+  if (next.status === "err" && nextI >= prevI) status = "err";
+  else if (later.status !== "err" && earlier.status === "ok" && later.step === earlier.step) status = "ok";
+  return {
+    ...earlier,
+    ...later,
+    step: later.step,
+    status,
+    error: status === "err" ? later.error || earlier.error : later.error,
+    artifact: later.artifact || earlier.artifact,
+    fixture: later.fixture || earlier.fixture,
+    uploads: Math.max(prev.uploads || 0, next.uploads || 0),
+    provider: mergeProviderMaps(earlier.provider, later.provider),
+  };
+}
+
+export function syncJobProgress(job: StoredReleaseJob): StoredReleaseJob {
+  const errPlat = job.platforms.find((p) => job.tracks[p]?.status === "err");
+  if (errPlat) {
+    const t = job.tracks[errPlat]!;
+    job.status = "err";
+    job.error = t.error;
+    job.step = t.step;
+    return job;
+  }
+  const steps = job.platforms.map((p) => job.tracks[p]?.step || "connect");
+  let minI = STEP_RANK.length;
+  let min: ReleaseStep = "ready";
+  for (const s of steps) {
+    const i = STEP_RANK.indexOf(s);
+    if (i >= 0 && i < minI) {
+      minI = i;
+      min = s;
+    }
+  }
+  job.step = min;
+  const allOk = job.platforms.every((p) => job.tracks[p]?.status === "ok");
+  job.status = allOk ? "ok" : job.status === "queued" ? "queued" : "run";
+  if (allOk) job.step = "ready";
+  return job;
+}
+
+/** Later FSM step always wins. Empty-string provider values delete the key. */
+export function mergeReleaseJobs(prev: StoredReleaseJob | null, next: StoredReleaseJob): StoredReleaseJob {
   if (!prev) return next;
   const tracks = { ...next.tracks };
   for (const p of PLATFORMS) {
-    const a = prev.tracks[p];
-    const b = tracks[p] || a;
-    if (!a && !b) continue;
-    const provider = { ...(a?.provider || {}), ...(b?.provider || {}) };
-    for (const key of Object.keys(a?.provider || {})) {
-      const k = key as keyof NonNullable<typeof provider>;
-      if (provider[k] == null && a?.provider?.[k] != null) {
-        (provider as Record<string, unknown>)[k] = a.provider[k];
-      }
-    }
-    tracks[p] = {
-      ...(a || b)!,
-      ...b,
-      provider,
-      uploads: Math.max(a?.uploads || 0, b?.uploads || 0),
-    };
+    const merged = mergeTrack(prev.tracks[p], tracks[p] || prev.tracks[p]);
+    if (merged) tracks[p] = merged;
   }
-  return {
+  const log = next.log.length >= prev.log.length ? next.log : prev.log;
+  return syncJobProgress({
     ...prev,
     ...next,
     tracks,
+    log,
     version: next.version ?? prev.version,
-  };
+  });
+}
+
+function mergeProvider(prev: StoredReleaseJob | null, next: StoredReleaseJob): StoredReleaseJob {
+  return mergeReleaseJobs(prev, next);
 }
 
 function rowJob(row: { job?: unknown; version?: unknown }): StoredReleaseJob | null {
@@ -459,15 +521,45 @@ export async function writeReleaseJob(job: StoredReleaseJob): Promise<StoredRele
   if (sql) return sqlWrite(sql, next);
   const blobs = await blobsStore();
   if (blobs) {
-    await blobs.setJSON(next.id, next);
-    await blobs.setJSON(`key-${next.idempotencyKey}`, { id: next.id });
-    return next;
+    const prev = (await blobs.get(next.id, { type: "json" }).catch(() => null)) as StoredReleaseJob | null;
+    const merged = mergeReleaseJobs(isJob(prev) ? prev : null, next);
+    await blobs.setJSON(merged.id, merged);
+    await blobs.setJSON(`key-${merged.idempotencyKey}`, { id: merged.id });
+    return merged;
   }
   if (onNetlifyRuntime()) {
     throw new Error("Archivio release non disponibile.");
   }
-  writeFileJob(next);
-  return next;
+  const prev = readFileJob(next.id);
+  const merged = mergeReleaseJobs(prev, next);
+  writeFileJob(merged);
+  return merged;
+}
+
+/** CAS: apply only if the track is still on expectedStep. Replay/stale returns applied=false. */
+export async function writeReleaseJobIfStep(
+  job: StoredReleaseJob,
+  platform: Platform,
+  expectedStep: ReleaseStep,
+): Promise<{ applied: boolean; saved: StoredReleaseJob }> {
+  const live = await readReleaseJob(job.id);
+  if (live) {
+    const t = live.tracks[platform];
+    if (!t || t.step !== expectedStep) {
+      return { applied: false, saved: live };
+    }
+  }
+  const saved = await writeReleaseJob(job);
+  const confirm = (await readReleaseJob(job.id)) || saved;
+  const got = confirm.tracks[platform]?.step;
+  const wanted = job.tracks[platform]?.step;
+  if (got && wanted && stepRank(got) < stepRank(wanted)) {
+    return { applied: false, saved: confirm };
+  }
+  if (live && confirm.tracks[platform]?.step === expectedStep && wanted && wanted !== expectedStep) {
+    return { applied: false, saved: confirm };
+  }
+  return { applied: true, saved: confirm };
 }
 
 void RELEASE_STORE;

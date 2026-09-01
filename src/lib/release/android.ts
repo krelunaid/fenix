@@ -9,6 +9,7 @@ import {
 } from "./deploy-api.ts";
 import { dispatchOrPoll, shouldDispatchNative } from "./dispatch.ts";
 import { missingStoreRecord } from "./ids.ts";
+import { withAndroidKeystore } from "./keystore.ts";
 import { materializeAndroid, validateAndroidProject } from "./native.ts";
 import { fixtureCommand, runCommand, type CommandRunner } from "./runner.ts";
 import { googlePreflight } from "./store-api.ts";
@@ -20,6 +21,36 @@ function runner(fixture: boolean, override?: CommandRunner): CommandRunner {
   return runCommand;
 }
 
+function ghaWorkflowRunId(): string | undefined {
+  const id = process.env.GITHUB_RUN_ID?.trim();
+  return id && /^\d+$/.test(id) ? id : undefined;
+}
+
+async function jarsignerSign(
+  run: CommandRunner,
+  aab: string,
+  signed: string,
+  opts: {
+    keystorePath: string;
+    keyAlias: string;
+    storePassword: string;
+    keyPassword: string;
+  },
+) {
+  return run("jarsigner", [
+    "-keystore",
+    opts.keystorePath,
+    "-storepass",
+    opts.storePassword,
+    "-keypass",
+    opts.keyPassword,
+    "-signedjar",
+    signed,
+    aab,
+    opts.keyAlias,
+  ]);
+}
+
 export async function runAndroidStep(
   step: TrackState["step"],
   job: StoredReleaseJob,
@@ -29,19 +60,22 @@ export async function runAndroidStep(
     fixture: boolean;
     serviceJson: string | null;
     keystorePath?: string;
+    keystoreBase64?: string;
     keyAlias?: string;
     storePassword?: string;
     keyPassword?: string;
+    local?: boolean;
     commands?: CommandRunner;
   },
 ): Promise<AdapterResult> {
   const fixture = opts.fixture;
-  if (shouldDispatchNative("android", step, fixture)) {
+  if (!opts.local && shouldDispatchNative("android", step, fixture)) {
     return dispatchOrPoll("android", step, job, track, persist);
   }
   const run = runner(fixture, opts.commands);
   const pkg = job.config.packageName;
   const versionCode = androidVersionCode(job);
+  const wf = ghaWorkflowRunId();
 
   if (step === "preflight") {
     if (missingStoreRecord(pkg)) {
@@ -75,16 +109,24 @@ export async function runAndroidStep(
     });
     if (!valid.ok) return { ok: false, step, fixture, error: valid.error };
     if (existsSync(aab)) {
-      await persist({ provider: { ...track.provider, aabPath: aab, versionCode } });
+      await persist({
+        provider: {
+          ...track.provider,
+          aabPath: aab,
+          versionCode,
+          workflowRunId: wf || track.provider?.workflowRunId,
+        },
+      });
       return { ok: true, step, fixture, artifact: aab, reconciled: true };
     }
     await persist({
       provider: {
         ...track.provider,
         aabPath: aab,
-        intentId: `${job.id}:android:bundle`,
+        intentId: track.provider?.intentId || `${job.id}:android:native`,
         inflight: "bundle",
         versionCode,
+        workflowRunId: wf || track.provider?.workflowRunId,
       },
     });
     const result = await run("gradle", ["bundleRelease"], { cwd: root });
@@ -114,8 +156,17 @@ export async function runAndroidStep(
       });
       return { ok: true, step, fixture, artifact: signed, reconciled: true };
     }
+    if (opts.local && !fixture && !existsSync(aab)) {
+      return {
+        ok: false,
+        step,
+        fixture: false,
+        error:
+          "L'AAB non è su questo runner. Build, firma e upload devono girare nello stesso workflow.",
+      };
+    }
     if (!fixture) {
-      if (!opts.keystorePath || !opts.keyAlias || !opts.storePassword || !opts.keyPassword) {
+      if (!opts.keyAlias || !opts.storePassword || !opts.keyPassword) {
         return {
           ok: false,
           step,
@@ -124,30 +175,44 @@ export async function runAndroidStep(
             "Manca il keystore di upload Android sul server (path, alias, store password, key password). Non si inventa un certificato.",
         };
       }
+      if (!opts.keystorePath && !opts.keystoreBase64) {
+        return {
+          ok: false,
+          step,
+          fixture: false,
+          error:
+            "Manca il keystore di upload Android sul server (ANDROID_KEYSTORE_BASE64, oppure un file esistente in ANDROID_KEYSTORE_PATH). Non si inventa un certificato.",
+        };
+      }
     }
     await persist({ provider: { ...track.provider, inflight: "sign" } });
-    const args = fixture
-      ? ["-signedjar", signed, aab, opts.keyAlias || "upload"]
-      : [
-          "-keystore",
-          opts.keystorePath!,
-          "-storepass",
-          opts.storePassword!,
-          "-keypass",
-          opts.keyPassword!,
-          "-signedjar",
-          signed,
-          aab,
-          opts.keyAlias!,
-        ];
-    const result = await run("jarsigner", args);
-    if (!result.ok && !fixture) {
-      return {
-        ok: false,
-        step,
-        fixture: false,
-        error: "Firma AAB non riuscita. Controlla il keystore sul server.",
-      };
+    if (fixture) {
+      const result = await run("jarsigner", ["-signedjar", signed, aab, opts.keyAlias || "upload"]);
+      if (!result.ok) {
+        return { ok: false, step, fixture, error: "Firma AAB di prova non riuscita." };
+      }
+    } else {
+      const signWith = async (keystorePath: string) =>
+        jarsignerSign(run, aab, signed, {
+          keystorePath,
+          keyAlias: opts.keyAlias!,
+          storePassword: opts.storePassword!,
+          keyPassword: opts.keyPassword!,
+        });
+      const result = opts.keystoreBase64
+        ? await withAndroidKeystore(
+            { path: opts.keystorePath, base64: opts.keystoreBase64 },
+            signWith,
+          )
+        : await signWith(opts.keystorePath!);
+      if (!result.ok) {
+        return {
+          ok: false,
+          step,
+          fixture: false,
+          error: "Firma AAB non riuscita. Controlla il keystore sul server.",
+        };
+      }
     }
     const artifact = existsSync(signed) ? signed : aab;
     await persist({
@@ -186,7 +251,16 @@ export async function runAndroidStep(
       return { ok: false, step, fixture: false, error: "Service account Play assente." };
     }
     const aabPath = track.provider?.signedAabPath || track.provider?.aabPath;
-    if (!aabPath) return { ok: false, step, fixture: false, error: "AAB assente. Riprendi dalla compilazione." };
+    if (!aabPath) {
+      return {
+        ok: false,
+        step,
+        fixture: false,
+        error: opts.local
+          ? "AAB assente su questo runner. Build, firma e upload devono girare nello stesso workflow."
+          : "AAB assente. Riprendi dalla compilazione.",
+      };
+    }
     await persist({
       provider: { ...track.provider, versionCode: track.provider?.versionCode || versionCode },
     });
@@ -210,7 +284,14 @@ export async function runAndroidStep(
     try {
       bytes = new Uint8Array(readFileSync(aabPath));
     } catch {
-      return { ok: false, step, fixture: false, error: "AAB non leggibile sul worker." };
+      return {
+        ok: false,
+        step,
+        fixture: false,
+        error: opts.local
+          ? "AAB non leggibile su questo runner. Build, firma e upload devono girare nello stesso workflow."
+          : "AAB non leggibile sul worker.",
+      };
     }
     const edit = await playInsertEdit(opts.serviceJson, pkg, track.provider?.editId);
     if (!edit.ok) return { ok: false, step, fixture: false, error: edit.error };

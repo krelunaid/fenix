@@ -51,4 +51,4 @@ Senza questa variabile Fenix resta sui due sguardi nell’anteprima (html2canvas
 
 ## Rilascio iOS / Android
 
-Build e firma **non** girano nella Function Netlify. Il job è su Postgres (`release_jobs`, `idempotency_key` unique). iOS va su un runner macOS con Xcode, Android su Linux con JDK/SDK. Dettagli e secret: [`workers/release/README.md`](workers/release/README.md). Web resta nella Function; dopo il deploy si mostra `ssl_url` Netlify.
+Build e firma **non** girano nella Function Netlify. Il job è su Postgres (`release_jobs`, `idempotency_key` unique). Un solo workflow per piattaforma esegue build → sign → upload sullo stesso runner, persiste gli id provider e invia callback HMAC. iOS: `.p8` + Team ID con `-allowProvisioningUpdates` (P12 opzionale). Android: `ANDROID_KEYSTORE_BASE64` materializzato in temp 0600. Dettagli: [`workers/release/README.md`](workers/release/README.md). Web resta nella Function; dopo il deploy si mostra `ssl_url` Netlify.

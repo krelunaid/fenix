@@ -76,3 +76,15 @@ export function copyGradleWrapperJar(src: string, destDir: string): string {
   copyFileSync(src, dest);
   return dest;
 }
+
+/** Download the pinned wrapper jar into workers/release/vendor if absent. */
+export function ensureVendoredGradleWrapperJar(): string {
+  const path = vendorGradleWrapperJarPath();
+  if (readVendoredGradleWrapperJar()) return path;
+  const bytes = downloadGradleWrapperJar();
+  mkdirSync(dirname(path), { recursive: true });
+  writeFileSync(path, bytes);
+  const check = assertGradleWrapperJar(readFileSync(path));
+  if (!check.ok) throw new Error(check.error);
+  return path;
+}

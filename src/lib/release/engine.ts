@@ -15,6 +15,7 @@ import {
   acquireReleaseLease,
   canTakeLease,
   claimReleaseKey,
+  mergeReleaseJobs,
   publicReleaseJob,
   readReleaseJob,
   waitReleaseByKey,
@@ -198,6 +199,26 @@ export async function tickReleaseJob(
       current.step = held.step;
       appendLog(current, `${platform}: ${result.error || "errore"}`);
       return writeReleaseJob(current);
+    }
+    const live = await readReleaseJob(current.id);
+    if (live) {
+      current = withLease(mergeReleaseJobs(live, current), token);
+      const advanced = current.tracks[platform];
+      if (advanced && advanced.step !== stepNow) {
+        Object.assign(held, advanced);
+        held.provider = { ...advanced.provider };
+        current.tracks[platform] = held;
+        current.step = jobStep(current);
+        if (advanced.status === "err") {
+          current.status = "err";
+          current.error = advanced.error;
+        } else {
+          const allReady = current.platforms.every((p) => current.tracks[p]?.status === "ok");
+          current.status = allReady ? "ok" : "run";
+          if (allReady) current.step = "ready";
+        }
+        return writeReleaseJob(current);
+      }
     }
     held.fixture = result.fixture;
     held.artifact = result.artifact || held.artifact;

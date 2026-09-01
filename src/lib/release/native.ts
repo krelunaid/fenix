@@ -1,6 +1,7 @@
 import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { assignBuildNumbers } from "./build-id.ts";
+import { installGradleWrapperJar } from "./gradle-wrapper.ts";
 import type { StoredReleaseJob } from "./types.ts";
 
 export function workDir(job: StoredReleaseJob, platform: "ios" | "android") {
@@ -612,6 +613,11 @@ zipStorePath=wrapper/dists
     chmodSync(gradlew, 0o755);
   } catch {
     /* windows */
+  }
+  try {
+    installGradleWrapperJar(join(root, "gradle/wrapper"));
+  } catch {
+    /* vendor jar / network optional at materialize; worker uses setup-gradle */
   }
   const aab = join(root, "app/build/outputs/bundle/release/app-release.aab");
   mkdirSync(dirname(aab), { recursive: true });

@@ -22,7 +22,17 @@ import {
 import type { PersistTrack, StoredReleaseJob, TrackState } from "./types.ts";
 import { runWebStep } from "./web.ts";
 import { redactArgs } from "./redact.ts";
-import { shouldDispatchNative } from "./dispatch.ts";
+import {
+  applyReleaseCallback,
+  artifactHashOf,
+} from "./callback.ts";
+import {
+  setNativeDispatcherForTest,
+  shouldDispatchNative,
+  signReleaseCallback,
+} from "./dispatch.ts";
+import { mergeReleaseJobs, writeReleaseJob, writeReleaseJobIfStep } from "./store.ts";
+import { runNativePipeline } from "./pipeline.ts";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const SITE = readFileSync(join(here, "../projects/fixtures/music-site-no-fenix.html"), "utf8");
@@ -590,5 +600,325 @@ describe("fase2 web keeps the Netlify ssl_url and native work is dispatched", ()
     assert.equal(shouldDispatchNative("ios", "build", true), false);
     process.env.FENIX_RELEASE_WORKER = "ios";
     assert.equal(shouldDispatchNative("ios", "build", false), false);
+  });
+});
+
+describe("fase2 one native workflow per platform, CAS callback, ephemeral runners", () => {
+  const prevRel = process.env.FENIX_RELEASE_DIR;
+  const rel = mkdtempSync(join(tmpdir(), "fenix-fase2-pipe-"));
+  afterEach(() => {
+    setNativeDispatcherForTest(null);
+    resetReleaseClaimsForTest();
+    setReleaseSqlForTest(null);
+    delete process.env.NETLIFY;
+    delete process.env.FENIX_NATIVE_DISPATCH;
+    delete process.env.FENIX_RELEASE_WORKER;
+  });
+  before(() => {
+    process.env.FENIX_RELEASE_DIR = rel;
+  });
+  after(() => {
+    if (prevRel === undefined) delete process.env.FENIX_RELEASE_DIR;
+    else process.env.FENIX_RELEASE_DIR = prevRel;
+    rmSync(rel, { recursive: true, force: true });
+  });
+
+  it("Netlify dispatches one pipeline and does not re-dispatch while runId is set", async () => {
+    process.env.NETLIFY = "1";
+    process.env.FENIX_NATIVE_DISPATCH = "1";
+    const calls: string[] = [];
+    setNativeDispatcherForTest({
+      async dispatch(req) {
+        calls.push(`dispatch:${req.platform}:${req.step}:${req.intentId}`);
+        return { ok: true, runId: `gha:${req.intentId}`, workflowRunId: "998877" };
+      },
+      async poll(runId) {
+        calls.push(`poll:${runId}`);
+        return { status: "run", runId, workflowRunId: "998877" };
+      },
+    });
+    const job = sampleJob({ id: "job-one-dispatch", platforms: ["ios"] });
+    const track: TrackState = {
+      platform: "ios",
+      step: "build",
+      status: "run",
+      fixture: false,
+      uploads: 0,
+    };
+    const first = await runIosStep("build", job, track, persistInto(track), {
+      fixture: false,
+      creds: { issuerId: "iss-123456789", keyId: "KEYID12345", privateKey: "not-a-pem" },
+    });
+    assert.equal(first.ok, true);
+    assert.equal(first.pending, true);
+    assert.equal(track.provider?.workflowRunId, "998877");
+    assert.equal(track.provider?.runId, `gha:${job.id}:ios:native`);
+    assert.equal(track.provider?.inflight, "dispatch");
+    const second = await runIosStep("sign", job, track, persistInto(track), {
+      fixture: false,
+      creds: { issuerId: "iss-123456789", keyId: "KEYID12345", privateKey: "not-a-pem" },
+    });
+    assert.equal(second.pending, true);
+    assert.equal(calls.filter((c) => c.startsWith("dispatch:")).length, 1);
+    assert.match(calls[0] || "", /pipeline|ios:native/);
+    assert.ok(calls.some((c) => c.startsWith("poll:")));
+  });
+
+  it("stale Netlify tick cannot regress a track that the worker already advanced", () => {
+    const advanced = sampleJob({ id: "job-no-regress" });
+    advanced.tracks.ios = {
+      platform: "ios",
+      step: "sign",
+      status: "run",
+      fixture: false,
+      uploads: 0,
+      artifact: "/tmp/A.xcarchive",
+      provider: { runId: "gha:x", inflight: "dispatch", archivePath: "/tmp/A.xcarchive" },
+    };
+    const stale = sampleJob({ id: "job-no-regress" });
+    stale.tracks.ios = {
+      platform: "ios",
+      step: "build",
+      status: "run",
+      fixture: false,
+      uploads: 0,
+      provider: { inflight: "dispatch" },
+    };
+    const merged = mergeReleaseJobs(advanced, stale);
+    assert.equal(merged.tracks.ios.step, "sign");
+    assert.equal(merged.tracks.ios.provider?.archivePath, "/tmp/A.xcarchive");
+    assert.equal(merged.tracks.ios.provider?.runId, "gha:x");
+  });
+
+  it("ok callback advances exactly once; replay and stale are ignored; inflight stays through native steps", async () => {
+    const pg = await createReleaseSqlForTest();
+    setReleaseSqlForTest(pg.sql);
+    const job = sampleJob({ id: "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee", platforms: ["ios"] });
+    job.tracks.ios = {
+      platform: "ios",
+      step: "build",
+      status: "run",
+      fixture: false,
+      uploads: 0,
+      provider: { intentId: `${job.id}:ios:native`, runId: `gha:${job.id}:ios:native` },
+    };
+    await writeReleaseJob(job);
+    const secret = "callback-secret-value";
+    const runId = `gha:${job.id}:ios:native`;
+    const artifact = "/runner-a/onda.xcarchive";
+    const ts = Date.now();
+    const artifactHash = artifactHashOf(artifact);
+    const signature = signReleaseCallback({
+      jobId: job.id,
+      platform: "ios",
+      step: "build",
+      runId,
+      status: "ok",
+      artifactHash,
+      ts,
+      secret,
+    });
+    const body = {
+      jobId: job.id,
+      platform: "ios" as const,
+      step: "build" as const,
+      runId,
+      status: "ok" as const,
+      artifact,
+      ts,
+      artifactHash,
+      workflowRunId: "33473800",
+      signature,
+      secret,
+    };
+    const first = await applyReleaseCallback(body);
+    assert.equal(first.ok, true);
+    assert.equal(first.ok && first.applied, true);
+    const after = await (await import("./store.ts")).readReleaseJob(job.id);
+    assert.equal(after?.tracks.ios.step, "sign");
+    assert.equal(after?.tracks.ios.provider?.inflight, "dispatch");
+    assert.equal(after?.tracks.ios.provider?.workflowRunId, "33473800");
+    const replay = await applyReleaseCallback(body);
+    assert.equal(replay.ok, true);
+    assert.equal(replay.ok && replay.applied, false);
+    assert.equal(replay.ok && replay.ignored, "replay");
+    const staleSig = signReleaseCallback({
+      jobId: job.id,
+      platform: "ios",
+      step: "build",
+      runId,
+      status: "ok",
+      artifactHash,
+      ts: Date.now(),
+      secret,
+    });
+    const stale = await applyReleaseCallback({ ...body, ts: Date.now(), signature: staleSig });
+    assert.equal(stale.ok && stale.applied, false);
+    const mismatch = await applyReleaseCallback({
+      ...body,
+      runId: "gha:other",
+      ts: Date.now(),
+      signature: signReleaseCallback({
+        jobId: job.id,
+        platform: "ios",
+        step: "build",
+        runId: "gha:other",
+        status: "ok",
+        artifactHash,
+        ts: Date.now(),
+        secret,
+      }),
+    });
+    assert.equal(mismatch.ok && mismatch.applied, false);
+    const still = await (await import("./store.ts")).readReleaseJob(job.id);
+    assert.equal(still?.tracks.ios.step, "sign");
+    await pg.close();
+  });
+
+  it("CAS writeReleaseJobIfStep ignores a callback for a step already left", async () => {
+    const job = sampleJob({ id: "job-cas-step" });
+    job.tracks.ios.step = "sign";
+    await writeReleaseJob(job);
+    job.tracks.ios.step = "upload";
+    const written = await writeReleaseJobIfStep(job, "ios", "build");
+    assert.equal(written.applied, false);
+    assert.equal(written.saved.tracks.ios.step, "sign");
+  });
+
+  it("archive from runner A is invisible on runner B; same-runner pipeline keeps it", async () => {
+    const a = mkdtempSync(join(tmpdir(), "fenix-runner-a-"));
+    const b = mkdtempSync(join(tmpdir(), "fenix-runner-b-"));
+    const prev = process.env.FENIX_RELEASE_DIR;
+    try {
+      process.env.FENIX_RELEASE_DIR = a;
+      const job = sampleJob({ id: "job-eph-ios" });
+      const track: TrackState = {
+        platform: "ios",
+        step: "build",
+        status: "run",
+        fixture: true,
+        uploads: 0,
+      };
+      const built = await runIosStep("build", job, track, persistInto(track), {
+        fixture: true,
+        creds: null,
+        local: true,
+      });
+      assert.equal(built.ok, true, built.error);
+      assert.equal(existsSync(String(built.artifact)), true);
+      rmSync(a, { recursive: true, force: true });
+      process.env.FENIX_RELEASE_DIR = b;
+      const trackB: TrackState = {
+        platform: "ios",
+        step: "sign",
+        status: "run",
+        fixture: false,
+        uploads: 0,
+        provider: { archivePath: String(built.artifact) },
+      };
+      const signedB = await runIosStep("sign", job, trackB, persistInto(trackB), {
+        fixture: false,
+        creds: { issuerId: "iss-123456789", keyId: "KEYID12345", privateKey: "k".repeat(40) },
+        teamId: "TEAMID1",
+        local: true,
+      });
+      assert.equal(signedB.ok, false);
+      assert.match(signedB.error || "", /stesso workflow|runner/i);
+      const same = mkdtempSync(join(tmpdir(), "fenix-runner-same-"));
+      process.env.FENIX_RELEASE_DIR = same;
+      const pipedTrack: TrackState = {
+        platform: "ios",
+        step: "build",
+        status: "run",
+        fixture: true,
+        uploads: 0,
+      };
+      const piped = await runNativePipeline(
+        "ios",
+        job,
+        pipedTrack,
+        persistInto(pipedTrack),
+        { fixture: true, ios: { creds: null, teamId: "TEAMID1" } },
+      );
+      assert.equal(piped.ok, true, piped.error);
+      rmSync(same, { recursive: true, force: true });
+    } finally {
+      if (prev === undefined) delete process.env.FENIX_RELEASE_DIR;
+      else process.env.FENIX_RELEASE_DIR = prev;
+      rmSync(a, { recursive: true, force: true });
+      rmSync(b, { recursive: true, force: true });
+    }
+  });
+
+  it("xcodebuild archive receives authentication flags and never logs the p8", async () => {
+    const { privateKey } = generateKeyPairSync("ec", { namedCurve: "P-256" });
+    const pem = privateKey.export({ type: "pkcs8", format: "pem" }).toString();
+    const job = sampleJob({ id: "job-ios-auth" });
+    const track: TrackState = {
+      platform: "ios",
+      step: "build",
+      status: "run",
+      fixture: false,
+      uploads: 0,
+    };
+    let captured: string[] = [];
+    let loggedPem = false;
+    const built = await runIosStep("build", job, track, persistInto(track), {
+      fixture: false,
+      creds: { issuerId: "iss-123456789", keyId: "KEYID12345", privateKey: pem },
+      teamId: "TEAMID1",
+      local: true,
+      commands: async (file, args, opts) => {
+        const blob = JSON.stringify({ file, args, env: opts?.env || {} });
+        if (blob.includes("BEGIN PRIVATE KEY") || blob.includes(pem.slice(0, 40))) loggedPem = true;
+        if (file === "xcodebuild") captured = args;
+        return fixtureCommand(file, args, opts);
+      },
+    });
+    assert.equal(built.ok, true, built.error);
+    assert.ok(captured.includes("-allowProvisioningUpdates"));
+    assert.ok(captured.includes("-authenticationKeyPath"));
+    assert.ok(captured.includes("-authenticationKeyID"));
+    assert.ok(captured.includes("-authenticationKeyIssuerID"));
+    assert.ok(captured.some((a) => a.startsWith("DEVELOPMENT_TEAM=")));
+    assert.equal(loggedPem, false);
+  });
+
+  it("Android sign materializes ANDROID_KEYSTORE_BASE64 and unlinks it", async () => {
+    const job = sampleJob({ id: "job-and-b64", platforms: ["android"] });
+    const aab = join(rel, "work", job.id, "android", "app/build/outputs/bundle/release/app-release.aab");
+    await fixtureCommand("gradle", ["bundleRelease"], {
+      cwd: join(rel, "work", job.id, "android"),
+    });
+    const track: TrackState = {
+      platform: "android",
+      step: "sign",
+      status: "run",
+      fixture: false,
+      uploads: 0,
+      provider: { aabPath: aab },
+    };
+    const fakeKs = Buffer.alloc(64, 7).toString("base64");
+    let seenPath = "";
+    const signed = await runAndroidStep("sign", job, track, persistInto(track), {
+      fixture: false,
+      serviceJson: "{}",
+      keystoreBase64: fakeKs,
+      keyAlias: "upload",
+      storePassword: "store-secret-value",
+      keyPassword: "key-secret-value",
+      local: true,
+      commands: async (file, args, opts) => {
+        if (file === "jarsigner") {
+          const i = args.indexOf("-keystore");
+          seenPath = i >= 0 ? String(args[i + 1]) : "";
+          assert.equal(existsSync(seenPath), true);
+        }
+        return fixtureCommand(file, args, opts);
+      },
+    });
+    assert.equal(signed.ok, true, signed.error);
+    assert.ok(seenPath.includes("fenix-ks-"));
+    assert.equal(existsSync(seenPath), false);
   });
 });

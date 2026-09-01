@@ -275,6 +275,7 @@ describe("focus-visible and worker model", () => {
     assert.match(releaseSecrets, /GOOGLE_PLAY_SERVICE_ACCOUNT/);
     assert.match(releaseSecrets, /APPLE_TEAM_ID/);
     assert.match(releaseSecrets, /ANDROID_KEYSTORE_PATH/);
+    assert.match(releaseSecrets, /ANDROID_KEYSTORE_BASE64/);
     assert.match(releaseSecrets, /ANDROID_KEY_ALIAS/);
     assert.match(releaseHttp, /handleReleaseCollection/);
     assert.match(releaseEngine, /gateHtml/);
@@ -303,9 +304,11 @@ describe("focus-visible and worker model", () => {
     assert.match(iosSrc, /altool/);
     assert.match(iosSrc, /appleListLatestBuild/);
     assert.match(iosSrc, /withAppleApiKey/);
+    assert.match(iosSrc, /allowProvisioningUpdates|authenticationKeyPath|withIosCodeSign/);
     const appleKeySrc = readFileSync(join(root, "src/lib/release/apple-key.ts"), "utf8");
     assert.match(appleKeySrc, /API_PRIVATE_KEYS_DIR/);
     assert.match(appleKeySrc, /AuthKey_/);
+    assert.match(appleKeySrc, /withIosCodeSign/);
     const nativeSrc = readFileSync(join(root, "src/lib/release/native.ts"), "utf8");
     assert.match(nativeSrc, /isa = PBXNativeTarget/);
     assert.match(nativeSrc, /xmlns:android/);
@@ -314,6 +317,7 @@ describe("focus-visible and worker model", () => {
     assert.match(androidSrc, /bundleRelease/);
     assert.match(androidSrc, /jarsigner/);
     assert.match(androidSrc, /-keystore/);
+    assert.match(androidSrc, /keystoreBase64|withAndroidKeystore/);
     assert.match(androidSrc, /playInsertEdit/);
     assert.match(androidSrc, /playUploadBundle/);
     assert.match(androidSrc, /playCommitInternal/);
@@ -327,6 +331,8 @@ describe("focus-visible and worker model", () => {
     const dispatchSrc = readFileSync(join(root, "src/lib/release/dispatch.ts"), "utf8");
     assert.match(dispatchSrc, /shouldDispatchNative/);
     assert.match(dispatchSrc, /workflow_dispatch|release-ios.yml/);
+    assert.match(dispatchSrc, /workflowRunId/);
+    assert.match(dispatchSrc, /step: "pipeline"/);
     const deployApi = readFileSync(join(root, "src/lib/release/deploy-api.ts"), "utf8");
     assert.match(deployApi, /edits\/.+\/tracks\/internal|\/edits\/" \+|encodeURIComponent\(edit.id\)/);
     assert.doesNotMatch(
@@ -346,6 +352,7 @@ describe("focus-visible and worker model", () => {
     assert.match(envExample, /APPLE_ISSUER_ID=/);
     assert.match(envExample, /APPLE_TEAM_ID=/);
     assert.match(envExample, /ANDROID_KEYSTORE_PATH=/);
+    assert.match(envExample, /ANDROID_KEYSTORE_BASE64=/);
     assert.match(envExample, /ANDROID_KEY_ALIAS=/);
     assert.match(envExample, /FENIX_RELEASE_CALLBACK_SECRET=/);
     assert.doesNotMatch(envExample, /BEGIN PRIVATE KEY/);
