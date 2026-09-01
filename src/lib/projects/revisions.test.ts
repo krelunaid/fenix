@@ -13,6 +13,7 @@ import {
   redactActivityText,
 } from "./activity.ts";
 import { FASE3_GAPS, fase3NowGaps } from "./fase3-gap.ts";
+import { FASE3_SCORECARD, fase3Score, scoreDimension } from "./fase3-scorecard.ts";
 import {
   MAX_REVISIONS,
   branchProjectRevision,
@@ -77,6 +78,27 @@ describe("fase3 gap matrix is evidence, not parity", () => {
     const observability = FASE3_GAPS.find((g) => g.id === "observability");
     assert.equal(observability?.slice, "next");
     assert.match(observability?.fenix || "", /registro|redatt|attivit/i);
+  });
+
+  it("scores only cited, reproducible evidence and keeps the 100-point ceiling honest", () => {
+    const total = fase3Score();
+    assert.deepEqual(
+      FASE3_SCORECARD.map((dimension) => dimension.max),
+      [20, 15, 15, 15, 15, 20],
+    );
+    assert.equal(total.max, 100);
+    assert.equal(total.score, 61);
+    assert.equal(total.complete, false);
+    for (const dimension of FASE3_SCORECARD) {
+      assert.ok(scoreDimension(dimension) <= dimension.max);
+      assert.ok(dimension.remaining.length >= 30);
+      assert.ok(dimension.evidence.length > 0);
+      for (const row of dimension.evidence) {
+        assert.ok(row.points > 0);
+        assert.match(row.reproduce, /npm (?:test|run)/);
+        assert.doesNotMatch(`${row.claim} ${dimension.remaining}`, /parit[aà]|feature-complete/i);
+      }
+    }
   });
 });
 
