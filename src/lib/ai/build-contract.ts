@@ -19,6 +19,7 @@ import {
   collectionForBrief,
   extractFenixCollectionHits,
   invalidFenixCollectionError,
+  rewriteFenixCollectionCode,
   slugFenixCollection,
 } from "../projects/fenix-collection.ts";
 import {
@@ -437,8 +438,9 @@ export function evaluateContract(input: {
       ? `mancano ${missingExpected.join(", ")}`
       : `${ingest.files.length} file`;
 
-  const collectionHits = extractFenixCollectionHits(code);
-  const collectionErr = invalidFenixCollectionError(code);
+  const collectionCode = rewriteFenixCollectionCode(code);
+  const collectionHits = extractFenixCollectionHits(collectionCode);
+  const collectionErr = invalidFenixCollectionError(collectionCode);
 
   const checks: ContractCheck[] = [
     check("html", report.ok, report.ok ? "HTML valido" : report.errors.slice(0, 3).join(" · ")),

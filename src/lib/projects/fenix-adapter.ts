@@ -8,6 +8,7 @@ import { kindFromPrompt } from "./infer.ts";
 import type { Palette, ProjectKind } from "./types.ts";
 import type { ProjectFile } from "./files.ts";
 import { FENIX_DATA_API_RUNTIME } from "./fenix-data-api.ts";
+import { rewriteFenixCollections } from "./fenix-collection.ts";
 import {
   CONTRACT_REPAIR_MAX,
   contractAllowsReady,
@@ -57,7 +58,7 @@ export type GatedProduct = {
 };
 
 export function ensureFenixAdapter(html: string): string {
-  const text = String(html || "");
+  const text = rewriteFenixCollections(String(html || ""));
   if (!text || htmlHasFenixApi(text)) return text;
   if (/<\/body>/i.test(text)) return text.replace(/<\/body>/i, `${FENIX_ADAPTER_SCRIPT}</body>`);
   return text + FENIX_ADAPTER_SCRIPT;

@@ -185,9 +185,9 @@ export const QUALITY_LEDGER: LedgerRow[] = [
   {
     id: "vesti-collection-gate",
     claim:
-      "Fenix.data accetta solo token [A-Za-z0-9._-]{1,80}. La collection di produzione Vesti «capi vesti» (spazio) è rifiutata da parser, gate HTML/contratto e runtime; il planner emette «capi». Nessun ready/Pubblica se il bootstrap fallisce. Patch su template assenti (t-new/t-stats/t-more) sono no-op deduplicate, senza nuovi giri xAI. Repair max 2. Crediti 0 su questi gate.",
+      "Fenix.data accetta solo token [A-Za-z0-9._-]{1,80} e non slugifica. L'output Vesti di produzione usa var COL = \"capi vesti\" (non un literal in query): parser/adattatore/preview lo riscrivono nel set canonico capi; un token con slash resta fail-closed e non può ready/Pubblica. Patch su template assenti o SCREEN id irraggiungibile sono no-op deduplicate, extra al massimo una volta per tab, senza nuovi giri xAI. Repair max 2. Crediti 0 su questi gate.",
     evidence:
-      "fenix-collection.test.ts + screen-patch.test.ts + vesti-browser.test.ts D/T/M + fixtures/vesti-eval.json + fixtures/shots/vesti/manifest.json",
+      "fenix-collection.test.ts (COL hole + rewrite capi + slash) + screen-patch.test.ts (unchanged≠absent, extraTried) + vesti-browser.test.ts D/T/M + fixtures/vesti-production.html + fixtures/vesti-eval.json + fixtures/shots/vesti/manifest.json",
     ok: true,
   },
   {

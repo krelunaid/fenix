@@ -9,10 +9,16 @@ import { prepareSrcDoc } from "./color-scheme.ts";
 import { waitForFenixReady } from "../../../scripts/fenix-ready.mjs";
 import { planContract, evaluateContract } from "../ai/build-contract.ts";
 import { formatPrefix } from "./infer.ts";
+import { canPublishHtml } from "./validate-html.ts";
+import { blocksPublish } from "../ai/build-contract.ts";
+import { isPublishable } from "./recover.ts";
+import { rewriteFenixCollections } from "./fenix-collection.ts";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const VALID = readFileSync(join(here, "fixtures/vesti.html"), "utf8");
+const PRODUCTION = readFileSync(join(here, "fixtures/vesti-production.html"), "utf8");
 const INVALID = readFileSync(join(here, "fixtures/vesti-invalid-collection.html"), "utf8");
+const SLASH = INVALID.replace('var COL = "capi vesti"', 'var COL = "capi/abiti"');
 const SHOTS = join(here, "fixtures/shots/vesti");
 const VIEWPORTS = [
   ["D", { width: 1280, height: 800 }],
@@ -36,16 +42,22 @@ async function shot(page: Page, name: string) {
 }
 
 describe("Vesti collection gate in the browser D/T/M", () => {
-  it("runs persistent CRUD on capi, stays console-clean, and blocks the spaced collection", async () => {
+  it("rewrites production COL=capi vesti, runs persistent CRUD, and blocks slash collections", async () => {
     const brief = `${formatPrefix("app")}Vesti: armadio di casa, registra i capi.`;
     const contract = planContract(brief);
+    assert.match(PRODUCTION, /var COL = "capi vesti"/);
+    const rewritten = rewriteFenixCollections(PRODUCTION);
+    assert.match(rewritten, /var COL = "capi"/);
     const evaluation = evaluateContract({
-      html: VALID,
-      files: [{ path: "index.html", content: VALID }],
+      html: PRODUCTION,
+      files: [{ path: "index.html", content: PRODUCTION }],
       contract,
       kind: "app",
     });
     assert.equal(evaluation.ok, true, evaluation.checks.filter((c) => !c.ok).map((c) => c.id).join(","));
+    assert.equal(canPublishHtml(SLASH, "app", "vesti-slash"), false);
+    assert.match(blocksPublish(SLASH, "app", undefined, brief), /collezione non valido/);
+    assert.equal(isPublishable({ status: "ready", html: SLASH, kind: "app", prompt: brief }), false);
 
     const browser = await launch();
     const manifest: {
@@ -76,28 +88,39 @@ describe("Vesti collection gate in the browser D/T/M", () => {
           w.__fenixRejects = bag;
         });
       });
-      const badSrc = prepareSrcDoc(INVALID, PALETTE, "vesti-bad", "app");
+      const badSrc = prepareSrcDoc(SLASH, PALETTE, "vesti-slash", "app");
       await badPage.setContent(badSrc, { waitUntil: "domcontentloaded", timeout: 15000 });
       await new Promise((r) => setTimeout(r, 600));
       const probed = await badPage.evaluate(async () => {
         const w = window as any;
         const rejects = w.__fenixRejects || [];
-        let call = "";
+        let spaced = "";
+        let slash = "";
         try {
           await w.Fenix.data.query("capi vesti");
         } catch (error) {
-          call = String(error);
+          spaced = String(error);
+        }
+        try {
+          await w.Fenix.data.query("capi/abiti");
+        } catch (error) {
+          slash = String(error);
         }
         return {
           ready: document.documentElement.getAttribute("data-fenix-ready"),
           boot: document.documentElement.getAttribute("data-fenix-boot-error"),
           rejects,
-          call,
+          spaced,
+          slash,
+          visibleCss: /html,body\{/.test(document.body?.innerText || ""),
         };
       });
-      const haystack = [probed.call, probed.boot, ...probed.rejects, ...bootErrors].join(" | ");
+      const haystack = [probed.spaced, probed.slash, probed.boot, ...probed.rejects, ...bootErrors].join(" | ");
       assert.match(haystack, /Fenix\.data: collezione non valido/);
+      assert.match(probed.spaced, /collezione non valido/);
+      assert.match(probed.slash, /collezione non valido/);
       assert.notEqual(probed.ready, "1");
+      assert.equal(probed.visibleCss, false);
       await badPage.close();
 
       for (const [vp, viewport] of VIEWPORTS) {
@@ -107,9 +130,19 @@ describe("Vesti collection gate in the browser D/T/M", () => {
         page.on("console", (msg) => {
           if (msg.type() === "error") errors.push(msg.text());
         });
-        const src = prepareSrcDoc(VALID, PALETTE, "vesti", "app");
+        const src = prepareSrcDoc(PRODUCTION, PALETTE, "vesti", "app");
+        assert.match(src, /var COL = "capi"/);
+        assert.doesNotMatch(src, /var COL = "capi vesti"/);
         await page.setContent(src, { waitUntil: "domcontentloaded", timeout: 15000 });
         await waitForFenixReady(page, 8000);
+        const overlay = await page.evaluate(() => ({
+          boot: document.documentElement.getAttribute("data-fenix-boot-error"),
+          ready: document.documentElement.getAttribute("data-fenix-ready"),
+          visibleCss: /html,body\{/.test(document.body?.innerText || ""),
+        }));
+        assert.equal(overlay.boot, null);
+        assert.equal(overlay.ready, "1");
+        assert.equal(overlay.visibleCss, false);
         await page.getByRole("button", { name: "Nuovo" }).click();
         await page.locator("#nome").fill("Cappotto lana");
         await page.locator("#stagione").fill("inverno");
@@ -147,7 +180,7 @@ window.addEventListener("message", function(e){
   e.source.postMessage({t:"fenix-db",id:m.id,v:value},"*");
 });
 </script></body></html>`);
-      const src = prepareSrcDoc(VALID, PALETTE, "vesti-persist", "app");
+      const src = prepareSrcDoc(PRODUCTION, PALETTE, "vesti-persist", "app");
       const load = () =>
         persist.locator("#f").evaluate((el, srcDoc: string) => {
           (el as HTMLIFrameElement).srcdoc = srcDoc;
@@ -184,5 +217,6 @@ window.addEventListener("message", function(e){
       assert.equal(existsSync(join(SHOTS, file.name)), true);
       assert.ok(statSync(join(SHOTS, file.name)).size > 1000);
     }
+    assert.equal(VALID.includes('query("capi")'), true);
   });
 });

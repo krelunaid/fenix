@@ -1,5 +1,6 @@
 import { looksLikeLeakedCss } from "./color-scheme.ts";
 import { hydratePortableBackendFiles } from "./portable-backend.ts";
+import { rewriteFenixCollections } from "./fenix-collection.ts";
 
 export type ProjectFile = {
   path: string;
@@ -510,5 +511,5 @@ export function bundleProjectHtml(files: ProjectFile[], fallbackHtml = ""): stri
 /** Live preview is a deterministic single document built from the canonical tree. */
 export function authorizedPreviewHtml(input: { html?: string; files?: ProjectFile[] }): string {
   const html = typeof input.html === "string" ? input.html : "";
-  return bundleProjectHtml(input.files || [], html);
+  return rewriteFenixCollections(bundleProjectHtml(input.files || [], html));
 }

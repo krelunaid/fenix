@@ -17,6 +17,7 @@ import {
   ensureMainElementId,
 } from "./craft-icons";
 import { repairLeakedCss } from "./color-scheme";
+import { rewriteFenixCollections } from "./fenix-collection";
 import {
   DEFAULT_PALETTE,
   type BuildStatus,
@@ -846,13 +847,15 @@ export function applyBuildResult(
   const requestedKind = existing?.requestedKind ?? kind;
   const html = repairLeakedCss(
     ensureMainElementId(
-      isPhoneKind(kind)
-        ? rewriteIosWidgetHome(replaceAppleTabIcons(result.html))
-        : shouldRepairDashboard(result.html, kind)
-          ? polishDashboardHtml(result.html, kind)
-          : kind === "site" || kind === "landing"
-            ? stripPhoneChromeFromSite(result.html)
-            : result.html,
+      rewriteFenixCollections(
+        isPhoneKind(kind)
+          ? rewriteIosWidgetHome(replaceAppleTabIcons(result.html))
+          : shouldRepairDashboard(result.html, kind)
+            ? polishDashboardHtml(result.html, kind)
+            : kind === "site" || kind === "landing"
+              ? stripPhoneChromeFromSite(result.html)
+              : result.html,
+      ),
     ),
   );
   const report = validatePublishable(html, {

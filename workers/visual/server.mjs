@@ -5,6 +5,9 @@ import {
   hasScreenTarget,
   looksLikeCssDump,
   noteAbsent,
+  noteSkip,
+  resolvePatchTarget,
+  shouldPolishTab,
 } from "./screen-patch.mjs";
 
 /**
@@ -752,10 +755,11 @@ async function polish(prompt, html, instruction, kind) {
   const focus = instruction ? inferTab(instruction) : -1;
   const rounds = !phone ? 0 : instruction ? 2 : PASSES;
   const absent = new Set();
+  const skipSeen = new Set();
   for (let i = 0; i < rounds; i++) {
     const tabIndex = focus >= 0 ? focus : i;
     const tabId = TAB_IDS[tabIndex] || "home";
-    if (!hasScreenTarget(current, tabId)) {
+    if (!shouldPolishTab(current, tabId, absent)) {
       noteAbsent(absent, log, tabId, false);
       continue;
     }
@@ -777,17 +781,20 @@ async function polish(prompt, html, instruction, kind) {
       const text = await grok(apiKey, prompt, current, shot, tabIndex + 1, instruction, tabId);
       const screen = parseScreen(text);
       if (screen?.inner) {
-        const id = screen.id || tabId;
-        const patch = applyScreenPatch(current, id, screen.inner);
-        if (!patch.applied) {
-          if (patch.reason === "absent") noteAbsent(absent, log, patch.id || id, false);
-          else if (patch.reason === "css-dump") log.push(`Patch ${id} ignorata: CSS leak`);
-          else log.push(`Patch ${id} ignorata`);
+        const id = resolvePatchTarget(current, tabId, screen.id);
+        if (!hasScreenTarget(current, id)) {
+          noteAbsent(absent, log, id, false);
         } else {
-          current = patch.html;
-          const comp = TSX_NAME[id] || "Home";
-          tsx[comp] = htmlToJsx(screen.inner, comp);
-          log.push(`Patch solo tab ${id} + src/screens/${comp}.tsx`);
+          const patch = applyScreenPatch(current, id, screen.inner);
+          if (!patch.applied) {
+            if (patch.reason === "absent") noteAbsent(absent, log, patch.id || id, false);
+            else noteSkip(skipSeen, log, patch.id || id, patch.reason, false);
+          } else {
+            current = patch.html;
+            const comp = TSX_NAME[id] || "Home";
+            tsx[comp] = htmlToJsx(screen.inner, comp);
+            log.push(`Patch solo tab ${id} + src/screens/${comp}.tsx`);
+          }
         }
       } else {
         const parsed = parseHtml(text);
@@ -805,15 +812,16 @@ async function polish(prompt, html, instruction, kind) {
   }
   if (!instruction && phone && session?.page) {
     const started = Date.now();
-    for (let extra = 0; extra < 5 && Date.now() - started < 7 * 60 * 1000; extra++) {
+    const extraTried = new Set();
+    for (let extra = 0; extra < TAB_IDS.length && Date.now() - started < 7 * 60 * 1000; extra++) {
       try {
         await session.page.setContent(current, { waitUntil: "domcontentloaded", timeout: 12000 });
         await new Promise((r) => setTimeout(r, 200));
         let weak = -1;
         for (let t = 0; t < TAB_IDS.length; t++) {
           const tabId = TAB_IDS[t];
-          if (absent.has(tabId) || !hasScreenTarget(current, tabId)) {
-            noteAbsent(absent, log, tabId, true);
+          if (!shouldPolishTab(current, tabId, absent, extraTried)) {
+            if (!hasScreenTarget(current, tabId)) noteAbsent(absent, log, tabId, true);
             continue;
           }
           const a = await auditTab(session.page, t);
@@ -827,21 +835,26 @@ async function polish(prompt, html, instruction, kind) {
           break;
         }
         const tabId = TAB_IDS[weak];
-        log.push(`Riprovo tab vuota ${tabId} (extra ${extra + 1})`);
+        extraTried.add(tabId);
+        log.push(`Riprovo tab vuota ${tabId} (extra ${extraTried.size})`);
         const shot = await shotTab(session.page, weak);
         const text = await grok(apiKey, prompt, current, shot, weak + 1, instruction, tabId);
         const screen = parseScreen(text);
         if (screen?.inner) {
-          const id = screen.id || tabId;
-          const patch = applyScreenPatch(current, id, screen.inner);
-          if (!patch.applied) {
-            if (patch.reason === "absent") noteAbsent(absent, log, patch.id || id, true);
-            else log.push(`Extra ${tabId} senza patch`);
+          const id = resolvePatchTarget(current, tabId, screen.id);
+          if (!hasScreenTarget(current, id)) {
+            noteAbsent(absent, log, id, true);
           } else {
-            current = patch.html;
-            const comp = TSX_NAME[id] || "Home";
-            tsx[comp] = htmlToJsx(screen.inner, comp);
-            log.push(`Patch extra ${id} + src/screens/${comp}.tsx`);
+            const patch = applyScreenPatch(current, id, screen.inner);
+            if (!patch.applied) {
+              if (patch.reason === "absent") noteAbsent(absent, log, patch.id || id, true);
+              else noteSkip(skipSeen, log, patch.id || id, patch.reason, true);
+            } else {
+              current = patch.html;
+              const comp = TSX_NAME[id] || "Home";
+              tsx[comp] = htmlToJsx(screen.inner, comp);
+              log.push(`Patch extra ${id} + src/screens/${comp}.tsx`);
+            }
           }
         } else {
           log.push(`Extra ${tabId} senza patch`);

@@ -8,6 +8,7 @@ import { replaceAppleTabIcons, rewriteIosWidgetHome } from "./craft-icons.ts";
 import { scrubCraftMedia } from "../ai/hero-image.ts";
 import { accentButtonPair, contrastRatio } from "./visual-quality.ts";
 import { FENIX_DATA_API_RUNTIME } from "./fenix-data-api.ts";
+import { rewriteFenixCollections } from "./fenix-collection.ts";
 
 export function isLightHex(hex: string) {
   const h = hex.replace("#", "").trim();
@@ -951,6 +952,7 @@ export function prepareSrcDoc(
   const scheme = isLightHex(bg) ? "light" : "dark";
   let next = sanitizePreviewHtml(html);
   next = repairLeakedCss(next);
+  next = rewriteFenixCollections(next);
   next = scrubCraftMedia(next);
   next = rewriteIosWidgetHome(replaceAppleTabIcons(next));
   if (!/color-scheme/i.test(next)) {

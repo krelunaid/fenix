@@ -59,8 +59,19 @@ describe("focus-visible and worker model", () => {
     const prompts = readFileSync(join(root, "src/lib/ai/prompts.shared.ts"), "utf8");
     assert.match(dataApi, /dataTokenRe = \/\^\[A-Za-z0-9\._-\]\{1,80\}\$\//);
     assert.match(collection, /FENIX_COLLECTION_RE = \/\^\[A-Za-z0-9\._-\]\{1,80\}\$\//);
+    assert.match(collection, /rewriteFenixCollections/);
+    assert.match(collection, /canonicalFenixCollection/);
     assert.match(prompts, /A-Za-z0-9\._-\]\{1,80\}/);
     assert.match(prompts, /capi vesti/);
+    const adapter = readFileSync(join(root, "src/lib/projects/fenix-adapter.ts"), "utf8");
+    const scheme = readFileSync(join(root, "src/lib/projects/color-scheme.ts"), "utf8");
+    const store = readFileSync(join(root, "src/lib/projects/store.ts"), "utf8");
+    assert.match(adapter, /rewriteFenixCollections/);
+    assert.match(scheme, /rewriteFenixCollections/);
+    assert.match(store, /rewriteFenixCollections/);
+    assert.match(worker, /extraTried/);
+    assert.match(worker, /resolvePatchTarget/);
+    assert.match(worker, /shouldPolishTab/);
   });
 
   it("does not iframe invalid or error projects on the home cards", () => {

@@ -28,9 +28,10 @@ nav.fk-tab{height:64px;display:flex}
 <template id="t-list"><div id="elenco"></div></template>
 <script>
 (function(){
+  var COL = "capi vesti";
   window.Fenix.load("state");
   window.Fenix.save("state", {});
-  window.Fenix.data.query("capi vesti").then(function(rows){
+  window.Fenix.data.query(COL).then(function(rows){
     document.getElementById("main").textContent = "righe:" + rows.length;
     document.documentElement.setAttribute("data-fenix-ready","1");
   });

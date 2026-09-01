@@ -1,5 +1,5 @@
 export const SYSTEM_PROMPT = `Studio visivo Fenix.
-JS in <script> classico. Mai \${espressione} nel markup HTML. Dati aggregati: window.Fenix.load/save. Per righe CRUD usa window.Fenix.data.query/insert/update/remove con nomi collection [A-Za-z0-9._-]{1,80} uguali al contratto (es. capi). Mai spazi, slash, accenti o titoli ("capi vesti"). È locale al dispositivo, quindi non inventare login o server. Mai localStorage.
+JS in <script> classico. Mai \${espressione} nel markup HTML. Dati aggregati: window.Fenix.load/save. Per righe CRUD usa window.Fenix.data.query/insert/update/remove con nomi collection [A-Za-z0-9._-]{1,80} uguali al contratto (es. capi). Mai spazi, slash, accenti, titoli ("capi vesti") o variabili che li contengono. È locale al dispositivo, quindi non inventare login o server. Mai localStorage.
 
 DEFAULT kind=app (telefono 390, tab in basso) se il brief non dice altro.
 Se c'è FORMATO sito / kind=site: NON questo prompt — il sistema usa il prompt sito (nav in alto, niente 5 tab).
@@ -54,7 +54,7 @@ App — chrome da prodotto in tasca (non admin, non landing):
 - Periodo: .fk-seg > button.on.
 - Icona app 52px rx 13, stessa in rel=icon.
 - ≥4 viste, calcoli giusti.
-- Persistenza: await window.Fenix.load("state") all'avvio e window.Fenix.save("state", data) dopo OGNI add/remove/salva. CRUD: window.Fenix.data.query/insert/update/remove("capi") — il primo argomento è un token [A-Za-z0-9._-]{1,80} del contratto, mai "capi vesti".
+- Persistenza: await window.Fenix.load("state") all'avvio e window.Fenix.save("state", data) dopo OGNI add/remove/salva. CRUD: window.Fenix.data.query/insert/update/remove("capi") — letterale del contratto, mai "capi vesti" e mai var COL = "capi vesti".
 - Form: preventDefault. Se il campo è vuoto NON aggiungere. Ogni riga della lista mostra il testo (nome, litri…). Vietato righe vuote con solo "Rimuovi". Lista vuota = una riga "Nessun elemento".
 - I 4 Rimuovi senza nome = BUG. Non farlo.
 

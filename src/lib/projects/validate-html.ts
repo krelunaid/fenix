@@ -1,6 +1,6 @@
 import { prepareSrcDoc, looksLikeLeakedCss, type SrcPalette } from "./color-scheme.ts";
 import { looksLikeAppleTabIcons, looksLikeIosWidgetHome } from "./craft-icons.ts";
-import { invalidFenixCollectionError } from "./fenix-collection.ts";
+import { invalidFenixCollectionError, rewriteFenixCollectionCode } from "./fenix-collection.ts";
 
 export type ScriptSyntaxError = {
   index: number;
@@ -148,7 +148,7 @@ export function validateProductHtml(html: string, opts?: { kind?: string }): Htm
   if (/\blocalStorage\b/.test(ownCode)) {
     errors.push("JS del prodotto usa localStorage. Usa window.Fenix.load/save.");
   }
-  const collectionErr = invalidFenixCollectionError(ownCode);
+  const collectionErr = invalidFenixCollectionError(rewriteFenixCollectionCode(ownCode));
   if (collectionErr) errors.push(collectionErr);
 
   const kind = (opts?.kind || "app").toLowerCase();
