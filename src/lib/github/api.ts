@@ -59,6 +59,49 @@ async function readJson(res: Response): Promise<unknown> {
   }
 }
 
+const RESPONSE_TOO_LARGE = Symbol("github-response-too-large");
+
+async function readJsonBounded(
+  res: Response,
+  maxBytes: number,
+): Promise<unknown | typeof RESPONSE_TOO_LARGE> {
+  const declared = Number(res.headers.get("content-length") || 0);
+  if (Number.isFinite(declared) && declared > maxBytes) return RESPONSE_TOO_LARGE;
+  if (!res.body) return readJson(res);
+
+  const reader = res.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      total += value.byteLength;
+      if (total > maxBytes) {
+        await reader.cancel();
+        return RESPONSE_TOO_LARGE;
+      }
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+
+  const bytes = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  const text = new TextDecoder().decode(bytes);
+  if (!text) return null;
+  try {
+    return JSON.parse(text) as unknown;
+  } catch {
+    return text;
+  }
+}
+
 export async function mintInstallationToken(installationId: string): Promise<string | GhError> {
   let jwt: string;
   try {
@@ -107,7 +150,9 @@ export async function getInstallation(
 
 export async function listInstallationRepos(
   token: string,
-): Promise<{ fullName: string; defaultBranch: string; private: boolean; empty: boolean }[] | GhError> {
+): Promise<
+  { fullName: string; defaultBranch: string; private: boolean; empty: boolean }[] | GhError
+> {
   const out: { fullName: string; defaultBranch: string; private: boolean; empty: boolean }[] = [];
   for (let page = 1; page <= 3; page += 1) {
     const res = await ghFetch(`${GITHUB_API}/installation/repositories?per_page=100&page=${page}`, {
@@ -121,7 +166,8 @@ export async function listInstallationRepos(
         size?: number;
       }[];
     } | null;
-    if (!res.ok) return fail(res.status, "Non riesco a elencare i repository.", JSON.stringify(body));
+    if (!res.ok)
+      return fail(res.status, "Non riesco a elencare i repository.", JSON.stringify(body));
     const repos = body?.repositories || [];
     for (const r of repos) {
       if (!r.full_name) continue;
@@ -137,14 +183,19 @@ export async function listInstallationRepos(
   return out;
 }
 
-export async function createBlob(token: string, repo: string, content: string): Promise<string | GhError> {
+export async function createBlob(
+  token: string,
+  repo: string,
+  content: string,
+): Promise<string | GhError> {
   const res = await ghFetch(`${GITHUB_API}/repos/${repo}/git/blobs`, {
     method: "POST",
     headers: { ...authHeaders(token), "Content-Type": "application/json" },
     body: JSON.stringify({ content, encoding: "utf-8" }),
   });
   const body = (await readJson(res)) as { sha?: string } | null;
-  if (!res.ok || !body?.sha) return fail(res.status, "Blob GitHub rifiutato.", JSON.stringify(body));
+  if (!res.ok || !body?.sha)
+    return fail(res.status, "Blob GitHub rifiutato.", JSON.stringify(body));
   return body.sha;
 }
 
@@ -159,7 +210,8 @@ export async function createTree(
     body: JSON.stringify({ tree }),
   });
   const body = (await readJson(res)) as { sha?: string } | null;
-  if (!res.ok || !body?.sha) return fail(res.status, "Tree GitHub rifiutato.", JSON.stringify(body));
+  if (!res.ok || !body?.sha)
+    return fail(res.status, "Tree GitHub rifiutato.", JSON.stringify(body));
   return body.sha;
 }
 
@@ -178,7 +230,8 @@ export async function createCommit(
     }),
   });
   const body = (await readJson(res)) as { sha?: string } | null;
-  if (!res.ok || !body?.sha) return fail(res.status, "Commit GitHub rifiutato.", JSON.stringify(body));
+  if (!res.ok || !body?.sha)
+    return fail(res.status, "Commit GitHub rifiutato.", JSON.stringify(body));
   return body.sha;
 }
 
@@ -187,9 +240,12 @@ export async function getRef(
   repo: string,
   branch: string,
 ): Promise<{ sha: string } | null | GhError> {
-  const res = await ghFetch(`${GITHUB_API}/repos/${repo}/git/ref/heads/${encodeURIComponent(branch)}`, {
-    headers: authHeaders(token),
-  });
+  const res = await ghFetch(
+    `${GITHUB_API}/repos/${repo}/git/ref/heads/${encodeURIComponent(branch)}`,
+    {
+      headers: authHeaders(token),
+    },
+  );
   if (res.status === 404 || res.status === 409) return null;
   const body = (await readJson(res)) as { object?: { sha?: string } } | null;
   if (!res.ok) return fail(res.status, "Branch GitHub non leggibile.", JSON.stringify(body));
@@ -206,7 +262,8 @@ export async function getCommitTreeSha(
     headers: authHeaders(token),
   });
   const body = (await readJson(res)) as { tree?: { sha?: string } } | null;
-  if (!res.ok || !body?.tree?.sha) return fail(res.status, "Commit GitHub non leggibile.", JSON.stringify(body));
+  if (!res.ok || !body?.tree?.sha)
+    return fail(res.status, "Commit GitHub non leggibile.", JSON.stringify(body));
   return body.tree.sha;
 }
 
@@ -223,17 +280,109 @@ export async function getRecursiveTree(
   return (body?.tree || []).filter((t) => t.type === "blob" && t.path).map((t) => t.path!);
 }
 
+export type GitHubTreeEntry = {
+  path: string;
+  type: string;
+  mode: string;
+  sha: string;
+  size: number;
+};
+
+export async function getRecursiveTreeEntries(
+  token: string,
+  repo: string,
+  sha: string,
+): Promise<{ entries: GitHubTreeEntry[]; truncated: boolean } | GhError> {
+  const res = await ghFetch(`${GITHUB_API}/repos/${repo}/git/trees/${sha}?recursive=1`, {
+    headers: authHeaders(token),
+  });
+  const rawBody = await readJsonBounded(res, 2_000_000);
+  if (rawBody === RESPONSE_TOO_LARGE) {
+    return { error: "Albero remoto troppo grande per un'importazione sicura.", status: 422 };
+  }
+  const body = rawBody as {
+    truncated?: boolean;
+    tree?: { path?: string; type?: string; mode?: string; sha?: string; size?: number }[];
+  } | null;
+  if (!res.ok) return fail(res.status, "Albero remoto non leggibile.", JSON.stringify(body));
+  const entries: GitHubTreeEntry[] = [];
+  for (const item of body?.tree || []) {
+    if (
+      typeof item.path !== "string" ||
+      typeof item.type !== "string" ||
+      typeof item.mode !== "string" ||
+      typeof item.sha !== "string" ||
+      !Number.isSafeInteger(item.size) ||
+      Number(item.size) < 0
+    ) {
+      return { error: "Albero remoto incompleto o non valido.", status: 422 };
+    }
+    entries.push({
+      path: item.path,
+      type: item.type,
+      mode: item.mode,
+      sha: item.sha,
+      size: Number(item.size),
+    });
+  }
+  return { entries, truncated: Boolean(body?.truncated) };
+}
+
+export async function getBlobUtf8(
+  token: string,
+  repo: string,
+  sha: string,
+  maxBytes: number,
+): Promise<string | GhError> {
+  const res = await ghFetch(`${GITHUB_API}/repos/${repo}/git/blobs/${sha}`, {
+    headers: authHeaders(token),
+  });
+  const rawBody = await readJsonBounded(res, Math.ceil(maxBytes * 1.5) + 4_096);
+  if (rawBody === RESPONSE_TOO_LARGE) {
+    return { error: "Risposta file GitHub troppo grande.", status: 422 };
+  }
+  const body = rawBody as {
+    content?: string;
+    encoding?: string;
+    size?: number;
+  } | null;
+  if (!res.ok) return fail(res.status, "File remoto non leggibile.", JSON.stringify(body));
+  if (
+    body?.encoding !== "base64" ||
+    typeof body.content !== "string" ||
+    !Number.isSafeInteger(body.size) ||
+    Number(body.size) < 1 ||
+    Number(body.size) > maxBytes
+  ) {
+    return { error: "File remoto vuoto, troppo grande o non supportato.", status: 422 };
+  }
+  try {
+    const compact = body.content.replace(/\s+/g, "");
+    const bytes = Buffer.from(compact, "base64");
+    const canonical = bytes.toString("base64").replace(/=+$/, "");
+    if (bytes.byteLength !== Number(body.size) || canonical !== compact.replace(/=+$/, "")) {
+      return { error: "Contenuto base64 remoto non valido.", status: 422 };
+    }
+    return new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+  } catch {
+    return { error: "Il file remoto non è testo UTF-8.", status: 422 };
+  }
+}
+
 export async function updateRef(
   token: string,
   repo: string,
   branch: string,
   sha: string,
 ): Promise<true | GhError> {
-  const res = await ghFetch(`${GITHUB_API}/repos/${repo}/git/refs/heads/${encodeURIComponent(branch)}`, {
-    method: "PATCH",
-    headers: { ...authHeaders(token), "Content-Type": "application/json" },
-    body: JSON.stringify({ sha, force: false }),
-  });
+  const res = await ghFetch(
+    `${GITHUB_API}/repos/${repo}/git/refs/heads/${encodeURIComponent(branch)}`,
+    {
+      method: "PATCH",
+      headers: { ...authHeaders(token), "Content-Type": "application/json" },
+      body: JSON.stringify({ sha, force: false }),
+    },
+  );
   if (res.status === 409) {
     return { error: "Il branch è cambiato. Non sovrascrivo. Riprova.", status: 409 };
   }

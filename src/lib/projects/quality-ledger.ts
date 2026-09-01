@@ -159,6 +159,14 @@ export const QUALITY_LEDGER: LedgerRow[] = [
     ok: true,
   },
   {
+    id: "github-verified-roundtrip",
+    claim:
+      "Un albero esportato da Fenix può tornare da un repo/branch GitHub solo dopo un click esplicito. L'installation token resta server-only; tree troncati, repo estranei, blob non UTF-8/100644, limiti, secret e mismatch manifest/checksum fermano l'import. Il risultato è un progetto nuovo senza stato operativo ereditato.",
+    evidence:
+      "github/import.ts + github.test.ts round-trip/tamper/truncated/owner + github-browser.test.ts D/T/M, zero auto-POST, console e overflow puliti",
+    ok: true,
+  },
+  {
     id: "emergent",
     claim: "Emergent resta solo un banco di prova. Nessun claim di completezza sul prodotto.",
     evidence: "src/lib/projects/fase3-gap.ts quality.slice=now; revisions.test.ts now list",

@@ -103,9 +103,17 @@ export const FASE3_SCORECARD: ScoreDimension[] = [
         claim: "Portabilità locale ZIP senza crediti e senza ereditare identità operative.",
         reproduce: "npm test -- src/lib/projects/files.test.ts",
       },
+      {
+        id: "github-verified-pull",
+        points: 1,
+        claim:
+          "Pull GitHub server-only di un albero Fenix verificato, senza token client, con nuovo studio isolato D/T/M.",
+        reproduce:
+          "npm test -- src/lib/github/github.test.ts src/lib/github/github-browser.test.ts",
+      },
     ],
     remaining:
-      "Manca il pull/sync bidirezionale con un repository remoto e la risoluzione assistita dei conflitti equivalente a un flusso Git completo.",
+      "La dimensione è al massimo verificabile definito: resta fuori scope il sync VS Code generico e la risoluzione assistita dei conflitti remoti.",
   },
   {
     id: "backend-auth-data",

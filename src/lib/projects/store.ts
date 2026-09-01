@@ -67,6 +67,13 @@ type ImportArchiveInput = {
   filename?: string;
 };
 
+type ImportTreeInput = {
+  files: ProjectFile[];
+  name?: string;
+  kind?: string;
+  source: "GitHub";
+};
+
 type ProjectStore = {
   hydrated: boolean;
   projects: Project[];
@@ -75,6 +82,7 @@ type ProjectStore = {
   setHydrated: () => void;
   createFromBrief: (input: NewProjectInput) => Project;
   importArchive: (input: ImportArchiveInput) => Project;
+  importTree: (input: ImportTreeInput) => Project;
   openDemo: (demoId: string) => Project;
   updateProject: (id: string, patch: Partial<Project>) => void;
   restoreRevision: (id: string, revisionId: string) => boolean;
@@ -254,6 +262,73 @@ function importedPalette(html: string): Palette {
   };
 }
 
+function createImportedProject(input: {
+  files: ProjectFile[];
+  name?: string;
+  kind?: string;
+  filename?: string;
+  source: "ZIP" | "GitHub";
+}): Project {
+  const rawKind = input.kind;
+  if (!rawKind || !PROJECT_KINDS.has(rawKind as ProjectKind)) {
+    throw new Error("Tipo di progetto assente o non valido in fenix.json.");
+  }
+  const kind = rawKind as ProjectKind;
+  const tree = projectFiles({ files: input.files });
+  if (tree.length !== input.files.length) {
+    throw new Error("Albero importato non valido o non canonico.");
+  }
+  const html = tree.find((file) => file.path === "index.html")?.content || "";
+  const id = uid();
+  const sourceLabel = input.source === "ZIP" ? "archivio" : "GitHub";
+  const prompt = `${formatPrefix(kind)}Importato da ${sourceLabel} Fenix verificato.`;
+  const palette = importedPalette(html);
+  const report = validatePublishable(html, { kind, projectId: id, palette });
+  const contractBlock = blocksPublish(html, kind, tree, prompt);
+  if (!report.ok || contractBlock) {
+    const reason = contractBlock || report.errors.slice(0, 3).join(" · ") || "gate non superato";
+    throw new Error(`Importazione fermata: ${reason}`);
+  }
+  const now = Date.now();
+  const name = importedName(html, input.name, input.filename);
+  const project: Project = {
+    id,
+    name,
+    tagline: input.source === "ZIP" ? "Archivio Fenix verificato" : "GitHub Fenix verificato",
+    prompt,
+    kind,
+    requestedKind: kind,
+    summary: "Albero importato senza dati, chat, job, deploy o credenziali.",
+    direction: `Import ${input.source}`,
+    palette,
+    html,
+    files: tree,
+    messages: [
+      {
+        id: uid(),
+        role: "assistant",
+        content: `${input.source === "ZIP" ? "Archivio" : "GitHub"} verificato. Il progetto è pronto in un nuovo studio indipendente.`,
+        at: now,
+      },
+    ],
+    buildLog: [`${input.source} Fenix verificato`, "Gate anteprima superato"],
+    status: "ready",
+    createdAt: now,
+    updatedAt: now,
+  };
+  return appendProjectActivity(
+    commitIfChanged(project, { source: "create", label: `Import ${input.source}`, at: now }),
+    {
+      kind: "import",
+      outcome: "ok",
+      label: `${input.source} importato`,
+      detail: "Nuovo studio indipendente",
+      metrics: { files: tree.length, revisions: 1 },
+      at: now,
+    },
+  );
+}
+
 export const useProjectStore = create<ProjectStore>()(
   persist(
     (set, get) => ({
@@ -363,64 +438,18 @@ export const useProjectStore = create<ProjectStore>()(
       importArchive: ({ bytes, filename }) => {
         const archive = importProjectArchive(bytes);
         if (!archive.ok) throw new Error(archive.error);
-        const rawKind = archive.manifest.kind;
-        if (!rawKind || !PROJECT_KINDS.has(rawKind as ProjectKind)) {
-          throw new Error("Tipo di progetto assente o non valido in fenix.json.");
-        }
-        const kind = rawKind as ProjectKind;
-        const html = archive.files.find((file) => file.path === "index.html")?.content || "";
-        const id = uid();
-        const prompt = `${formatPrefix(kind)}Importato da archivio Fenix verificato.`;
-        const palette = importedPalette(html);
-        const report = validatePublishable(html, {
-          kind,
-          projectId: id,
-          palette,
-        });
-        const contractBlock = blocksPublish(html, kind, archive.files, prompt);
-        if (!report.ok || contractBlock) {
-          const reason =
-            contractBlock || report.errors.slice(0, 3).join(" · ") || "gate non superato";
-          throw new Error(`Importazione fermata: ${reason}`);
-        }
-        const now = Date.now();
-        const name = importedName(html, archive.manifest.name, filename);
-        const project: Project = {
-          id,
-          name,
-          tagline: "Archivio Fenix verificato",
-          prompt,
-          kind,
-          requestedKind: kind,
-          summary: "Albero importato senza dati, chat, job, deploy o credenziali.",
-          direction: "Import ZIP",
-          palette,
-          html,
+        const stored = createImportedProject({
           files: archive.files,
-          messages: [
-            {
-              id: uid(),
-              role: "assistant",
-              content: "Archivio verificato. Il progetto è pronto in un nuovo studio indipendente.",
-              at: now,
-            },
-          ],
-          buildLog: ["ZIP Fenix verificato", "Gate anteprima superato"],
-          status: "ready",
-          createdAt: now,
-          updatedAt: now,
-        };
-        const stored = appendProjectActivity(
-          commitIfChanged(project, { source: "create", label: "Import ZIP", at: now }),
-          {
-            kind: "import",
-            outcome: "ok",
-            label: "ZIP importato",
-            detail: "Nuovo studio indipendente",
-            metrics: { files: archive.files.length, revisions: 1 },
-            at: now,
-          },
-        );
+          name: archive.manifest.name,
+          kind: archive.manifest.kind,
+          filename,
+          source: "ZIP",
+        });
+        set((s) => ({ projects: trimList([stored, ...s.projects]) }));
+        return stored;
+      },
+      importTree: (input) => {
+        const stored = createImportedProject(input);
         set((s) => ({ projects: trimList([stored, ...s.projects]) }));
         return stored;
       },

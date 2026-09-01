@@ -1,7 +1,14 @@
 import { ownerFromRequest } from "../projects/publish-owner.ts";
 import { redactSecrets } from "../release/redact.ts";
-import { getInstallation, isGhError, listInstallationRepos, mintInstallationToken, dropToken } from "./api.ts";
+import {
+  getInstallation,
+  isGhError,
+  listInstallationRepos,
+  mintInstallationToken,
+  dropToken,
+} from "./api.ts";
 import { exportToGitHub, previewExport } from "./export.ts";
+import { importFromGitHub } from "./import.ts";
 import { githubAppConfig } from "./secrets.server.ts";
 import {
   clearConnectCookieHeader,
@@ -162,7 +169,8 @@ function htmlErr(message: string): Response {
 
 export async function handleGitHubRepos(request: Request): Promise<Response> {
   if (request.method !== "GET") return json({ error: "Metodo non consentito." }, 405);
-  if (!(await githubReady())) return json({ error: GITHUB_NOT_CONFIGURED, hint: HINT_MISSING }, 503);
+  if (!(await githubReady()))
+    return json({ error: GITHUB_NOT_CONFIGURED, hint: HINT_MISSING }, 503);
   const owner = ownerFromRequest(request);
   if (!owner) return json({ error: "Identità assente." }, 401);
   const row = await readInstallation(githubOwnerHash(owner));
@@ -180,7 +188,8 @@ export async function handleGitHubRepos(request: Request): Promise<Response> {
 
 export async function handleGitHubExport(request: Request): Promise<Response> {
   if (request.method !== "POST") return json({ error: "Metodo non consentito." }, 405);
-  if (!(await githubReady())) return json({ error: GITHUB_NOT_CONFIGURED, hint: HINT_MISSING }, 503);
+  if (!(await githubReady()))
+    return json({ error: GITHUB_NOT_CONFIGURED, hint: HINT_MISSING }, 503);
   const owner = ownerFromRequest(request);
   if (!owner) return json({ error: "Identità assente." }, 401);
   const row = await readInstallation(githubOwnerHash(owner));
@@ -214,6 +223,29 @@ export async function handleGitHubExport(request: Request): Promise<Response> {
     return json({ error: result.error }, result.status);
   }
   return json(result, body.preview ? 200 : result.status === "ok" ? 201 : 200);
+}
+
+export async function handleGitHubImport(request: Request): Promise<Response> {
+  if (request.method !== "POST") return json({ error: "Metodo non consentito." }, 405);
+  if (!(await githubReady()))
+    return json({ error: GITHUB_NOT_CONFIGURED, hint: HINT_MISSING }, 503);
+  const owner = ownerFromRequest(request);
+  if (!owner) return json({ error: "Identità assente." }, 401);
+  const row = await readInstallation(githubOwnerHash(owner));
+  if (!row) return json({ error: "GitHub non collegato." }, 401);
+  let body: { repo?: string; branch?: string };
+  try {
+    body = (await request.json()) as typeof body;
+  } catch {
+    return json({ error: "JSON non valido." }, 400);
+  }
+  const result = await importFromGitHub({
+    installationId: row.installationId,
+    repo: String(body.repo || ""),
+    branch: String(body.branch || "main"),
+  });
+  if (isGhError(result)) return json({ error: result.error }, result.status);
+  return json(result);
 }
 
 export async function handleGitHubCollection(request: Request): Promise<Response> {

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "@tanstack/react-router";
 import { Download, FolderGit2, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -9,6 +10,7 @@ import { useProjectStore } from "@/lib/projects/store";
 import type { ProjectKind } from "@/lib/projects/types";
 import {
   disconnectGitHub,
+  importGitHubProject,
   loadGitHubRepos,
   loadGitHubStatus,
   previewGitHubExport,
@@ -36,7 +38,9 @@ export function ExportPanel({
   kind: ProjectKind;
   files?: ProjectFile[];
 }) {
+  const navigate = useNavigate();
   const recordActivity = useProjectStore((state) => state.recordActivity);
+  const importTree = useProjectStore((state) => state.importTree);
   const [status, setStatus] = useState<GitHubStatus | null>(null);
   const [repos, setRepos] = useState<GitHubRepo[]>([]);
   const [repo, setRepo] = useState("");
@@ -196,6 +200,31 @@ export function ExportPanel({
     }
   }
 
+  async function importNow() {
+    if (!repo || busy) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const pulled = await importGitHubProject({
+        repo,
+        branch: branch.trim() || "main",
+      });
+      const project = importTree({
+        files: pulled.files,
+        name: pulled.name,
+        kind: pulled.kind,
+        source: "GitHub",
+      });
+      toast(`${project.name} importato in uno studio indipendente.`);
+      onClose();
+      await navigate({ to: "/studio/$projectId", params: { projectId: project.id } });
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Importazione GitHub rifiutata.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   const shownFiles = preview?.files?.length
     ? preview.files
     : [
@@ -341,6 +370,19 @@ export function ExportPanel({
                   Esporta
                 </Button>
               </div>
+              <Button
+                variant="secondary"
+                className="min-h-11 w-full"
+                disabled={busy || !repo}
+                onClick={() => void importNow()}
+              >
+                <Download />
+                Importa come nuovo progetto
+              </Button>
+              <p className="text-xs leading-relaxed text-muted-foreground">
+                Legge solo un albero esportato da Fenix con manifest e checksum validi. Crea un
+                progetto nuovo: dati, chat, job e deploy non vengono copiati.
+              </p>
               <Button
                 variant="ghost"
                 className="min-h-11 w-full"

@@ -6,12 +6,13 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { OWNER_HEADER } from "../projects/publish-owner.ts";
 import { looksLikeSecret, redactSecrets } from "../release/redact.ts";
-import { setGitHubFetchForTest } from "./api.ts";
+import { getBlobUtf8, getRecursiveTreeEntries, setGitHubFetchForTest } from "./api.ts";
 import { githubAppJwt } from "./jwt.ts";
 import {
   handleGitHubCallback,
   handleGitHubCollection,
   handleGitHubExport,
+  handleGitHubImport,
   handleGitHubRepos,
 } from "./http.ts";
 import { githubAppConfig, setGitHubAppForTest } from "./secrets.server.ts";
@@ -40,11 +41,11 @@ const ARGILLA = readFileSync(join(here, "../projects/fixtures/argilla-viva.html"
 const OWNER_A = "a".repeat(32);
 const OWNER_B = "b".repeat(32);
 const HTML = ARGILLA.slice(0, 4000);
-const pem = generateKeyPairSync("rsa", { modulusLength: 2048 }).privateKey
-  .export({ type: "pkcs8", format: "pem" })
+const pem = generateKeyPairSync("rsa", { modulusLength: 2048 })
+  .privateKey.export({ type: "pkcs8", format: "pem" })
   .toString();
-const pkcs1 = generateKeyPairSync("rsa", { modulusLength: 2048 }).privateKey
-  .export({ type: "pkcs1", format: "pem" })
+const pkcs1 = generateKeyPairSync("rsa", { modulusLength: 2048 })
+  .privateKey.export({ type: "pkcs1", format: "pem" })
   .toString();
 
 function ownerReq(method: string, url: string, owner?: string, body?: unknown) {
@@ -86,19 +87,27 @@ async function connectOwner(owner: string, returnTo = "/") {
   return { res, body, url, state, cookie: cookieValue(res), setCookie: cookieHeader(res) };
 }
 
-function installMock(opts?: { empty?: boolean; conflict?: boolean; extraRepo?: boolean }) {
+function installMock(opts?: {
+  empty?: boolean;
+  conflict?: boolean;
+  extraRepo?: boolean;
+  truncated?: boolean;
+}) {
   const blobs = new Map<string, string>();
-  const trees = new Map<string, string[]>();
+  const trees = new Map<string, { path: string; sha: string; size: number }[]>();
   const commits = new Map<string, { tree: string; parents: string[] }>();
   const refs = new Map<string, string>();
   const tokens = new Set<string>();
-  const calls: { method: string; path: string; body: unknown; auth: string; version: string }[] = [];
+  const calls: { method: string; path: string; body: unknown; auth: string; version: string }[] =
+    [];
   let n = 1;
   const sha = () => `abc${(n++).toString(16).padStart(37, "0")}`;
   if (!opts?.empty) {
+    const b = sha();
     const t = sha();
     const c = sha();
-    trees.set(t, ["README.md"]);
+    blobs.set(b, "# Seed\n");
+    trees.set(t, [{ path: "README.md", sha: b, size: 7 }]);
     commits.set(c, { tree: t, parents: [] });
     refs.set("heads/main", c);
   }
@@ -139,10 +148,20 @@ function installMock(opts?: { empty?: boolean; conflict?: boolean; extraRepo?: b
     if (needInst && !tokens.has(token)) return new Response("no token", { status: 401 });
     if (method === "GET" && path === "/installation/repositories") {
       const repos = [
-        { full_name: "krelunaid/argilla", default_branch: "main", private: false, size: opts?.empty ? 0 : 12 },
+        {
+          full_name: "krelunaid/argilla",
+          default_branch: "main",
+          private: false,
+          size: opts?.empty ? 0 : 12,
+        },
       ];
       if (opts?.extraRepo) {
-        repos.push({ full_name: "krelunaid/secret-lab", default_branch: "main", private: true, size: 1 });
+        repos.push({
+          full_name: "krelunaid/secret-lab",
+          default_branch: "main",
+          private: true,
+          size: 1,
+        });
       }
       return Response.json({ repositories: repos });
     }
@@ -154,7 +173,11 @@ function installMock(opts?: { empty?: boolean; conflict?: boolean; extraRepo?: b
     }
     if (method === "POST" && path.endsWith("/git/trees")) {
       const id = sha();
-      const tree = ((body as { tree?: { path: string }[] }).tree || []).map((t) => t.path);
+      const tree = ((body as { tree?: { path: string; sha: string }[] }).tree || []).map((t) => ({
+        path: t.path,
+        sha: t.sha,
+        size: Buffer.byteLength(blobs.get(t.sha) || "", "utf8"),
+      }));
       trees.set(id, tree);
       return Response.json({ sha: id });
     }
@@ -179,7 +202,20 @@ function installMock(opts?: { empty?: boolean; conflict?: boolean; extraRepo?: b
     if (method === "GET" && path.includes("/git/trees/")) {
       const id = (path.split("/git/trees/")[1] || "").split("?")[0];
       const tree = trees.get(id) || [];
-      return Response.json({ tree: tree.map((path) => ({ path, type: "blob" })) });
+      return Response.json({
+        truncated: Boolean(opts?.truncated),
+        tree: tree.map((entry) => ({ ...entry, type: "blob", mode: "100644" })),
+      });
+    }
+    if (method === "GET" && path.includes("/git/blobs/")) {
+      const id = path.split("/git/blobs/")[1] || "";
+      const content = blobs.get(id);
+      if (content === undefined) return new Response("missing", { status: 404 });
+      return Response.json({
+        content: Buffer.from(content, "utf8").toString("base64"),
+        encoding: "base64",
+        size: Buffer.byteLength(content, "utf8"),
+      });
     }
     if (method === "PATCH" && path.includes("/git/refs/heads/")) {
       const b = body as { sha?: string; force?: boolean };
@@ -200,8 +236,14 @@ function installMock(opts?: { empty?: boolean; conflict?: boolean; extraRepo?: b
     }
     if (method === "PUT" && path.includes("/contents/README.md")) {
       const id = sha();
+      const b = sha();
       const t = sha();
-      trees.set(t, ["README.md"]);
+      const readme = Buffer.from(
+        String((body as { content?: string }).content || ""),
+        "base64",
+      ).toString("utf8");
+      blobs.set(b, readme);
+      trees.set(t, [{ path: "README.md", sha: b, size: Buffer.byteLength(readme, "utf8") }]);
       commits.set(id, { tree: t, parents: [] });
       refs.set("heads/main", id);
       return Response.json({ commit: { sha: id } });
@@ -231,7 +273,10 @@ describe("github export helpers", () => {
       files: [
         { path: "index.html", content: HTML },
         { path: "notes.md", content: "ok" },
-        { path: "leak.pem", content: "-----BEGIN PRIVATE KEY-----\nMII\n-----END PRIVATE KEY-----" },
+        {
+          path: "leak.pem",
+          content: "-----BEGIN PRIVATE KEY-----\nMII\n-----END PRIVATE KEY-----",
+        },
         { path: "token.txt", content: `ghs_${"y".repeat(48)}` },
       ],
     });
@@ -261,18 +306,37 @@ describe("github app http", () => {
   });
 
   it("unconfigured status is honest and connect is 503", async () => {
-    const status = await handleGitHubCollection(ownerReq("GET", "https://fenix.test/api/github", OWNER_A));
+    const status = await handleGitHubCollection(
+      ownerReq("GET", "https://fenix.test/api/github", OWNER_A),
+    );
     assert.equal(status.status, 200);
     const body = (await status.json()) as { configured: boolean; connected: boolean; hint: string };
     assert.equal(body.configured, false);
     assert.equal(body.connected, false);
     assert.match(body.hint, /GitHub non configurato/);
     const connect = await handleGitHubCollection(
-      ownerReq("POST", "https://fenix.test/api/github", OWNER_A, { returnTo: `/studio/${OWNER_A}` }),
+      ownerReq("POST", "https://fenix.test/api/github", OWNER_A, {
+        returnTo: `/studio/${OWNER_A}`,
+      }),
     );
     assert.equal(connect.status, 503);
     const err = (await connect.json()) as { error: string };
     assert.match(err.error, /GitHub non configurato/);
+  });
+
+  it("bounds recursive-tree and blob responses before parsing", async () => {
+    setGitHubFetchForTest(async (input) => {
+      const url = String(input);
+      const declared = url.includes("/git/trees/") ? "2000001" : "400000";
+      return new Response("{}", { headers: { "content-length": declared } });
+    });
+    const tree = await getRecursiveTreeEntries("server-token", "krelunaid/argilla", "tree-sha");
+    assert.deepEqual(tree, {
+      error: "Albero remoto troppo grande per un'importazione sicura.",
+      status: 422,
+    });
+    const blob = await getBlobUtf8("server-token", "krelunaid/argilla", "blob-sha", 256_000);
+    assert.deepEqual(blob, { error: "Risposta file GitHub troppo grande.", status: 422 });
   });
 
   it("App keys without durable SQL stay unconfigured: no cookie, no GitHub URL", async () => {
@@ -283,9 +347,16 @@ describe("github app http", () => {
     try {
       setGitHubAppForTest({ appId: "12345", privateKey: pem, slug: "fenix-export" });
       assert.equal(await githubNonceStoreReady(), false);
-      const status = await handleGitHubCollection(ownerReq("GET", "https://fenix.test/api/github", OWNER_A));
+      const status = await handleGitHubCollection(
+        ownerReq("GET", "https://fenix.test/api/github", OWNER_A),
+      );
       assert.equal(status.status, 200);
-      const body = (await status.json()) as { configured: boolean; connected: boolean; hint: string; url?: string };
+      const body = (await status.json()) as {
+        configured: boolean;
+        connected: boolean;
+        hint: string;
+        url?: string;
+      };
       assert.equal(body.configured, false);
       assert.equal(body.connected, false);
       assert.match(body.hint, /GitHub App/);
@@ -321,10 +392,15 @@ describe("github app http", () => {
       assert.equal(await githubNonceStoreReady(), true);
       const connect = await connectOwner(OWNER_A, "/studio/argilla");
       assert.equal(connect.res.status, 200);
-      assert.match(connect.url, /^https:\/\/github\.com\/apps\/fenix-export\/installations\/new\?state=/);
+      assert.match(
+        connect.url,
+        /^https:\/\/github\.com\/apps\/fenix-export\/installations\/new\?state=/,
+      );
       assert.match(connect.setCookie, /HttpOnly/i);
       assert.match(connect.setCookie, /Secure/i);
-      const status = await handleGitHubCollection(ownerReq("GET", "https://fenix.test/api/github", OWNER_A));
+      const status = await handleGitHubCollection(
+        ownerReq("GET", "https://fenix.test/api/github", OWNER_A),
+      );
       const body = (await status.json()) as { configured: boolean };
       assert.equal(body.configured, true);
     } finally {
@@ -348,7 +424,10 @@ describe("github app http", () => {
 
     const connect = await connectOwner(OWNER_A, "/studio/argilla");
     assert.equal(connect.res.status, 200);
-    assert.match(connect.url, /^https:\/\/github\.com\/apps\/fenix-export\/installations\/new\?state=/);
+    assert.match(
+      connect.url,
+      /^https:\/\/github\.com\/apps\/fenix-export\/installations\/new\?state=/,
+    );
     assert.match(connect.setCookie, new RegExp(`^${CONNECT_COOKIE_NAME}=`));
     assert.match(connect.setCookie, /HttpOnly/i);
     assert.match(connect.setCookie, /Secure/i);
@@ -402,7 +481,9 @@ describe("github app http", () => {
       parseConnectState(attacker.state)?.nonce || "",
       Date.now() - 1000,
     );
-    const stale = await handleGitHubCallback(callbackReq(attacker.state, "99", expired || undefined));
+    const stale = await handleGitHubCallback(
+      callbackReq(attacker.state, "99", expired || undefined),
+    );
     assert.equal(stale.status, 400);
 
     const legit = await handleGitHubCallback(callbackReq(attacker.state, "99", attacker.cookie));
@@ -475,7 +556,10 @@ describe("github app http", () => {
     try {
       const nonce = randomBytes(16).toString("hex");
       assert.equal(await consumeNonce(nonce, githubOwnerHash(OWNER_A), Date.now() + 60_000), false);
-      assert.equal([...bag.keys()].some((k) => k.includes("nonce")), false);
+      assert.equal(
+        [...bag.keys()].some((k) => k.includes("nonce")),
+        false,
+      );
     } finally {
       if (prev === undefined) delete process.env.NETLIFY;
       else process.env.NETLIFY = prev;
@@ -487,11 +571,15 @@ describe("github app http", () => {
     installMock({ extraRepo: true });
     const connect = await connectOwner(OWNER_A);
     await handleGitHubCallback(callbackReq(connect.state, "99", connect.cookie));
-    const list = await handleGitHubRepos(ownerReq("GET", "https://fenix.test/api/github/repos", OWNER_A));
+    const list = await handleGitHubRepos(
+      ownerReq("GET", "https://fenix.test/api/github/repos", OWNER_A),
+    );
     assert.equal(list.status, 200);
     const payload = (await list.json()) as { repos: { fullName: string }[] };
     assert.ok(payload.repos.some((r) => r.fullName === "krelunaid/argilla"));
-    const other = await handleGitHubRepos(ownerReq("GET", "https://fenix.test/api/github/repos", OWNER_B));
+    const other = await handleGitHubRepos(
+      ownerReq("GET", "https://fenix.test/api/github/repos", OWNER_B),
+    );
     assert.equal(other.status, 401);
   });
 
@@ -509,15 +597,22 @@ describe("github app http", () => {
       html: HTML,
       files: [{ path: "index.html", content: HTML }],
     };
-    const first = await handleGitHubExport(ownerReq("POST", "https://fenix.test/api/github/export", OWNER_A, body));
+    const first = await handleGitHubExport(
+      ownerReq("POST", "https://fenix.test/api/github/export", OWNER_A, body),
+    );
     assert.equal(first.status, 201);
     const job = (await first.json()) as { commitSha: string; log: string[]; contentHash: string };
     assert.ok(job.commitSha);
-    const commits1 = mock.calls.filter((c) => c.method === "POST" && c.path.endsWith("/git/commits")).length;
+    const commits1 = mock.calls.filter(
+      (c) => c.method === "POST" && c.path.endsWith("/git/commits"),
+    ).length;
     assert.equal(commits1, 1);
     assert.ok(
       mock.calls.some(
-        (c) => c.method === "PATCH" && c.path.includes("/git/refs/heads/") && (c.body as { force?: boolean }).force === false,
+        (c) =>
+          c.method === "PATCH" &&
+          c.path.includes("/git/refs/heads/") &&
+          (c.body as { force?: boolean }).force === false,
       ),
     );
     assert.ok(!mock.calls.some((c) => (c.body as { force?: boolean } | null)?.force === true));
@@ -529,11 +624,119 @@ describe("github app http", () => {
     const stored = JSON.stringify(mock.calls.map((c) => ({ path: c.path, body: c.body })));
     assert.doesNotMatch(stored, /ghs_y{10,}/);
 
-    const second = await handleGitHubExport(ownerReq("POST", "https://fenix.test/api/github/export", OWNER_A, body));
+    const second = await handleGitHubExport(
+      ownerReq("POST", "https://fenix.test/api/github/export", OWNER_A, body),
+    );
     const job2 = (await second.json()) as { unchanged?: boolean };
     assert.equal(job2.unchanged, true);
-    const commits2 = mock.calls.filter((c) => c.method === "POST" && c.path.endsWith("/git/commits")).length;
+    const commits2 = mock.calls.filter(
+      (c) => c.method === "POST" && c.path.endsWith("/git/commits"),
+    ).length;
     assert.equal(commits2, 1);
+  });
+
+  it("imports a verified Fenix tree as public files without exposing the installation token", async () => {
+    setGitHubAppForTest({ appId: "12345", privateKey: pem, slug: "fenix-export" });
+    const mock = installMock();
+    const connect = await connectOwner(OWNER_A);
+    await handleGitHubCallback(callbackReq(connect.state, "99", connect.cookie));
+    const exported = await handleGitHubExport(
+      ownerReq("POST", "https://fenix.test/api/github/export", OWNER_A, {
+        repo: "krelunaid/argilla",
+        branch: "main",
+        name: "Argilla Viva",
+        kind: "dashboard",
+        html: HTML,
+        files: [{ path: "index.html", content: HTML }],
+      }),
+    );
+    assert.equal(exported.status, 201);
+    const exportJob = (await exported.json()) as { commitSha: string };
+
+    const imported = await handleGitHubImport(
+      ownerReq("POST", "https://fenix.test/api/github/import", OWNER_A, {
+        repo: "krelunaid/argilla",
+        branch: "main",
+      }),
+    );
+    assert.equal(imported.status, 200);
+    const raw = await imported.text();
+    assert.doesNotMatch(raw, /ghs_/);
+    assert.doesNotMatch(raw, /BEGIN PRIVATE/);
+    const pulled = JSON.parse(raw) as {
+      commitSha: string;
+      contentHash: string;
+      name: string;
+      kind: string;
+      files: { path: string; content: string }[];
+    };
+    assert.equal(pulled.commitSha, exportJob.commitSha);
+    assert.equal(pulled.contentHash.length, 64);
+    assert.equal(pulled.name, "Argilla Viva");
+    assert.equal(pulled.kind, "dashboard");
+    assert.deepEqual(
+      pulled.files.map((file) => file.path),
+      ["index.html"],
+    );
+    assert.equal(pulled.files[0]?.content, HTML);
+    assert.ok(
+      mock.calls.some((call) => call.method === "GET" && call.path.includes("/git/blobs/")),
+    );
+
+    const indexBlob = [...mock.blobs.entries()].find(([, content]) => content === HTML);
+    assert.ok(indexBlob);
+    const bytes = Buffer.byteLength(indexBlob![1], "utf8");
+    const leaked = `<html>ghs_${"y".repeat(48)}</html>`.padEnd(bytes, "x");
+    mock.blobs.set(indexBlob![0], leaked);
+    const tampered = await handleGitHubImport(
+      ownerReq("POST", "https://fenix.test/api/github/import", OWNER_A, {
+        repo: "krelunaid/argilla",
+        branch: "main",
+      }),
+    );
+    assert.equal(tampered.status, 422);
+    const tamperedBody = (await tampered.json()) as { error: string };
+    assert.match(tamperedBody.error, /segreto|Manifest non corrispondente/i);
+  });
+
+  it("GitHub import fails closed for a truncated tree, foreign repo and missing owner", async () => {
+    setGitHubAppForTest({ appId: "12345", privateKey: pem, slug: "fenix-export" });
+    installMock({ truncated: true });
+    const connect = await connectOwner(OWNER_A);
+    await handleGitHubCallback(callbackReq(connect.state, "99", connect.cookie));
+    const exported = await handleGitHubExport(
+      ownerReq("POST", "https://fenix.test/api/github/export", OWNER_A, {
+        repo: "krelunaid/argilla",
+        branch: "main",
+        name: "Argilla Viva",
+        kind: "dashboard",
+        html: HTML,
+      }),
+    );
+    assert.equal(exported.status, 201);
+    const truncated = await handleGitHubImport(
+      ownerReq("POST", "https://fenix.test/api/github/import", OWNER_A, {
+        repo: "krelunaid/argilla",
+        branch: "main",
+      }),
+    );
+    assert.equal(truncated.status, 422);
+    const err = (await truncated.json()) as { error: string };
+    assert.match(err.error, /troncato/i);
+    const foreign = await handleGitHubImport(
+      ownerReq("POST", "https://fenix.test/api/github/import", OWNER_A, {
+        repo: "octocat/hello",
+        branch: "main",
+      }),
+    );
+    assert.equal(foreign.status, 403);
+    const anonymous = await handleGitHubImport(
+      ownerReq("POST", "https://fenix.test/api/github/import", undefined, {
+        repo: "krelunaid/argilla",
+        branch: "main",
+      }),
+    );
+    assert.equal(anonymous.status, 401);
   });
 
   it("invalid branch and foreign repo are rejected; conflict does not force", async () => {
@@ -588,13 +791,19 @@ describe("github app http", () => {
     );
     assert.equal(res.status, 201);
     assert.ok(mock.calls.some((c) => c.method === "PUT" && c.path.includes("/contents/README.md")));
-    assert.ok(mock.calls.some((c) => c.method === "PATCH" && (c.body as { force?: boolean }).force === false));
+    assert.ok(
+      mock.calls.some(
+        (c) => c.method === "PATCH" && (c.body as { force?: boolean }).force === false,
+      ),
+    );
   });
 
   it("JWT is RS256 under 10 minutes, PKCS1 works, tokens are not in status JSON", async () => {
     setGitHubAppForTest({ appId: "12345", privateKey: pem, slug: "fenix-export" });
     const jwt = await githubAppJwt();
-    const header = JSON.parse(Buffer.from(jwt.split(".")[0]!, "base64url").toString("utf8")) as { alg: string };
+    const header = JSON.parse(Buffer.from(jwt.split(".")[0]!, "base64url").toString("utf8")) as {
+      alg: string;
+    };
     const payload = JSON.parse(Buffer.from(jwt.split(".")[1]!, "base64url").toString("utf8")) as {
       iss: string;
       iat: number;
@@ -611,7 +820,9 @@ describe("github app http", () => {
     installMock();
     const connect = await connectOwner(OWNER_A);
     await handleGitHubCallback(callbackReq(connect.state, "99", connect.cookie));
-    const status = await handleGitHubCollection(ownerReq("GET", "https://fenix.test/api/github", OWNER_A));
+    const status = await handleGitHubCollection(
+      ownerReq("GET", "https://fenix.test/api/github", OWNER_A),
+    );
     const text = await status.text();
     assert.doesNotMatch(text, /ghs_/);
     assert.doesNotMatch(text, /BEGIN PRIVATE/);

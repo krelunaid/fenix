@@ -1,4 +1,4 @@
-# GitHub App export — evidenza ufficiale
+# GitHub App export e pull Fenix — evidenza ufficiale
 
 Fenix esporta l'albero POSIX su un repository **esistente** con una GitHub App.
 Niente token nel browser, niente OAuth utente, niente credenziali inventate.
@@ -21,6 +21,27 @@ Emergent resta un benchmark, non un modello da copiare.
   «Leaving this out or setting it to false will make sure you're not overwriting work.»
 - Header `X-GitHub-Api-Version: 2026-03-10`
 - Permessi minimi: **Contents** read/write, **Metadata** read.
+
+## Pull verificato
+
+`POST /api/github/import` riceve soltanto `repo` e `branch`, dopo un click esplicito.
+Il server riusa l'installazione owner-bound, conia un token breve, verifica che il
+repository appartenga all'installazione e legge ref → commit → tree ricorsivo →
+blob. Il token non viene salvato né restituito.
+
+Il pull accetta solo export Fenix:
+
+- tree GitHub completo (`truncated=false`);
+- un solo `fenix.json`, blob regolari mode `100644`;
+- massimo 48 file, 256 KiB per file, 1,5 MB totali;
+- base64 canonico decodificato come UTF-8 fatal;
+- percorso, byte e checksum di ogni file devono coincidere col manifest;
+- ingest comune blocca traversal, binari, estensioni non ammesse e secret.
+
+README o altri file remoti non dichiarati non vengono importati né eseguiti. Il
+client applica di nuovo i gate HTML/contratto prima di creare un nuovo studio
+indipendente. Non si copiano dati, chat, job, deploy, owner o credenziali. Non è
+un sync Git generico e non risolve conflitti remoti.
 
 ## CSRF / session binding
 
@@ -58,7 +79,7 @@ SQL atomico lo stato resta «GitHub non configurato» — nessuna connessione fi
 
 Setup URL (GitHub App → Callback / Setup URL): `https://fenix.kreluna.it/api/github/callback`
 
-`FENIX_RELEASE_GITHUB_TOKEN` resta il token di dispatch nativo Fase 2, non l'export prodotto.
+`FENIX_RELEASE_GITHUB_TOKEN` resta il token di dispatch nativo Fase 2, non il trasporto GitHub del prodotto.
 
 Installazione e job idempotenti stanno nello store Netlify Blobs `fenix-github` (filesystem `.grok/github` solo in locale). Niente token in quel store.
 
@@ -66,4 +87,4 @@ Installazione e job idempotenti stanno nello store Netlify Blobs `fenix-github` 
 
 «You are unable to create new references for empty repositories, even if the commit SHA-1 hash used exists. Empty repositories are repositories without branches.»
 
-Fenix prova un seed `PUT /contents/README.md` e poi l'albero atomico; se GitHub rifiuta, errore chiaro. Questo può fare due commit. Non è un merge e non c'è pull VS Code.
+Fenix prova un seed `PUT /contents/README.md` e poi l'albero atomico; se GitHub rifiuta, errore chiaro. Questo può fare due commit. Non è un merge e non c'è sync VS Code.

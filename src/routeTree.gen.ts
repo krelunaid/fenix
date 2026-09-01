@@ -22,6 +22,7 @@ import { Route as ApiAppDataSiteIdRouteImport } from './routes/api/app-data.$sit
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiGithubCallbackRouteImport } from './routes/api/github.callback'
 import { Route as ApiGithubExportRouteImport } from './routes/api/github.export'
+import { Route as ApiGithubImportRouteImport } from './routes/api/github.import'
 import { Route as ApiGithubReposRouteImport } from './routes/api/github.repos'
 import { Route as ApiJobsIdRouteImport } from './routes/api/jobs.$id'
 import { Route as ApiReleaseIdRouteImport } from './routes/api/release.$id'
@@ -93,6 +94,11 @@ const ApiGithubExportRoute = ApiGithubExportRouteImport.update({
   path: '/export',
   getParentRoute: () => ApiGithubRoute,
 } as any)
+const ApiGithubImportRoute = ApiGithubImportRouteImport.update({
+  id: '/import',
+  path: '/import',
+  getParentRoute: () => ApiGithubRoute,
+} as any)
 const ApiGithubReposRoute = ApiGithubReposRouteImport.update({
   id: '/repos',
   path: '/repos',
@@ -133,6 +139,7 @@ export interface FileRoutesByFullPath {
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/github/callback': typeof ApiGithubCallbackRoute
   '/api/github/export': typeof ApiGithubExportRoute
+  '/api/github/import': typeof ApiGithubImportRoute
   '/api/github/repos': typeof ApiGithubReposRoute
   '/api/jobs/$id': typeof ApiJobsIdRoute
   '/api/release/$id': typeof ApiReleaseIdRoute
@@ -153,6 +160,7 @@ export interface FileRoutesByTo {
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/github/callback': typeof ApiGithubCallbackRoute
   '/api/github/export': typeof ApiGithubExportRoute
+  '/api/github/import': typeof ApiGithubImportRoute
   '/api/github/repos': typeof ApiGithubReposRoute
   '/api/jobs/$id': typeof ApiJobsIdRoute
   '/api/release/$id': typeof ApiReleaseIdRoute
@@ -174,6 +182,7 @@ export interface FileRoutesById {
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/github/callback': typeof ApiGithubCallbackRoute
   '/api/github/export': typeof ApiGithubExportRoute
+  '/api/github/import': typeof ApiGithubImportRoute
   '/api/github/repos': typeof ApiGithubReposRoute
   '/api/jobs/$id': typeof ApiJobsIdRoute
   '/api/release/$id': typeof ApiReleaseIdRoute
@@ -196,6 +205,7 @@ export interface FileRouteTypes {
     | '/api/auth/$'
     | '/api/github/callback'
     | '/api/github/export'
+    | '/api/github/import'
     | '/api/github/repos'
     | '/api/jobs/$id'
     | '/api/release/$id'
@@ -216,6 +226,7 @@ export interface FileRouteTypes {
     | '/api/auth/$'
     | '/api/github/callback'
     | '/api/github/export'
+    | '/api/github/import'
     | '/api/github/repos'
     | '/api/jobs/$id'
     | '/api/release/$id'
@@ -236,6 +247,7 @@ export interface FileRouteTypes {
     | '/api/auth/$'
     | '/api/github/callback'
     | '/api/github/export'
+    | '/api/github/import'
     | '/api/github/repos'
     | '/api/jobs/$id'
     | '/api/release/$id'
@@ -352,6 +364,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiGithubExportRouteImport
       parentRoute: typeof ApiGithubRoute
     }
+    '/api/github/import': {
+      id: '/api/github/import'
+      path: '/import'
+      fullPath: '/api/github/import'
+      preLoaderRoute: typeof ApiGithubImportRouteImport
+      parentRoute: typeof ApiGithubRoute
+    }
     '/api/github/repos': {
       id: '/api/github/repos'
       path: '/repos'
@@ -393,12 +412,14 @@ declare module '@tanstack/react-router' {
 interface ApiGithubRouteChildren {
   ApiGithubCallbackRoute: typeof ApiGithubCallbackRoute
   ApiGithubExportRoute: typeof ApiGithubExportRoute
+  ApiGithubImportRoute: typeof ApiGithubImportRoute
   ApiGithubReposRoute: typeof ApiGithubReposRoute
 }
 
 const ApiGithubRouteChildren: ApiGithubRouteChildren = {
   ApiGithubCallbackRoute: ApiGithubCallbackRoute,
   ApiGithubExportRoute: ApiGithubExportRoute,
+  ApiGithubImportRoute: ApiGithubImportRoute,
   ApiGithubReposRoute: ApiGithubReposRoute,
 }
 

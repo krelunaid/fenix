@@ -1,9 +1,9 @@
 import { OWNER_HEADER } from "../projects/publish-owner.ts";
 import { getOwnerCapability } from "../projects/publish-client.ts";
 import type { ProjectFile } from "../projects/files.ts";
-import type { GitHubRepo, GitHubStatus, PublicExportJob } from "./types.ts";
+import type { GitHubRepo, GitHubStatus, PublicExportJob, PublicImportJob } from "./types.ts";
 
-export type { GitHubRepo, GitHubStatus, PublicExportJob } from "./types.ts";
+export type { GitHubRepo, GitHubStatus, PublicExportJob, PublicImportJob } from "./types.ts";
 
 async function asJson<T>(res: Response, fallback: string): Promise<T> {
   const payload = (await res.json().catch(() => ({}))) as T & { error?: string };
@@ -78,4 +78,17 @@ export async function runGitHubExport(input: {
     body: JSON.stringify(input),
   });
   return asJson<PublicExportJob>(res, "Export rifiutato.");
+}
+
+export async function importGitHubProject(input: {
+  repo: string;
+  branch: string;
+}): Promise<PublicImportJob> {
+  const res = await fetch("/api/github/import", {
+    method: "POST",
+    cache: "no-store",
+    headers: { "Content-Type": "application/json", ...ownerHeaders() },
+    body: JSON.stringify(input),
+  });
+  return asJson<PublicImportJob>(res, "Importazione GitHub rifiutata.");
 }

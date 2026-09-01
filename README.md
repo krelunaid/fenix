@@ -12,11 +12,11 @@ Prove pronte: **Fornace Grottaglie**, **Officina Catenaria**.
 
 La chiave è esclusivamente server-side. Mai `VITE_XAI_API_KEY`, mai nel frontend, mai nel repository e mai nel README con il valore.
 
-| Nome | Dove | Note |
-|---|---|---|
-| `XAI_API_KEY` | server | Tua, creata su [console.x.ai](https://console.x.ai) |
+| Nome                | Dove   | Note                                                                             |
+| ------------------- | ------ | -------------------------------------------------------------------------------- |
+| `XAI_API_KEY`       | server | Tua, creata su [console.x.ai](https://console.x.ai)                              |
 | `VISUAL_WORKER_URL` | server | Opzionale. Worker Playwright. Es. `https://fenix-production-d9f5.up.railway.app` |
-| `VITE_AUTH_ENABLED` | build | `false` di default in locale. Per Gmail/email metti `true` e `DATABASE_URL` |
+| `VITE_AUTH_ENABLED` | build  | `false` di default in locale. Per Gmail/email metti `true` e `DATABASE_URL`      |
 
 ## Configurazione Netlify
 
@@ -28,7 +28,7 @@ La chiave è esclusivamente server-side. Mai `VITE_XAI_API_KEY`, mai nel fronten
 
 Se il secret non è configurato, Fenix risponde chiaramente: `Manca XAI_API_KEY sul server`.
 
-Export GitHub (opzionale, server only): `GITHUB_APP_ID` (o `GITHUB_APP_CLIENT_ID`), `GITHUB_APP_PRIVATE_KEY`, `GITHUB_APP_SLUG` **e** `DATABASE_URL` con la migrazione `0003_github_connect_nonces`. Setup URL della App: `https://fenix.kreluna.it/api/github/callback`. Permessi minimi Contents + Metadata. Le sole chiavi App non bastano: Studio resta su **GitHub non configurato**. ZIP locale resta. Dettagli: [`src/lib/github/references.md`](src/lib/github/references.md).
+Export + pull Fenix da GitHub (opzionale, server only): `GITHUB_APP_ID` (o `GITHUB_APP_CLIENT_ID`), `GITHUB_APP_PRIVATE_KEY`, `GITHUB_APP_SLUG` **e** `DATABASE_URL` con la migrazione `0003_github_connect_nonces`. Setup URL della App: `https://fenix.kreluna.it/api/github/callback`. Permessi minimi Contents + Metadata. Le sole chiavi App non bastano: Studio resta su **GitHub non configurato**. Il pull accetta soltanto alberi Fenix con manifest/checksum validi e crea uno studio isolato; ZIP locale resta. Dettagli: [`src/lib/github/references.md`](src/lib/github/references.md).
 
 Le app generate (Grottaglie, Catenaria, …) si scaricano da **Pubblica** (ZIP / `index.html`) e si caricano sul sito come HTML statico. **Pubblica** resta disabilitata finché il documento finale (srcdoc compreso il runtime) non è valido.
 

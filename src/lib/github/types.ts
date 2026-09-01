@@ -1,4 +1,6 @@
-/** Public GitHub export types. No tokens, no PEM, no installation secrets. */
+import type { ProjectFile } from "../projects/files.ts";
+
+/** Public GitHub transport types. No tokens, no PEM, no installation secrets. */
 
 export type GitHubStatus = {
   configured: boolean;
@@ -32,6 +34,16 @@ export type PublicExportJob = {
   files: ExportFile[];
   log: string[];
   error?: string;
+};
+
+export type PublicImportJob = {
+  repo: string;
+  branch: string;
+  commitSha: string;
+  contentHash: string;
+  name?: string;
+  kind?: string;
+  files: ProjectFile[];
 };
 
 export type StoredInstallation = {

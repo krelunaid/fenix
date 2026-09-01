@@ -197,6 +197,92 @@ export function unzipProject(buf: Uint8Array): {
 export type ProjectArchiveResult =
   { ok: true; files: ProjectFile[]; manifest: TreeManifest } | { ok: false; error: string };
 
+/**
+ * Validate a decoded Fenix package exactly like the strict ZIP importer.
+ * The caller may be a local archive reader or a server-only remote transport.
+ */
+export function importProjectTree(raw: { path: string; content: string }[]): ProjectArchiveResult {
+  if (!Array.isArray(raw) || raw.length < 2 || raw.length > MAX_PROJECT_FILES + 1) {
+    return { ok: false, error: "Albero Fenix vuoto, incompleto o troppo grande." };
+  }
+  const unique = new Set<string>();
+  for (const file of raw) {
+    if (!file || typeof file.path !== "string" || typeof file.content !== "string") {
+      return { ok: false, error: "Albero Fenix non valido." };
+    }
+    const key = file.path.toLowerCase();
+    if (!file.path || unique.has(key)) {
+      return { ok: false, error: "Percorsi duplicati o non validi nell'albero." };
+    }
+    unique.add(key);
+  }
+
+  const manifests = raw.filter((file) => file.path === "fenix.json");
+  if (manifests.length !== 1) {
+    return { ok: false, error: "Manca il manifest fenix.json univoco." };
+  }
+  let manifest: TreeManifest;
+  try {
+    manifest = JSON.parse(manifests[0]!.content) as TreeManifest;
+  } catch {
+    return { ok: false, error: "fenix.json non è JSON valido." };
+  }
+  if (
+    !manifest ||
+    manifest.v !== 1 ||
+    manifest.entrypoint !== ENTRYPOINT ||
+    !Array.isArray(manifest.files) ||
+    manifest.files.length < 1 ||
+    manifest.files.length > MAX_PROJECT_FILES
+  ) {
+    return { ok: false, error: "Manifest Fenix non supportato." };
+  }
+  if (
+    manifest.name !== undefined &&
+    (manifest.name !== manifestName(manifest.name) || manifest.name.length > 80)
+  ) {
+    return { ok: false, error: "Nome progetto non valido nel manifest." };
+  }
+
+  const source = raw.filter((file) => file.path !== "fenix.json");
+  const ingested = ingestProjectFiles(source);
+  if (ingested.rejected.length || ingested.files.length !== source.length) {
+    const why = ingested.rejected[0]?.reason || "albero non valido";
+    return { ok: false, error: `File rifiutato: ${why}.` };
+  }
+  if (!ingested.files.some((file) => file.path === ENTRYPOINT)) {
+    return { ok: false, error: "Manca index.html." };
+  }
+
+  const actual = new Map(ingested.files.map((file) => [file.path, file]));
+  const declared = new Set<string>();
+  for (const item of manifest.files) {
+    if (
+      !item ||
+      typeof item.path !== "string" ||
+      typeof item.hash !== "string" ||
+      !Number.isSafeInteger(item.bytes) ||
+      item.bytes < 1 ||
+      declared.has(item.path)
+    ) {
+      return { ok: false, error: "Elenco file non valido in fenix.json." };
+    }
+    declared.add(item.path);
+    const file = actual.get(item.path);
+    if (
+      !file ||
+      utf8Bytes(file.content) !== item.bytes ||
+      treeFileHash(file.content) !== item.hash
+    ) {
+      return { ok: false, error: `Manifest non corrispondente: ${item.path}.` };
+    }
+  }
+  if (declared.size !== actual.size) {
+    return { ok: false, error: "L'albero contiene file non dichiarati." };
+  }
+  return { ok: true, files: ingested.files, manifest };
+}
+
 function readU16(buf: Uint8Array, at: number): number {
   return buf[at]! | (buf[at + 1]! << 8);
 }
@@ -269,69 +355,5 @@ export function importProjectArchive(buf: Uint8Array): ProjectArchiveResult {
   if (!central || raw.length < 2) {
     return { ok: false, error: "Archivio ZIP incompleto." };
   }
-
-  const manifests = raw.filter((file) => file.path === "fenix.json");
-  if (manifests.length !== 1) {
-    return { ok: false, error: "Manca il manifest fenix.json univoco." };
-  }
-  let manifest: TreeManifest;
-  try {
-    manifest = JSON.parse(manifests[0]!.content) as TreeManifest;
-  } catch {
-    return { ok: false, error: "fenix.json non è JSON valido." };
-  }
-  if (
-    !manifest ||
-    manifest.v !== 1 ||
-    manifest.entrypoint !== ENTRYPOINT ||
-    !Array.isArray(manifest.files) ||
-    manifest.files.length < 1 ||
-    manifest.files.length > MAX_PROJECT_FILES
-  ) {
-    return { ok: false, error: "Manifest Fenix non supportato." };
-  }
-  if (
-    manifest.name !== undefined &&
-    (manifest.name !== manifestName(manifest.name) || manifest.name.length > 80)
-  ) {
-    return { ok: false, error: "Nome progetto non valido nel manifest." };
-  }
-
-  const source = raw.filter((file) => file.path !== "fenix.json");
-  const ingested = ingestProjectFiles(source);
-  if (ingested.rejected.length || ingested.files.length !== source.length) {
-    const why = ingested.rejected[0]?.reason || "albero non valido";
-    return { ok: false, error: `File rifiutato: ${why}.` };
-  }
-  if (!ingested.files.some((file) => file.path === ENTRYPOINT)) {
-    return { ok: false, error: "Manca index.html." };
-  }
-
-  const actual = new Map(ingested.files.map((file) => [file.path, file]));
-  const declared = new Set<string>();
-  for (const item of manifest.files) {
-    if (
-      !item ||
-      typeof item.path !== "string" ||
-      typeof item.hash !== "string" ||
-      !Number.isSafeInteger(item.bytes) ||
-      item.bytes < 1 ||
-      declared.has(item.path)
-    ) {
-      return { ok: false, error: "Elenco file non valido in fenix.json." };
-    }
-    declared.add(item.path);
-    const file = actual.get(item.path);
-    if (
-      !file ||
-      utf8Bytes(file.content) !== item.bytes ||
-      treeFileHash(file.content) !== item.hash
-    ) {
-      return { ok: false, error: `Manifest non corrispondente: ${item.path}.` };
-    }
-  }
-  if (declared.size !== actual.size) {
-    return { ok: false, error: "Il ZIP contiene file non dichiarati." };
-  }
-  return { ok: true, files: ingested.files, manifest };
+  return importProjectTree(raw);
 }
