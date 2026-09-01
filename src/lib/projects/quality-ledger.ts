@@ -127,6 +127,14 @@ export const QUALITY_LEDGER: LedgerRow[] = [
     ok: true,
   },
   {
+    id: "published-cloud-private-data",
+    claim:
+      "Le app pubblicate passano al cloud-private quando DATABASE_URL è disponibile: cookie anonimo HttpOnly per sito, solo hash nel DB, JSON ≤256 KB, revisioni CAS e un solo vincitore concorrente. Errori di validazione, autorizzazione e conflitto restano fail-closed; solo 503/rete ripiega sul locale. shared=false resta esplicito.",
+    evidence:
+      "migrations/0004_generated_app_data.sql + cloud-data.test.ts SQL/HTTP + sito-db.test.ts trasporto, retry, conflitto e fallback",
+    ok: true,
+  },
+  {
     id: "project-activity-ledger",
     claim:
       "Ogni progetto conserva un registro operativo redatto e limitato: build, esiti, rimborsi, dati, versioni, rami, pubblicazioni ed export. I rami non ereditano la cronologia sorgente; prompt, messaggi, job id e segreti non entrano nel registro.",

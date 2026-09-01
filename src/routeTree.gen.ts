@@ -18,6 +18,7 @@ import { Route as ApiPolishRouteImport } from './routes/api/polish'
 import { Route as ApiReleaseRouteImport } from './routes/api/release'
 import { Route as SitoProjectIdRouteImport } from './routes/sito.$projectId'
 import { Route as StudioProjectIdRouteImport } from './routes/studio.$projectId'
+import { Route as ApiAppDataSiteIdRouteImport } from './routes/api/app-data.$siteId'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiGithubCallbackRouteImport } from './routes/api/github.callback'
 import { Route as ApiGithubExportRouteImport } from './routes/api/github.export'
@@ -72,6 +73,11 @@ const StudioProjectIdRoute = StudioProjectIdRouteImport.update({
   path: '/studio/$projectId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAppDataSiteIdRoute = ApiAppDataSiteIdRouteImport.update({
+  id: '/api/app-data/$siteId',
+  path: '/api/app-data/$siteId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
@@ -123,6 +129,7 @@ export interface FileRoutesByFullPath {
   '/api/release': typeof ApiReleaseRouteWithChildren
   '/sito/$projectId': typeof SitoProjectIdRoute
   '/studio/$projectId': typeof StudioProjectIdRoute
+  '/api/app-data/$siteId': typeof ApiAppDataSiteIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/github/callback': typeof ApiGithubCallbackRoute
   '/api/github/export': typeof ApiGithubExportRoute
@@ -142,6 +149,7 @@ export interface FileRoutesByTo {
   '/api/release': typeof ApiReleaseRouteWithChildren
   '/sito/$projectId': typeof SitoProjectIdRoute
   '/studio/$projectId': typeof StudioProjectIdRoute
+  '/api/app-data/$siteId': typeof ApiAppDataSiteIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/github/callback': typeof ApiGithubCallbackRoute
   '/api/github/export': typeof ApiGithubExportRoute
@@ -162,6 +170,7 @@ export interface FileRoutesById {
   '/api/release': typeof ApiReleaseRouteWithChildren
   '/sito/$projectId': typeof SitoProjectIdRoute
   '/studio/$projectId': typeof StudioProjectIdRoute
+  '/api/app-data/$siteId': typeof ApiAppDataSiteIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/github/callback': typeof ApiGithubCallbackRoute
   '/api/github/export': typeof ApiGithubExportRoute
@@ -183,6 +192,7 @@ export interface FileRouteTypes {
     | '/api/release'
     | '/sito/$projectId'
     | '/studio/$projectId'
+    | '/api/app-data/$siteId'
     | '/api/auth/$'
     | '/api/github/callback'
     | '/api/github/export'
@@ -202,6 +212,7 @@ export interface FileRouteTypes {
     | '/api/release'
     | '/sito/$projectId'
     | '/studio/$projectId'
+    | '/api/app-data/$siteId'
     | '/api/auth/$'
     | '/api/github/callback'
     | '/api/github/export'
@@ -221,6 +232,7 @@ export interface FileRouteTypes {
     | '/api/release'
     | '/sito/$projectId'
     | '/studio/$projectId'
+    | '/api/app-data/$siteId'
     | '/api/auth/$'
     | '/api/github/callback'
     | '/api/github/export'
@@ -241,6 +253,7 @@ export interface RootRouteChildren {
   ApiReleaseRoute: typeof ApiReleaseRouteWithChildren
   SitoProjectIdRoute: typeof SitoProjectIdRoute
   StudioProjectIdRoute: typeof StudioProjectIdRoute
+  ApiAppDataSiteIdRoute: typeof ApiAppDataSiteIdRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiJobsIdRoute: typeof ApiJobsIdRoute
   ApiSitesIdRoute: typeof ApiSitesIdRoute
@@ -309,6 +322,13 @@ declare module '@tanstack/react-router' {
       path: '/studio/$projectId'
       fullPath: '/studio/$projectId'
       preLoaderRoute: typeof StudioProjectIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/app-data/$siteId': {
+      id: '/api/app-data/$siteId'
+      path: '/api/app-data/$siteId'
+      fullPath: '/api/app-data/$siteId'
+      preLoaderRoute: typeof ApiAppDataSiteIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/auth/$': {
@@ -410,6 +430,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiReleaseRoute: ApiReleaseRouteWithChildren,
   SitoProjectIdRoute: SitoProjectIdRoute,
   StudioProjectIdRoute: StudioProjectIdRoute,
+  ApiAppDataSiteIdRoute: ApiAppDataSiteIdRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiJobsIdRoute: ApiJobsIdRoute,
   ApiSitesIdRoute: ApiSitesIdRoute,

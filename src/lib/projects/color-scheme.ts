@@ -406,13 +406,19 @@ export function fenixRuntimeScript(projectId: string, kind?: string) {
         resolve(op === "load" ? pickLoad(v, col) : unwrapSave(v));
       }
       function unwrapSave(v){
-        if (v && typeof v === "object" && "ok" in v) return v;
+        if (v && typeof v === "object" && "ok" in v) {
+          if (v.ok === false && v.conflict && v.current && "data" in v.current) {
+            fallbackSave(col, v.current.data);
+          }
+          return v;
+        }
         if (v === false || v == null) return { ok: false, v: null, durable: 0 };
         return { ok: true, v: v, durable: Array.isArray(v) ? v.length : 0 };
       }
       function on(e){
         var m = e.data;
         if (!m || m.t !== "fenix-db" || m.id !== id) return;
+        if (m.mode === "cloud-private" || m.mode === "local-first") dataRuntimeMode = m.mode;
         finish(m.v);
       }
       window.addEventListener("message", on);

@@ -1,11 +1,13 @@
 /**
- * JSON-only, local-first collection API installed on the iframe bridge.
+ * JSON-only collection API installed on the iframe bridge. Published apps can
+ * switch to the cloud-private parent transport; shared data stays false.
  * It deliberately exposes no network, credentials or arbitrary callbacks.
  * Mutations are serialized per collection so Promise.all cannot lose writes
  * inside one generated runtime.
  */
 export const FENIX_DATA_API_RUNTIME = String.raw`
   var dataLanes = Object.create(null);
+  var dataRuntimeMode = "local-first";
   var dataTokenRe = /^[A-Za-z0-9._-]{1,80}$/;
   var dataForbidden = { "__proto__": 1, "prototype": 1, "constructor": 1 };
   function dataToken(value, label){
@@ -133,7 +135,7 @@ export const FENIX_DATA_API_RUNTIME = String.raw`
     });
   }
   api.data = Object.freeze({
-    mode: "local-first",
+    get mode(){ return dataRuntimeMode; },
     shared: false,
     query: dataQuery,
     list: dataQuery,

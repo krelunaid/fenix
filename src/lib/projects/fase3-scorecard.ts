@@ -60,7 +60,7 @@ export const FASE3_SCORECARD: ScoreDimension[] = [
       },
     ],
     remaining:
-      "Manca un backend generato e distribuibile insieme al tree; il runtime pubblicato resta client-side.",
+      "Manca un backend generato e distribuibile insieme al tree; i dati cloud sono un servizio gestito Fenix, non file server del progetto.",
   },
   {
     id: "versions-git",
@@ -119,9 +119,23 @@ export const FASE3_SCORECARD: ScoreDimension[] = [
         reproduce:
           "npm test -- src/lib/projects/published.test.ts src/lib/projects/published-browser.test.ts",
       },
+      {
+        id: "cloud-private-data",
+        points: 2,
+        claim:
+          "Archivio Postgres JSON per sito/sessione anonima HttpOnly, isolato per collezione e protetto da revisioni CAS.",
+        reproduce: "npm test -- src/lib/projects/cloud-data.test.ts",
+      },
+      {
+        id: "published-cloud-bridge",
+        points: 1,
+        claim:
+          "Le app pubblicate usano il cloud privato quando configurato, deduplicano i retry e ripiegano sul locale solo per indisponibilità esplicita.",
+        reproduce: "npm test -- src/lib/projects/sito-db.test.ts",
+      },
     ],
     remaining:
-      "Fenix.data dichiara shared=false: niente database cloud condiviso, auth degli utenti finali, API server generate o connettori applicativi.",
+      "Fenix.data resta shared=false: niente identità cross-device, database condiviso tra utenti, auth degli utenti finali, API server generate o connettori applicativi.",
   },
   {
     id: "collaboration-operations",

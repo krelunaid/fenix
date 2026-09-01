@@ -53,7 +53,7 @@ export const FASE3_GAPS: Fase3Gap[] = [
     area: "Backend / db / auth / API nelle app generate",
     emergent: "Auth (Google), DB, Stripe, API nel primo build.",
     fenix:
-      "Fenix.load/save IndexedDB più Fenix.data JSON local-first (query/list/get/insert/update/remove), mutazioni serializzate per collezione e token non sicuri bloccati prima del bridge. API dichiara shared=false: auth Fenix è del titolare, non dell'app generata. Mock JSON nel tree, niente server cloud inventato.",
+      "Fenix.load/save e Fenix.data JSON (query/list/get/insert/update/remove) usano, sulle app pubblicate, un archivio Postgres cloud-private per sessione anonima HttpOnly con isolamento sito/collezione, limite 256 KB e revisioni CAS; retry duplicati e conflitti non sovrascrivono il vincitore. Se il database durevole è esplicitamente non configurato o irraggiungibile, resta il bridge IndexedDB/localStorage. API dichiara shared=false: niente identità cross-device, auth dell'utente finale o dati condivisi. Mock JSON nel tree, nessun server del progetto inventato.",
     impact: "high",
     cost: "high",
     slice: "next",

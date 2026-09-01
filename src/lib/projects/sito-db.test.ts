@@ -8,6 +8,7 @@ import { prepareSrcDoc } from "./color-scheme.ts";
 import { APP_DB_KEY } from "./durable-db.ts";
 import {
   bindPublishedSiteDb,
+  dispatchPublishedSiteCloudDb,
   dispatchPublishedSiteDb,
   parseSiteDbRequest,
   siteDbReplyOrigin,
@@ -17,6 +18,164 @@ const here = dirname(fileURLToPath(import.meta.url));
 const root = join(here, "../../..");
 
 describe("published /sito Fenix db", () => {
+  it("uses cloud-private revisions and distinguishes conflicts from outages", async () => {
+    const requests: { url: string; init?: RequestInit; body: Record<string, unknown> }[] = [];
+    const replies = [
+      { status: 200, body: { ok: true, rev: 4, data: [{ id: "old" }] } },
+      { status: 200, body: { ok: true, rev: 5, data: [{ id: "new" }] } },
+    ];
+    const fetcher = (async (input: URL | RequestInfo, init?: RequestInit) => {
+      requests.push({
+        url: String(input),
+        init,
+        body: JSON.parse(String(init?.body || "{}")) as Record<string, unknown>,
+      });
+      const next = replies.shift();
+      assert.ok(next);
+      return new Response(JSON.stringify(next.body), {
+        status: next.status,
+        headers: { "content-type": "application/json" },
+      });
+    }) as typeof fetch;
+    const saved = await dispatchPublishedSiteCloudDb(
+      {
+        t: "fenix-db",
+        id: "r1",
+        op: "save",
+        projectId: "site-cloud-1",
+        col: "items",
+        data: [{ id: "new" }],
+      },
+      "site-cloud-1",
+      undefined,
+      { fetch: fetcher },
+    );
+    assert.deepEqual(saved, { state: "ok", rev: 5, data: [{ id: "new" }] });
+    assert.equal(requests.length, 2, "a direct save must first learn the current revision");
+    assert.deepEqual(requests[0]?.body, { op: "load", col: "items" });
+    assert.deepEqual(requests[1]?.body, {
+      op: "save",
+      col: "items",
+      rev: 4,
+      data: [{ id: "new" }],
+    });
+    assert.equal(requests[1]?.url, "/api/app-data/site-cloud-1");
+    assert.equal(requests[1]?.init?.credentials, "same-origin");
+
+    const conflictFetch = (async () =>
+      new Response(
+        JSON.stringify({ conflict: true, current: { rev: 8, data: [{ id: "winner" }] } }),
+        { status: 409 },
+      )) as typeof fetch;
+    assert.deepEqual(
+      await dispatchPublishedSiteCloudDb(
+        { t: "fenix-db", id: "r2", op: "save", projectId: "site-cloud-1", col: "items", data: [] },
+        "site-cloud-1",
+        7,
+        { fetch: conflictFetch },
+      ),
+      { state: "conflict", current: { rev: 8, data: [{ id: "winner" }] } },
+    );
+    const unavailableFetch = (async () =>
+      new Response(JSON.stringify({ error: "Dati cloud non configurati." }), {
+        status: 503,
+      })) as typeof fetch;
+    assert.deepEqual(
+      await dispatchPublishedSiteCloudDb(
+        { t: "fenix-db", id: "r3", op: "load", projectId: "site-cloud-1", col: "items" },
+        "site-cloud-1",
+        undefined,
+        { fetch: unavailableFetch },
+      ),
+      { state: "unavailable" },
+    );
+    const rejectedFetch = (async () => {
+      throw new Error("offline");
+    }) as typeof fetch;
+    assert.deepEqual(
+      await dispatchPublishedSiteCloudDb(
+        { t: "fenix-db", id: "r4", op: "load", projectId: "site-cloud-1", col: "items" },
+        "site-cloud-1",
+        undefined,
+        { fetch: rejectedFetch },
+      ),
+      { state: "unavailable" },
+    );
+  });
+
+  it("binds cloud mode to the expected iframe and deduplicates retried request ids", async () => {
+    const originalWindow = Object.getOwnPropertyDescriptor(globalThis, "window");
+    let listener: ((event: MessageEvent) => void) | undefined;
+    const posted: { payload: unknown; origin: string }[] = [];
+    const frame = {
+      postMessage(payload: unknown, origin: string) {
+        posted.push({ payload, origin });
+      },
+    } as unknown as Window;
+    const fakeWindow = {
+      addEventListener(type: string, next: (event: MessageEvent) => void) {
+        if (type === "message") listener = next;
+      },
+      removeEventListener(type: string, next: (event: MessageEvent) => void) {
+        if (type === "message" && listener === next) listener = undefined;
+      },
+    } as unknown as Window;
+    Object.defineProperty(globalThis, "window", { configurable: true, value: fakeWindow });
+    let fetchCalls = 0;
+    let release: ((value: Response) => void) | undefined;
+    const fetcher = (() => {
+      fetchCalls += 1;
+      return new Promise<Response>((resolve) => {
+        release = resolve;
+      });
+    }) as typeof fetch;
+    try {
+      const unbind = bindPublishedSiteDb(
+        "site-cloud-1",
+        { current: { contentWindow: frame } as HTMLIFrameElement },
+        { fetch: fetcher },
+      );
+      const event = {
+        data: {
+          t: "fenix-db",
+          id: "same-request",
+          op: "load",
+          projectId: "site-cloud-1",
+          col: "items",
+        },
+        source: frame,
+        origin: "null",
+      } as MessageEvent;
+      listener?.(event);
+      listener?.(event);
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      assert.equal(fetchCalls, 1);
+      assert.ok(release);
+      release(
+        new Response(JSON.stringify({ ok: true, rev: 2, data: [{ id: "cloud" }] }), {
+          status: 200,
+        }),
+      );
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      assert.deepEqual(posted, [
+        {
+          origin: "*",
+          payload: {
+            t: "fenix-db",
+            id: "same-request",
+            mode: "cloud-private",
+            v: [{ id: "cloud" }],
+          },
+        },
+      ]);
+      unbind();
+      assert.equal(listener, undefined);
+    } finally {
+      if (originalWindow) Object.defineProperty(globalThis, "window", originalWindow);
+      else Reflect.deleteProperty(globalThis, "window");
+    }
+  });
+
   it("sito route binds durable db without the project store", () => {
     const sito = readFileSync(join(root, "src/routes/sito.$projectId.tsx"), "utf8");
     const db = readFileSync(join(here, "sito-db.ts"), "utf8");
@@ -221,7 +380,10 @@ parent.postMessage({
       assert.doesNotMatch(String(afterEvil.stored), /HACK/);
       assert.match(String(afterEvil.stored), /Anna della Luna/);
       assert.ok(afterEvil.ignored >= 1, "evil source must be ignored");
-      assert.equal(afterEvil.evilTitle.some((t) => t.startsWith("GOT:")), false);
+      assert.equal(
+        afterEvil.evilTitle.some((t) => t.startsWith("GOT:")),
+        false,
+      );
     } finally {
       await browser.close();
     }
@@ -463,7 +625,10 @@ nav ul{display:flex;flex-wrap:nowrap;margin:0;padding:0;list-style:none}
           shortDisplay: short ? getComputedStyle(short).display : "",
           fullDisplay: full ? getComputedStyle(full).display : "",
           navRows: ys.length,
-          overflowX: Math.max(0, document.documentElement.scrollWidth - document.documentElement.clientWidth),
+          overflowX: Math.max(
+            0,
+            document.documentElement.scrollWidth - document.documentElement.clientWidth,
+          ),
           links,
         };
       });
@@ -478,7 +643,10 @@ nav ul{display:flex;flex-wrap:nowrap;margin:0;padding:0;list-style:none}
         assert.equal(link.t.includes("…"), false, link.t);
         assert.equal(link.t.endsWith("T"), false);
       }
-      assert.equal(info.links.some((l) => l.t === "Terra" || l.t.includes("Terra")), true);
+      assert.equal(
+        info.links.some((l) => l.t === "Terra" || l.t.includes("Terra")),
+        true,
+      );
     } finally {
       await browser.close();
     }
