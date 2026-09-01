@@ -476,6 +476,8 @@ describe("focus-visible and worker model", () => {
     assert.match(jwt, /now - 60/);
     assert.match(secrets, /GITHUB_APP_PRIVATE_KEY/);
     assert.match(http, /GitHub non configurato/);
+    assert.match(http, /database durevole/);
+    assert.match(http, /githubNonceStoreReady/);
     assert.match(http, /cookieMatchesState/);
     assert.match(http, /clearConnectCookieHeader/);
     assert.match(state, /HttpOnly/);
@@ -487,20 +489,25 @@ describe("focus-visible and worker model", () => {
     assert.match(state, /fenix-github-\$\{purpose\}/);
     assert.match(store, /ON CONFLICT \(nonce\)/);
     assert.match(store, /github_connect_nonces/);
+    assert.match(store, /githubNonceStoreReady/);
     assert.doesNotMatch(store, /blobKey\("nonce"/);
     assert.match(migration, /github_connect_nonces/);
     assert.match(fn, /path: "\/api\/github"/);
     assert.match(fnExport, /path: "\/api\/github\/export"/);
     assert.match(envExample, /GITHUB_APP_ID=/);
     assert.match(envExample, /GITHUB_APP_SLUG=/);
+    assert.match(envExample, /0003_github_connect_nonces/);
+    assert.match(envExample, /DATABASE_URL/);
     assert.doesNotMatch(envExample, /VITE_GITHUB/);
     assert.match(refs, /2026-03-10/);
     assert.match(refs, /force/);
     assert.match(refs, /HttpOnly/);
     assert.match(refs, /github_connect_nonces/);
+    assert.match(refs, /DATABASE_URL/);
     assert.match(gap, /github-export/);
     assert.match(gap, /GitHub App server-only/);
     assert.match(gap, /cookie HttpOnly CSRF/);
+    assert.match(gap, /DATABASE_URL/);
     assert.doesNotMatch(gap, /feature-complete|uguale a Emergent/);
     const clientRoots = [join(root, "dist/assets"), join(root, ".output/public/assets")];
     for (const dir of clientRoots) {

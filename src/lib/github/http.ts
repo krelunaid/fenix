@@ -2,7 +2,7 @@ import { ownerFromRequest } from "../projects/publish-owner.ts";
 import { redactSecrets } from "../release/redact.ts";
 import { getInstallation, isGhError, listInstallationRepos, mintInstallationToken, dropToken } from "./api.ts";
 import { exportToGitHub, previewExport } from "./export.ts";
-import { githubAppConfig, githubConfigured } from "./secrets.server.ts";
+import { githubAppConfig } from "./secrets.server.ts";
 import {
   clearConnectCookieHeader,
   cookieMatchesState,
@@ -17,6 +17,7 @@ import {
 import {
   consumeNonce,
   deleteInstallation,
+  githubNonceStoreReady,
   githubOwnerHash,
   readInstallation,
   saveInstallation,
@@ -32,13 +33,17 @@ function json(data: unknown, status = 200, extra?: HeadersInit) {
 }
 
 const HINT_MISSING =
-  "GitHub non configurato. Serve una GitHub App sul server (Contents read/write + Metadata read). Nessuna connessione finta.";
+  "GitHub non configurato. Serve una GitHub App sul server (Contents read/write + Metadata read) e un database durevole (DATABASE_URL con la migrazione nonce). Nessuna connessione finta.";
 const HINT_CONNECT = "Collega un'installazione. Il token vive solo sul server, pochi minuti.";
 const HINT_OK = "Installazione collegata. L'export parte solo se lo chiedi tu.";
 
+async function githubReady(): Promise<boolean> {
+  return Boolean(githubAppConfig()) && (await githubNonceStoreReady());
+}
+
 export async function handleGitHubStatus(request: Request): Promise<Response> {
   if (request.method !== "GET") return json({ error: "Metodo non consentito." }, 405);
-  if (!githubConfigured()) {
+  if (!(await githubReady())) {
     return json({ configured: false, connected: false, hint: HINT_MISSING });
   }
   const owner = ownerFromRequest(request);
@@ -63,7 +68,9 @@ export async function handleGitHubStatus(request: Request): Promise<Response> {
 export async function handleGitHubConnect(request: Request): Promise<Response> {
   if (request.method !== "POST") return json({ error: "Metodo non consentito." }, 405);
   const cfg = githubAppConfig();
-  if (!cfg) return json({ error: GITHUB_NOT_CONFIGURED, hint: HINT_MISSING }, 503);
+  if (!cfg || !(await githubNonceStoreReady())) {
+    return json({ error: GITHUB_NOT_CONFIGURED, hint: HINT_MISSING }, 503);
+  }
   const owner = ownerFromRequest(request);
   if (!owner) return json({ error: "Identità assente." }, 401);
   let returnTo = "/";
@@ -87,7 +94,12 @@ export async function handleGitHubDisconnect(request: Request): Promise<Response
   const owner = ownerFromRequest(request);
   if (!owner) return json({ error: "Identità assente." }, 401);
   await deleteInstallation(githubOwnerHash(owner));
-  return json({ configured: githubConfigured(), connected: false, hint: HINT_CONNECT });
+  const ready = await githubReady();
+  return json({
+    configured: ready,
+    connected: false,
+    hint: ready ? HINT_CONNECT : HINT_MISSING,
+  });
 }
 
 export async function handleGitHubCallback(request: Request): Promise<Response> {
@@ -150,7 +162,7 @@ function htmlErr(message: string): Response {
 
 export async function handleGitHubRepos(request: Request): Promise<Response> {
   if (request.method !== "GET") return json({ error: "Metodo non consentito." }, 405);
-  if (!githubConfigured()) return json({ error: GITHUB_NOT_CONFIGURED }, 503);
+  if (!(await githubReady())) return json({ error: GITHUB_NOT_CONFIGURED, hint: HINT_MISSING }, 503);
   const owner = ownerFromRequest(request);
   if (!owner) return json({ error: "Identità assente." }, 401);
   const row = await readInstallation(githubOwnerHash(owner));
@@ -168,7 +180,7 @@ export async function handleGitHubRepos(request: Request): Promise<Response> {
 
 export async function handleGitHubExport(request: Request): Promise<Response> {
   if (request.method !== "POST") return json({ error: "Metodo non consentito." }, 405);
-  if (!githubConfigured()) return json({ error: GITHUB_NOT_CONFIGURED }, 503);
+  if (!(await githubReady())) return json({ error: GITHUB_NOT_CONFIGURED, hint: HINT_MISSING }, 503);
   const owner = ownerFromRequest(request);
   if (!owner) return json({ error: "Identità assente." }, 401);
   const row = await readInstallation(githubOwnerHash(owner));

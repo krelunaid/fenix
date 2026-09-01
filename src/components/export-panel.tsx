@@ -70,7 +70,7 @@ export function ExportPanel({
           setStatus({
             configured: false,
             connected: false,
-            hint: "GitHub non configurato. Serve una GitHub App sul server (Contents read/write + Metadata read). Nessuna connessione finta.",
+            hint: "GitHub non configurato. Serve una GitHub App sul server (Contents read/write + Metadata read) e un database durevole (DATABASE_URL con la migrazione nonce). Nessuna connessione finta.",
           });
         }
       });

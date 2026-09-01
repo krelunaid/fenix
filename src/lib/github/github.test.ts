@@ -24,6 +24,7 @@ import {
 import {
   consumeNonce,
   createGitHubSqlForTest,
+  githubNonceStoreReady,
   githubOwnerHash,
   readInstallation,
   saveInstallation,
@@ -272,6 +273,64 @@ describe("github app http", () => {
     assert.equal(connect.status, 503);
     const err = (await connect.json()) as { error: string };
     assert.match(err.error, /GitHub non configurato/);
+  });
+
+  it("App keys without durable SQL stay unconfigured: no cookie, no GitHub URL", async () => {
+    setGitHubStoreMemoryForTest(false);
+    setGitHubSqlForTest(null);
+    const prevDb = process.env.DATABASE_URL;
+    delete process.env.DATABASE_URL;
+    try {
+      setGitHubAppForTest({ appId: "12345", privateKey: pem, slug: "fenix-export" });
+      assert.equal(await githubNonceStoreReady(), false);
+      const status = await handleGitHubCollection(ownerReq("GET", "https://fenix.test/api/github", OWNER_A));
+      assert.equal(status.status, 200);
+      const body = (await status.json()) as { configured: boolean; connected: boolean; hint: string; url?: string };
+      assert.equal(body.configured, false);
+      assert.equal(body.connected, false);
+      assert.match(body.hint, /GitHub App/);
+      assert.match(body.hint, /database durevole/);
+      assert.match(body.hint, /DATABASE_URL/);
+      assert.equal(body.url, undefined);
+      const connect = await handleGitHubCollection(
+        ownerReq("POST", "https://fenix.test/api/github", OWNER_A, { returnTo: "/studio/argilla" }),
+      );
+      assert.equal(connect.status, 503);
+      assert.equal(connect.headers.get("set-cookie"), null);
+      const err = (await connect.json()) as { error: string; hint?: string; url?: string };
+      assert.match(err.error, /GitHub non configurato/);
+      assert.match(String(err.hint || ""), /database durevole/);
+      assert.equal(err.url, undefined);
+      const dumped = JSON.stringify(err);
+      assert.doesNotMatch(dumped, /github\.com/);
+      assert.doesNotMatch(dumped, /fenix_gh/);
+      assert.doesNotMatch(dumped, /BEGIN PRIVATE/);
+    } finally {
+      if (prevDb === undefined) delete process.env.DATABASE_URL;
+      else process.env.DATABASE_URL = prevDb;
+    }
+  });
+
+  it("SQL mock ready: connect issues cookie and GitHub URL", async () => {
+    setGitHubStoreMemoryForTest(false);
+    const pg = await createGitHubSqlForTest();
+    setGitHubSqlForTest(pg.sql);
+    try {
+      setGitHubAppForTest({ appId: "12345", privateKey: pem, slug: "fenix-export" });
+      installMock();
+      assert.equal(await githubNonceStoreReady(), true);
+      const connect = await connectOwner(OWNER_A, "/studio/argilla");
+      assert.equal(connect.res.status, 200);
+      assert.match(connect.url, /^https:\/\/github\.com\/apps\/fenix-export\/installations\/new\?state=/);
+      assert.match(connect.setCookie, /HttpOnly/i);
+      assert.match(connect.setCookie, /Secure/i);
+      const status = await handleGitHubCollection(ownerReq("GET", "https://fenix.test/api/github", OWNER_A));
+      const body = (await status.json()) as { configured: boolean };
+      assert.equal(body.configured, true);
+    } finally {
+      await pg.close();
+      setGitHubSqlForTest(null);
+    }
   });
 
   it("missing slug is not a fake connection", () => {

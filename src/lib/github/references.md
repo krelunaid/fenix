@@ -38,6 +38,10 @@ Nonce monouso: `INSERT INTO github_connect_nonces … ON CONFLICT (nonce) DO NOT
 RETURNING nonce` (Postgres/PGlite). Su Netlify senza SQL il claim fallisce chiuso.
 Blobs `fenix-github` restano per installazioni e job, non per i nonce.
 
+GET/POST `/api/github` dichiarano `configured` solo con GitHub App **e**
+`DATABASE_URL` (tabella `github_connect_nonces` raggiungibile). Le sole chiavi
+App non bastano: niente cookie, niente URL `github.com/apps/.../installations/new`.
+
 ## Variabili server-only
 
 ```
@@ -45,9 +49,12 @@ GITHUB_APP_ID=
 GITHUB_APP_CLIENT_ID=
 GITHUB_APP_PRIVATE_KEY=
 GITHUB_APP_SLUG=
+DATABASE_URL=
 ```
 
-Mai `VITE_*`. Se mancano, lo stato è «GitHub non configurato» — nessuna connessione finta.
+Mai `VITE_*`. In produzione servono **tutte**: App ID o Client ID, PEM, slug **e**
+`DATABASE_URL` con la migrazione `0003_github_connect_nonces`. Senza l'archivio
+SQL atomico lo stato resta «GitHub non configurato» — nessuna connessione finta.
 
 Setup URL (GitHub App → Callback / Setup URL): `https://fenix.kreluna.it/api/github/callback`
 

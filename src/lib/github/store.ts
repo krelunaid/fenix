@@ -78,6 +78,19 @@ async function liveSql(): Promise<GitHubSql | null> {
   }
 }
 
+/** UNIQUE nonce store is ready: test memory/SQL, or DATABASE_URL with github_connect_nonces. Never Blobs. */
+export async function githubNonceStoreReady(): Promise<boolean> {
+  if (useMemory) return true;
+  const sql = await liveSql();
+  if (!sql) return false;
+  try {
+    await sql.query("SELECT 1 FROM github_connect_nonces WHERE false");
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 async function blobsStore(): Promise<BlobStore | null> {
   if (testBlobs) return testBlobs;
   if (!onNetlifyRuntime() && !process.env.NETLIFY_SITE_ID) return null;
