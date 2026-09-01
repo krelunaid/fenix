@@ -1,6 +1,7 @@
 import { dashboardCrudScript, discoverAppCollection, shouldRepairDashboard } from "./dashboard-crud.ts";
 import { replaceAppleTabIcons, rewriteIosWidgetHome } from "./craft-icons.ts";
 import { scrubCraftMedia } from "../ai/hero-image.ts";
+import { accentButtonPair } from "./visual-quality.ts";
 
 export function isLightHex(hex: string) {
   const h = hex.replace("#", "").trim();
@@ -72,7 +73,8 @@ export function resolvePalette(input?: string | SrcPalette): Required<SrcPalette
 
 export function paletteRootStyle(palette: Required<SrcPalette>): string {
   const p = palette;
-  return `<style data-fenix-palette>:root{--bg:${p.bg};--surface:${p.surface};--fg:${p.fg};--muted:${p.muted};--accent:${p.accent};--line:${p.line}}</style>`;
+  const btn = accentButtonPair(p.accent);
+  return `<style data-fenix-palette>:root{--bg:${p.bg};--surface:${p.surface};--fg:${p.fg};--muted:${p.muted};--accent:${p.accent};--line:${p.line};--btn:${btn.bg};--btn-ink:${btn.ink}}</style>`;
 }
 
 const NAV_GUARD = `<script data-officina-guard>
@@ -184,6 +186,7 @@ section{margin:0 0 36px}
 footer{padding:28px 24px;font-size:14px;color:var(--muted,#5c5348)}
 img[src=""],img:not([src]){display:none!important}
 .fk-tab,.tabbar,nav.bottom-tab,nav.fk-tab{display:none!important}
+.btn,a.btn,button[type=submit]{background:var(--btn,var(--accent))!important;color:var(--btn-ink,#fff)!important}
 </style>`;
 
 const DASHBOARD_KIT = `<style data-fenix-site data-fenix-desk>

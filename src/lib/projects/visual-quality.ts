@@ -89,6 +89,31 @@ export function contrastRatioRgb(a: CssRgb, b: CssRgb) {
   return (hi + 0.05) / (lo + 0.05);
 }
 
+function mixHexToward(hex: string, toward: string, t: number): string {
+  const a = parseCssColor(hex);
+  const b = parseCssColor(toward);
+  if (!a || !b) return hex;
+  const m = (x: number, y: number) => Math.round(x * (1 - t) + y * t);
+  return (
+    "#" +
+    [m(a.r, b.r), m(a.g, b.g), m(a.b, b.b)]
+      .map((n) => n.toString(16).padStart(2, "0"))
+      .join("")
+  );
+}
+
+/** Fill/ink pair for .btn so white (or paper) on terracotta always meets WCAG AA 4.5. */
+export function accentButtonPair(accent: string): { bg: string; ink: string } {
+  const src = parseCssColor(accent) ? accent : "#c45c26";
+  if (contrastRatio("#ffffff", src) >= 4.5) return { bg: src, ink: "#ffffff" };
+  let cur = src;
+  for (let i = 0; i < 12; i++) {
+    cur = mixHexToward(cur, "#000000", 0.14);
+    if (contrastRatio("#ffffff", cur) >= 4.5) return { bg: cur, ink: "#ffffff" };
+  }
+  return { bg: "#5c220e", ink: "#ffffff" };
+}
+
 export type VisualReport = {
   genericFont: boolean;
   genericIosGray: boolean;

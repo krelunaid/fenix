@@ -4,7 +4,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, it } from "node:test";
 import { DEMOS } from "./demos.ts";
-import { auditCraft, contrastRatio } from "./visual-quality.ts";
+import { accentButtonPair, auditCraft, contrastRatio } from "./visual-quality.ts";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const fingerprint = JSON.parse(
@@ -57,5 +57,15 @@ describe("auditCraft fixtures", () => {
       assert.ok(contrastRatio(demo.palette.fg, demo.palette.bg) >= 4.5, id);
       assert.equal(auditCraft(demo.html, demo.palette).ok, true, id);
     }
+  });
+
+  it("darkens terracotta fill until white on the button is AA", () => {
+    const weak = accentButtonPair("#c45c26");
+    assert.ok(contrastRatio("#ffffff", weak.bg) >= 4.5, weak.bg);
+    assert.equal(weak.ink, "#ffffff");
+    assert.notEqual(weak.bg.toLowerCase(), "#c45c26");
+    const already = accentButtonPair("#8f3a14");
+    assert.equal(already.bg.toLowerCase(), "#8f3a14");
+    assert.ok(contrastRatio("#ffffff", already.bg) >= 4.5);
   });
 });

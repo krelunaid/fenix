@@ -79,5 +79,16 @@ describe("injectHero / materializeHero", () => {
       `<html><body><nav class="fk-tab"></nav><img class="fk-hero" src="${DATA}" alt=""/></body></html>`,
     );
     assert.match(phone, /data:image\/png/);
+    const gallery = scrubCraftMedia(
+      `<html><body>
+        <img class="fk-hero" src="/craft-hero.jpg" alt="hero"/>
+        <img src="https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=900" alt="Scaffali"/>
+        <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800" alt="Brocca"/>
+      </body></html>`,
+    );
+    assert.doesNotMatch(gallery, /unsplash/i);
+    assert.match(gallery, /alt="Scaffali"/);
+    assert.match(gallery, /alt="Brocca"/);
+    assert.equal(scrubCraftMedia(gallery), gallery);
   });
 });

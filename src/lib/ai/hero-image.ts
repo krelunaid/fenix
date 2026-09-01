@@ -110,16 +110,17 @@ export function injectHero(html: string, url: string) {
   return placeHeroMarkup(html, img);
 }
 
-/** Drop page-screenshot data heroes and known-dead product photos. Idempotent. */
+/** Drop page-screenshot data heroes and stock Unsplash. Idempotent. */
 export function scrubCraftMedia(html: string) {
   if (!html) return html;
   let next = html;
+  next = next.replace(/https:\/\/images\.unsplash\.com\/[^"'>\s]+/gi, CRAFT_HERO_SRC);
   for (const [re, live] of DEAD_UNSPLASH) next = next.replace(re, live);
   if (isPhoneApp(next)) return next;
   next = next.replace(/<img\b([^>]*class=["'][^"']*fk-hero[^"']*["'][^>]*)>/gi, (tag, attrs: string) => {
     const src = String(attrs).match(/\bsrc=["']([^"']*)["']/i)?.[1] || "";
     if (src === CRAFT_HERO_SRC || /\/craft-hero\.jpg(?:\?|$)/.test(src)) return CRAFT_HERO_MARKUP;
-    if (/\bfk-hero-craft\b/.test(tag) || !src || isDataImageSrc(src) || /unsplash\.com\/photo-1610701596007/.test(src)) {
+    if (/\bfk-hero-craft\b/.test(tag) || !src || isDataImageSrc(src) || /unsplash\.com/i.test(src)) {
       return CRAFT_HERO_MARKUP;
     }
     return tag;

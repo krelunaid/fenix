@@ -240,6 +240,8 @@ describe("looksLikeSite kind lock", () => {
     assert.match(src, /--muted:#9a8f7a/);
     assert.match(src, /--accent:#c45c26/);
     assert.match(src, /--line:/);
+    assert.match(src, /--btn:/);
+    assert.match(src, /--btn-ink:/);
     const lastRoot = [...src.matchAll(/:root\{([^}]+)\}/g)].at(-1)?.[1] ?? "";
     assert.match(lastRoot, /--fg:#e6dcc8/);
   });
