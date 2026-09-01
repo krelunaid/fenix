@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Vesti</title>
+<style>
+:root{--bg:#f3ead8;--surface:#fff8ec;--fg:#1c1712;--muted:#5c5348;--accent:#8c2f1b;--line:#d2c4ae}
+html,body{height:100%;margin:0}
+body{font:16px/1.4 system-ui,sans-serif;background:var(--bg);color:var(--fg);display:flex;flex-direction:column;min-height:100dvh}
+button:focus-visible{outline:2px solid var(--accent)}
+header.fk-top{padding:14px 16px;background:var(--surface)}
+main.fk-main{flex:1;padding:16px}
+nav.fk-tab{height:64px;display:flex}
+</style>
+</head>
+<body>
+<header class="fk-top"><h1 class="fk-hello">Vesti</h1></header>
+<main class="fk-main" id="main"></main>
+<nav class="fk-tab" aria-label="Navigazione">
+  <button type="button" data-view="home">Home</button>
+  <button type="button" data-view="new">Nuovo</button>
+  <button type="button" data-view="list">Capi</button>
+  <button type="button" data-view="stats">Numeri</button>
+  <button type="button" data-view="more">Altro</button>
+</nav>
+<template id="t-home"><section><p>Armadio</p></section></template>
+<template id="t-list"><div id="elenco"></div></template>
+<script>
+(function(){
+  window.Fenix.load("state");
+  window.Fenix.save("state", {});
+  window.Fenix.data.query("capi vesti").then(function(rows){
+    document.getElementById("main").textContent = "righe:" + rows.length;
+    document.documentElement.setAttribute("data-fenix-ready","1");
+  });
+})();
+</script>
+</body>
+</html>

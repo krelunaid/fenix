@@ -1,0 +1,12 @@
+{
+  "product": "Vesti",
+  "brief": "App telefono per l'armadio di casa: registra i capi, stagione e elenco.",
+  "failingCollection": "capi vesti",
+  "failingReason": "spazio fuori da [A-Za-z0-9._-]{1,80}; Fenix.data resta fail-closed",
+  "validCollection": "capi",
+  "contractEntity": "capi",
+  "runtimeError": "Fenix.data: collezione non valido",
+  "missingTemplates": ["t-new", "t-stats", "t-more"],
+  "presentTemplates": ["t-home", "t-list"],
+  "credits": 0
+}

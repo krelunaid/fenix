@@ -251,7 +251,7 @@ export const FASE3_SCORECARD: ScoreDimension[] = [
       },
     ],
     remaining:
-      "La dimensione è al massimo verificabile definito; resta utile una valutazione comparativa cieca esterna, che non viene simulata nel repository.",
+      "La dimensione resta 80/100: i gate Vesti (collection token + patch no-op) sono nel ledger, non alzano il punteggio. Resta utile una valutazione comparativa cieca esterna, che non viene simulata nel repository.",
   },
   {
     id: "reliability-deploy",

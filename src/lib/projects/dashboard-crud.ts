@@ -1,4 +1,5 @@
 import { DASHBOARD_CRUD_SCRIPT, dashboardCrudScript } from "./fenix-crud-runtime.ts";
+import { extractFenixCollectionHits, parseFenixCollection } from "./fenix-collection.ts";
 export { DASHBOARD_CRUD_SCRIPT, dashboardCrudScript };
 
 /** Repair gestionali: modal Nuovo/Annulla/Salva + pelle professionale cobalto/argilla. */
@@ -84,15 +85,12 @@ export function hasDashboardCrud(html: string): boolean {
 }
 
 export function discoverAppCollection(html: string): string {
-  const found: string[] = [];
-  const re = /(?:window\.)?Fenix\.(?:load|save)\(\s*['"]([^'"]+)['"]/g;
-  let m: RegExpExecArray | null;
-  const src = String(html || "");
-  while ((m = re.exec(src))) found.push(m[1]);
-  const named = found.find((n) => n !== "items" && n !== "state");
+  const hits = extractFenixCollectionHits(String(html || ""));
+  const valid = hits.map((hit) => hit.raw).filter((name) => parseFenixCollection(name));
+  const named = valid.find((n) => n !== "items" && n !== "state");
   if (named) return named;
-  if (found.includes("state")) return "state";
-  if (found.includes("items")) return "items";
+  if (valid.includes("state")) return "state";
+  if (valid.includes("items")) return "items";
   return "items";
 }
 

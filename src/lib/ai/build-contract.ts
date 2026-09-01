@@ -15,6 +15,12 @@ import {
   validateProductHtml,
 } from "../projects/validate-html.ts";
 import { auditCraft, contrastRatio, extractCssVars } from "../projects/visual-quality.ts";
+import {
+  collectionForBrief,
+  extractFenixCollectionHits,
+  invalidFenixCollectionError,
+  slugFenixCollection,
+} from "../projects/fenix-collection.ts";
 
 export const BUILD_CONTRACT_VERSION = 1 as const;
 export const CONTRACT_REPAIR_MAX = 2;
@@ -140,7 +146,7 @@ function entitiesFor(kind: ProjectKind, brief: string): ContractEntity[] {
   if (kind === "site" || kind === "landing") {
     return [{ name: "messaggi", fields: ["nome", "testo"], crud: false }];
   }
-  return [{ name: "voci", fields: ["nome", "valore"], crud: true }];
+  return [{ name: collectionForBrief(brief, "voci"), fields: ["nome", "valore"], crud: true }];
 }
 
 function journeysFor(kind: ProjectKind): ContractJourney[] {
@@ -227,7 +233,7 @@ export function parseContract(raw: unknown): BuildContract | null {
   for (const item of entitiesIn) {
     if (!item || typeof item !== "object") continue;
     const row = item as Record<string, unknown>;
-    const name = asText(row.name, 40);
+    const name = slugFenixCollection(asText(row.name, 40));
     if (!name) continue;
     entities.push({
       name,
@@ -280,6 +286,7 @@ export function contractInstruction(contract: BuildContract): string {
   const entities = contract.entities.map((e) => `${e.name}${e.crud ? " (CRUD)" : ""}`).join(", ");
   const extras = contract.files.filter((p) => p !== "index.html");
   const fileBlocks = extras.map((p) => `<<<FILE path="${p}">>>`).join(" ");
+  const collections = contract.entities.map((e) => e.name).join(", ");
   return [
     "CONTRATTO DI BUILD (legge):",
     `kind=${contract.kind}`,
@@ -287,6 +294,8 @@ export function contractInstruction(contract: BuildContract): string {
     `schermate: ${contract.screens.join(", ")}`,
     `route: ${contract.routes.join(", ")}`,
     `entità: ${entities}`,
+    `collezioni Fenix.data: ${collections}`,
+    "Nomi collection: solo [A-Za-z0-9._-]{1,80}. Vietati spazi, accenti, slash, titoli. Usa esattamente questi nomi (es. capi, mai \"capi vesti\").",
     `file obbligatori: ${contract.files.join(", ")}`,
     fileBlocks
       ? `Emetti ogni extra come ${fileBlocks} … contenuto … poi <<<HTML>>> e <<<END>>>. Collega CSS/JS locali da index.html e usa fetch per i dati locali: Fenix li assembla nello stesso artifact. Niente server inventato.`
@@ -398,6 +407,9 @@ export function evaluateContract(input: {
       ? `mancano ${missingExpected.join(", ")}`
       : `${ingest.files.length} file`;
 
+  const collectionHits = extractFenixCollectionHits(code);
+  const collectionErr = invalidFenixCollectionError(code);
+
   const checks: ContractCheck[] = [
     check("html", report.ok, report.ok ? "HTML valido" : report.errors.slice(0, 3).join(" · ")),
     check(
@@ -461,6 +473,11 @@ export function evaluateContract(input: {
         ? sections >= 4 || views.size >= 3
         : views.size >= 3 || sections >= 3,
       `${views.size} viste / ${sections} sezioni`,
+    ),
+    check(
+      "collections",
+      !collectionErr,
+      collectionErr || (collectionHits.length ? `${collectionHits.length} token` : "nessun literal"),
     ),
   ];
 

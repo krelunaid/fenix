@@ -565,6 +565,7 @@ async function repairBootFailures(projectId: string, prompt: string): Promise<bo
           "Stato iniziale = oggetto vuoto, mai null. META+HTML completo.",
           "Non assegnare .innerHTML o .textContent a querySelector/getElementById senza if (el).",
           "Non patchare template t-home/t-new o tab se quei nodi non esistono nel DOM.",
+          "Se Fenix.data usa un nome con spazi/slash/accenti, rinominalo in un token [A-Za-z0-9._-]{1,80} (es. capi).",
         ].join("\n"),
       },
       true,

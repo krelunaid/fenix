@@ -1,4 +1,11 @@
 import { createServer } from "node:http";
+import {
+  TAB_IDS,
+  applyScreenPatch,
+  hasScreenTarget,
+  looksLikeCssDump,
+  noteAbsent,
+} from "./screen-patch.mjs";
 
 /**
  * Worker visivo Fenix — 5 giri (una tab ciascuno) Playwright + grok-build-0.1.
@@ -24,6 +31,7 @@ ICONE (giro dedicato, non opzionale):
 Correggi chrome/CSS/icone. Se lo screenshot è BIANCO o main vuoto, RIEMPI la home: registro a righe, oggetto del mestiere, CTA, form. Non lasciare una pagina bianca.
 Se la home è 4 riquadri + «Ultimo» + «Stato», SOSTITUISCILA con un registro. Vietato copiare i widget iPhone.
 Copia i tag <script> identici se il JS già fa add/save. Se non c'è contenuto visibile, puoi aggiungere HTML in main.
+Collezioni Fenix.data: solo token [A-Za-z0-9._-]{1,80}. Mai spazi, slash, accenti, titoli ("capi vesti").
 Canvas: body colonna 100dvh, header.fk-top, main.fk-main, nav.fk-tab.
 Non scrivere le parole Apple, iOS, Fenix, Grok nel prodotto.
 Rispondi SOLO con la schermata di QUESTA tab, non l'HTML intero:
@@ -32,7 +40,6 @@ Rispondi SOLO con la schermata di QUESTA tab, non l'HTML intero:
 <<<END>>>
 Se proprio non puoi, allora META+HTML completo come ultima spiaggia.`;
 
-const TAB_IDS = ["home", "new", "list", "stats", "more"];
 const TSX_NAME = { home: "Home", new: "New", list: "List", stats: "Stats", more: "More" };
 
 function htmlToJsx(inner, comp) {
@@ -67,20 +74,8 @@ function parseScreen(text) {
   return { id: (m[1] || "").toLowerCase(), inner };
 }
 
-function looksLikeCssDump(inner) {
-  const s = String(inner || "");
-  return /\.fk-(hello|tab|sheet|main|top)\s*\{/.test(s) && !/^\s*</.test(s);
-}
-
 function spliceScreen(html, id, inner) {
-  if (!html || !inner) return html;
-  if (looksLikeCssDump(inner)) return html;
-  const tid = TAB_IDS.includes(id) ? id : "home";
-  const tRe = new RegExp(`(<template[^>]*\\bid=["']t-${tid}["'][^>]*>)([\\s\\S]*?)(<\\/template>)`, "i");
-  if (tRe.test(html)) {
-    return html.replace(tRe, `$1${inner}$3`);
-  }
-  return html;
+  return applyScreenPatch(html, id, inner).html;
 }
 
 function looksPhoneShell(html) {
@@ -756,9 +751,14 @@ async function polish(prompt, html, instruction, kind) {
   const phone = looksPhoneShell(current);
   const focus = instruction ? inferTab(instruction) : -1;
   const rounds = !phone ? 0 : instruction ? 2 : PASSES;
+  const absent = new Set();
   for (let i = 0; i < rounds; i++) {
     const tabIndex = focus >= 0 ? focus : i;
     const tabId = TAB_IDS[tabIndex] || "home";
+    if (!hasScreenTarget(current, tabId)) {
+      noteAbsent(absent, log, tabId, false);
+      continue;
+    }
     log.push(instruction ? `Modifica tab ${tabId} (${i + 1}/${rounds})` : `Giro ${i + 1}/${PASSES} (schermata ${tabId})`);
     let shot = null;
     try {
@@ -778,11 +778,13 @@ async function polish(prompt, html, instruction, kind) {
       const screen = parseScreen(text);
       if (screen?.inner) {
         const id = screen.id || tabId;
-        const before = current;
-        current = spliceScreen(current, id, screen.inner);
-        if (current === before) {
-          log.push(`Patch ${id} ignorata: nodo assente`);
+        const patch = applyScreenPatch(current, id, screen.inner);
+        if (!patch.applied) {
+          if (patch.reason === "absent") noteAbsent(absent, log, patch.id || id, false);
+          else if (patch.reason === "css-dump") log.push(`Patch ${id} ignorata: CSS leak`);
+          else log.push(`Patch ${id} ignorata`);
         } else {
+          current = patch.html;
           const comp = TSX_NAME[id] || "Home";
           tsx[comp] = htmlToJsx(screen.inner, comp);
           log.push(`Patch solo tab ${id} + src/screens/${comp}.tsx`);
@@ -809,6 +811,11 @@ async function polish(prompt, html, instruction, kind) {
         await new Promise((r) => setTimeout(r, 200));
         let weak = -1;
         for (let t = 0; t < TAB_IDS.length; t++) {
+          const tabId = TAB_IDS[t];
+          if (absent.has(tabId) || !hasScreenTarget(current, tabId)) {
+            noteAbsent(absent, log, tabId, true);
+            continue;
+          }
           const a = await auditTab(session.page, t);
           if (a.empty) {
             weak = t;
@@ -816,7 +823,7 @@ async function polish(prompt, html, instruction, kind) {
           }
         }
         if (weak < 0) {
-          log.push("Checklist: 5 tab piene. Stop.");
+          log.push(absent.size ? `Stop patch: ${absent.size} nodi assenti, niente altri tab vuoti` : "Checklist: 5 tab piene. Stop.");
           break;
         }
         const tabId = TAB_IDS[weak];
@@ -826,11 +833,12 @@ async function polish(prompt, html, instruction, kind) {
         const screen = parseScreen(text);
         if (screen?.inner) {
           const id = screen.id || tabId;
-          const before = current;
-          current = spliceScreen(current, id, screen.inner);
-          if (current === before) {
-            log.push(`Patch extra ${id} ignorata: nodo assente`);
+          const patch = applyScreenPatch(current, id, screen.inner);
+          if (!patch.applied) {
+            if (patch.reason === "absent") noteAbsent(absent, log, patch.id || id, true);
+            else log.push(`Extra ${tabId} senza patch`);
           } else {
+            current = patch.html;
             const comp = TSX_NAME[id] || "Home";
             tsx[comp] = htmlToJsx(screen.inner, comp);
             log.push(`Patch extra ${id} + src/screens/${comp}.tsx`);

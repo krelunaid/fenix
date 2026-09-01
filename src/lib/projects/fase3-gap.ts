@@ -101,7 +101,7 @@ export const FASE3_GAPS: Fase3Gap[] = [
     area: "Qualità generata",
     emergent: "Agente di test che ripara; output lento (45–60 min in prove terze).",
     fenix:
-      "Contratto di build v1 (planner deterministico, 0 token) + ruoli grok-build-0.1 con ricevute, niente CoT. Evaluator su 6 fixture: gestionale CRUD, mobile, multi-file, utility, gioco e portfolio; 18 percorsi funzionali D/T/M con console, overflow, focus e target misurati. Gate condiviso API/Edge: blocking ContractCheck ferma t:ok/ready/Pubblica. File extra solo se il brief li chiede. AA fail-closed. Critic LLM saltato se i gate statici passano. Repair max 2. Ledger in quality-ledger.ts.",
+      "Contratto di build v1 (planner deterministico, 0 token) + ruoli grok-build-0.1 con ricevute, niente CoT. Evaluator su 6 fixture: gestionale CRUD, mobile, multi-file, utility, gioco e portfolio; 18 percorsi funzionali D/T/M con console, overflow, focus e target misurati. Gate condiviso API/Edge: blocking ContractCheck ferma t:ok/ready/Pubblica. File extra solo se il brief li chiede. AA fail-closed. Critic LLM saltato se i gate statici passano. Repair max 2. Collection Fenix.data: solo [A-Za-z0-9._-]{1,80}; Vesti «capi vesti» è rifiutata, planner «capi», patch su nodo assente interrotte. Ledger in quality-ledger.ts.",
     impact: "high",
     cost: "medium",
     slice: "now",

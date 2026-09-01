@@ -8,6 +8,7 @@
 export const FENIX_DATA_API_RUNTIME = String.raw`
   var dataLanes = Object.create(null);
   var dataRuntimeMode = "local-first";
+  /* Keep in sync with FENIX_COLLECTION_RE in fenix-collection.ts. Runtime does not slugify. */
   var dataTokenRe = /^[A-Za-z0-9._-]{1,80}$/;
   var dataForbidden = { "__proto__": 1, "prototype": 1, "constructor": 1 };
   function dataToken(value, label){

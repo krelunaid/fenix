@@ -8,6 +8,7 @@ VIETATO: casetta Lucide, plus in cerchio, omino, hamburger, barre iPhone, letter
 NON cancellare sezioni. NON lasciare main vuoto. NON fare un sito.
 Palette unica dal brief (carta e inchiostro del mestiere, mai grigio iPhone). Date in italiano, non ISO.
 Tieni header.fk-top, main, nav.fk-tab, form, liste, Fenix.load/save.
+Collezioni Fenix.data: solo [A-Za-z0-9._-]{1,80}, mai "capi vesti".
 Ogni tab mostra una vista vera. Form: preventDefault, niente righe vuote.
 Restituisci META + FILE screens/home.html new list stats more + HTML montato.`;
 

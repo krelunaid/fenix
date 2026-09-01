@@ -54,6 +54,13 @@ describe("focus-visible and worker model", () => {
     const edge = readFileSync(join(root, "netlify/edge-functions/build.ts"), "utf8");
     assert.match(edge, /MODEL = "grok-build-0.1"/);
     assert.doesNotMatch(edge, /reasoning_effort/);
+    const dataApi = readFileSync(join(root, "src/lib/projects/fenix-data-api.ts"), "utf8");
+    const collection = readFileSync(join(root, "src/lib/projects/fenix-collection.ts"), "utf8");
+    const prompts = readFileSync(join(root, "src/lib/ai/prompts.shared.ts"), "utf8");
+    assert.match(dataApi, /dataTokenRe = \/\^\[A-Za-z0-9\._-\]\{1,80\}\$\//);
+    assert.match(collection, /FENIX_COLLECTION_RE = \/\^\[A-Za-z0-9\._-\]\{1,80\}\$\//);
+    assert.match(prompts, /A-Za-z0-9\._-\]\{1,80\}/);
+    assert.match(prompts, /capi vesti/);
   });
 
   it("does not iframe invalid or error projects on the home cards", () => {
@@ -141,6 +148,7 @@ describe("focus-visible and worker model", () => {
     assert.match(overlay, /z-20/);
     assert.doesNotMatch(overlay, /z-12/);
     const worker = readFileSync(join(root, "workers/visual/server.mjs"), "utf8");
+    const screenPatch = readFileSync(join(root, "workers/visual/screen-patch.mjs"), "utf8");
     assert.doesNotMatch(worker, /card bianche, panel scuro solo se serve un dato, CTA pillola blu/);
     assert.doesNotMatch(worker, /2 colori #1d1d1f \/ #0071e3/);
     assert.match(worker, /function looksDashboard/);
@@ -148,7 +156,10 @@ describe("focus-visible and worker model", () => {
     assert.match(worker, /k === "site" \|\| k === "landing"/);
     assert.match(worker, /body\.kind/);
     assert.match(worker, /function looksPhoneShell/);
-    assert.match(worker, /nodo assente/);
+    assert.match(screenPatch, /nodo assente/);
+    assert.match(worker, /from "\.\/screen-patch\.mjs"/);
+    assert.match(worker, /hasScreenTarget\(current, tabId\)/);
+    assert.match(worker, /noteAbsent/);
     assert.doesNotMatch(worker, /<template id="t-\$\{tid\}">/);
     assert.match(worker, /DASHBOARD_SYSTEM/);
     assert.match(worker, /SITE_SYSTEM/);
@@ -431,8 +442,9 @@ describe("focus-visible and worker model", () => {
     const files = readFileSync(join(root, "src/lib/projects/files.ts"), "utf8");
     assert.match(files, /!looksLikeLeakedCss\(main\)/);
     const worker = readFileSync(join(root, "workers/visual/server.mjs"), "utf8");
-    assert.match(worker, /function looksLikeCssDump/);
-    assert.match(worker, /if \(looksLikeCssDump\(inner\)\) return html/);
+    const screenPatch = readFileSync(join(root, "workers/visual/screen-patch.mjs"), "utf8");
+    assert.match(screenPatch, /export function looksLikeCssDump/);
+    assert.match(screenPatch, /if \(looksLikeCssDump\(inner\)\)/);
     assert.match(worker, /if \(looksLikeCssDump\(m\[1\]\)\) return html/);
     assert.equal(existsSync(join(root, "src/lib/projects/fixtures/leaked-phone-css.html")), true);
     const leaked = readFileSync(join(root, "src/lib/projects/fixtures/leaked-phone-css.html"), "utf8");

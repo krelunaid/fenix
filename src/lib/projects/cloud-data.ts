@@ -7,10 +7,11 @@ import {
 } from "./app-collaboration.ts";
 import { readPublished } from "./published-store.ts";
 import { isPublishedId } from "./published.ts";
+import { FENIX_COLLECTION_RE, parseFenixCollection } from "./fenix-collection.ts";
 
 export const MAX_CLOUD_COLLECTION_BYTES = 256_000;
 export const MAX_CLOUD_REQUEST_BYTES = MAX_CLOUD_COLLECTION_BYTES + 4_096;
-export const CLOUD_COLLECTION_RE = /^[A-Za-z0-9._-]{1,80}$/;
+export const CLOUD_COLLECTION_RE = FENIX_COLLECTION_RE;
 const SESSION_RE = /^[a-f0-9]{64}$/;
 
 type CloudRow = { rev: number; data: unknown };
@@ -47,10 +48,7 @@ function jsonClone(value: unknown): { json: string; value: unknown } | { error: 
 }
 
 export function parseCloudCollection(value: unknown): string | null {
-  const col = String(value || "");
-  return CLOUD_COLLECTION_RE.test(col) && !["__proto__", "prototype", "constructor"].includes(col)
-    ? col
-    : null;
+  return parseFenixCollection(value);
 }
 
 export function parseCloudRevision(value: unknown): number | null {

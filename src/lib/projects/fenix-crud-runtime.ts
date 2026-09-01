@@ -1,3 +1,5 @@
+import { normalizeFenixCollection } from "./fenix-collection.ts";
+
 /** Injected into gestionale HTML. %%COL%% is replaced by dashboardCrudScript. */
 const CRUD_TEMPLATE = `<script data-fenix-crud="13">
 (function(){
@@ -720,7 +722,7 @@ const CRUD_TEMPLATE = `<script data-fenix-crud="13">
 </script>`;
 
 export function dashboardCrudScript(collection = "items"): string {
-  const col = String(collection || "items").replace(/[^a-zA-Z0-9_-]/g, "") || "items";
+  const col = normalizeFenixCollection(collection, "items");
   return CRUD_TEMPLATE.replace(/%%COL%%/g, col);
 }
 

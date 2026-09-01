@@ -175,6 +175,14 @@ export const QUALITY_LEDGER: LedgerRow[] = [
     ok: true,
   },
   {
+    id: "vesti-collection-gate",
+    claim:
+      "Fenix.data accetta solo token [A-Za-z0-9._-]{1,80}. La collection di produzione Vesti «capi vesti» (spazio) è rifiutata da parser, gate HTML/contratto e runtime; il planner emette «capi». Nessun ready/Pubblica se il bootstrap fallisce. Patch su template assenti (t-new/t-stats/t-more) sono no-op deduplicate, senza nuovi giri xAI. Repair max 2. Crediti 0 su questi gate.",
+    evidence:
+      "fenix-collection.test.ts + screen-patch.test.ts + vesti-browser.test.ts D/T/M + fixtures/vesti-eval.json + fixtures/shots/vesti/manifest.json",
+    ok: true,
+  },
+  {
     id: "emergent",
     claim: "Emergent resta solo un banco di prova. Nessun claim di completezza sul prodotto.",
     evidence: "src/lib/projects/fase3-gap.ts quality.slice=now; revisions.test.ts now list",
