@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdirSync, readFileSync } from "node:fs";
+import { mkdirSync, readFileSync, existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, it } from "node:test";
@@ -11,7 +11,11 @@ const here = dirname(fileURLToPath(import.meta.url));
 const SITE = readFileSync(join(here, "../projects/fixtures/music-site-no-fenix.html"), "utf8");
 const ADAPTED = ensureFenixAdapter(SITE);
 const PREVIEW = process.env.PREVIEW_URL || "http://127.0.0.1:8081";
-const OUT = process.env.FENIX_SCORECARD_OUT || "/workspace/screenshots/fase2-release";
+const OUT =
+  process.env.FENIX_SCORECARD_OUT ||
+  (existsSync("/workspace")
+    ? "/workspace/screenshots/fase2-release"
+    : join(process.cwd(), "screenshots/fase2-release"));
 
 function seed(page: Page, project: Record<string, unknown>, owner?: string) {
   return page.addInitScript(
@@ -30,12 +34,14 @@ function seed(page: Page, project: Record<string, unknown>, owner?: string) {
   );
 }
 
-async function shot(page: Page, name: string) {
+async function shot(page: Page, name: string, locator?: ReturnType<Page["getByRole"]>) {
+  mkdirSync(OUT, { recursive: true });
   try {
-    mkdirSync(OUT, { recursive: true });
-    await page.screenshot({ path: join(OUT, name), fullPage: false });
+    const dest = join(OUT, name);
+    if (locator) await locator.screenshot({ path: dest });
+    else await page.screenshot({ path: dest, fullPage: false });
   } catch {
-    /* optional */
+    /* CI without the preview workspace still asserts the panel. */
   }
 }
 
@@ -91,9 +97,9 @@ describe("publish panel multiplatform", () => {
       await page.getByRole("button", { name: "Android" }).click();
       await shot(page, "release-desktop.png");
       await page.setViewportSize({ width: 768, height: 1024 });
-      await page.getByRole("dialog").screenshot({ path: join(OUT, "release-tablet.png") });
+      await shot(page, "release-tablet.png", page.getByRole("dialog"));
       await page.setViewportSize({ width: 390, height: 844 });
-      await page.getByRole("dialog").screenshot({ path: join(OUT, "release-mobile.png") });
+      await shot(page, "release-mobile.png", page.getByRole("dialog"));
       const launch = page.getByRole("button", { name: /Pubblica su/ });
       await launch.waitFor({ timeout: 8000 });
       assert.equal(await launch.isDisabled(), false, "launch stays gated until snapshot");

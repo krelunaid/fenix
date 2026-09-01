@@ -64,7 +64,7 @@ export function syncStaticPublish(from, to = from) {
   const stamp = {
     sha: sha.slice(0, 40),
     assets: names,
-    published: src.replace(root + "/", ""),
+    published: (to || src).replace(root + "/", "").replace(/\\/g, "/"),
     at: new Date().toISOString(),
   };
   writeFileSync(join(src, "fenix-release.json"), JSON.stringify(stamp), "utf8");
