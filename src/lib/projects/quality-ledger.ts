@@ -113,9 +113,9 @@ export const QUALITY_LEDGER: LedgerRow[] = [
   {
     id: "revision-branches",
     claim:
-      "Qualsiasi cottura crea un progetto ramo indipendente con HTML e file esatti. Dati, chat, job e identità di deploy restano nel progetto sorgente.",
+      "Qualsiasi cottura crea un progetto ramo indipendente con HTML e file esatti. Un merge three-way riporta le sole modifiche non conflittuali; uno stesso file divergente ferma l'intera unione. Dati, chat, job e identità di deploy restano nel progetto sorgente.",
     evidence:
-      "revisions.test.ts branch isolation + revisions-browser.test.ts D/T/M branch and rollback",
+      "revisions.test.ts isolamento/merge/conflitti + revisions-browser.test.ts D/T/M ramo, unione e rollback",
     ok: true,
   },
   {

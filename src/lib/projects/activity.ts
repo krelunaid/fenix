@@ -7,7 +7,15 @@ import type {
 
 export const MAX_PROJECT_ACTIVITY = 64;
 const DEDUPE_MS = 2_000;
-const METRIC_KEYS = new Set(["credits", "files", "revisions", "rows", "durable", "version"]);
+const METRIC_KEYS = new Set([
+  "credits",
+  "files",
+  "revisions",
+  "rows",
+  "durable",
+  "version",
+  "conflicts",
+]);
 
 export type ActivityInput = {
   kind: ProjectActivityKind;

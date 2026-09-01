@@ -20,6 +20,7 @@ import {
   captureRevision,
   commitIfChanged,
   formatRevisionAge,
+  mergeProjectBranch,
   restoreProjectRevision,
   revisionHasOnlySafeKeys,
   revisionHash,
@@ -87,7 +88,7 @@ describe("fase3 gap matrix is evidence, not parity", () => {
       [20, 15, 15, 15, 15, 20],
     );
     assert.equal(total.max, 100);
-    assert.equal(total.score, 66);
+    assert.equal(total.score, 68);
     assert.equal(total.complete, false);
     for (const dimension of FASE3_SCORECARD) {
       assert.ok(scoreDimension(dimension) <= dimension.max);
@@ -284,6 +285,110 @@ describe("project tree and revisions", () => {
     assert.equal(branch!.revisions?.length, 1);
     assert.match(branch!.revisions?.[0]?.label || "", /^Ramo · Pronto$/);
     assert.equal(source.html, SITE_B);
+  });
+
+  it("three-way merges independent branch edits without copying operational state", () => {
+    const baseHtml = SITE_A.replace(
+      "</head>",
+      '<link rel="stylesheet" href="css/theme.css"/></head>',
+    );
+    let source = commitIfChanged(
+      sample({
+        html: baseHtml,
+        files: [
+          { path: "index.html", content: baseHtml },
+          { path: "css/theme.css", content: "body{letter-spacing:0}" },
+          { path: "js/app.js", content: "window.appVersion=1" },
+        ],
+      }),
+      { source: "build", label: "Base", id: "merge-base", at: 1 },
+    );
+    const branch = branchProjectRevision(source, "merge-base", {
+      id: "merge-branch",
+      at: 2,
+    });
+    assert.ok(branch);
+    source = {
+      ...source,
+      files: source.files!.map((file) =>
+        file.path === "css/theme.css" ? { ...file, content: "body{letter-spacing:.01em}" } : file,
+      ),
+      messages: [{ id: "source-chat", role: "user", content: "privato fonte", at: 3 }],
+      appData: { clients: [{ secret: "source-only" }] },
+      visualJobId: "source-job",
+      publishedId: "source-live",
+    };
+    const editedBranch: Project = {
+      ...branch!,
+      files: branch!.files!.map((file) =>
+        file.path === "js/app.js" ? { ...file, content: "window.appVersion=2" } : file,
+      ),
+      messages: [{ id: "branch-chat", role: "user", content: "non copiare", at: 4 }],
+      appData: { clients: [{ secret: "branch-only" }] },
+      visualJobId: "branch-job",
+      publishedId: "branch-live",
+    };
+    const result = mergeProjectBranch(source, editedBranch, { id: "merge-result", at: 5 });
+    assert.equal(result.ok, true);
+    if (!result.ok) return;
+    assert.deepEqual(result.changed, ["js/app.js"]);
+    assert.equal(
+      result.project.files?.find((file) => file.path === "css/theme.css")?.content,
+      "body{letter-spacing:.01em}",
+    );
+    assert.equal(
+      result.project.files?.find((file) => file.path === "js/app.js")?.content,
+      "window.appVersion=2",
+    );
+    assert.deepEqual(result.project.messages, source.messages);
+    assert.deepEqual(result.project.appData, source.appData);
+    assert.equal(result.project.visualJobId, "source-job");
+    assert.equal(result.project.publishedId, "source-live");
+    assert.doesNotMatch(
+      JSON.stringify(result.project),
+      /branch-only|branch-chat|branch-job|branch-live/,
+    );
+    assert.match(result.project.revisions?.at(-1)?.label || "", /^Unione ·/);
+  });
+
+  it("fails closed on same-file conflicts and never applies a partial merge", () => {
+    let source = commitIfChanged(
+      sample({
+        files: [
+          { path: "index.html", content: SITE_A },
+          { path: "css/theme.css", content: "body{color:black}" },
+        ],
+      }),
+      { source: "build", label: "Base", id: "conflict-base", at: 1 },
+    );
+    const branch = branchProjectRevision(source, "conflict-base", {
+      id: "conflict-branch",
+      at: 2,
+    });
+    assert.ok(branch);
+    source = {
+      ...source,
+      files: source.files!.map((file) =>
+        file.path === "css/theme.css" ? { ...file, content: "body{color:navy}" } : file,
+      ),
+    };
+    const editedBranch: Project = {
+      ...branch!,
+      files: branch!.files!.map((file) =>
+        file.path === "css/theme.css" ? { ...file, content: "body{color:maroon}" } : file,
+      ),
+    };
+    const before = JSON.stringify(source);
+    const result = mergeProjectBranch(source, editedBranch, { id: "must-not-exist", at: 3 });
+    assert.equal(result.ok, false);
+    if (result.ok) return;
+    assert.equal(result.reason, "conflict");
+    assert.deepEqual(result.conflicts, [{ path: "css/theme.css", reason: "both-changed" }]);
+    assert.equal(JSON.stringify(source), before);
+    assert.equal(
+      source.revisions?.some((revision) => revision.id === "must-not-exist"),
+      false,
+    );
   });
 
   it("recover keeps revisions on a ready project", () => {

@@ -23,7 +23,7 @@ export const FASE3_GAPS: Fase3Gap[] = [
     area: "Iterazione / versioni / rollback",
     emergent: "Rollback e Fork: Ctrl+Z sulla cottura AI, duplica senza toccare il main.",
     fenix:
-      "Cotture fotografate (html+files). Ripristino CAS e ramo indipendente da qualsiasi cottura, max 16. Il ramo copia codice/file ma non dati, chat, job o deploy; niente secret nel log.",
+      "Cotture fotografate (html+files). Ripristino CAS e ramo indipendente da qualsiasi cottura, max 16. Unione three-way nel progetto origine: modifiche indipendenti convergono, stesso file divergente ferma tutto senza merge parziale. Il ramo copia e riunisce solo codice/file, mai dati, chat, job o deploy; niente secret nel log.",
     impact: "high",
     cost: "medium",
     slice: "now",
@@ -81,7 +81,7 @@ export const FASE3_GAPS: Fase3Gap[] = [
     area: "Osservabilità",
     emergent: "Monitoring di deploy/CI dichiarato; profondità non verificata qui.",
     fenix:
-      "Job visuale + release FSM e registro attività per progetto: build, esito, rimborsi, dati, versioni, rami, publish ed export. Max 64 eventi, testo redatto, metriche allowlist; niente prompt, messaggi, job id o segreti. Registro visibile D/T/M. Il data service ha un test bounded multi-soggetto/CAS. Dopo ogni CI main verde, production-smoke attende lo SHA Netlify esatto e misura root, asset, Edge e Railway con SLO 8s; niente APM e niente carico sul DB produzione non configurato.",
+      "Job visuale + release FSM e registro attività per progetto: build, esito, rimborsi, dati, versioni, rami/unioni, publish ed export. Max 64 eventi, testo redatto, metriche allowlist; niente prompt, messaggi, job id o segreti. Registro visibile D/T/M. Il data service ha un test bounded multi-soggetto/CAS. Dopo ogni CI main verde, production-smoke attende lo SHA Netlify esatto e misura root, asset, Edge e Railway con SLO 8s; niente APM e niente carico sul DB produzione non configurato.",
     impact: "medium",
     cost: "medium",
     slice: "next",

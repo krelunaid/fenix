@@ -46,6 +46,12 @@ function StudioPage() {
   const addMessage = useProjectStore((s) => s.addMessage);
   const restoreRevision = useProjectStore((s) => s.restoreRevision);
   const branchRevision = useProjectStore((s) => s.branchRevision);
+  const mergeBranch = useProjectStore((s) => s.mergeBranch);
+  const sourceProject = useProjectStore((s) =>
+    project?.branchFrom
+      ? s.projects.find((candidate) => candidate.id === project.branchFrom?.projectId)
+      : undefined,
+  );
   const updateProject = useProjectStore((s) => s.updateProject);
   const recordActivity = useProjectStore((s) => s.recordActivity);
   const [device, setDevice] = useState<Device>(previewDevice(project?.kind));
@@ -329,6 +335,7 @@ function StudioPage() {
         open={versionsOpen}
         onClose={() => setVersionsOpen(false)}
         project={project}
+        sourceName={sourceProject?.name}
         onRestore={(revisionId) => {
           if (restoreRevision(project.id, revisionId)) setVersionsOpen(false);
         }}
@@ -338,6 +345,21 @@ function StudioPage() {
           setVersionsOpen(false);
           void navigate({ to: "/studio/$projectId", params: { projectId: branch.id } });
         }}
+        onMerge={
+          project.branchFrom
+            ? () => {
+                const result = mergeBranch(project.id);
+                if (result.ok) {
+                  setVersionsOpen(false);
+                  void navigate({
+                    to: "/studio/$projectId",
+                    params: { projectId: result.project.id },
+                  });
+                }
+                return result;
+              }
+            : undefined
+        }
       />
       <ExportPanel
         open={exportOpen}

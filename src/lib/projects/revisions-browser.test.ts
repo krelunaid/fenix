@@ -23,6 +23,8 @@ const OUT = process.env.FENIX_SCORECARD_OUT || "/workspace/screenshots/fase3-rev
 function seed(page: Page, project: Project) {
   return page.addInitScript((p) => {
     if (window !== window.parent) return;
+    if (sessionStorage.getItem("fenix-revisions-seeded") === "1") return;
+    sessionStorage.setItem("fenix-revisions-seeded", "1");
     localStorage.setItem(
       "officina-projects",
       JSON.stringify({
@@ -151,7 +153,7 @@ describe("studio version branches and rollback", () => {
               projects?: Array<{
                 id: string;
                 html: string;
-                files?: Array<{ path: string }>;
+                files?: Array<{ path: string; content?: string }>;
                 branchFrom?: { projectId: string; revisionId: string };
               }>;
             };
@@ -161,6 +163,7 @@ describe("studio version branches and rollback", () => {
           return branch
             ? {
                 count: projects.length,
+                id: branch.id,
                 html: branch.html,
                 paths: (branch.files || []).map((file) => file.path),
                 from: branch.branchFrom,
@@ -172,6 +175,83 @@ describe("studio version branches and rollback", () => {
         assert.match(branchProof!.html, /Prima cottura, prima della rifinitura/);
         assert.deepEqual(branchProof!.paths, ["index.html"]);
         assert.deepEqual(branchProof!.from, { projectId: project.id, revisionId: "rev-old" });
+
+        await page.evaluate((branchId) => {
+          const raw = localStorage.getItem("officina-projects");
+          if (!raw) throw new Error("missing persisted projects");
+          const parsed = JSON.parse(raw) as {
+            state?: {
+              projects?: Array<{
+                id: string;
+                files?: Array<{ path: string; content: string }>;
+                appData?: Record<string, unknown>;
+                messages?: Array<{ id: string; role: string; content: string; at: number }>;
+              }>;
+            };
+          };
+          const branch = parsed.state?.projects?.find((candidate) => candidate.id === branchId);
+          if (!branch) throw new Error("missing branch");
+          branch.files = [
+            ...(branch.files || []),
+            { path: "notes/ramo.md", content: "# Decisione del ramo" },
+          ];
+          branch.appData = { private: [{ value: "non copiare" }] };
+          branch.messages = [
+            { id: "branch-private", role: "user", content: "messaggio privato", at: 1 },
+          ];
+          localStorage.setItem("officina-projects", JSON.stringify(parsed));
+        }, branchProof!.id);
+        await page.reload({ waitUntil: "domcontentloaded", timeout: 20000 });
+        await page.getByRole("button", { name: /^Versioni$/ }).click();
+        const branchDialog = page.getByRole("dialog", { name: /Cotture precedenti/i });
+        await branchDialog.waitFor({ timeout: 5000 });
+        const merge = branchDialog.getByRole("button", { name: /^Unisci ramo in /i });
+        assert.equal(
+          await merge.count(),
+          1,
+          `${name} merge missing: ${(await branchDialog.getByRole("button").allTextContents()).join(" · ")}`,
+        );
+        const mergeBox = await merge.boundingBox();
+        assert.ok(mergeBox && mergeBox.height >= 44, `${name} Unisci target too small`);
+        await shot(page, `merge-${name}.png`);
+        await merge.click();
+        await page.waitForURL((url) => url.pathname.endsWith(`/${project.id}`), {
+          timeout: 5000,
+        });
+        const mergeProof = await page.evaluate((sourceId) => {
+          const raw = localStorage.getItem("officina-projects");
+          if (!raw) return null;
+          const parsed = JSON.parse(raw) as {
+            state?: {
+              projects?: Array<{
+                id: string;
+                html: string;
+                files?: Array<{ path: string }>;
+                appData?: Record<string, unknown>;
+                messages?: Array<{ content: string }>;
+                activity?: Array<{ kind: string; outcome: string }>;
+              }>;
+            };
+          };
+          const source = parsed.state?.projects?.find((candidate) => candidate.id === sourceId);
+          return source
+            ? {
+                html: source.html,
+                paths: (source.files || []).map((file) => file.path),
+                appData: source.appData,
+                messages: source.messages,
+                merged: (source.activity || []).some(
+                  (item) => item.kind === "merge" && item.outcome === "ok",
+                ),
+              }
+            : null;
+        }, project.id);
+        assert.ok(mergeProof);
+        assert.match(mergeProof!.html, /Carica e ascolta i tuoi brani/);
+        assert.ok(mergeProof!.paths.includes("notes/ramo.md"));
+        assert.equal(mergeProof!.appData, undefined);
+        assert.doesNotMatch(JSON.stringify(mergeProof!.messages), /messaggio privato/);
+        assert.equal(mergeProof!.merged, true);
 
         await page.goto(`${PREVIEW}/studio/${project.id}`, {
           waitUntil: "domcontentloaded",

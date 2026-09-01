@@ -25,7 +25,13 @@ import {
   type Project,
   type ProjectKind,
 } from "./types";
-import { branchProjectRevision, commitIfChanged, restoreProjectRevision } from "./revisions";
+import {
+  branchProjectRevision,
+  commitIfChanged,
+  mergeProjectBranch,
+  restoreProjectRevision,
+  type BranchMergeResult,
+} from "./revisions";
 import { appendProjectActivity, type ActivityInput } from "./activity";
 import { importProjectArchive } from "./zip";
 
@@ -73,6 +79,7 @@ type ProjectStore = {
   updateProject: (id: string, patch: Partial<Project>) => void;
   restoreRevision: (id: string, revisionId: string) => boolean;
   branchRevision: (id: string, revisionId: string) => Project | null;
+  mergeBranch: (branchId: string) => BranchMergeResult;
   addMessage: (id: string, message: Omit<ChatMessage, "id" | "at"> & { id?: string }) => void;
   removeProject: (id: string) => void;
   getProject: (id: string) => Project | undefined;
@@ -529,6 +536,58 @@ export const useProjectStore = create<ProjectStore>()(
           ]),
         }));
         return branchWithActivity;
+      },
+      mergeBranch: (branchId) => {
+        const branch = get().getProject(branchId);
+        if (!branch?.branchFrom) {
+          return { ok: false, reason: "not-a-branch", conflicts: [] };
+        }
+        const source = get().getProject(branch.branchFrom.projectId);
+        if (!source) {
+          return { ok: false, reason: "wrong-source", conflicts: [] };
+        }
+        const result = mergeProjectBranch(source, branch);
+        if (!result.ok) {
+          set((state) => ({
+            projects: state.projects.map((project) =>
+              project.id === branchId
+                ? appendProjectActivity(project, {
+                    kind: "merge",
+                    outcome: "err",
+                    label: "Unione fermata",
+                    detail: result.conflicts.map((item) => item.path).join(", ") || result.reason,
+                    metrics: { conflicts: result.conflicts.length },
+                  })
+                : project,
+            ),
+          }));
+          return result;
+        }
+        const mergedSource = appendProjectActivity(result.project, {
+          kind: "merge",
+          outcome: "ok",
+          label: result.changed.length ? "Ramo unito" : "Ramo già allineato",
+          detail: branch.name,
+          metrics: {
+            files: projectFiles({ html: result.project.html, files: result.project.files }).length,
+            revisions: result.project.revisions?.length ?? 0,
+          },
+        });
+        const mergedBranch = appendProjectActivity(branch, {
+          kind: "merge",
+          outcome: "ok",
+          label: result.changed.length ? "Unito nel progetto origine" : "Già allineato",
+          detail: source.name,
+          metrics: { files: result.changed.length },
+        });
+        set((state) => ({
+          projects: state.projects.map((project) => {
+            if (project.id === source.id) return mergedSource;
+            if (project.id === branch.id) return mergedBranch;
+            return project;
+          }),
+        }));
+        return { ...result, project: mergedSource };
       },
       addMessage: (id, message) => {
         const full: ChatMessage = {

@@ -82,6 +82,14 @@ export const FASE3_SCORECARD: ScoreDimension[] = [
         reproduce: "npm test -- src/lib/projects/revisions.test.ts",
       },
       {
+        id: "branch-three-way-merge",
+        points: 2,
+        claim:
+          "Unione three-way ramo→origine per file: modifiche indipendenti convergono e i conflitti fermano tutto senza copiare stato operativo.",
+        reproduce:
+          "npm test -- src/lib/projects/revisions.test.ts src/lib/projects/revisions-browser.test.ts",
+      },
+      {
         id: "github-export",
         points: 4,
         claim:
@@ -97,7 +105,7 @@ export const FASE3_SCORECARD: ScoreDimension[] = [
       },
     ],
     remaining:
-      "Mancano pull/sync bidirezionale, merge e conflitti equivalenti a un flusso Git completo.",
+      "Manca il pull/sync bidirezionale con un repository remoto e la risoluzione assistita dei conflitti equivalente a un flusso Git completo.",
   },
   {
     id: "backend-auth-data",
@@ -146,7 +154,7 @@ export const FASE3_SCORECARD: ScoreDimension[] = [
         id: "activity-ledger",
         points: 2,
         claim:
-          "Registro progetto bounded e redatto per build, dati, versioni, publish, export e rimborsi.",
+          "Registro progetto bounded e redatto per build, dati, versioni, rami/unioni, publish, export e rimborsi.",
         reproduce:
           "npm test -- src/lib/projects/revisions.test.ts src/lib/projects/revisions-browser.test.ts",
       },

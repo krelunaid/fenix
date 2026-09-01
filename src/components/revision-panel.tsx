@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
-import { Activity, GitFork, History, RotateCcw, X } from "lucide-react";
+import { Activity, GitFork, GitMerge, History, RotateCcw, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatActivityAge, listProjectActivity } from "@/lib/projects/activity";
 import { formatRevisionAge, listRevisions } from "@/lib/projects/revisions";
+import type { BranchMergeResult } from "@/lib/projects/revisions";
 import type { Project } from "@/lib/projects/types";
 import { cn } from "@/lib/utils";
 
@@ -12,16 +13,24 @@ export function RevisionPanel({
   project,
   onRestore,
   onBranch,
+  sourceName,
+  onMerge,
 }: {
   open: boolean;
   onClose: () => void;
   project: Project;
   onRestore: (revisionId: string) => void;
   onBranch: (revisionId: string) => void;
+  sourceName?: string;
+  onMerge?: () => BranchMergeResult;
 }) {
   const [tab, setTab] = useState<"versions" | "activity">("versions");
+  const [mergeError, setMergeError] = useState("");
   useEffect(() => {
-    if (open) setTab("versions");
+    if (open) {
+      setTab("versions");
+      setMergeError("");
+    }
   }, [open]);
   if (!open) return null;
   const revisions = listRevisions(project);
@@ -59,6 +68,47 @@ export function RevisionPanel({
             <X />
           </Button>
         </div>
+
+        {project.branchFrom && onMerge ? (
+          <div className="mt-5 rounded-lg border border-primary/35 bg-primary/5 p-3 sm:p-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="flex items-center gap-2 font-medium">
+                  <GitMerge className="size-4" aria-hidden="true" />
+                  Ramo indipendente
+                </p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Unisci solo codice e file in {sourceName || "progetto origine"}. Dati, chat, job e
+                  deploy restano separati.
+                </p>
+              </div>
+              <Button
+                variant="secondary"
+                size="sm"
+                className="min-h-11 shrink-0"
+                onClick={() => {
+                  const result = onMerge();
+                  if (result.ok) return;
+                  const paths = result.conflicts.map((item) => item.path).join(", ");
+                  setMergeError(
+                    paths
+                      ? `Conflitto su ${paths}. Nessun file è stato unito.`
+                      : "Il progetto origine non è più disponibile. Nessun file è stato unito.",
+                  );
+                }}
+                aria-label={`Unisci ramo in ${sourceName || "progetto origine"}`}
+              >
+                <GitMerge />
+                Unisci
+              </Button>
+            </div>
+            {mergeError ? (
+              <p role="alert" className="mt-3 text-sm text-destructive">
+                {mergeError}
+              </p>
+            ) : null}
+          </div>
+        ) : null}
 
         <div
           className="mt-5 grid grid-cols-2 rounded-lg border border-border bg-background p-1"

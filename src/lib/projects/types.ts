@@ -29,6 +29,7 @@ export type ProjectActivityKind =
   | "data"
   | "restore"
   | "branch"
+  | "merge"
   | "publish"
   | "export"
   | "import";
@@ -44,7 +45,7 @@ export type ProjectActivity = {
   label: string;
   detail?: string;
   metrics?: Partial<
-    Record<"credits" | "files" | "revisions" | "rows" | "durable" | "version", number>
+    Record<"credits" | "files" | "revisions" | "rows" | "durable" | "version" | "conflicts", number>
   >;
 };
 
