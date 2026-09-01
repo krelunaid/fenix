@@ -6,6 +6,8 @@ import {
   gateIncompleteHtml,
   type GateOutcome,
 } from "@/lib/projects/fenix-adapter";
+import type { BuildContract } from "./build-contract";
+import type { ProjectFile } from "@/lib/projects/files";
 
 export { REPAIR_PROMPT } from "./prompts.shared";
 
@@ -35,7 +37,7 @@ export async function repairBuild(input: {
         { role: "system", content: REPAIR_PROMPT },
         {
           role: "user",
-          content: `BRIEF:\n${input.prompt}\n\nERRORI DI VALIDAZIONE:\n${input.error}\n\nHTML DA RIPARARE:\n${input.html.slice(0, 40000)}\n\nRestituisci il documento corretto, META+HTML.`,
+          content: `BRIEF:\n${input.prompt}\n\nERRORI DI VALIDAZIONE:\n${input.error}\n\nHTML DA RIPARARE:\n${input.html.slice(0, 40000)}\n\nRestituisci META + eventuali <<<FILE path="...">>> + <<<HTML>>> + <<<END>>>. Niente server inventato.`,
         },
       ],
     }),
@@ -55,6 +57,8 @@ export async function gateBuildResult(input: {
   signal?: AbortSignal;
   onStage?: (stage: string) => void;
   repair?: typeof repairBuild;
+  contract?: BuildContract;
+  files?: ProjectFile[];
 }): Promise<GateOutcome> {
   return gateIncompleteHtml({
     ...input,

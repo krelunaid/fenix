@@ -7,6 +7,7 @@ import { CREDITS_GRANT, CREDIT_COST } from "./credits";
 import { DEMOS } from "./demos";
 import { resolveProjectKind, isPhoneKind } from "./infer";
 import { validatePublishable, type HtmlReport } from "./validate-html";
+import { blocksPublish } from "../ai/build-contract";
 import { recoverPersistedProject, STALE_BUILD_MS, RESUME_ERROR } from "./recover";
 import { polishDashboardHtml, scrubTechMessages, shouldRepairDashboard } from "./dashboard-crud";
 import { replaceAppleTabIcons, rewriteIosWidgetHome, stripPhoneChromeFromSite, ensureMainElementId } from "./craft-icons";
@@ -533,6 +534,12 @@ export function applyBuildResult(
     bg: result.palette?.bg ?? existing?.palette.bg,
   });
   if (!report.syntaxOk) return report;
+  const contractBlock = blocksPublish(html, kind, result.files, existing?.prompt);
+  if (contractBlock) {
+    report.ok = false;
+    report.complete = false;
+    report.errors = [...report.errors, contractBlock];
+  }
   const nextStatus: BuildStatus =
     status === "ready" ? (report.complete ? "ready" : "building") : status;
   useProjectStore.getState().updateProject(id, {
@@ -568,6 +575,12 @@ export function promoteReady(id: string): HtmlReport {
     projectId: project.id,
     bg: project.palette.bg,
   });
+  const contractBlock = blocksPublish(project.html, kind, project.files, project.prompt);
+  if (contractBlock) {
+    report.ok = false;
+    report.complete = false;
+    report.errors = [...report.errors, contractBlock];
+  }
   if (!report.ok) return report;
   useProjectStore.getState().updateProject(id, { kind, status: "ready", error: undefined });
   return report;

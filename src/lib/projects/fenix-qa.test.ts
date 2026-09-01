@@ -540,10 +540,17 @@ describe("focus-visible and worker model", () => {
     assert.match(api, /planContract/);
     assert.match(api, /contractInstruction/);
     assert.match(api, /criticBudget/);
+    assert.match(api, /gateBuildResult/);
+    const adapter = readFileSync(join(root, "src/lib/projects/fenix-adapter.ts"), "utf8");
+    assert.match(adapter, /evaluateContract/);
+    assert.match(adapter, /formatContractErrors/);
+    assert.match(adapter, /CONTRACT_REPAIR_MAX/);
     const edge = readFileSync(join(root, "netlify/edge-functions/build.ts"), "utf8");
     assert.match(edge, /planContract/);
     assert.match(edge, /REPAIR_PROMPT/);
     assert.match(edge, /REPAIR_MAX = 2/);
+    assert.match(edge, /gateIncompleteHtml/);
+    assert.match(edge, /parseProjectFiles/);
     assert.doesNotMatch(edge, /reasoning_effort/);
     const worker = readFileSync(join(root, "workers/visual/server.mjs"), "utf8");
     assert.match(worker, /MODEL = "grok-build-0.1"/);

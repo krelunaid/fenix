@@ -40,7 +40,7 @@ export function loadContractFixtures(): ContractFixture[] {
     {
       id: "dashboard-multifile",
       family: "dashboard full-stack/multi-file",
-      brief: `${formatPrefix("dashboard")}Kiln con dati mock e API locale. Nessun server inventato.`,
+      brief: `${formatPrefix("dashboard")}Kiln con ordini, dati mock e API locale. Nessun server inventato.`,
       html: kiln.html,
       files: [{ path: "index.html", content: kiln.html }, ...extra],
       palette: kiln.palette,

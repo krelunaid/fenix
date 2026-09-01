@@ -54,20 +54,32 @@ export const QUALITY_LEDGER: LedgerRow[] = [
   },
   {
     id: "eval-negative",
-    claim: "Gate negativi: secret, eval, kind-lock tabbar su dashboard, iOS cheap.",
-    evidence: "src/lib/ai/build-contract.test.ts rejects secret/eval/kind-lock/cheap",
+    claim: "Gate negativi: secret, eval, kind-lock tabbar su dashboard, iOS cheap. Contratto blocking ferma t:ok/ready/Pubblica.",
+    evidence: "src/lib/ai/build-contract.test.ts rejects + false-positive gates closed (eval/secret/CRUD)",
+    ok: true,
+  },
+  {
+    id: "files-tree",
+    claim: "File obbligatori del contratto devono esistere nell'output. Dashboard senza data/ordini.json fallisce; con file passa. Extra mock non eseguito.",
+    evidence: "src/lib/ai/build-contract.test.ts file-tree dashboard without/with data/ordini.json",
+    ok: true,
+  },
+  {
+    id: "aa-fail-closed",
+    claim: "AA fail-closed: palette assente o contrasto < 4.5 (anche body #777/#777) blocca. Niente 'palette assente ⇒ ok'.",
+    evidence: "src/lib/ai/build-contract.test.ts AA fail-closed; extractColorPair",
     ok: true,
   },
   {
     id: "budget",
-    claim: "Critic LLM saltato se i gate statici passano; desk e iterate non pagano un secondo giro.",
+    claim: "Critic LLM saltato se i gate statici passano; desk e iterate non pagano un secondo giro. Planner 0 token.",
     evidence: "src/lib/ai/build-contract.test.ts criticBudget static-ok/desk/iterate",
     ok: true,
   },
   {
     id: "browser-dtm",
-    claim: "D/T/M, console zero, overflow, focus di base sulle 3 fixture.",
-    evidence: "src/lib/ai/build-contract-browser.test.ts viewports 1280/768/390",
+    claim: "D/T/M: console 0, overflow ≤8, focus visibile (outline/box-shadow) e target ≥24px. Screenshot + manifest sha256 in src/lib/ai/fixtures/dtm (Chromium drift: presenza e peso, non pixel-hash in CI).",
+    evidence: "src/lib/ai/build-contract-browser.test.ts viewports 1280/768/390 + fixtures/dtm/manifest.json",
     ok: true,
   },
   {

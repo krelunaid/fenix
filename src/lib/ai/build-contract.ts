@@ -6,6 +6,7 @@ import {
   isDeskKind,
   isPhoneKind,
   kindFromPrompt,
+  formatPrefix,
 } from "../projects/infer.ts";
 import type { ProjectKind } from "../projects/types.ts";
 import {
@@ -13,7 +14,7 @@ import {
   htmlHasFenixApi,
   validateProductHtml,
 } from "../projects/validate-html.ts";
-import { auditCraft } from "../projects/visual-quality.ts";
+import { auditCraft, contrastRatio, extractCssVars } from "../projects/visual-quality.ts";
 
 export const BUILD_CONTRACT_VERSION = 1 as const;
 export const CONTRACT_REPAIR_MAX = 2;
@@ -148,9 +149,11 @@ function journeysFor(kind: ProjectKind): ContractJourney[] {
   return [{ id: "salva", steps: ["apri nuovo", "compila", "salva", "vedi in lista"] }];
 }
 
-function filesFor(kind: ProjectKind): string[] {
-  if (kind === "dashboard") return ["index.html", "data/ordini.json"];
-  if (kind === "site" || kind === "landing") return ["index.html", "css/theme.css"];
+/** Only files the product actually needs. Dashboard + "ordini" ⇒ data/ordini.json. No invented backend. */
+export function filesFor(kind: ProjectKind, brief = ""): string[] {
+  if (kind === "dashboard" && /\bordini\b/i.test(brief)) {
+    return ["index.html", "data/ordini.json"];
+  }
   return ["index.html"];
 }
 
@@ -196,7 +199,7 @@ export function planContract(brief: string): BuildContract {
       security: ["no localStorage", "no eval", "no secret", "no ${} nel markup"],
       responsive: ["D 1280", "T 768", "M 390", "niente overflow orizzontale"],
     },
-    files: filesFor(kind),
+    files: filesFor(kind, brief),
   };
 }
 
@@ -236,6 +239,7 @@ export function parseContract(raw: unknown): BuildContract | null {
     rec.constraints && typeof rec.constraints === "object"
       ? (rec.constraints as Record<string, unknown>)
       : {};
+  const files = asStringList(rec.files, 12, 80);
   const contract: BuildContract = {
     version: BUILD_CONTRACT_VERSION,
     kind,
@@ -255,7 +259,7 @@ export function parseContract(raw: unknown): BuildContract | null {
       security: asStringList(constraintsIn.security, 6, 60),
       responsive: asStringList(constraintsIn.responsive, 6, 60),
     },
-    files: asStringList(rec.files, 12, 80),
+    files: files.length ? files : filesFor(kind, asText(rec.intent, 120)),
   };
   return contract;
 }
@@ -264,6 +268,8 @@ export function contractInstruction(contract: BuildContract): string {
   const entities = contract.entities
     .map((e) => `${e.name}${e.crud ? " (CRUD)" : ""}`)
     .join(", ");
+  const extras = contract.files.filter((p) => p !== "index.html");
+  const fileBlocks = extras.map((p) => `<<<FILE path="${p}">>>`).join(" ");
   return [
     "CONTRATTO DI BUILD (legge):",
     `kind=${contract.kind}`,
@@ -271,7 +277,10 @@ export function contractInstruction(contract: BuildContract): string {
     `schermate: ${contract.screens.join(", ")}`,
     `route: ${contract.routes.join(", ")}`,
     `entità: ${entities}`,
-    `file: ${contract.files.join(", ")}`,
+    `file obbligatori: ${contract.files.join(", ")}`,
+    fileBlocks
+      ? `Emetti ogni extra come ${fileBlocks} … contenuto … poi <<<HTML>>> e <<<END>>>. Niente server, extra file non eseguiti.`
+      : 'Documento META + <<<HTML>>> + <<<END>>>. Extra file solo con <<<FILE path="...">>> se servono, e solo se il contratto li elenca.',
     `accetta: ${contract.acceptance.join("; ")}`,
     `a11y: ${contract.constraints.a11y.join("; ")}`,
     `sicurezza: ${contract.constraints.security.join("; ")}`,
@@ -303,6 +312,28 @@ function styleBlocks(html: string): string {
   return (html.match(/<style\b[\s\S]*?<\/style>/gi) || []).join("\n");
 }
 
+function fullHex(raw: string): string | null {
+  const h = raw.replace("#", "").trim();
+  if (h.length === 3 && /^[0-9a-fA-F]{3}$/.test(h)) {
+    return `#${h[0]}${h[0]}${h[1]}${h[1]}${h[2]}${h[2]}`.toLowerCase();
+  }
+  if (h.length >= 6 && /^[0-9a-fA-F]{6}/.test(h)) return `#${h.slice(0, 6).toLowerCase()}`;
+  return null;
+}
+
+/** Palette from :root --bg/--fg/--ink or body { background; color }. Fail-closed if missing. */
+export function extractColorPair(html: string): { bg: string; fg: string } | null {
+  const vars = extractCssVars(html);
+  const fromVarsBg = fullHex(vars.bg || "");
+  const fromVarsFg = fullHex(vars.fg || vars.ink || "");
+  if (fromVarsBg && fromVarsFg) return { bg: fromVarsBg, fg: fromVarsFg };
+  const body = html.match(/body\s*\{[^}]+\}/i)?.[0] || "";
+  const bg = fullHex(body.match(/background(?:-color)?\s*:\s*(#[0-9a-fA-F]{3,8})/i)?.[1] || "");
+  const fg = fullHex(body.match(/(?:^|[^-])color\s*:\s*(#[0-9a-fA-F]{3,8})/i)?.[1] || "");
+  if (bg && fg) return { bg, fg };
+  return null;
+}
+
 export function evaluateContract(input: {
   html: string;
   files?: ProjectFile[];
@@ -319,11 +350,12 @@ export function evaluateContract(input: {
   const visual = auditCraft(html);
 
   const secretFile = ingest.files.find((f) => fileLooksLikeSecret(f.content, f.path));
-  const provided = (input.files || []).map((f) => f.path).filter((p) => p && p !== "index.html");
-  const missingProvided = provided.filter((p) => !paths.has(p));
-  const expectedExtra = input.contract.files.filter((p) => p !== "index.html");
-  const missingExpected =
-    provided.length > 0 ? expectedExtra.filter((p) => provided.includes(p) && !paths.has(p)) : [];
+  const secretReject = ingest.rejected.find((r) => r.reason === "segreto");
+  const secretHit = secretFile?.path || secretReject?.path;
+  const provided = (input.files || []).map((f) => f.path).filter(Boolean);
+  const missingProvided = provided.filter((p) => !paths.has(p) && p !== "index.html");
+  const expected = input.contract.files.filter(Boolean);
+  const missingExpected = expected.filter((p) => !paths.has(p));
 
   const hasTable = /<table\b/i.test(html);
   const hasForm = /<form\b/i.test(html);
@@ -331,31 +363,44 @@ export function evaluateContract(input: {
   const views = new Set([...html.matchAll(/data-view=["']([^"']+)["']/gi)].map((m) => m[1]));
   const sections = (html.match(/<section\b/gi) || []).length;
   const crudOk =
-    hasFenix &&
-    (kind === "site" || kind === "landing"
-      ? hasForm || sections >= 4
-      : kind === "dashboard"
-        ? hasTable || hasForm || /data-act=/i.test(html)
-        : hasForm || views.size >= 3);
+    kind === "landing"
+      ? hasForm || sections >= 4 || views.size >= 3
+      : hasFenix &&
+        (kind === "site"
+          ? hasForm || sections >= 4
+          : kind === "dashboard"
+            ? hasTable || hasForm || /data-act=/i.test(html)
+            : hasForm || views.size >= 3);
 
   const bodyOverflow = /(?:^|})\s*body\s*\{[^}]*overflow\s*:\s*hidden/i.test(css);
   const phoneDesktop = isPhoneKind(kind) && /min-width\s*:\s*1[1-9]\d{2,}px/i.test(css);
   const iframeSameOrigin = /sandbox\s*=\s*["'][^"']*allow-same-origin/i.test(html);
   const evalCall = /\beval\s*\(|\bnew Function\s*\(/.test(code);
-  const hasFocus = /:focus(?:-visible)?/.test(html);
-  const hasControl = /<(?:button|a|input)\b/i.test(html);
+  const hasFocus = /:focus-visible|:focus\b/.test(`${html}\n${css}`);
+
+  const pair = extractColorPair(html);
+  const contrast = pair ? contrastRatio(pair.fg, pair.bg) : 0;
+  const aaOk = Boolean(pair) && contrast >= 4.5;
+  const dnaOk = !visual.genericFont && !visual.aiPurple && !(visual.genericIosGray && visual.genericIosBlue);
+
+  const filesOk = ingest.rejected.length === 0 && missingProvided.length === 0 && missingExpected.length === 0;
+  const filesDetail = ingest.rejected[0]
+    ? `${ingest.rejected[0].path}: ${ingest.rejected[0].reason}`
+    : missingExpected.length
+      ? `mancano ${missingExpected.join(", ")}`
+      : `${ingest.files.length} file`;
 
   const checks: ContractCheck[] = [
     check("html", report.ok, report.ok ? "HTML valido" : report.errors.slice(0, 3).join(" · ")),
     check("kind-lock", report.ok || !report.errors.some((e) => /tabbar telefono|gestionale|scaffold/i.test(e)), kind),
     check("srcdoc", /<!DOCTYPE html/i.test(html) && /<\/html>/i.test(html) && /<body[\s>]/i.test(html), "documento completo"),
-    check("files", ingest.rejected.length === 0 && missingProvided.length === 0 && missingExpected.length === 0, ingest.rejected[0] ? `${ingest.rejected[0].path}: ${ingest.rejected[0].reason}` : `${ingest.files.length} file`),
-    check("crud", crudOk, hasFenix ? (hasForm || hasTable ? "Fenix + form/tabella" : "Fenix") : "manca Fenix.load/save"),
-    check("security", !secretFile && !evalCall && !iframeSameOrigin && !/\blocalStorage\b/.test(code), secretFile ? `segreto ${secretFile.path}` : evalCall ? "eval" : iframeSameOrigin ? "sandbox allow-same-origin" : "ok"),
+    check("files", filesOk, filesDetail),
+    check("crud", crudOk, hasFenix ? (hasForm || hasTable ? "Fenix + form/tabella" : "Fenix") : kind === "landing" ? "landing" : "manca Fenix.load/save"),
+    check("security", !secretHit && !evalCall && !iframeSameOrigin && !/\blocalStorage\b/.test(code), secretHit ? `segreto ${secretHit}` : evalCall ? "eval" : iframeSameOrigin ? "sandbox allow-same-origin" : "ok"),
     check("overflow", !(kind === "site" || kind === "landing" ? bodyOverflow : false) && !phoneDesktop, phoneDesktop ? "min-width desktop su app" : bodyOverflow ? "overflow:hidden su body" : "ok"),
-    check("aa", visual.contrast >= 4.5 || !extractHasVars(html), visual.contrast ? `contrasto ${visual.contrast.toFixed(2)}` : "palette assente", true),
-    check("visual-dna", visual.ok || visual.contrast === 0, visual.notes.join(" · ") || "identità ok", visual.contrast > 0),
-    check("a11y-focus", hasFocus || hasControl, hasFocus ? ":focus" : "controlli focusabili", false),
+    check("aa", aaOk, aaOk ? `contrasto ${contrast.toFixed(2)}` : pair ? `contrasto ${contrast.toFixed(2)} < 4.5` : "contrasto non misurabile"),
+    check("visual-dna", dnaOk, visual.notes.filter((n) => !/contrasto/i.test(n)).join(" · ") || "identità ok"),
+    check("a11y-focus", hasFocus, hasFocus ? ":focus-visible" : "manca :focus-visible", false),
     check("routes", kind === "site" || kind === "landing" ? sections >= 4 || views.size >= 3 : views.size >= 3 || sections >= 3, `${views.size} viste / ${sections} sezioni`),
   ];
 
@@ -363,8 +408,29 @@ export function evaluateContract(input: {
   return { ok, kind, checks };
 }
 
-function extractHasVars(html: string): boolean {
-  return /:root\s*\{[^}]*--(?:bg|fg)\s*:/i.test(html);
+export function formatContractErrors(evaluation: ContractEval): string {
+  return evaluation.checks
+    .filter((c) => c.blocking && !c.ok)
+    .map((c) => `${c.id}: ${String(c.detail || "").replace(/\s+/g, " ").trim().slice(0, 80)}`)
+    .join(" · ");
+}
+
+/** Shared ready/publish predicate: any blocking ContractCheck that failed blocks. */
+export function contractAllowsReady(evaluation: ContractEval): boolean {
+  return evaluation.ok;
+}
+
+/** Empty string = allowed. Otherwise blocking contract errors. Deterministic, 0 tokens. */
+export function blocksPublish(
+  html: string,
+  kind?: string,
+  files?: ProjectFile[],
+  prompt?: string,
+): string {
+  const k = asKind(kind) ?? "app";
+  const contract = planContract(`${formatPrefix(k)}${prompt || ""}`);
+  const evaluation = evaluateContract({ html, files, contract, kind: k });
+  return evaluation.ok ? "" : formatContractErrors(evaluation);
 }
 
 export function criticBudget(input: {

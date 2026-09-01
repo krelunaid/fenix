@@ -54,7 +54,7 @@
         },
         {
           "id": "a11y-focus",
-          "ok": true,
+          "ok": false,
           "blocking": false
         },
         {
@@ -117,7 +117,7 @@
         },
         {
           "id": "a11y-focus",
-          "ok": true,
+          "ok": false,
           "blocking": false
         },
         {
@@ -180,7 +180,7 @@
         },
         {
           "id": "a11y-focus",
-          "ok": true,
+          "ok": false,
           "blocking": false
         },
         {

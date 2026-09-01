@@ -1,6 +1,16 @@
 import { formatHtmlErrors, htmlHasFenixApi, validateProductHtml, type HtmlReport } from "./validate-html.ts";
 import { kindFromPrompt } from "./infer.ts";
-import type { BuildResult } from "../ai/parse.ts";
+import type { Palette, ProjectKind } from "./types.ts";
+import type { ProjectFile } from "./files.ts";
+import {
+  CONTRACT_REPAIR_MAX,
+  contractAllowsReady,
+  evaluateContract,
+  formatContractErrors,
+  planContract,
+  type BuildContract,
+  type ContractEval,
+} from "../ai/build-contract.ts";
 
 /** Bridge-only adapter. No secrets, no localStorage. Host runtime wins when present. */
 export const FENIX_ADAPTER_SCRIPT = `<script data-fenix-adapter>
@@ -26,6 +36,18 @@ export const FENIX_ADAPTER_SCRIPT = `<script data-fenix-adapter>
 
 export { htmlHasFenixApi };
 
+/** Structural product — keep parse.ts (and its @/ aliases) out of the Edge bundle. */
+export type GatedProduct = {
+  name: string;
+  tagline: string;
+  kind?: ProjectKind;
+  summary: string;
+  direction: string;
+  palette: Palette;
+  html: string;
+  files?: ProjectFile[];
+};
+
 export function ensureFenixAdapter(html: string): string {
   const text = String(html || "");
   if (!text || htmlHasFenixApi(text)) return text;
@@ -33,10 +55,10 @@ export function ensureFenixAdapter(html: string): string {
   return text + FENIX_ADAPTER_SCRIPT;
 }
 
-function patchResult(result: BuildResult, kind?: string): BuildResult {
+function patchResult(result: GatedProduct, kind?: string): GatedProduct {
   return {
     ...result,
-    kind: (kind as BuildResult["kind"]) || result.kind,
+    kind: (kind as ProjectKind) || result.kind,
     html: ensureFenixAdapter(result.html),
   };
 }
@@ -47,28 +69,71 @@ export type RepairFn = (input: {
   html: string;
   error: string;
   signal?: AbortSignal;
-}) => Promise<BuildResult | null>;
+}) => Promise<GatedProduct | null>;
 
 export type GateOutcome =
-  | { result: BuildResult; report: HtmlReport }
-  | { error: string; report: HtmlReport; result?: BuildResult };
+  | { result: GatedProduct; report: HtmlReport; evaluation: ContractEval }
+  | { error: string; report: HtmlReport; evaluation?: ContractEval; result?: GatedProduct };
+
+function gateError(report: HtmlReport, evaluationDetail: string): string {
+  const htmlPart = formatHtmlErrors(report);
+  const parts = [htmlPart, evaluationDetail].filter(Boolean);
+  if (!report.syntaxOk) {
+    return `HTML non valido, non pubblico: ${parts.join(" · ") || "documento incompleto"}`;
+  }
+  return `Il prodotto non è completo: ${parts.join(" · ") || "contratto non soddisfatto"}`;
+}
+
+export function assessProduct(input: {
+  html: string;
+  files?: ProjectFile[];
+  contract: BuildContract;
+  kind?: ProjectKind;
+}) {
+  const report = validateProductHtml(input.html, { kind: input.kind });
+  const evaluation = evaluateContract({
+    html: input.html,
+    files: input.files,
+    contract: input.contract,
+    kind: input.kind,
+  });
+  return { report, evaluation, ok: report.ok && contractAllowsReady(evaluation) };
+}
 
 export async function gateIncompleteHtml(input: {
   prompt: string;
-  result: BuildResult;
+  result: GatedProduct;
   apiKey?: string;
   signal?: AbortSignal;
   onStage?: (stage: string) => void;
   repair?: RepairFn;
+  contract?: BuildContract;
+  files?: ProjectFile[];
 }): Promise<GateOutcome> {
   const lockKind = kindFromPrompt(input.prompt) ?? input.result.kind;
-  let current = patchResult(input.result, lockKind);
+  const contract = input.contract ?? planContract(input.prompt);
+  let current = patchResult(
+    {
+      ...input.result,
+      files: input.files ?? input.result.files,
+    },
+    lockKind,
+  );
   if (current.html !== input.result.html) input.onStage?.("Adatto Fenix");
-  let report = validateProductHtml(current.html, { kind: current.kind });
-  if (report.ok) return { result: current, report };
+
+  const assess = (product: GatedProduct) =>
+    assessProduct({
+      html: product.html,
+      files: product.files,
+      contract,
+      kind: product.kind,
+    });
+
+  let scored = assess(current);
+  if (scored.ok) return { result: current, report: scored.report, evaluation: scored.evaluation };
 
   const repair = input.repair;
-  for (let attempt = 0; attempt < 2; attempt++) {
+  for (let attempt = 0; attempt < CONTRACT_REPAIR_MAX; attempt++) {
     if (!repair) break;
     input.onStage?.(attempt === 0 ? "Riparo il codice" : "Secondo riparo");
     const ctl = new AbortController();
@@ -76,17 +141,23 @@ export async function gateIncompleteHtml(input: {
     const onAbort = () => ctl.abort();
     input.signal?.addEventListener("abort", onAbort, { once: true });
     try {
+      const error = [formatHtmlErrors(scored.report), formatContractErrors(scored.evaluation)]
+        .filter(Boolean)
+        .join(" · ");
       const fixed = await repair({
         apiKey: input.apiKey ?? "",
         prompt: input.prompt,
         html: current.html,
-        error: formatHtmlErrors(report),
+        error,
         signal: ctl.signal,
       });
       if (!fixed?.html) continue;
-      current = patchResult({ ...fixed, kind: lockKind || fixed.kind }, lockKind);
-      report = validateProductHtml(current.html, { kind: current.kind });
-      if (report.ok) return { result: current, report };
+      current = patchResult(
+        { ...fixed, kind: lockKind || fixed.kind, files: fixed.files ?? current.files },
+        lockKind,
+      );
+      scored = assess(current);
+      if (scored.ok) return { result: current, report: scored.report, evaluation: scored.evaluation };
     } catch {
       /* retry */
     } finally {
@@ -95,12 +166,11 @@ export async function gateIncompleteHtml(input: {
     }
   }
 
-  const salvage = report.syntaxOk && current.html.length >= 80 ? current : undefined;
+  const salvage = scored.report.syntaxOk && current.html.length >= 80 ? current : undefined;
   return {
-    error: report.syntaxOk
-      ? `Il prodotto non è completo: ${formatHtmlErrors(report)}`
-      : `HTML non valido, non pubblico: ${formatHtmlErrors(report)}`,
-    report,
+    error: gateError(scored.report, formatContractErrors(scored.evaluation)),
+    report: scored.report,
+    evaluation: scored.evaluation,
     result: salvage,
   };
 }

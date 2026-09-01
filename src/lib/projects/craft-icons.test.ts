@@ -90,7 +90,8 @@ var views={
 
   it("strips bottom-tab phone chrome from a site/landing without touching the form", () => {
     const site = `<!DOCTYPE html><html lang="it"><head><style>
-html, body { height: 100dvh; margin: 0; display: flex; flex-direction: column; font-family: Georgia, serif; }
+:root{--bg:#1a1410;--fg:#f4efe8}
+html, body { height: 100dvh; margin: 0; display: flex; flex-direction: column; font-family: Georgia, serif; background:var(--bg); color:var(--fg); }
 main { flex: 1; overflow: auto; padding: 1rem; }
 .bottom-tab { display: flex; background: #111; }
 </style></head><body>
@@ -133,7 +134,8 @@ main { flex: 1; overflow: auto; padding: 1rem; }
 
   it("does not eat JS that queries .bottom-tab button", () => {
     const site = `<!DOCTYPE html><html><head><style>
-html, body { height: 100dvh; margin: 0; display: flex; flex-direction: column; }
+:root{--bg:#1a1410;--fg:#f4efe8}
+html, body { height: 100dvh; margin: 0; display: flex; flex-direction: column; background:var(--bg); color:var(--fg); }
 .bottom-tab { display: flex; }
 </style></head><body>
 <header><nav><a href="#bottega">Bottega</a></nav></header>

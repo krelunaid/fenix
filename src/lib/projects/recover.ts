@@ -13,6 +13,7 @@ import { polishDashboardHtml, shouldRepairDashboard } from "./dashboard-crud.ts"
 import { replaceAppleTabIcons, rewriteIosWidgetHome, stripPhoneChromeFromSite, ensureMainElementId } from "./craft-icons.ts";
 import { repairLeakedCss } from "./color-scheme.ts";
 import { migrateProjectTree, type ProjectFile } from "./files.ts";
+import { blocksPublish } from "../ai/build-contract.ts";
 
 export const STALE_BUILD_MS = 120_000;
 export const RESUME_ERROR = "Rifinitura interrotta. Tocca Riprendi rifinitura.";
@@ -133,6 +134,13 @@ export function recoverPersistedProject<T extends Recoverable>(p: T, now = Date.
       status = "error";
       error = migrated ? RESUME_ERROR : formatHtmlErrors(report);
       dropJob();
+    } else if (p.status === "ready") {
+      const contractBlock = blocksPublish(html, kind, p.files, p.prompt);
+      if (contractBlock) {
+        status = "error";
+        error = migrated ? RESUME_ERROR : contractBlock;
+        dropJob();
+      }
     } else if (migrated && !report.ok) {
       status = "error";
       error = RESUME_ERROR;
@@ -174,6 +182,7 @@ export function isPublishable(project: {
   id?: string;
   prompt?: string;
   requestedKind?: string;
+  files?: ProjectFile[];
 }) {
   if (project.status !== "ready" || !project.html) return false;
   const kind = resolveProjectKind({
@@ -181,7 +190,8 @@ export function isPublishable(project: {
     requested: project.requestedKind as ProjectKind | undefined,
     prompt: project.prompt,
   });
-  return canPublishHtml(project.html, kind, project.id ?? "preview");
+  if (!canPublishHtml(project.html, kind, project.id ?? "preview")) return false;
+  return !blocksPublish(project.html, kind, project.files, project.prompt);
 }
 
 export function needsResume(project: { html?: string; status?: string; error?: string }) {

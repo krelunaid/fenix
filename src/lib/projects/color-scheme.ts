@@ -134,6 +134,8 @@ textarea,select{
   color:#1c1712!important;-webkit-text-fill-color:#1c1712!important;caret-color:#1c1712!important;
   outline:none;min-width:0;color-scheme:light!important;opacity:1!important
 }
+button:focus-visible,a:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--accent,#3d4a1f);outline-offset:2px}
+input:focus-visible,textarea:focus-visible,select:focus-visible{outline:2px solid var(--accent,#3d4a1f);outline-offset:2px}
 .fk-field input::placeholder,.fk-field textarea::placeholder,
 input::placeholder,textarea::placeholder{
   color:#6e5648!important;-webkit-text-fill-color:#6e5648!important;opacity:1!important
@@ -214,6 +216,7 @@ th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line,#d7c4
 th{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted,#6e5648)}
 .card,.fk-tile{background:var(--surface,#fbf6ee);border-radius:4px;padding:16px;margin:0 0 12px;border:1px solid var(--line,#d7c4b0);color:var(--fg,#2b211c)}
 button,.cta{border-radius:2px}
+button:focus-visible,a:focus-visible,[tabindex]:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline:2px solid var(--accent,#b85c38);outline-offset:2px}
 dialog,[role=dialog],.modal{background:var(--surface,#fbf6ee);color:var(--fg,#2b211c);border:1px solid var(--line,#d7c4b0);padding:20px 22px}
 input:not([type=hidden]):not([type=checkbox]):not([type=radio]):not([type=submit]):not([type=button]),
 textarea,select{

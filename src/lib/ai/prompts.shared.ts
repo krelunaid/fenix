@@ -75,10 +75,12 @@ Desktop-first: h1 clamp(2.5rem, 6vw, 4.6rem), max-width 1120px, niente 100dvh co
 VIETATO: nav.fk-tab, nav.bottom-tab, header.fk-top, template t-home, src/screens/*.tsx, 5 tab, fk-appicon, max-width 430px, Inter, Manrope, Apple, iOS, Fenix, Grok.
 Foto: 1 hero (fk-hero) + 2–4 Unsplash photo- con &w=1600. Form che conferma e salva i messaggi.
 CSS in <style>, Google Fonts del mestiere. Niente commenti.
-File extra opzionali (css/, js/, data/*.json, pages/*.html): percorsi POSIX relativi, niente .., niente secret, niente server. L'HTML resta il documento dell'anteprima.
+File extra solo se il contratto li elenca, come <<<FILE path="css/theme.css">>>. Niente server, extra file non eseguiti. L'HTML resta il documento dell'anteprima.
 Rispondi SOLO:
 <<<META>>>
 {"name":"","tagline":"","kind":"site","direction":"3-6 parole","summary":"cosa si visita","palette":{"bg":"#rrggbb","surface":"#rrggbb","fg":"#rrggbb","muted":"#rrggbb","accent":"#rrggbb"}}
+<<<FILE path="index.html">>>
+(opzionale se coincidente con HTML)
 <<<HTML>>>
 <!DOCTYPE html> sito desktop completo (nav in alto, sezioni, footer, form, script Fenix)
 <<<END>>>`;
@@ -119,5 +121,7 @@ Obbligo:
 4) Documento completo <!DOCTYPE html> … </html>.
 5) Se kind=site/landing: togli scaffold gestionale (.orders, inventario, Nuovo pezzo). Stato = oggetto vuoto, mai null. Non leggere .orders su null.
 6) Cattura TypeError di avvio (DOMContentLoaded, unhandledrejection). Non lasciare stato null.
+7) Se ERRORI elencano file mancanti, emetti <<<FILE path="data/ordini.json">>> (o il path citato) con contenuto onesto. Niente backend, niente server. Extra file non eseguiti.
+8) Contrasto --fg su --bg ≥ 4.5. Niente eval, localStorage, secret.
 
-Rispondi SOLO META + HTML completo.`;
+Rispondi SOLO META + eventuali <<<FILE path="...">>> + <<<HTML>>> + <<<END>>>.`;

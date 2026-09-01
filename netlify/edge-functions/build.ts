@@ -1,9 +1,10 @@
 declare const Netlify: { env: { get(name: string): string | undefined } };
 
 import { QA_PROMPT, REPAIR_PROMPT, SITE_PROMPT, SYSTEM_PROMPT, VISUAL_PROMPT } from "../../src/lib/ai/prompts.shared.ts";
-import { validateProductHtml } from "../../src/lib/projects/validate-html.ts";
 import { formatPrefix, kindFromPrompt } from "../../src/lib/projects/infer.ts";
+import { ingestProjectFiles, parseProjectFiles } from "../../src/lib/projects/files.ts";
 import {
+  CONTRACT_REPAIR_MAX,
   contractInstruction,
   criticBudget,
   evaluateContract,
@@ -11,6 +12,7 @@ import {
   planContract,
   roleReceipt,
 } from "../../src/lib/ai/build-contract.ts";
+import { gateIncompleteHtml } from "../../src/lib/projects/fenix-adapter.ts";
 
 const MODEL = "grok-build-0.1";
 const XAI_URL = "https://api.x.ai/v1/chat/completions";
@@ -107,6 +109,9 @@ function parseResult(output: string, lockKind?: string) {
     typeof meta.kind === "string" && kinds.includes(meta.kind) ? meta.kind : "app";
   const kind = lockKind && kinds.includes(lockKind) ? lockKind : parsed;
 
+  const extra = parseProjectFiles(output);
+  const files = ingestProjectFiles(extra, { html }).files;
+
   return {
     name: cleanText(meta.name, title, 80),
     tagline: cleanText(meta.tagline, "", 120),
@@ -121,7 +126,7 @@ function parseResult(output: string, lockKind?: string) {
       accent: hex(paletteIn.accent, DEFAULT_PALETTE.accent),
     },
     html,
-    files: [{ path: "index.html", content: html }],
+    files,
   };
 }
 
@@ -203,6 +208,9 @@ async function reviewPass(apiKey: string, prompt: string, html: string, spec: st
 }
 
 const REPAIR_MAX = 2;
+if (REPAIR_MAX !== CONTRACT_REPAIR_MAX) {
+  throw new Error("repair cap drift");
+}
 
 async function repairPass(apiKey: string, prompt: string, html: string, error: string) {
   const controller = new AbortController();
@@ -224,7 +232,7 @@ async function repairPass(apiKey: string, prompt: string, html: string, error: s
           { role: "system", content: REPAIR_PROMPT },
           {
             role: "user",
-            content: `BRIEF:\n${prompt}\n\nERRORI:\n${error}\n\nHTML:\n${html.slice(0, 35000)}\n\nMETA+HTML corretto.`,
+            content: `BRIEF:\n${prompt}\n\nERRORI:\n${error}\n\nHTML:\n${html.slice(0, 35000)}\n\nRestituisci META + eventuali <<<FILE path="...">>> + <<<HTML>>> + <<<END>>>. Niente server inventato.`,
           },
         ],
       }),
@@ -242,28 +250,34 @@ async function repairPass(apiKey: string, prompt: string, html: string, error: s
 async function gateResult(
   apiKey: string,
   prompt: string,
-  result: { html: string; kind?: string } | null,
+  result: { html: string; kind?: string; files?: { path: string; content: string }[]; name?: string; tagline?: string; summary?: string; direction?: string; palette?: typeof DEFAULT_PALETTE } | null,
   send: (event: StreamEvent) => void,
+  contract = planContract(prompt),
 ) {
-  if (!result) return { error: "Risposta incompleta. Riprova." };
-  const lockKind = kindFromPrompt(prompt);
-  let current = lockKind && result.kind !== lockKind ? { ...result, kind: lockKind } : result;
-  let report = validateProductHtml(current.html, { kind: current.kind });
-  if (report.ok) return { result: current };
-  for (let i = 0; i < REPAIR_MAX; i++) {
-    send({ t: "s", s: i === 0 ? "Riparo il codice" : "Secondo riparo" });
-    const fixed = await repairPass(apiKey, prompt, current.html, report.errors.join(" · "));
-    const parsed = parseResult(fixed, lockKind);
-    if (!parsed) continue;
-    report = validateProductHtml(parsed.html, { kind: parsed.kind || current.kind });
-    if (report.syntaxOk) current = parsed;
-    if (report.ok) return { result: current };
-  }
-  return {
-    error: report.syntaxOk
-      ? `Il prodotto non è completo: ${report.errors.slice(0, 4).join(" · ")}`
-      : `HTML non valido, non pubblico: ${report.errors.slice(0, 4).join(" · ")}`,
-  };
+  if (!result?.html) return { error: "Risposta incompleta. Riprova." };
+  const gated = await gateIncompleteHtml({
+    apiKey,
+    prompt,
+    result: {
+      name: result.name || "Studio",
+      tagline: result.tagline || "",
+      kind: (result.kind as "app") || "app",
+      summary: result.summary || "",
+      direction: result.direction || "",
+      palette: result.palette || DEFAULT_PALETTE,
+      html: result.html,
+      files: result.files || [{ path: "index.html", content: result.html }],
+    },
+    contract,
+    files: result.files,
+    onStage: (s) => send({ t: "s", s }),
+    repair: async ({ html, error }) => {
+      const fixed = await repairPass(apiKey, prompt, html, error);
+      return parseResult(fixed, kindFromPrompt(prompt));
+    },
+  });
+  if ("error" in gated) return { error: gated.error, result: gated.result };
+  return { result: gated.result };
 }
 
 export default async function build(request: Request) {
@@ -299,7 +313,7 @@ export default async function build(request: Request) {
     instruction && currentHtml ? `APP ATTUALE:\n${currentHtml}` : "",
     instruction ? `MODIFICA:\n${instruction}\nRestituisci il documento completo.` : "",
     shot ? "SCREENSHOT allegato: VEDI l'anteprima e correggi chrome, tab, icone, contrasto. Tieni il JS." : "",
-    "Costruisci ora. Formato META + HTML, nient'altro.",
+    "Costruisci ora. Formato META + <<<FILE path>>> se il contratto li chiede + <<<HTML>>> + <<<END>>>.",
   ].filter(Boolean);
 
   const encoder = new TextEncoder();
@@ -471,14 +485,14 @@ export default async function build(request: Request) {
               ),
             });
           }
-          const gated = await gateResult(apiKey, prompt, result, send);
+          const gated = await gateResult(apiKey, prompt, result, send, contract);
           if ("error" in gated) finish({ t: "err", error: gated.error });
           else finish({ t: "ok", result: gated.result });
         }
       } catch (error) {
         const salvage = parseResult(output, lockKind);
         if (salvage) {
-          const gated = await gateResult(apiKey, prompt, salvage, send);
+          const gated = await gateResult(apiKey, prompt, salvage, send, contract);
           if ("error" in gated) {
             finish({ t: "err", error: gated.error });
           } else {

@@ -1,0 +1,49 @@
+{
+  "files": [
+    {
+      "name": "gestionale-crud-D.png",
+      "sha256": "b4e5baf90997ef8bfab84cd0b3222b38b97b2f4496b43989ede5786db89119dc",
+      "bytes": 50899
+    },
+    {
+      "name": "gestionale-crud-T.png",
+      "sha256": "09f6d36ee77c79ebab6720736991823a4b68af215a0fa0934f58ee2885103f86",
+      "bytes": 46456
+    },
+    {
+      "name": "gestionale-crud-M.png",
+      "sha256": "fd7ae046f4bb2f6ec3cffbe6e845b9e54f84fdacf9c39b7bc3c73b5d377d2a0f",
+      "bytes": 33273
+    },
+    {
+      "name": "consumer-mobile-D.png",
+      "sha256": "55bcba0c889a669de9ccbeb0c0eabfee724e11d6daa356e0e75996cbfd5193ff",
+      "bytes": 54380
+    },
+    {
+      "name": "consumer-mobile-T.png",
+      "sha256": "178b285109d2e9a5a17885b8ca68e0eddfb8fe8e00cad9c4c1a3e62beba6a18f",
+      "bytes": 60686
+    },
+    {
+      "name": "consumer-mobile-M.png",
+      "sha256": "1ca70bd2b29d8aeb5060d0e664105c4b31db1bc5efe03beb65eb4eb082ce26e4",
+      "bytes": 41772
+    },
+    {
+      "name": "dashboard-multifile-D.png",
+      "sha256": "b4e5baf90997ef8bfab84cd0b3222b38b97b2f4496b43989ede5786db89119dc",
+      "bytes": 50899
+    },
+    {
+      "name": "dashboard-multifile-T.png",
+      "sha256": "09f6d36ee77c79ebab6720736991823a4b68af215a0fa0934f58ee2885103f86",
+      "bytes": 46456
+    },
+    {
+      "name": "dashboard-multifile-M.png",
+      "sha256": "fd7ae046f4bb2f6ec3cffbe6e845b9e54f84fdacf9c39b7bc3c73b5d377d2a0f",
+      "bytes": 33273
+    }
+  ]
+}

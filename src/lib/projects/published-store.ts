@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { scrubCraftMedia } from "../ai/hero-image.ts";
 import { ifMatchSatisfied, parseIfMatch, parseOwnerId } from "./publish-owner.ts";
 import { validatePublishable } from "./validate-html.ts";
+import { blocksPublish } from "../ai/build-contract.ts";
 import {
   isPublishedId,
   isPublishedSnapshot,
@@ -148,9 +149,10 @@ export async function writePublished(
     projectId: id,
     palette: parsed.palette,
   });
-  if (!report.ok) {
+  const contractBlock = blocksPublish(html, parsed.kind);
+  if (!report.ok || contractBlock) {
     return {
-      error: report.errors[0] || "Il prodotto non è completo, non pubblico.",
+      error: report.errors[0] || contractBlock || "Il prodotto non è completo, non pubblico.",
       status: 422,
     };
   }

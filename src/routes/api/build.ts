@@ -403,6 +403,8 @@ export const Route = createFileRoute("/api/build")({
                   result,
                   signal: abort.signal,
                   onStage: (s) => send({ t: "s", s }),
+                  contract,
+                  files: result.files,
                 });
                 if ("error" in gated) {
                   if (gated.result) finish({ t: "err", error: gated.error, result: gated.result });
@@ -422,6 +424,8 @@ export const Route = createFileRoute("/api/build")({
                   result: salvage,
                   signal: abort.signal,
                   onStage: (s) => send({ t: "s", s }),
+                  contract,
+                  files: salvage.files,
                 });
                 if ("error" in gated) {
                   if (gated.result) finish({ t: "err", error: gated.error, result: gated.result });
@@ -451,6 +455,8 @@ export const Route = createFileRoute("/api/build")({
                     prompt,
                     result: salvage,
                     onStage: (s) => send({ t: "s", s }),
+                    contract,
+                    files: salvage.files,
                   });
                   if ("error" in gated) {
                     if (gated.result) finish({ t: "err", error: gated.error, result: gated.result });
