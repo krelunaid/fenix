@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
-import { mkdirSync, readFileSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, it } from "node:test";
@@ -43,6 +44,39 @@ async function shot(page: Page, name: string) {
   try {
     mkdirSync(OUT, { recursive: true });
     await page.screenshot({ path: join(OUT, name), fullPage: false });
+  } catch {
+    /* CI without the scorecard dir is fine */
+  }
+}
+
+function writeShotManifest() {
+  try {
+    const screenshots = readdirSync(OUT)
+      .filter((name) => name.endsWith(".png"))
+      .sort()
+      .map((name) => {
+        const path = join(OUT, name);
+        const bytes = readFileSync(path);
+        return {
+          name,
+          bytes: statSync(path).size,
+          sha256: createHash("sha256").update(bytes).digest("hex"),
+        };
+      });
+    writeFileSync(
+      join(OUT, "manifest.json"),
+      `${JSON.stringify(
+        {
+          schema: "fenix-revisions-evidence-v1",
+          viewports: ["desktop", "tablet", "phone"],
+          journeys: ["activity-diagnostics", "branch-merge", "rollback"],
+          screenshots,
+        },
+        null,
+        2,
+      )}\n`,
+      "utf8",
+    );
   } catch {
     /* CI without the scorecard dir is fine */
   }
@@ -131,9 +165,25 @@ describe("studio version branches and rollback", () => {
         await activityTab.click();
         const ledger = dialog.getByRole("list", { name: "Registro attività" });
         await ledger.waitFor({ timeout: 3000 });
+        const summary = dialog.getByRole("group", { name: "Riepilogo operativo" });
+        await summary.waitFor({ timeout: 3000 });
+        assert.match((await summary.textContent()) || "", /2Eventi1Riuscite0Errori4Crediti/);
         assert.ok(await ledger.getByText("Build pronta").count());
         assert.ok(await ledger.getByText("Build avviata").count());
         assert.match((await ledger.textContent()) || "", /files 2|revisions 2/);
+        const exportButton = dialog.getByRole("button", { name: "Esporta diagnosi" });
+        const exportBox = await exportButton.boundingBox();
+        assert.ok(exportBox && exportBox.height >= 44, `${name} export target too small`);
+        const downloadPromise = page.waitForEvent("download");
+        await exportButton.click();
+        const download = await downloadPromise;
+        assert.equal(download.suggestedFilename(), "fenix-diagnostica.json");
+        const downloadedPath = await download.path();
+        assert.ok(downloadedPath);
+        const report = readFileSync(downloadedPath!, "utf8");
+        assert.match(report, /"schema": "fenix-diagnostics-v1"/);
+        assert.doesNotMatch(report, /prompt|messages|html|visualJob|p-rev-studio/i);
+        await shot(page, `activity-${name}.png`);
         await dialog.getByRole("tab", { name: /Versioni · 2/i }).click();
         const branchButton = dialog.getByRole("button", { name: /Crea ramo da Pronto/i });
         const branchBox = await branchButton.boundingBox();
@@ -272,6 +322,7 @@ describe("studio version branches and rollback", () => {
         assert.match(html, /Prima cottura, prima della rifinitura/);
         await page.close();
       }
+      writeShotManifest();
     } finally {
       await browser.close();
     }

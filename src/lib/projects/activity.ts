@@ -16,6 +16,34 @@ const METRIC_KEYS = new Set([
   "version",
   "conflicts",
 ]);
+const ACTIVITY_KINDS = new Set<ProjectActivityKind>([
+  "created",
+  "build",
+  "ready",
+  "error",
+  "refund",
+  "data",
+  "restore",
+  "branch",
+  "merge",
+  "publish",
+  "export",
+  "import",
+]);
+const PROJECT_KINDS = new Set<Project["kind"]>([
+  "landing",
+  "app",
+  "dashboard",
+  "tool",
+  "game",
+  "site",
+]);
+const PROJECT_STATUSES = new Set<Project["status"]>([
+  "draft",
+  "building",
+  "ready",
+  "error",
+]);
 
 export type ActivityInput = {
   kind: ProjectActivityKind;
@@ -26,6 +54,36 @@ export type ActivityInput = {
   at?: number;
   id?: string;
   dedupe?: string;
+};
+
+export type ProjectActivitySummary = {
+  events: number;
+  ok: number;
+  err: number;
+  run: number;
+  info: number;
+  credits: number;
+  refunds: number;
+};
+
+export type ProjectDiagnostics = {
+  schema: "fenix-diagnostics-v1";
+  generatedAt: string;
+  project: {
+    kind: Project["kind"];
+    status: Project["status"];
+    files: number;
+    revisions: number;
+  };
+  summary: ProjectActivitySummary;
+  activity: Array<{
+    at: number;
+    kind: ProjectActivityKind;
+    outcome: ProjectActivityOutcome;
+    label: string;
+    detail?: string;
+    metrics?: ProjectActivity["metrics"];
+  }>;
 };
 
 function hashText(value: string): string {
@@ -105,6 +163,85 @@ export function appendProjectActivity(project: Project, input: ActivityInput): P
 
 export function listProjectActivity(project: Pick<Project, "activity">): ProjectActivity[] {
   return [...(project.activity ?? [])].sort((a, b) => b.at - a.at || b.id.localeCompare(a.id));
+}
+
+export function summarizeProjectActivity(
+  project: Pick<Project, "activity">,
+): ProjectActivitySummary {
+  const summary: ProjectActivitySummary = {
+    events: 0,
+    ok: 0,
+    err: 0,
+    run: 0,
+    info: 0,
+    credits: 0,
+    refunds: 0,
+  };
+  for (const item of project.activity ?? []) {
+    summary.events += 1;
+    const outcome: ProjectActivityOutcome =
+      item.outcome === "ok" || item.outcome === "err" || item.outcome === "run"
+        ? item.outcome
+        : "info";
+    summary[outcome] += 1;
+    const credits = Number(item.metrics?.credits ?? 0);
+    if (Number.isFinite(credits) && credits > 0) {
+      summary.credits += Math.round(credits);
+      if (item.kind === "refund") summary.refunds += Math.round(credits);
+    }
+  }
+  return summary;
+}
+
+/**
+ * Portable operational evidence for support and audits. It deliberately omits
+ * project identity, name, prompt, messages, HTML, files, data and worker ids.
+ */
+export function projectDiagnostics(
+  project: Pick<
+    Project,
+    "kind" | "status" | "html" | "files" | "revisions" | "activity"
+  >,
+  now = Date.now(),
+): ProjectDiagnostics {
+  const generatedAt = new Date(Number.isFinite(now) ? Math.max(0, now) : 0).toISOString();
+  const activity = listProjectActivity(project).map((item) => {
+    const label = redactActivityText(item.label, 80) || "Attività";
+    const detail = redactActivityText(item.detail, 180) || undefined;
+    const metrics = safeMetrics(item.metrics);
+    const kind: ProjectActivityKind = ACTIVITY_KINDS.has(item.kind) ? item.kind : "error";
+    const outcome: ProjectActivityOutcome =
+      item.outcome === "ok" || item.outcome === "err" || item.outcome === "run"
+        ? item.outcome
+        : "info";
+    return {
+      at: Number.isFinite(item.at) ? Math.max(0, Math.round(item.at)) : 0,
+      kind,
+      outcome,
+      label,
+      ...(detail ? { detail } : {}),
+      ...(metrics ? { metrics } : {}),
+    };
+  });
+  return {
+    schema: "fenix-diagnostics-v1",
+    generatedAt,
+    project: {
+      kind: PROJECT_KINDS.has(project.kind) ? project.kind : "app",
+      status: PROJECT_STATUSES.has(project.status) ? project.status : "error",
+      files: project.files?.length ?? (project.html ? 1 : 0),
+      revisions: project.revisions?.length ?? 0,
+    },
+    summary: summarizeProjectActivity({ activity: project.activity }),
+    activity,
+  };
+}
+
+export function serializeProjectDiagnostics(
+  project: Parameters<typeof projectDiagnostics>[0],
+  now = Date.now(),
+): string {
+  return `${JSON.stringify(projectDiagnostics(project, now), null, 2)}\n`;
 }
 
 export function formatActivityAge(at: number, now = Date.now()): string {

@@ -1,7 +1,12 @@
 import { useEffect, useState } from "react";
-import { Activity, GitFork, GitMerge, History, RotateCcw, X } from "lucide-react";
+import { Activity, Download, GitFork, GitMerge, History, RotateCcw, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { formatActivityAge, listProjectActivity } from "@/lib/projects/activity";
+import {
+  formatActivityAge,
+  listProjectActivity,
+  serializeProjectDiagnostics,
+  summarizeProjectActivity,
+} from "@/lib/projects/activity";
 import { formatRevisionAge, listRevisions } from "@/lib/projects/revisions";
 import type { BranchMergeResult } from "@/lib/projects/revisions";
 import type { Project } from "@/lib/projects/types";
@@ -35,6 +40,19 @@ export function RevisionPanel({
   if (!open) return null;
   const revisions = listRevisions(project);
   const activity = listProjectActivity(project);
+  const activitySummary = summarizeProjectActivity(project);
+
+  function downloadDiagnostics() {
+    const blob = new Blob([serializeProjectDiagnostics(project)], {
+      type: "application/json;charset=utf-8",
+    });
+    const href = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = href;
+    anchor.download = "fenix-diagnostica.json";
+    anchor.click();
+    window.setTimeout(() => URL.revokeObjectURL(href), 0);
+  }
 
   return (
     <div
@@ -200,43 +218,79 @@ export function RevisionPanel({
             Nessuna attività registrata. Il registro parte dalla prossima operazione.
           </p>
         ) : (
-          <ol className="mt-6 flex flex-col gap-2" aria-label="Registro attività">
-            {activity.map((item) => (
-              <li key={item.id} className="rounded-lg border border-border p-3 sm:p-4">
-                <div className="flex items-start gap-3">
-                  <span
-                    className={cn(
-                      "mt-1 size-2.5 shrink-0 rounded-full bg-muted-foreground",
-                      item.outcome === "ok" && "bg-emerald-500",
-                      item.outcome === "run" && "bg-primary",
-                      item.outcome === "err" && "bg-destructive",
-                    )}
-                    aria-hidden="true"
-                  />
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-                      <p className="font-medium">{item.label}</p>
-                      <p className="font-mono text-xs text-muted-foreground">
-                        {formatActivityAge(item.at)}
-                      </p>
-                    </div>
-                    {item.detail ? (
-                      <p className="mt-1 break-words text-sm text-muted-foreground">
-                        {item.detail}
-                      </p>
-                    ) : null}
-                    {item.metrics && Object.keys(item.metrics).length ? (
-                      <p className="mt-2 font-mono text-[11px] text-muted-foreground">
-                        {Object.entries(item.metrics)
-                          .map(([key, value]) => `${key} ${value}`)
-                          .join(" · ")}
-                      </p>
-                    ) : null}
+          <>
+            <div className="mt-6 rounded-lg border border-border bg-background p-3 sm:p-4">
+              <div
+                className="grid grid-cols-2 gap-2 sm:grid-cols-4"
+                role="group"
+                aria-label="Riepilogo operativo"
+              >
+                {[
+                  ["Eventi", activitySummary.events],
+                  ["Riuscite", activitySummary.ok],
+                  ["Errori", activitySummary.err],
+                  ["Crediti", activitySummary.credits],
+                ].map(([label, value]) => (
+                  <div key={label} className="rounded-md border border-border bg-card px-3 py-2">
+                    <p className="font-mono text-lg tabular-nums">{value}</p>
+                    <p className="text-xs text-muted-foreground">{label}</p>
                   </div>
-                </div>
-              </li>
-            ))}
-          </ol>
+                ))}
+              </div>
+              <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-xs text-muted-foreground">
+                  Report redatto: niente prompt, messaggi, codice, dati o identificativi dei job.
+                </p>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  className="min-h-11 shrink-0"
+                  onClick={downloadDiagnostics}
+                >
+                  <Download />
+                  Esporta diagnosi
+                </Button>
+              </div>
+            </div>
+            <ol className="mt-3 flex flex-col gap-2" aria-label="Registro attività">
+              {activity.map((item) => (
+                <li key={item.id} className="rounded-lg border border-border p-3 sm:p-4">
+                  <div className="flex items-start gap-3">
+                    <span
+                      className={cn(
+                        "mt-1 size-2.5 shrink-0 rounded-full bg-muted-foreground",
+                        item.outcome === "ok" && "bg-emerald-500",
+                        item.outcome === "run" && "bg-primary",
+                        item.outcome === "err" && "bg-destructive",
+                      )}
+                      aria-hidden="true"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+                        <p className="font-medium">{item.label}</p>
+                        <p className="font-mono text-xs text-muted-foreground">
+                          {formatActivityAge(item.at)}
+                        </p>
+                      </div>
+                      {item.detail ? (
+                        <p className="mt-1 break-words text-sm text-muted-foreground">
+                          {item.detail}
+                        </p>
+                      ) : null}
+                      {item.metrics && Object.keys(item.metrics).length ? (
+                        <p className="mt-2 font-mono text-[11px] text-muted-foreground">
+                          {Object.entries(item.metrics)
+                            .map(([key, value]) => `${key} ${value}`)
+                            .join(" · ")}
+                        </p>
+                      ) : null}
+                    </div>
+                  </div>
+                </li>
+              ))}
+            </ol>
+          </>
         )}
       </div>
     </div>

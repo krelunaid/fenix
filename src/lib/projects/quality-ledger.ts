@@ -145,9 +145,9 @@ export const QUALITY_LEDGER: LedgerRow[] = [
   {
     id: "project-activity-ledger",
     claim:
-      "Ogni progetto conserva un registro operativo redatto e limitato: build, esiti, rimborsi, dati, versioni, rami, pubblicazioni ed export. I rami non ereditano la cronologia sorgente; prompt, messaggi, job id e segreti non entrano nel registro.",
+      "Ogni progetto conserva un registro operativo redatto e limitato: build, esiti, rimborsi, dati, versioni, rami, pubblicazioni ed export. Un riepilogo D/T/M aggrega esiti e crediti; il report diagnostico JSON esportabile omette identità, prompt, messaggi, HTML, file, dati e job id. I rami non ereditano la cronologia sorgente.",
     evidence:
-      "activity.ts + revisions.test.ts redazione/dedupe/cap/isolamento + revisions-browser.test.ts registro accessibile D/T/M",
+      "activity.ts + revisions.test.ts redazione/dedupe/cap/report/isolamento + revisions-browser.test.ts riepilogo ed export D/T/M",
     ok: true,
   },
   {

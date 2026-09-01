@@ -10,7 +10,10 @@ import {
   appendProjectActivity,
   formatActivityAge,
   listProjectActivity,
+  projectDiagnostics,
   redactActivityText,
+  serializeProjectDiagnostics,
+  summarizeProjectActivity,
 } from "./activity.ts";
 import { FASE3_GAPS, fase3NowGaps } from "./fase3-gap.ts";
 import { FASE3_SCORECARD, fase3Score, scoreDimension } from "./fase3-scorecard.ts";
@@ -88,7 +91,7 @@ describe("fase3 gap matrix is evidence, not parity", () => {
       [20, 15, 15, 15, 15, 20],
     );
     assert.equal(total.max, 100);
-    assert.equal(total.score, 78);
+    assert.equal(total.score, 80);
     assert.equal(total.complete, false);
     for (const dimension of FASE3_SCORECARD) {
       assert.ok(scoreDimension(dimension) <= dimension.max);
@@ -117,6 +120,29 @@ describe("project activity evidence", () => {
     assert.doesNotMatch(JSON.stringify(project.activity), /secretvalue|abc123456|hunter2/);
     assert.deepEqual(project.activity?.[0]?.metrics, { durable: 3, rows: 4 });
     assert.equal(activityHasOnlySafeKeys(project.activity![0]!), true);
+    const diagnosticProject: Project = {
+      ...project,
+      prompt: "non esportare questo prompt",
+      messages: [{ id: "m1", role: "user", content: "messaggio privato", at: 1 }],
+      visualJobId: "job-private",
+    };
+    const diagnostic = projectDiagnostics(diagnosticProject, 1_700_000_000_000);
+    assert.equal(diagnostic.schema, "fenix-diagnostics-v1");
+    assert.equal(diagnostic.generatedAt, "2023-11-14T22:13:20.000Z");
+    assert.deepEqual(diagnostic.summary, {
+      events: 1,
+      ok: 0,
+      err: 1,
+      run: 0,
+      info: 0,
+      credits: 0,
+      refunds: 0,
+    });
+    assert.equal(diagnostic.activity[0]?.label, "Worker error");
+    assert.doesNotMatch(
+      serializeProjectDiagnostics(diagnosticProject, 1_700_000_000_000),
+      /prompt|messages|html|files\"\s*: \[|visualJob|secretvalue|abc123456|hunter2/i,
+    );
     project = appendProjectActivity(project, {
       kind: "data",
       outcome: "ok",
@@ -137,6 +163,15 @@ describe("project activity evidence", () => {
     });
     assert.equal(project.activity?.length, 2);
     assert.equal(project.activity?.at(-1)?.metrics?.rows, 8);
+    assert.deepEqual(summarizeProjectActivity(project), {
+      events: 2,
+      ok: 1,
+      err: 1,
+      run: 0,
+      info: 0,
+      credits: 0,
+      refunds: 0,
+    });
     for (let i = 0; i < MAX_PROJECT_ACTIVITY + 8; i += 1) {
       project = appendProjectActivity(project, {
         kind: "build",

@@ -195,9 +195,17 @@ export const FASE3_SCORECARD: ScoreDimension[] = [
         reproduce:
           "npm test -- src/lib/projects/app-collaboration.test.ts src/lib/projects/app-collaboration-browser.test.ts",
       },
+      {
+        id: "operational-diagnostics",
+        points: 2,
+        claim:
+          "Riepilogo operativo D/T/M ed export diagnostico JSON redatto aggregano esiti e crediti senza identità, prompt, messaggi, codice, dati o job id.",
+        reproduce:
+          "npm test -- src/lib/projects/revisions.test.ts src/lib/projects/revisions-browser.test.ts",
+      },
     ],
     remaining:
-      "I ruoli coprono i dati dell'app pubblicata; mancano co-editing del codice/progetto, presenza multi-utente e workspace organizzativi.",
+      "I ruoli coprono i dati dell'app pubblicata e la diagnosi è locale; mancano co-editing del codice/progetto, presenza multi-utente, workspace organizzativi e APM centralizzato.",
   },
   {
     id: "generated-quality",
