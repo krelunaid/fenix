@@ -83,8 +83,8 @@ export const QUALITY_LEDGER: LedgerRow[] = [
   {
     id: "aa-fail-closed",
     claim:
-      "AA fail-closed: palette assente o contrasto < 4.5 (anche body #777/#777) blocca. Niente 'palette assente ⇒ ok'.",
-    evidence: "src/lib/ai/build-contract.test.ts AA fail-closed; extractColorPair",
+      "AA fail-closed: palette assente o contrasto < 4.5 (anche body #777/#777, last-wins sull'ultimo body) blocca. Niente 'palette assente ⇒ ok'.",
+    evidence: "src/lib/ai/build-contract.test.ts AA fail-closed; extractColorPair last body",
     ok: true,
   },
   {

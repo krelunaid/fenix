@@ -335,16 +335,17 @@ function fullHex(raw: string): string | null {
   return null;
 }
 
-/** Palette from :root --bg/--fg/--ink or body { background; color }. Fail-closed if missing. */
+/** Palette from last :root --bg/--fg/--ink, overridden by last body { background; color } hex. Fail-closed if missing. */
 export function extractColorPair(html: string): { bg: string; fg: string } | null {
   const vars = extractCssVars(html);
   const fromVarsBg = fullHex(vars.bg || "");
   const fromVarsFg = fullHex(vars.fg || vars.ink || "");
+  const bodies = [...html.matchAll(/body\s*\{[^}]+\}/gi)];
+  const body = bodies.at(-1)?.[0] || "";
+  const bodyBg = fullHex(body.match(/background(?:-color)?\s*:\s*(#[0-9a-fA-F]{3,8})/i)?.[1] || "");
+  const bodyFg = fullHex(body.match(/(?:^|[^-])color\s*:\s*(#[0-9a-fA-F]{3,8})/i)?.[1] || "");
+  if (bodyBg && bodyFg) return { bg: bodyBg, fg: bodyFg };
   if (fromVarsBg && fromVarsFg) return { bg: fromVarsBg, fg: fromVarsFg };
-  const body = html.match(/body\s*\{[^}]+\}/i)?.[0] || "";
-  const bg = fullHex(body.match(/background(?:-color)?\s*:\s*(#[0-9a-fA-F]{3,8})/i)?.[1] || "");
-  const fg = fullHex(body.match(/(?:^|[^-])color\s*:\s*(#[0-9a-fA-F]{3,8})/i)?.[1] || "");
-  if (bg && fg) return { bg, fg };
   return null;
 }
 

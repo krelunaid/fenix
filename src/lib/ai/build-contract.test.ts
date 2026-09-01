@@ -279,6 +279,17 @@ describe("false-positive gates closed", () => {
     const washed = evaluateContract({ html: gray, contract, kind: "site" });
     assert.equal(washed.checks.find((c) => c.id === "aa")?.ok, false);
     assert.equal(washed.ok, false);
+
+    const laterWash = SITE_OK.replace(
+      "body{background:var(--bg);color:var(--fg);font-family:Georgia,serif}",
+      "body{background:#0e0d0b;color:#e8e0d0;font-family:Georgia,serif}\nbody{background:#777;color:#777}",
+    );
+    const laterPair = extractColorPair(laterWash);
+    assert.equal(laterPair?.bg, "#777777");
+    assert.equal(laterPair?.fg, "#777777");
+    const later = evaluateContract({ html: laterWash, contract, kind: "site" });
+    assert.equal(later.checks.find((c) => c.id === "aa")?.ok, false);
+    assert.equal(later.ok, false);
   });
 
   it("file-tree: requested runtime files are all required and execute as one artifact", () => {
