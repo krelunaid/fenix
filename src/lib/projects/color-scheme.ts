@@ -129,6 +129,41 @@ document.addEventListener("click", function (e) {
 }, true);
 </script>`;
 
+/**
+ * Last rendered-DOM guard for malformed generated markup. String repair catches
+ * normal orphan CSS; this catches a browser text node containing the phone kit
+ * after HTML error recovery. It deliberately skips code/pre surfaces.
+ */
+const VISIBLE_PHONE_CSS_GUARD = `<script data-fenix-css-guard>
+(function () {
+  function sweep() {
+    if (!document.body || !document.head) return;
+    var walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+    var leaked = [];
+    var node;
+    while ((node = walker.nextNode())) {
+      var parent = node.parentElement;
+      if (!parent || parent.closest("style,script,pre,code,textarea")) continue;
+      var text = node.nodeValue || "";
+      var phoneRules = text.match(/\\.fk-[a-z][\\w-]*(?:\\s+[a-z][\\w-]*)?\\s*\\{[^{}]*:[^{}]*\\}/gi) || [];
+      if (text.length >= 80 && phoneRules.length >= 2) leaked.push(node);
+    }
+    leaked.forEach(function (textNode) {
+      var style = document.createElement("style");
+      style.setAttribute("data-fenix-dom-rescued", "");
+      style.textContent = textNode.nodeValue || "";
+      document.head.appendChild(style);
+      textNode.nodeValue = "";
+    });
+  }
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", sweep, { once: true });
+  } else {
+    sweep();
+  }
+})();
+</script>`;
+
 const PHONE_KIT = `<style data-fenix-phone>
 *,*::before,*::after{box-sizing:border-box}
 html,body{height:100%!important;margin:0;max-width:100%;overflow:hidden;color:var(--fg,#1c1712);background:var(--bg,#efe6d4)}
@@ -937,6 +972,11 @@ export function prepareSrcDoc(
     next = /<\/body>/i.test(next)
       ? next.replace(/<\/body>/i, `${NAV_GUARD}</body>`)
       : `${next}${NAV_GUARD}`;
+  }
+  if (!/data-fenix-css-guard/.test(next)) {
+    next = /<\/body>/i.test(next)
+      ? next.replace(/<\/body>/i, `${VISIBLE_PHONE_CSS_GUARD}</body>`)
+      : `${next}${VISIBLE_PHONE_CSS_GUARD}`;
   }
   if (!/data-fenix-phone/.test(next) && !/data-fenix-site/.test(next)) {
     const kit =

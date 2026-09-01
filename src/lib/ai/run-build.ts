@@ -33,8 +33,8 @@ export const WORKER_POLL_MAX = 30;
 const WORKER_POLL_MS = 2000;
 /** 2s ticks while a persisted job is live. Overlay stays compact. */
 export const WORKER_JOB_POLL_MAX = 180;
-/** Site/dashboard generate on Railway: 2s × 360 = 12 min. Edge SSE dies first. */
-const GENERATE_POLL_MAX = 360;
+/** Match the visible promise: generation never owns the UI for more than 10 min. */
+const GENERATE_POLL_MAX = 300;
 export const BOOT_REPAIR_MAX = 2;
 
 function isTransientNetwork(msg: string) {
@@ -674,10 +674,8 @@ export async function resumePolish(projectId: string) {
   } catch (err) {
     const message = err instanceof Error ? err.message : RESUME_ERROR;
     if (message === JOB_STILL_RUNNING) {
-      const current = useProjectStore.getState().getProject(projectId);
-      if (current?.visualJobId) {
-        store.updateProject(projectId, { status: "building", error: undefined });
-      }
+      refundBuildCredit(projectId, CREATE_COST);
+      abandonVisualJob(projectId, RESUME_ERROR);
       return;
     }
     refundBuildCredit(projectId, CREATE_COST);
@@ -911,10 +909,9 @@ export async function runBuild(projectId: string, instruction?: string) {
     const message =
       err instanceof Error ? err.message : "Qualcosa è andato storto. Riprova.";
     if (message === JOB_STILL_RUNNING) {
-      const current = useProjectStore.getState().getProject(projectId);
-      if (current?.visualJobId) {
-        store.updateProject(projectId, { status: "building", error: undefined });
-      }
+      if (charged) refundBuildCredit(projectId, cost);
+      charged = false;
+      abandonVisualJob(projectId, RESUME_ERROR);
       return;
     }
     if (charged) refundBuildCredit(projectId, cost);

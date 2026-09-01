@@ -1,7 +1,7 @@
 import type { BuildStatus } from "./types.ts";
 
-/** Worker keeps finished jobs ~30 min. Stop treating one as live before that. */
-export const VISUAL_JOB_TTL_MS = 20 * 60 * 1000;
+/** The UI promises a 5–10 minute refinement. Never leave it "building" past that promise. */
+export const VISUAL_JOB_TTL_MS = 10 * 60 * 1000;
 export const JOB_STILL_RUNNING = "JOB_STILL_RUNNING";
 
 export type VisualJobStatus = "run" | "ok" | "err";

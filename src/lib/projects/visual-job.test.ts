@@ -13,6 +13,7 @@ import {
 
 describe("hasActiveVisualJob", () => {
   it("is true for a live run job and false after TTL or clear", () => {
+    assert.equal(VISUAL_JOB_TTL_MS, 10 * 60 * 1000);
     const now = 1_700_000_000_000;
     assert.equal(hasActiveVisualJob({}, now), false);
     assert.equal(

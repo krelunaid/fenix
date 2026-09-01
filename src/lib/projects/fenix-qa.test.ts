@@ -30,6 +30,7 @@ describe("focus-visible and worker model", () => {
     assert.match(resume, /finishPolish/);
     assert.match(resume, /abandonVisualJob/);
     assert.match(resume, /if \(message === JOB_STILL_RUNNING\)/);
+    assert.match(resume, /abandonVisualJob\(projectId, RESUME_ERROR\)/);
     assert.match(resume, /const live = Boolean\(hasActiveVisualJob/);
     assert.match(resume, /uniqueLogs/);
     assert.match(resume, /refundBuildCredit/);
@@ -229,7 +230,7 @@ describe("focus-visible and worker model", () => {
     assert.match(runBuild, /SITE_POLISH_INSTRUCTION/);
     assert.match(runBuild, /if \(!\(instruction \|\| isIOS\(\)\) && phone\)/);
     assert.match(runBuild, /isIOS\(\) \|\| desk/);
-    assert.match(runBuild, /GENERATE_POLL_MAX = 360/);
+    assert.match(runBuild, /GENERATE_POLL_MAX = 300/);
     assert.match(runBuild, /isTransientNetwork/);
     assert.match(runBuild, /throw new Error\(event\.error \|\| "network error"\)/);
     assert.match(runBuild, /proxyAnswered/);

@@ -239,6 +239,7 @@ function StudioPage() {
                 active={Boolean(building)}
                 compact={Boolean(project.html)}
                 steps={project.buildLog ?? []}
+                startedAt={project.visualJobStartedAt ?? project.updatedAt}
                 error={!building && project.status === "error" ? project.error : undefined}
                 onRetry={() =>
                   canResume ? void resumePolish(project.id) : void runBuild(project.id)
@@ -300,6 +301,7 @@ function StudioPage() {
                 active={Boolean(building)}
                 compact={Boolean(project.html)}
                 steps={project.buildLog ?? []}
+                startedAt={project.visualJobStartedAt ?? project.updatedAt}
                 error={!building && project.status === "error" ? project.error : undefined}
                 onRetry={() =>
                   canResume ? void resumePolish(project.id) : void runBuild(project.id)
@@ -438,10 +440,18 @@ function ChatColumn({
         <p className="text-xs tracking-[0.14em] text-muted-foreground uppercase">Fenix · Studio</p>
         <p className="mt-1 truncate font-display text-lg tracking-tight">{projectName}</p>
         {palette.length ? (
-          <div className="mt-3 flex h-2 overflow-hidden rounded-full">
-            {palette.map((c, i) => (
-              <span key={i} className="flex-1" style={{ background: c }} />
-            ))}
+          <div className="mt-3">
+            <p className="mb-1.5 text-[10px] tracking-[0.12em] text-muted-foreground uppercase">
+              Palette del progetto
+            </p>
+            <div
+              className="flex h-2 overflow-hidden rounded-full border border-border"
+              aria-label="Palette del progetto"
+            >
+              {palette.map((c, i) => (
+                <span key={i} className="flex-1" style={{ background: c }} />
+              ))}
+            </div>
           </div>
         ) : null}
       </div>

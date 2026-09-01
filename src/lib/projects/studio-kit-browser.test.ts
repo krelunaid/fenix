@@ -76,6 +76,15 @@ describe("studio kit overlay and Pubblica gate", () => {
       const mute = page.getByRole("button", { name: /silenzia kit/i }).first();
       await mute.waitFor({ timeout: 8000 });
       assert.equal(await mute.getAttribute("aria-label"), "Silenzia kit");
+      await page.getByText("Palette del progetto").waitFor({ timeout: 4000 });
+      const progress = page.getByRole("progressbar", { name: /Avanzamento Fenix/i }).first();
+      await progress.waitFor({ timeout: 4000 });
+      const firstProgress = await progress.getAttribute("aria-valuetext");
+      assert.match(String(firstProgress), /Codice, tempo trascorso 00:0\d/);
+      await page.waitForTimeout(1100);
+      const nextProgress = await progress.getAttribute("aria-valuetext");
+      assert.notEqual(nextProgress, firstProgress, "elapsed time must prove the worker is still monitored");
+      assert.match(await progress.innerText(), /^\s*$/, "progress segments must not expose code or fake percent text");
       await shot(page, "studio-kit-building.png");
       await mute.click();
       await page.getByRole("button", { name: /riattiva audio kit/i }).first().waitFor({ timeout: 4000 });

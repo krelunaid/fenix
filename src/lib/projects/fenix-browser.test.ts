@@ -319,6 +319,29 @@ describe("leaked phone-kit CSS in the preview", () => {
       await browser.close();
     }
   });
+
+  it("removes a late phone-kit CSS text node matching the production screenshot", async () => {
+    const screenshotDump =
+      ".fk-appicon{display:inline-flex;width:36px}.fk-hello{margin:0;font-size:20px}.fk-tab button{flex:1;border:none}.fk-main{overflow:auto;padding:16px}";
+    const dynamicLeak = VALID.replace(
+      "</body>",
+      `<script>document.addEventListener("DOMContentLoaded",function(){document.body.append(${JSON.stringify(screenshotDump)})})</script></body>`,
+    );
+    const src = prepareSrcDoc(dynamicLeak, "#efe6d4", "screenshot-leak", "app");
+    assert.match(src, /data-fenix-css-guard/);
+    const browser = await launch();
+    try {
+      const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+      await page.setContent(src, { waitUntil: "domcontentloaded", timeout: 15000 });
+      const visible = await page.evaluate(() => document.body.innerText);
+      assert.doesNotMatch(visible, /\.fk-appicon\s*\{/);
+      assert.doesNotMatch(visible, /\.fk-hello\s*\{/);
+      assert.doesNotMatch(visible, /\.fk-tab button\s*\{/);
+      assert.equal(await page.locator("style[data-fenix-dom-rescued]").count(), 1);
+    } finally {
+      await browser.close();
+    }
+  });
 });
 
 describe("studio overlay and resume in browser", () => {

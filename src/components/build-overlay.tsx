@@ -10,6 +10,7 @@ export function BuildOverlay({
   active,
   compact = false,
   steps,
+  startedAt,
   error,
   onRetry,
   retryLabel = "Riprova. Lo ricostruisco.",
@@ -18,11 +19,13 @@ export function BuildOverlay({
   active: boolean;
   compact?: boolean;
   steps: string[];
+  startedAt?: number;
   error?: string;
   onRetry?: () => void;
   retryLabel?: string;
   hasDraft?: boolean;
 }) {
+  const [now, setNow] = useState(() => Date.now());
   const [muted, setMuted] = useState(() => {
     try {
       return sessionStorage.getItem(MUTE_KEY) === "1";
@@ -33,6 +36,15 @@ export function BuildOverlay({
   const levels = useTalkingKit(active && !muted);
   const stage = inferStage(steps);
   const current = steps[steps.length - 1] ?? BUILD_STAGES[stage];
+  const elapsedSeconds = Math.max(0, Math.floor((now - (startedAt || now)) / 1000));
+  const elapsed = `${String(Math.floor(elapsedSeconds / 60)).padStart(2, "0")}:${String(elapsedSeconds % 60).padStart(2, "0")}`;
+
+  useEffect(() => {
+    if (!active) return;
+    setNow(Date.now());
+    const id = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(id);
+  }, [active, startedAt]);
 
   useEffect(() => {
     try {
@@ -82,7 +94,11 @@ export function BuildOverlay({
         </div>
       );
     }
-    return <div className="absolute inset-0 z-10 grid place-items-center bg-[#07041a]/88 px-6 backdrop-blur-[2px]">{shell}</div>;
+    return (
+      <div className="absolute inset-0 z-10 grid place-items-center bg-[#07041a]/88 px-6 backdrop-blur-[2px]">
+        {shell}
+      </div>
+    );
   }
 
   const leds = (
@@ -92,6 +108,30 @@ export function BuildOverlay({
           key={i}
           className="kit-led w-[5px] rounded-sm"
           style={{ height: `${6 + n * 18}px` }}
+        />
+      ))}
+    </div>
+  );
+
+  const progress = (
+    <div
+      className="mt-1 grid grid-cols-4 gap-1"
+      role="progressbar"
+      aria-label={`Avanzamento Fenix: ${BUILD_STAGES[stage]}`}
+      aria-valuemin={1}
+      aria-valuemax={4}
+      aria-valuenow={stage + 1}
+      aria-valuetext={`${BUILD_STAGES[stage]}, tempo trascorso ${elapsed}`}
+    >
+      {BUILD_STAGES.map((label, i) => (
+        <span
+          key={label}
+          title={label}
+          className={cn(
+            "h-1 rounded-full bg-white/10",
+            i < stage && "bg-[#8576ff]",
+            i === stage && "animate-pulse bg-[#b8afff]",
+          )}
         />
       ))}
     </div>
@@ -130,7 +170,9 @@ export function BuildOverlay({
                 </li>
               ))}
             </ol>
+            {progress}
             <p className="truncate text-xs text-[#cfc8ea]">{current}</p>
+            <p className="text-[10px] text-[#8f86b5]">Controllo live · {elapsed}</p>
           </div>
           {muteBtn}
         </div>
@@ -144,11 +186,7 @@ export function BuildOverlay({
     <div className="absolute inset-0 z-10 grid place-items-center bg-[#07041a]/88 px-6 backdrop-blur-[2px]">
       <div className="w-full max-w-sm rounded-2xl border border-white/10 bg-[#120c28]/95 px-6 py-7">
         <div className="flex flex-col items-center">
-          <img
-            src="/fenix-orb.png"
-            alt=""
-            className="kit-orb h-[120px] w-auto bg-transparent"
-          />
+          <img src="/fenix-orb.png" alt="" className="kit-orb h-[120px] w-auto bg-transparent" />
           <div className="kit-leds mt-1 flex h-10 items-end gap-[3px]" aria-hidden>
             {levels.map((n, i) => (
               <span
@@ -166,11 +204,13 @@ export function BuildOverlay({
             </li>
           ))}
         </ol>
+        {progress}
         <p className={cn("mt-2 text-center text-xl font-semibold tracking-tight", "shimmer-text")}>
           {current}
         </p>
         <p className="mt-3 text-center text-sm leading-relaxed text-[#cfc8ea]">
-          Ci vogliono circa 5–10 minuti. Pazienza: sta scrivendo le schermate e guardando i pixel. Non chiudere.
+          Ci vogliono circa 5–10 minuti. Pazienza: sta scrivendo le schermate e guardando i pixel.
+          Non chiudere.
         </p>
         {done.length ? (
           <ul className="mt-4 space-y-1.5">
@@ -185,7 +225,7 @@ export function BuildOverlay({
         <div className="mt-4 flex items-center justify-center gap-2">
           {muteBtn}
           <p className="text-center text-[11px] text-[#6e6794]">
-            Se dopo 10 minuti è fermo, ricarica. La bozza resta sotto.
+            Controllo live · {elapsed}. Dopo 10 minuti Fenix si ferma e mostra Riprendi.
           </p>
         </div>
       </div>
