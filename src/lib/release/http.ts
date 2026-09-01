@@ -1,8 +1,14 @@
 import { ownerFromRequest } from "../projects/publish-owner.ts";
-import { callbackSecret, verifyReleaseCallback } from "./dispatch.ts";
+import {
+  applyReleaseCallback,
+  artifactHashOf,
+  isPlatform,
+  isReleaseStep,
+  type ReleaseCallbackBody,
+} from "./callback.ts";
+import { callbackSecret } from "./dispatch.ts";
 import { createReleaseJob, loadReleaseJob, releaseAccounts, resumeReleaseJob } from "./engine.ts";
-import { readReleaseJob, writeReleaseJob } from "./store.ts";
-import type { Platform, PublicReleaseJob, ReleaseInput, ReleaseStep } from "./types.ts";
+import type { PublicReleaseJob, ReleaseInput } from "./types.ts";
 
 function json(data: unknown, status = 200) {
   return Response.json(data, {
@@ -62,11 +68,14 @@ export async function handleReleaseCallback(request: Request): Promise<Response>
   let body: {
     jobId?: string;
     runId?: string;
-    platform?: Platform;
-    step?: ReleaseStep;
+    platform?: string;
+    step?: string;
     status?: string;
     artifact?: string;
     error?: string;
+    ts?: number;
+    artifactHash?: string;
+    workflowRunId?: string;
   } = {};
   try {
     body = (await request.json()) as typeof body;
@@ -75,39 +84,31 @@ export async function handleReleaseCallback(request: Request): Promise<Response>
   }
   const signature =
     request.headers.get("x-fenix-release-signature") || request.headers.get("x-signature") || "";
-  if (
-    !body.jobId ||
-    !body.runId ||
-    !body.status ||
-    !verifyReleaseCallback({
-      jobId: body.jobId,
-      runId: body.runId,
-      status: body.status,
-      signature,
-      secret,
-    })
-  ) {
-    return json({ error: "Firma callback non valida." }, 401);
+  if (!body.jobId || !body.runId || !body.status || !body.platform || !body.step) {
+    return json({ error: "Callback incompleta." }, 400);
   }
-  const job = await readReleaseJob(body.jobId);
-  if (!job) return json({ error: "Job non trovato." }, 404);
-  const platform = body.platform;
-  if (platform && job.tracks[platform]) {
-    const t = job.tracks[platform]!;
-    t.provider = {
-      ...t.provider,
-      runId: body.runId,
-      inflight: body.status === "ok" || body.status === "err" ? undefined : t.provider?.inflight,
-    };
-    if (body.artifact) t.artifact = body.artifact;
-    if (body.status === "err") {
-      t.status = "err";
-      t.error = body.error || "Worker native fallito.";
-      job.status = "err";
-      job.error = t.error;
-    }
-    job.tracks[platform] = t;
+  if (!isPlatform(body.platform) || !isReleaseStep(body.step)) {
+    return json({ error: "Callback incompleta." }, 400);
   }
-  await writeReleaseJob(job);
-  return json({ ok: true });
+  if (body.status !== "ok" && body.status !== "err" && body.status !== "run") {
+    return json({ error: "Stato callback non valido." }, 400);
+  }
+  const ts = Number(body.ts || 0);
+  const payload: ReleaseCallbackBody = {
+    jobId: body.jobId,
+    platform: body.platform,
+    step: body.step,
+    runId: body.runId,
+    status: body.status,
+    artifact: body.artifact,
+    error: body.error,
+    ts,
+    artifactHash: body.artifactHash || artifactHashOf(body.artifact),
+    workflowRunId: body.workflowRunId,
+    signature,
+    secret,
+  };
+  const result = await applyReleaseCallback(payload);
+  if (!result.ok) return json({ error: result.error }, result.status);
+  return json({ ok: true, applied: result.applied, ignored: result.ignored });
 }

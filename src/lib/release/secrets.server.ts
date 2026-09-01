@@ -49,6 +49,11 @@ export function androidKeystorePath(): string | null {
   return p.length > 2 ? p : null;
 }
 
+export function androidKeystoreBase64(): string | null {
+  const b = process.env.ANDROID_KEYSTORE_BASE64?.trim() || "";
+  return b.length > 32 ? b : null;
+}
+
 export function androidKeyAlias(): string | null {
   const a = process.env.ANDROID_KEY_ALIAS?.trim() || "";
   return a.length > 0 ? a : null;
@@ -68,4 +73,12 @@ export function googleServiceAccount(): string | null {
   const raw =
     process.env.GOOGLE_PLAY_SERVICE_ACCOUNT?.trim() || process.env.GOOGLE_PLAY_JSON?.trim() || "";
   return raw.length > 8 ? raw : null;
+}
+
+export function appleDistributionP12(): { p12Base64: string; p12Password: string; profileBase64?: string } | null {
+  const p12 = process.env.APPLE_DISTRIBUTION_P12_BASE64?.trim() || "";
+  const password = process.env.APPLE_DISTRIBUTION_P12_PASSWORD?.trim() || "";
+  if (p12.length < 32 || !password) return null;
+  const profile = process.env.APPLE_PROVISIONING_PROFILE_BASE64?.trim() || "";
+  return { p12Base64: p12, p12Password: password, profileBase64: profile || undefined };
 }
