@@ -9,6 +9,8 @@ describe("inferStage", () => {
 
   it("maps log lines to the compact overlay index", () => {
     assert.equal(inferStage([]), 0);
+    assert.equal(inferStage(["Piano · 6 check"]), 0);
+    assert.equal(inferStage(["Contratto"]), 0);
     assert.equal(inferStage(["Direzione visiva"]), 0);
     assert.equal(inferStage(["Palette", "Scrivo il codice HTML"]), 1);
     assert.equal(inferStage(["Codice", "QA checklist"]), 2);

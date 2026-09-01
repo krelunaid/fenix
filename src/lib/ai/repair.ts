@@ -1,22 +1,13 @@
 import { parseBuildOutput, type BuildResult } from "./parse";
 import { FENIX_MODEL, XAI_CHAT_COMPLETIONS_URL } from "./model";
+import { REPAIR_PROMPT } from "./prompts.shared";
 import { kindFromPrompt } from "@/lib/projects/infer";
 import {
   gateIncompleteHtml,
   type GateOutcome,
 } from "@/lib/projects/fenix-adapter";
 
-export const REPAIR_PROMPT = `Sei il riparatore di Fenix. L'HTML ha JS rotto, markup con \${} stampato, oppure lancia all'avvio.
-
-Obbligo:
-1) Ripara la sintassi JS (parentesi, virgole, template). Compila senza eseguirlo.
-2) Togli \${...} dal markup HTML. In JS usa concatenazione o template SOLO dentro <script>.
-3) Tieni le funzioni. Almeno 3 viste data-view collegate, window.Fenix.load/save, niente localStorage.
-4) Documento completo <!DOCTYPE html> … </html>.
-5) Se kind=site/landing: togli scaffold gestionale (.orders, inventario, Nuovo pezzo). Stato = oggetto vuoto, mai null. Non leggere .orders su null.
-6) Cattura TypeError di avvio (DOMContentLoaded, unhandledrejection). Non lasciare stato null.
-
-Rispondi SOLO META + HTML completo.`;
+export { REPAIR_PROMPT } from "./prompts.shared";
 
 export { ensureFenixAdapter, htmlHasFenixApi, FENIX_ADAPTER_SCRIPT } from "@/lib/projects/fenix-adapter";
 export type { GateOutcome };

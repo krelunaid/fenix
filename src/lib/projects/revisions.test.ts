@@ -49,7 +49,7 @@ describe("fase3 gap matrix is evidence, not parity", () => {
     const now = fase3NowGaps();
     assert.deepEqual(
       now.map((g) => g.id),
-      ["revisions", "project-tree", "github-export"],
+      ["revisions", "project-tree", "github-export", "quality"],
     );
     assert.equal(now[0]?.impact, "high");
     assert.notEqual(now[0]?.cost, "high");

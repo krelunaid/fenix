@@ -1,8 +1,16 @@
 declare const Netlify: { env: { get(name: string): string | undefined } };
 
-import { QA_PROMPT, SITE_PROMPT, SYSTEM_PROMPT, VISUAL_PROMPT } from "../../src/lib/ai/prompts.shared.ts";
+import { QA_PROMPT, REPAIR_PROMPT, SITE_PROMPT, SYSTEM_PROMPT, VISUAL_PROMPT } from "../../src/lib/ai/prompts.shared.ts";
 import { validateProductHtml } from "../../src/lib/projects/validate-html.ts";
 import { formatPrefix, kindFromPrompt } from "../../src/lib/projects/infer.ts";
+import {
+  contractInstruction,
+  criticBudget,
+  evaluateContract,
+  formatReceipt,
+  planContract,
+  roleReceipt,
+} from "../../src/lib/ai/build-contract.ts";
 
 const MODEL = "grok-build-0.1";
 const XAI_URL = "https://api.x.ai/v1/chat/completions";
@@ -194,7 +202,7 @@ async function reviewPass(apiKey: string, prompt: string, html: string, spec: st
   }
 }
 
-const REPAIR_PROMPT = `Ripara HTML/JS di Fenix. Compila gli script senza eseguirli. Togli \${} dal markup. 3 viste data-view, window.Fenix.load/save, niente localStorage. SOLO META+HTML.`;
+const REPAIR_MAX = 2;
 
 async function repairPass(apiKey: string, prompt: string, html: string, error: string) {
   const controller = new AbortController();
@@ -242,7 +250,7 @@ async function gateResult(
   let current = lockKind && result.kind !== lockKind ? { ...result, kind: lockKind } : result;
   let report = validateProductHtml(current.html, { kind: current.kind });
   if (report.ok) return { result: current };
-  for (let i = 0; i < 2; i++) {
+  for (let i = 0; i < REPAIR_MAX; i++) {
     send({ t: "s", s: i === 0 ? "Riparo il codice" : "Secondo riparo" });
     const fixed = await repairPass(apiKey, prompt, current.html, report.errors.join(" · "));
     const parsed = parseResult(fixed, lockKind);
@@ -282,9 +290,11 @@ export default async function build(request: Request) {
       ? body.shot.slice(0, 380000)
       : "";
   const lockKind = kindFromPrompt(prompt);
+  const contract = planContract(prompt);
   const userParts = [
     `BRIEF:\n${prompt}`,
     formatPrefix(lockKind ?? "app").trim(),
+    contractInstruction(contract),
     "Crea un prodotto completo, specifico e immediatamente utilizzabile.",
     instruction && currentHtml ? `APP ATTUALE:\n${currentHtml}` : "",
     instruction ? `MODIFICA:\n${instruction}\nRestituisci il documento completo.` : "",
@@ -322,6 +332,19 @@ export default async function build(request: Request) {
 
       try {
         let spec = "";
+        send({
+          t: "s",
+          s: formatReceipt(
+            roleReceipt({
+              role: "planner",
+              ok: true,
+              checks: contract.acceptance,
+              skipped: true,
+              reason: "static",
+              tokens: 0,
+            }),
+          ),
+        });
         if (!instruction) {
           send({ t: "s", s: "Direzione visiva" });
           spec = await designDirection(apiKey, prompt);
@@ -416,10 +439,37 @@ export default async function build(request: Request) {
         if (!terminal) {
           let result = parseResult(output, lockKind);
           const desk = lockKind === "site" || lockKind === "landing" || lockKind === "dashboard";
-          if (result && !desk && !instruction && !shot) {
-            send({ t: "s", s: "Provo la grafica" });
+          const evaluation = result
+            ? evaluateContract({
+                html: result.html,
+                files: result.files,
+                contract,
+                kind: (lockKind as typeof contract.kind | undefined) ?? contract.kind,
+              })
+            : { ok: false, kind: contract.kind, checks: [] };
+          const budget = criticBudget({
+            kind: lockKind ?? contract.kind,
+            instruction,
+            shot: Boolean(shot),
+            evaluation,
+          });
+          if (result && !desk && budget.call) {
+            send({ t: "s", s: "QA" });
             const reviewed = await reviewPass(apiKey, prompt, result.html, spec);
             result = parseResult(reviewed, lockKind) ?? result;
+          } else if (result) {
+            send({
+              t: "s",
+              s: formatReceipt(
+                roleReceipt({
+                  role: "critic",
+                  ok: evaluation.ok,
+                  skipped: true,
+                  reason: budget.reason,
+                  checks: evaluation.checks.filter((c) => c.ok).map((c) => c.id),
+                }),
+              ),
+            });
           }
           const gated = await gateResult(apiKey, prompt, result, send);
           if ("error" in gated) finish({ t: "err", error: gated.error });

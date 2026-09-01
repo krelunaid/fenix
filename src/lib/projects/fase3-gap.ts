@@ -94,10 +94,10 @@ export const FASE3_GAPS: Fase3Gap[] = [
     id: "quality",
     area: "Qualità generata",
     emergent: "Agente di test che ripara; output lento (45–60 min in prove terze).",
-    fenix: "QA HTML, kind-lock, repair boot, polish. Fornace/Officina restano il banco Fase 1.",
+    fenix: "Contratto di build v1 (planner deterministico, 0 token) + ruoli grok-build-0.1 con ricevute, niente CoT. Evaluator su 3 fixture (kiln CRUD, grottaglie mobile, kiln+mock multi-file). Critic LLM saltato se i gate statici passano. Repair max 2. Ledger in quality-ledger.ts.",
     impact: "high",
     cost: "medium",
-    slice: "next",
+    slice: "now",
   },
   {
     id: "onboarding-deploy",

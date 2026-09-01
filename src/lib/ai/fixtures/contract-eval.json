@@ -1,0 +1,194 @@
+{
+  "model": "grok-build-0.1",
+  "reports": [
+    {
+      "id": "gestionale-crud",
+      "family": "gestionale CRUD",
+      "kind": "dashboard",
+      "ok": true,
+      "checks": [
+        {
+          "id": "html",
+          "ok": true,
+          "blocking": true
+        },
+        {
+          "id": "kind-lock",
+          "ok": true,
+          "blocking": true
+        },
+        {
+          "id": "srcdoc",
+          "ok": true,
+          "blocking": true
+        },
+        {
+          "id": "files",
+          "ok": true,
+          "blocking": true
+        },
+        {
+          "id": "crud",
+          "ok": true,
+          "blocking": true
+        },
+        {
+          "id": "security",
+          "ok": true,
+          "blocking": true
+        },
+        {
+          "id": "overflow",
+          "ok": true,
+          "blocking": true
+        },
+        {
+          "id": "aa",
+          "ok": true,
+          "blocking": true
+        },
+        {
+          "id": "visual-dna",
+          "ok": true,
+          "blocking": true
+        },
+        {
+          "id": "a11y-focus",
+          "ok": true,
+          "blocking": false
+        },
+        {
+          "id": "routes",
+          "ok": true,
+          "blocking": true
+        }
+      ]
+    },
+    {
+      "id": "consumer-mobile",
+      "family": "consumer/mobile",
+      "kind": "app",
+      "ok": true,
+      "checks": [
+        {
+          "id": "html",
+          "ok": true,
+          "blocking": true
+        },
+        {
+          "id": "kind-lock",
+          "ok": true,
+          "blocking": true
+        },
+        {
+          "id": "srcdoc",
+          "ok": true,
+          "blocking": true
+        },
+        {
+          "id": "files",
+          "ok": true,
+          "blocking": true
+        },
+        {
+          "id": "crud",
+          "ok": true,
+          "blocking": true
+        },
+        {
+          "id": "security",
+          "ok": true,
+          "blocking": true
+        },
+        {
+          "id": "overflow",
+          "ok": true,
+          "blocking": true
+        },
+        {
+          "id": "aa",
+          "ok": true,
+          "blocking": true
+        },
+        {
+          "id": "visual-dna",
+          "ok": true,
+          "blocking": true
+        },
+        {
+          "id": "a11y-focus",
+          "ok": true,
+          "blocking": false
+        },
+        {
+          "id": "routes",
+          "ok": true,
+          "blocking": true
+        }
+      ]
+    },
+    {
+      "id": "dashboard-multifile",
+      "family": "dashboard full-stack/multi-file",
+      "kind": "dashboard",
+      "ok": true,
+      "checks": [
+        {
+          "id": "html",
+          "ok": true,
+          "blocking": true
+        },
+        {
+          "id": "kind-lock",
+          "ok": true,
+          "blocking": true
+        },
+        {
+          "id": "srcdoc",
+          "ok": true,
+          "blocking": true
+        },
+        {
+          "id": "files",
+          "ok": true,
+          "blocking": true
+        },
+        {
+          "id": "crud",
+          "ok": true,
+          "blocking": true
+        },
+        {
+          "id": "security",
+          "ok": true,
+          "blocking": true
+        },
+        {
+          "id": "overflow",
+          "ok": true,
+          "blocking": true
+        },
+        {
+          "id": "aa",
+          "ok": true,
+          "blocking": true
+        },
+        {
+          "id": "visual-dna",
+          "ok": true,
+          "blocking": true
+        },
+        {
+          "id": "a11y-focus",
+          "ok": true,
+          "blocking": false
+        },
+        {
+          "id": "routes",
+          "ok": true,
+          "blocking": true
+        }
+      ]
+    }
+  ]
+}

@@ -7,7 +7,7 @@ export function inferStage(steps: string[]): number {
   if (/riprend|rifin|icon|sguardo|pixel|motore visivo|anteprima rifinita/.test(last)) return 3;
   if (/\bqa\b|controllo|checklist/.test(last)) return 2;
   if (/codice|html|scherm|bozza|file|tsx/.test(last)) return 1;
-  if (/direzion|palette|font|look/.test(last)) return 0;
+  if (/piano|contratto|direzion|palette|font|look/.test(last)) return 0;
   if (steps.length === 0) return 0;
   if (steps.length < 3) return 1;
   if (steps.length < 5) return 2;

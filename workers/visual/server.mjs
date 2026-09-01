@@ -3,6 +3,7 @@ import { createServer } from "node:http";
 /**
  * Worker visivo Fenix — 5 giri (una tab ciascuno) Playwright + grok-build-0.1.
  * Env: XAI_API_KEY, PORT (8787). Tutte le chiamate xAI usano grok-build-0.1, payload Chat Completions senza extra flags.
+ * Planner/evaluator vivono in src/lib/ai/build-contract.ts (statici). Qui niente ruoli extra e niente reasoningEffort.
  * POST /polish  { prompt, html }  →  { html, name, log }
  */
 const PORT = Number(process.env.PORT || 8787);
@@ -1002,7 +1003,7 @@ const server = createServer(async (req, res) => {
   if (idempotencyKey) jobsByKey.set(idempotencyKey, job);
   if (projectId) activeByProject.set(projectId, id);
   enqueue(async () => {
-    job.log = ["Partito"];
+    job.log = ["Partito", "grok-build-0.1 · ruoli visivo/codice · repair max 2"];
     try {
       const result = isBuild
         ? await generate(prompt, html, instruction, kind)

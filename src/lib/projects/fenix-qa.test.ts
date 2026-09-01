@@ -520,4 +520,41 @@ describe("focus-visible and worker model", () => {
       }
     }
   });
+
+  it("quality protocol is shared, grok-build-0.1 only, planner is static", () => {
+    const plan = readFileSync(join(root, "src/lib/ai/plan.ts"), "utf8");
+    assert.doesNotMatch(plan, /fetch\(/);
+    assert.doesNotMatch(plan, /XAI_CHAT_COMPLETIONS_URL/);
+    assert.match(plan, /planContract/);
+    const contract = readFileSync(join(root, "src/lib/ai/build-contract.ts"), "utf8");
+    assert.match(contract, /BUILD_ROLES/);
+    assert.match(contract, /criticBudget/);
+    assert.match(contract, /evaluateContract/);
+    assert.doesNotMatch(contract, /reasoning_effort|reasoningEffort/);
+    const prompts = readFileSync(join(root, "src/lib/ai/prompts.shared.ts"), "utf8");
+    assert.match(prompts, /export const PLAN_PROMPT/);
+    assert.match(prompts, /export const REPAIR_PROMPT/);
+    const repair = readFileSync(join(root, "src/lib/ai/repair.ts"), "utf8");
+    assert.match(repair, /from "\.\/prompts\.shared"/);
+    const api = readFileSync(join(root, "src/routes/api/build.ts"), "utf8");
+    assert.match(api, /planContract/);
+    assert.match(api, /contractInstruction/);
+    assert.match(api, /criticBudget/);
+    const edge = readFileSync(join(root, "netlify/edge-functions/build.ts"), "utf8");
+    assert.match(edge, /planContract/);
+    assert.match(edge, /REPAIR_PROMPT/);
+    assert.match(edge, /REPAIR_MAX = 2/);
+    assert.doesNotMatch(edge, /reasoning_effort/);
+    const worker = readFileSync(join(root, "workers/visual/server.mjs"), "utf8");
+    assert.match(worker, /MODEL = "grok-build-0.1"/);
+    assert.match(worker, /repair max 2/);
+    assert.doesNotMatch(worker, /reasoning_effort/);
+    const gap = readFileSync(join(root, "src/lib/projects/fase3-gap.ts"), "utf8");
+    assert.match(gap, /id: "quality"/);
+    assert.match(gap, /planner deterministico/);
+    assert.match(gap, /Evaluator su 3 fixture/);
+    assert.doesNotMatch(gap, /feature-complete|uguale a Emergent/);
+    const overlay = readFileSync(join(root, "src/components/build-overlay.tsx"), "utf8");
+    assert.doesNotMatch(overlay, /Officina/);
+  });
 });

@@ -1,6 +1,6 @@
 # Fenix
 
-Studio visivo Kreluna. Usa **grok-build-0.1** per tutte le chiamate xAI (piano, direzione visiva, build, QA, worker Railway). Niente `reasoningEffort`. Endpoint: `https://api.x.ai/v1/chat/completions`.
+Studio visivo Kreluna. Usa **grok-build-0.1** per tutte le chiamate xAI (piano, direzione visiva, build, QA, worker Railway). Niente `reasoningEffort`. Endpoint: `https://api.x.ai/v1/chat/completions`. Il piano è deterministico (contratto di build, 0 token); critic/QA scatta solo se i gate statici falliscono.
 
 Prove pronte: **Fornace Grottaglie**, **Officina Catenaria**.
 

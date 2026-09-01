@@ -7,6 +7,14 @@ import { gateBuildResult } from "@/lib/ai/repair";
 import { detectStage, sseLine } from "@/lib/ai/stages";
 import { designVisual } from "@/lib/ai/visual";
 import {
+  contractInstruction,
+  criticBudget,
+  evaluateContract,
+  formatReceipt,
+  planContract,
+  roleReceipt,
+} from "@/lib/ai/build-contract";
+import {
   getXaiApiKey,
   XAI_CHAT_COMPLETIONS_URL,
   XAI_MISSING_KEY_ERROR,
@@ -107,9 +115,11 @@ export const Route = createFileRoute("/api/build")({
 
         const seed = Array.from(prompt).reduce((h, c) => ((h << 5) - h + c.charCodeAt(0)) | 0, 0);
         const lockKind = kindFromPrompt(prompt) ?? "app";
+        const contract = planContract(prompt);
         const userParts = [
           `BRIEF:\n${prompt}`,
           formatPrefix(lockKind).trim(),
+          contractInstruction(contract),
         ];
         if (lockKind === "dashboard") {
           userParts.push(
@@ -168,6 +178,19 @@ export const Route = createFileRoute("/api/build")({
 
             let visualSpec = "";
             try {
+              send({
+                t: "s",
+                s: formatReceipt(
+                  roleReceipt({
+                    role: "planner",
+                    ok: true,
+                    checks: contract.acceptance,
+                    skipped: true,
+                    reason: "static",
+                    tokens: 0,
+                  }),
+                ),
+              });
               send({ t: "s", s: "Direzione visiva" });
               if (!instruction) {
                 const visCtl = new AbortController();
@@ -302,10 +325,22 @@ export const Route = createFileRoute("/api/build")({
                 });
               } else {
                 let result = parsed;
+                const evaluation = evaluateContract({
+                  html: parsed.html,
+                  files: parsed.files,
+                  contract,
+                  kind: lockKind,
+                });
+                const budget = criticBudget({
+                  kind: lockKind,
+                  instruction,
+                  shot: Boolean(shot),
+                  evaluation,
+                });
                 const desk = lockKind === "site" || lockKind === "landing" || lockKind === "dashboard";
-                const shouldReview = !desk && !shot && (!instruction || looksCheap(parsed.html, lockKind));
+                const shouldReview = !desk && budget.call && (!instruction || looksCheap(parsed.html, lockKind));
                 if (shouldReview) {
-                  send({ t: "s", s: "Provo la grafica" });
+                  send({ t: "s", s: "QA" });
                   const visCtl = new AbortController();
                   const visTimer = setTimeout(() => visCtl.abort(), 50_000);
                   try {
@@ -324,6 +359,19 @@ export const Route = createFileRoute("/api/build")({
                   } finally {
                     clearTimeout(visTimer);
                   }
+                } else {
+                  send({
+                    t: "s",
+                    s: formatReceipt(
+                      roleReceipt({
+                        role: "critic",
+                        ok: evaluation.ok,
+                        skipped: true,
+                        reason: budget.reason,
+                        checks: evaluation.checks.filter((c) => c.ok).map((c) => c.id),
+                      }),
+                    ),
+                  });
                 }
                 send({ t: "s", s: "Foto del mestiere" });
                 try {

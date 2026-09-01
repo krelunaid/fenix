@@ -3,6 +3,7 @@ import { parseBuildOutput, type BuildResult } from "./parse";
 import { FENIX_MODEL, getXaiApiKey, XAI_CHAT_COMPLETIONS_URL, XAI_MISSING_KEY_ERROR } from "./model";
 import { SYSTEM_PROMPT } from "./prompt";
 import { kindFromPrompt } from "@/lib/projects/infer";
+import { contractInstruction, planContract } from "./build-contract";
 
 export type GenerateInput = {
   prompt: string;
@@ -39,6 +40,7 @@ export const generateBuild = createServerFn({ method: "POST" })
 
     const userParts = [
       `BRIEF:\n${data.prompt}`,
+      contractInstruction(planContract(data.prompt)),
       `VINCOLO UNICITÀ: prodotto visivamente unico, nato dal brief. Vietato #f5f5f7 + Manrope + hero centrato.`,
     ];
     if (data.html) {

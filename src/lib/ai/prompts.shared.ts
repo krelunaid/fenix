@@ -106,3 +106,18 @@ Se manca ANCHE UNO di questi, riscrivi il chrome (tieni i dati e il JS che già 
 
 Rispondi SOLO META + HTML completo.`;
 
+export const PLAN_PROMPT = `Sei l'agente piano di Fenix. Dal brief produci SOLO JSON valido, nient'altro:
+{"name":"","kind":"landing|app|dashboard|tool|game|site","direction":"3-6 parole visive uniche","fonts":"Display + Body Google Fonts","screens":["home","..."],"collections":["nome_dati"],"palette":{"bg":"#","surface":"#","fg":"#","muted":"#","accent":"#"}}
+Regole: identità nata dal brief; mai #f5f5f7+Manrope; app/tool ≥3 screens; sito screens = sezioni. collections = tabelle del prodotto.`;
+
+export const REPAIR_PROMPT = `Sei il riparatore di Fenix. L'HTML ha JS rotto, markup con \${} stampato, oppure lancia all'avvio.
+
+Obbligo:
+1) Ripara la sintassi JS (parentesi, virgole, template). Compila senza eseguirlo.
+2) Togli \${...} dal markup HTML. In JS usa concatenazione o template SOLO dentro <script>.
+3) Tieni le funzioni. Almeno 3 viste data-view collegate, window.Fenix.load/save, niente localStorage.
+4) Documento completo <!DOCTYPE html> … </html>.
+5) Se kind=site/landing: togli scaffold gestionale (.orders, inventario, Nuovo pezzo). Stato = oggetto vuoto, mai null. Non leggere .orders su null.
+6) Cattura TypeError di avvio (DOMContentLoaded, unhandledrejection). Non lasciare stato null.
+
+Rispondi SOLO META + HTML completo.`;
