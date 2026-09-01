@@ -1,6 +1,7 @@
 import { mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { RELEASE_STORE, type Platform, type PublicReleaseJob, type StoredReleaseJob } from "./types.ts";
+import { randomUUID } from "node:crypto";
+import { LEASE_MS, RELEASE_STORE, type Platform, type PublicReleaseJob, type StoredReleaseJob } from "./types.ts";
 import { REVIEW_NOTE } from "./types.ts";
 import { redactSecrets } from "./redact.ts";
 
@@ -19,6 +20,10 @@ function keyPath(key: string) {
 
 function onNetlifyRuntime() {
   return Boolean(process.env.NETLIFY || process.env.NETLIFY_BLOBS_CONTEXT);
+}
+
+export function releaseInstanceId(): string {
+  return process.env.FENIX_INSTANCE || `${process.pid}-${randomUUID().slice(0, 8)}`;
 }
 
 type BlobStore = {
@@ -64,9 +69,6 @@ function writeFileJob(job: StoredReleaseJob) {
   const tmp = `${target}.${process.pid}.tmp`;
   writeFileSync(tmp, JSON.stringify(job), "utf8");
   renameSync(tmp, target);
-  const k = keyPath(job.idempotencyKey);
-  writeFileSync(`${k}.${process.pid}.tmp`, JSON.stringify({ id: job.id }), "utf8");
-  renameSync(`${k}.${process.pid}.tmp`, k);
 }
 
 function readFileKey(key: string): string | null {
@@ -75,6 +77,22 @@ function readFileKey(key: string): string | null {
     return typeof parsed.id === "string" ? parsed.id : null;
   } catch {
     return null;
+  }
+}
+
+function claimFileKey(key: string, id: string): { won: boolean; id: string } {
+  mkdirSync(releaseDir(), { recursive: true });
+  try {
+    writeFileSync(keyPath(key), JSON.stringify({ id, claimedAt: Date.now() }), {
+      encoding: "utf8",
+      flag: "wx",
+    });
+    return { won: true, id };
+  } catch (err) {
+    const code = (err as { code?: string }).code;
+    if (code !== "EEXIST") throw err;
+    const existing = readFileKey(key);
+    return { won: existing === id, id: existing || id };
   }
 }
 
@@ -139,6 +157,53 @@ export async function readReleaseByKey(key: string): Promise<StoredReleaseJob | 
   if (onNetlifyRuntime()) return null;
   const id = readFileKey(key);
   return id ? readFileJob(id) : null;
+}
+
+export async function claimReleaseKey(
+  key: string,
+  id: string,
+): Promise<{ won: boolean; id: string }> {
+  const blobs = await blobsStore();
+  if (blobs) {
+    const existing = (await blobs.get(`key-${key}`, { type: "json" }).catch(() => null)) as
+      | { id?: string }
+      | null;
+    if (existing?.id && existing.id !== id) return { won: false, id: existing.id };
+    if (existing?.id === id) return { won: true, id };
+    await blobs.setJSON(`key-${key}`, { id, claimedAt: Date.now() });
+    const confirm = (await blobs.get(`key-${key}`, { type: "json" })) as { id?: string } | null;
+    if (confirm?.id && confirm.id !== id) return { won: false, id: confirm.id };
+    return { won: true, id };
+  }
+  if (onNetlifyRuntime()) throw new Error("Archivio release non disponibile.");
+  return claimFileKey(key, id);
+}
+
+export async function waitReleaseByKey(key: string, tries = 25): Promise<StoredReleaseJob | null> {
+  for (let i = 0; i < tries; i++) {
+    const job = await readReleaseByKey(key);
+    if (job) return job;
+    await new Promise((r) => setTimeout(r, 20));
+  }
+  return readReleaseByKey(key);
+}
+
+export function canTakeLease(job: StoredReleaseJob, token?: string, now = Date.now()): boolean {
+  if (!job.leaseUntil || job.leaseUntil <= now) return true;
+  if (!token) return false;
+  return job.leaseOwner === token;
+}
+
+export function withLease(
+  job: StoredReleaseJob,
+  token: string,
+  now = Date.now(),
+): StoredReleaseJob {
+  return {
+    ...job,
+    leaseOwner: token,
+    leaseUntil: now + LEASE_MS,
+  };
 }
 
 export async function writeReleaseJob(job: StoredReleaseJob): Promise<StoredReleaseJob> {

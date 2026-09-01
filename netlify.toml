@@ -1,5 +1,5 @@
 [build]
-  command = "node scripts/with-app-env.mjs ./node_modules/.bin/vite build && node scripts/migrate.mjs"
+  command = "node scripts/with-app-env.mjs ./node_modules/.bin/vite build && node scripts/copy-pglite-assets.mjs && node scripts/sync-static-publish.mjs && node scripts/migrate.mjs"
   publish = "dist"
 
 [build.environment]

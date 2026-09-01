@@ -1,6 +1,6 @@
 import { importPKCS8, SignJWT } from "jose";
 
-export type StoreCheck = { ok: true } | { ok: false; error: string };
+export type StoreCheck = { ok: true; appId?: string } | { ok: false; error: string };
 
 type ReleaseFetch = typeof fetch;
 
@@ -10,12 +10,29 @@ export function setReleaseFetchForTest(fn: ReleaseFetch | null) {
   customFetch = fn;
 }
 
-function callFetch(input: string | URL | Request, init?: RequestInit): Promise<Response> {
-  return (customFetch || fetch)(input, init);
+export function releaseFetch(input: string | URL | Request, init?: RequestInit): Promise<Response> {
+  const extra: RequestInit = { ...init };
+  if (!extra.signal) extra.signal = AbortSignal.timeout(20_000);
+  return (customFetch || fetch)(input, extra);
 }
 
 function pemFrom(raw: string): string {
   return raw.replace(/\\n/g, "\n").trim();
+}
+
+export async function appleJwt(creds: {
+  issuerId: string;
+  keyId: string;
+  privateKey: string;
+}): Promise<string> {
+  const key = await importPKCS8(pemFrom(creds.privateKey), "ES256");
+  return new SignJWT({})
+    .setProtectedHeader({ alg: "ES256", kid: creds.keyId, typ: "JWT" })
+    .setIssuer(creds.issuerId)
+    .setIssuedAt()
+    .setExpirationTime("15m")
+    .setAudience("appstoreconnect-v1")
+    .sign(key);
 }
 
 export async function applePreflight(
@@ -24,14 +41,7 @@ export async function applePreflight(
 ): Promise<StoreCheck> {
   let token: string;
   try {
-    const key = await importPKCS8(pemFrom(creds.privateKey), "ES256");
-    token = await new SignJWT({})
-      .setProtectedHeader({ alg: "ES256", kid: creds.keyId, typ: "JWT" })
-      .setIssuer(creds.issuerId)
-      .setIssuedAt()
-      .setExpirationTime("15m")
-      .setAudience("appstoreconnect-v1")
-      .sign(key);
+    token = await appleJwt(creds);
   } catch {
     return {
       ok: false,
@@ -44,7 +54,7 @@ export async function applePreflight(
     encodeURIComponent(bundleId);
   let res: Response;
   try {
-    res = await callFetch(url, {
+    res = await releaseFetch(url, {
       headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
     });
   } catch {
@@ -66,9 +76,9 @@ export async function applePreflight(
       error: `App Store Connect ha risposto ${res.status}. Controlla il record e i ruoli, poi riprova.`,
     };
   }
-  let body: { data?: unknown[] };
+  let body: { data?: { id?: string }[] };
   try {
-    body = (await res.json()) as { data?: unknown[] };
+    body = (await res.json()) as { data?: { id?: string }[] };
   } catch {
     return { ok: false, error: "App Store Connect ha risposto un JSON non valido." };
   }
@@ -78,7 +88,8 @@ export async function applePreflight(
       error: `Manca il record App Store Connect per ${bundleId}. Crea l'app (ruolo App Manager o Admin) e riprova.`,
     };
   }
-  return { ok: true };
+  const appId = typeof body.data[0]?.id === "string" ? body.data[0].id : undefined;
+  return { ok: true, appId };
 }
 
 type GoogleAccount = { client_email: string; private_key: string };
@@ -110,9 +121,9 @@ export function parseGoogleServiceAccount(raw: string): GoogleAccount | { error:
   };
 }
 
-export async function googlePreflight(rawJson: string, packageName: string): Promise<StoreCheck> {
+export async function googleAccessToken(rawJson: string): Promise<string | { error: string }> {
   const account = parseGoogleServiceAccount(rawJson);
-  if ("error" in account) return { ok: false, error: account.error };
+  if ("error" in account) return { error: account.error };
   let assertion: string;
   try {
     const key = await importPKCS8(account.private_key, "RS256");
@@ -125,14 +136,13 @@ export async function googlePreflight(rawJson: string, packageName: string): Pro
       .sign(key);
   } catch {
     return {
-      ok: false,
       error:
         "Chiave del service account Play non valida. Controlla il JSON sul server (ruolo Release Manager).",
     };
   }
   let tokenRes: Response;
   try {
-    tokenRes = await callFetch("https://oauth2.googleapis.com/token", {
+    tokenRes = await releaseFetch("https://oauth2.googleapis.com/token", {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({
@@ -141,30 +151,33 @@ export async function googlePreflight(rawJson: string, packageName: string): Pro
       }),
     });
   } catch {
-    return { ok: false, error: "Google non risponde per il token. Riprova: non carico un secondo AAB." };
+    return { error: "Google non risponde per il token. Riprova: non carico un secondo AAB." };
   }
   if (!tokenRes.ok) {
-    return {
-      ok: false,
-      error: "Play Console ha rifiutato il service account. Serve ruolo Release Manager.",
-    };
+    return { error: "Play Console ha rifiutato il service account. Serve ruolo Release Manager." };
   }
   let tokenBody: { access_token?: string };
   try {
     tokenBody = (await tokenRes.json()) as { access_token?: string };
   } catch {
-    return { ok: false, error: "Google ha risposto un token non valido." };
+    return { error: "Google ha risposto un token non valido." };
   }
   if (!tokenBody.access_token) {
-    return { ok: false, error: "Play Console ha rifiutato il service account. Serve ruolo Release Manager." };
+    return { error: "Play Console ha rifiutato il service account. Serve ruolo Release Manager." };
   }
+  return tokenBody.access_token;
+}
+
+export async function googlePreflight(rawJson: string, packageName: string): Promise<StoreCheck> {
+  const token = await googleAccessToken(rawJson);
+  if (typeof token !== "string") return { ok: false, error: token.error };
   const appUrl =
     "https://androidpublisher.googleapis.com/androidpublisher/v3/applications/" +
     encodeURIComponent(packageName);
   let appRes: Response;
   try {
-    appRes = await callFetch(appUrl, {
-      headers: { Authorization: `Bearer ${tokenBody.access_token}` },
+    appRes = await releaseFetch(appUrl, {
+      headers: { Authorization: `Bearer ${token}` },
     });
   } catch {
     return { ok: false, error: "Play Console non risponde. Riprova: non carico un secondo AAB." };

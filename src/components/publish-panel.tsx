@@ -10,6 +10,7 @@ import { publishSnapshot, readPublishedId } from "@/lib/projects/publish-client"
 import type { PublishedSnapshot } from "@/lib/projects/published";
 import {
   loadReleaseAccounts,
+  loadReleaseJob,
   resumeReleaseJob,
   startRelease,
   suggestedBundleId,
@@ -116,6 +117,32 @@ export function PublishPanel({
       cancelled = true;
     };
   }, [open, projectId, name, html, kind, palette, tagline, summary, defaults.bundleId, defaults.packageName]);
+
+  useEffect(() => {
+    if (!open || !job || job.status !== "run") return;
+    let cancelled = false;
+    let ticks = 0;
+    const id = window.setInterval(() => {
+      ticks += 1;
+      if (ticks > 40) {
+        window.clearInterval(id);
+        return;
+      }
+      void loadReleaseJob(job.id)
+        .then((next) => {
+          if (cancelled) return;
+          setJob(next);
+          if (next.status === "err") setError(next.error || "Rilascio interrotto.");
+        })
+        .catch(() => {
+          /* next poll */
+        });
+    }, 2000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(id);
+    };
+  }, [open, job?.id, job?.status]);
 
   if (!open) return null;
 

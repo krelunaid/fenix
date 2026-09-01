@@ -15,6 +15,22 @@ export type ReleaseStep = (typeof RELEASE_STEPS)[number];
 
 export type ReleaseStatus = "queued" | "run" | "ok" | "err";
 
+/** Provider operation ids. Never secrets. Persist before/during side effects. */
+export type ProviderIds = {
+  appId?: string;
+  archivePath?: string;
+  ipaPath?: string;
+  aabPath?: string;
+  signedAabPath?: string;
+  uploadId?: string;
+  buildId?: string;
+  editId?: string;
+  versionCode?: string;
+  siteId?: string;
+  deployId?: string;
+  intentId?: string;
+};
+
 export type TrackState = {
   platform: Platform;
   step: ReleaseStep;
@@ -23,6 +39,7 @@ export type TrackState = {
   artifact?: string;
   error?: string;
   uploads: number;
+  provider?: ProviderIds;
 };
 
 export type ReleaseConfig = {
@@ -76,9 +93,11 @@ export type StoredReleaseJob = {
     accent: string;
     line?: string;
   };
+  leaseOwner?: string;
+  leaseUntil?: number;
 };
 
-/** Public GET. Never ownerHash, never html (too big / not needed), never secrets. */
+/** Public GET. Never ownerHash, never html, never secrets, never lease. */
 export type PublicReleaseJob = {
   id: string;
   projectId: string;
@@ -110,7 +129,20 @@ export type ReleaseInput = {
   idempotencyKey?: unknown;
 };
 
+export type PersistTrack = (patch: Partial<TrackState>) => Promise<TrackState>;
+
+export type AdapterResult = {
+  ok: boolean;
+  step: ReleaseStep;
+  artifact?: string;
+  error?: string;
+  fixture: boolean;
+  pending?: boolean;
+  reconciled?: boolean;
+};
+
 export const REVIEW_NOTE =
   "TestFlight e il canale internal di Play si raggiungono in automatico. La scheda pubblica su App Store e Play Store resta soggetta a review.";
 
 export const RELEASE_STORE = "fenix-release-jobs";
+export const LEASE_MS = 45_000;

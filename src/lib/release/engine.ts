@@ -10,8 +10,17 @@ import {
 } from "./ids.ts";
 import { accountsSnapshot, gateHtml, gatePlatform, parseKind } from "./preflight.ts";
 import { redactSecrets } from "./redact.ts";
-import { publicReleaseJob, readReleaseByKey, readReleaseJob, writeReleaseJob } from "./store.ts";
+import {
+  canTakeLease,
+  claimReleaseKey,
+  publicReleaseJob,
+  readReleaseJob,
+  waitReleaseByKey,
+  withLease,
+  writeReleaseJob,
+} from "./store.ts";
 import type {
+  PersistTrack,
   Platform,
   PublicReleaseJob,
   ReleaseInput,
@@ -88,64 +97,111 @@ function jobStep(job: StoredReleaseJob): ReleaseStep {
   return min;
 }
 
+function snapTracks(job: StoredReleaseJob): string {
+  return job.platforms
+    .map((p) => {
+      const t = job.tracks[p];
+      return `${p}:${t?.step}:${t?.status}:${t?.uploads}:${t?.provider?.uploadId || t?.provider?.deployId || ""}`;
+    })
+    .join("|");
+}
+
 export async function tickReleaseJob(
   job: StoredReleaseJob,
   access: WebUploadOwner,
+  leaseToken?: string,
 ): Promise<StoredReleaseJob> {
   if (job.status === "ok") return job;
-  let current = job;
+  const token = leaseToken || randomUUID();
+  let current = withLease(job, token);
   for (const platform of current.platforms) {
-    const track = current.tracks[platform] || emptyTrack(platform);
-    if (track.status === "ok") continue;
-    if (track.status === "err") {
+    const start = current.tracks[platform] || emptyTrack(platform);
+    if (start.status === "ok") continue;
+    if (start.status === "err") {
       current.status = "err";
-      current.error = track.error;
-      current.step = track.step;
+      current.error = start.error;
+      current.step = start.step;
       return writeReleaseJob(current);
     }
     const blocked = gatePlatform(platform);
-    if (blocked && (track.step === "connect" || track.step === "configure" || track.step === "preflight")) {
-      track.status = "err";
-      track.error = blocked;
-      current.tracks[platform] = track;
+    if (blocked && (start.step === "connect" || start.step === "configure" || start.step === "preflight")) {
+      start.status = "err";
+      start.error = blocked;
+      current.tracks[platform] = start;
       current.status = "err";
       current.error = blocked;
       current.step = "connect";
       appendLog(current, `${platform}: ${blocked}`);
       return writeReleaseJob(current);
     }
-    if (track.step === "connect" || track.step === "configure") {
-      track.step = "preflight";
-      track.status = "run";
-      current.tracks[platform] = track;
+    if (start.step === "connect" || start.step === "configure") {
+      start.step = "preflight";
+      start.status = "run";
+      current.tracks[platform] = start;
       current.status = "run";
       appendLog(current, `${platform}: preflight`);
       current = await writeReleaseJob(current);
     }
+    const held = current.tracks[platform] || start;
+    const persist: PersistTrack = async (patch) => {
+      const prev = current.tracks[platform] || held;
+      const merged: TrackState = {
+        ...prev,
+        ...patch,
+        provider: { ...prev.provider, ...patch.provider },
+      };
+      current.tracks[platform] = merged;
+      current = withLease(await writeReleaseJob(current), token);
+      const saved = current.tracks[platform] || merged;
+      Object.assign(held, saved);
+      held.provider = { ...saved.provider };
+      current.tracks[platform] = held;
+      return held;
+    };
     const adapter = adapterFor(platform, access);
-    const running = current.tracks[platform]!;
-    const result = await adapter.run(running.step, current, running);
+    const stepNow = held.step;
+    let result;
+    try {
+      result = await adapter.run(stepNow, current, held, persist);
+    } catch (err) {
+      const message = redactSecrets(err instanceof Error ? err.message : "errore");
+      held.status = "err";
+      held.error = message;
+      current.tracks[platform] = held;
+      current.status = "err";
+      current.error = message;
+      current.step = held.step;
+      appendLog(current, `${platform}: ${message}`);
+      return writeReleaseJob(current);
+    }
     if (!result.ok) {
-      running.status = "err";
-      running.error = result.error;
-      current.tracks[platform] = running;
+      held.status = "err";
+      held.error = result.error;
+      current.tracks[platform] = held;
       current.status = "err";
       current.error = result.error;
-      current.step = running.step;
+      current.step = held.step;
       appendLog(current, `${platform}: ${result.error || "errore"}`);
       return writeReleaseJob(current);
     }
-    running.fixture = result.fixture;
-    running.artifact = result.artifact || running.artifact;
-    if (running.step === "upload") running.uploads += 1;
-    const nxt = nextStep(running.step);
+    held.fixture = result.fixture;
+    held.artifact = result.artifact || held.artifact;
+    if (held.step === "upload" && !result.reconciled) held.uploads += 1;
+    if (result.pending) {
+      current.tracks[platform] = held;
+      current.status = "run";
+      current.step = held.step;
+      appendLog(current, `${platform}: ${held.step} in attesa del provider`);
+      return writeReleaseJob(current);
+    }
+    const nxt = nextStep(held.step);
     appendLog(
       current,
-      `${platform}: ${running.step}${result.fixture ? " (banco di prova)" : ""} → ${nxt}`,
+      `${platform}: ${held.step}${result.fixture ? " (banco di prova)" : ""}${result.reconciled ? " (già fatto)" : ""} → ${nxt}`,
     );
-    running.step = nxt;
+    held.step = nxt;
     if (nxt === "ready") {
-      running.status = "ok";
+      held.status = "ok";
       appendLog(
         current,
         platform === "ios"
@@ -155,9 +211,9 @@ export async function tickReleaseJob(
             : `${platform}: production Netlify.`,
       );
     } else {
-      running.status = "run";
+      held.status = "run";
     }
-    current.tracks[platform] = running;
+    current.tracks[platform] = held;
     current.status = "run";
     current.step = jobStep(current);
     current = await writeReleaseJob(current);
@@ -177,25 +233,31 @@ export async function runReleaseToIdle(
   job: StoredReleaseJob,
   access: WebUploadOwner,
   maxTicks = 24,
+  leaseToken?: string,
 ): Promise<StoredReleaseJob> {
+  const token = leaseToken || randomUUID();
   let current = job;
   for (let i = 0; i < maxTicks; i++) {
     if (current.status === "ok" || current.status === "err") return current;
-    current = await tickReleaseJob(current, access);
+    const before = snapTracks(current);
+    current = await tickReleaseJob(current, access, token);
+    if (current.status === "run" && snapTracks(current) === before) return current;
   }
   return current;
 }
 
-export async function resumeReleaseJob(
-  id: string,
+async function continueJob(
+  job: StoredReleaseJob,
   access: { ownerId: string },
 ): Promise<PublicReleaseJob | { error: string; status: number }> {
-  const job = await readReleaseJob(id);
-  if (!job) return { error: "Job non trovato.", status: 404 };
   if (job.ownerHash !== hashOwner(access.ownerId)) {
     return { error: "Non sei il titolare di questo job.", status: 403 };
   }
+  const token = randomUUID();
   if (job.status === "ok") return publicReleaseJob(job);
+  if (job.status !== "err" && !canTakeLease(job, token)) {
+    return publicReleaseJob(job);
+  }
   if (job.status === "err") {
     for (const p of job.platforms) {
       const t = job.tracks[p];
@@ -209,12 +271,19 @@ export async function resumeReleaseJob(
     job.status = "run";
     job.error = undefined;
     appendLog(job, "Riprendo dall'ultimo passo riuscito. Nessun secondo upload se è già andato.");
-    const saved = await writeReleaseJob(job);
-    const done = await runReleaseToIdle(saved, access);
-    return publicReleaseJob(done);
   }
-  const done = await runReleaseToIdle(job, access);
+  const saved = await writeReleaseJob(withLease(job, token));
+  const done = await runReleaseToIdle(saved, access, 24, token);
   return publicReleaseJob(done);
+}
+
+export async function resumeReleaseJob(
+  id: string,
+  access: { ownerId: string },
+): Promise<PublicReleaseJob | { error: string; status: number }> {
+  const job = await readReleaseJob(id);
+  if (!job) return { error: "Job non trovato.", status: 404 };
+  return continueJob(job, access);
 }
 
 export async function createReleaseJob(
@@ -268,26 +337,24 @@ export async function createReleaseJob(
       packageName: pkg,
     });
 
-  const existing = await readReleaseByKey(key);
-  if (existing && existing.ownerHash === ownerHash) {
-    if (existing.status === "ok" || existing.status === "run") {
-      const live = existing.status === "run" ? await runReleaseToIdle(existing, access) : existing;
-      return publicReleaseJob(live);
-    }
-    if (existing.status === "err") {
-      return resumeReleaseJob(existing.id, access);
-    }
+  const id = randomUUID();
+  const claim = await claimReleaseKey(key, id);
+  if (!claim.won) {
+    const existing = (await waitReleaseByKey(key)) || (await readReleaseJob(claim.id));
+    if (!existing) return { error: "Job in creazione. Riprova.", status: 409 };
+    return continueJob(existing, access);
   }
 
   const tracks = {} as StoredReleaseJob["tracks"];
   for (const p of PLATFORMS) tracks[p] = emptyTrack(p);
   const now = Date.now();
+  const token = randomUUID();
   const job: StoredReleaseJob = {
-    id: randomUUID(),
+    id,
     projectId,
     ownerHash,
     platforms,
-    status: "queued",
+    status: "run",
     step: "connect",
     log: ["Partito. Controllo HTML e record."],
     tracks,
@@ -303,8 +370,8 @@ export async function createReleaseJob(
     html: parsed.html,
     palette: parsed.palette,
   };
-  const saved = await writeReleaseJob(job);
-  const done = await runReleaseToIdle(saved, access);
+  const saved = await writeReleaseJob(withLease(job, token));
+  const done = await runReleaseToIdle(saved, access, 24, token);
   return publicReleaseJob(done);
 }
 
@@ -317,10 +384,7 @@ export async function loadReleaseJob(
   if (job.ownerHash !== hashOwner(access.ownerId)) {
     return { error: "Non sei il titolare di questo job.", status: 403 };
   }
-  if (job.status === "run") {
-    const done = await runReleaseToIdle(job, access);
-    return publicReleaseJob(done);
-  }
+  if (job.status === "run") return continueJob(job, access);
   return publicReleaseJob(job);
 }
 

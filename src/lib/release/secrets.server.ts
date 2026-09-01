@@ -39,6 +39,16 @@ export function appleCredentials(): { issuerId: string; keyId: string; privateKe
   return { issuerId, keyId, privateKey };
 }
 
+export function appleTeamId(): string | null {
+  const t = process.env.APPLE_TEAM_ID?.trim() || "";
+  return t.length >= 5 ? t : null;
+}
+
+export function androidKeystorePath(): string | null {
+  const p = process.env.ANDROID_KEYSTORE_PATH?.trim() || "";
+  return p.length > 2 ? p : null;
+}
+
 export function googleServiceAccount(): string | null {
   const raw =
     process.env.GOOGLE_PLAY_SERVICE_ACCOUNT?.trim() || process.env.GOOGLE_PLAY_JSON?.trim() || "";

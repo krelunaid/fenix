@@ -91,9 +91,9 @@ describe("publish panel multiplatform", () => {
       await page.getByRole("button", { name: "Android" }).click();
       await shot(page, "release-desktop.png");
       await page.setViewportSize({ width: 768, height: 1024 });
-      await shot(page, "release-tablet.png");
+      await page.getByRole("dialog").screenshot({ path: join(OUT, "release-tablet.png") });
       await page.setViewportSize({ width: 390, height: 844 });
-      await shot(page, "release-mobile.png");
+      await page.getByRole("dialog").screenshot({ path: join(OUT, "release-mobile.png") });
       const launch = page.getByRole("button", { name: /Pubblica su/ });
       await launch.waitFor({ timeout: 8000 });
       assert.equal(await launch.isDisabled(), false, "launch stays gated until snapshot");
