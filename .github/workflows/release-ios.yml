@@ -11,7 +11,8 @@ on:
         default: ios
         type: string
       step:
-        required: true
+        required: false
+        default: pipeline
         type: string
       intent_id:
         required: true
@@ -32,13 +33,16 @@ jobs:
         with:
           node-version: 22
       - run: npm install --ignore-scripts
-      - name: Run iOS step on macOS + Xcode
+      - name: Run iOS pipeline (build + sign + upload) on this runner
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           APPLE_ISSUER_ID: ${{ secrets.APPLE_ISSUER_ID }}
           APPLE_KEY_ID: ${{ secrets.APPLE_KEY_ID }}
           APPLE_PRIVATE_KEY: ${{ secrets.APPLE_PRIVATE_KEY }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_DISTRIBUTION_P12_BASE64: ${{ secrets.APPLE_DISTRIBUTION_P12_BASE64 }}
+          APPLE_DISTRIBUTION_P12_PASSWORD: ${{ secrets.APPLE_DISTRIBUTION_P12_PASSWORD }}
+          APPLE_PROVISIONING_PROFILE_BASE64: ${{ secrets.APPLE_PROVISIONING_PROFILE_BASE64 }}
           FENIX_RELEASE_CALLBACK_SECRET: ${{ secrets.FENIX_RELEASE_CALLBACK_SECRET }}
           FENIX_RELEASE_CALLBACK_URL: ${{ secrets.FENIX_RELEASE_CALLBACK_URL }}
-        run: node --experimental-strip-types workers/release/run.mjs --job "${{ inputs.job_id }}" --platform ios --step "${{ inputs.step }}" --intent "${{ inputs.intent_id }}"
+        run: node --experimental-strip-types workers/release/run.mjs --job "${{ inputs.job_id }}" --platform ios --intent "${{ inputs.intent_id }}"

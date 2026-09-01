@@ -11,7 +11,8 @@ on:
         default: android
         type: string
       step:
-        required: true
+        required: false
+        default: pipeline
         type: string
       intent_id:
         required: true
@@ -35,15 +36,19 @@ jobs:
         with:
           distribution: temurin
           java-version: "17"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.7"
       - run: npm install --ignore-scripts
-      - name: Run Android step on Linux + JDK
+      - name: Run Android pipeline (build + sign + upload) on this runner
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           GOOGLE_PLAY_SERVICE_ACCOUNT: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT }}
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           ANDROID_KEYSTORE_PATH: ${{ secrets.ANDROID_KEYSTORE_PATH }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
           FENIX_RELEASE_CALLBACK_SECRET: ${{ secrets.FENIX_RELEASE_CALLBACK_SECRET }}
           FENIX_RELEASE_CALLBACK_URL: ${{ secrets.FENIX_RELEASE_CALLBACK_URL }}
-        run: node --experimental-strip-types workers/release/run.mjs --job "${{ inputs.job_id }}" --platform android --step "${{ inputs.step }}" --intent "${{ inputs.intent_id }}"
+        run: node --experimental-strip-types workers/release/run.mjs --job "${{ inputs.job_id }}" --platform android --intent "${{ inputs.intent_id }}"
