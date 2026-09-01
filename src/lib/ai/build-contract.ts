@@ -149,9 +149,16 @@ function journeysFor(kind: ProjectKind): ContractJourney[] {
   return [{ id: "salva", steps: ["apri nuovo", "compila", "salva", "vedi in lista"] }];
 }
 
-/** Only files the product actually needs. Dashboard + "ordini" ⇒ data/ordini.json. No invented backend. */
+/** Only files the product actually needs. Mock JSON only if the brief asks for extra data files. Never invent a backend. */
 export function filesFor(kind: ProjectKind, brief = ""): string[] {
-  if (kind === "dashboard" && /\bordini\b/i.test(brief)) {
+  const p = brief.toLowerCase();
+  if (
+    kind === "dashboard" &&
+    (/data\/ordini\.json/i.test(brief) ||
+      /\bdati mock\b/i.test(p) ||
+      /\bapi locale\b/i.test(p) ||
+      /\bmulti-?file\b/i.test(p))
+  ) {
     return ["index.html", "data/ordini.json"];
   }
   return ["index.html"];

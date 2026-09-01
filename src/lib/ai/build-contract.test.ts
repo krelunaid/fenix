@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, it } from "node:test";
@@ -29,6 +29,7 @@ import { fileLooksLikeSecret } from "../projects/files.ts";
 import { validateProductHtml } from "../projects/validate-html.ts";
 import { gateIncompleteHtml } from "../projects/fenix-adapter.ts";
 import { DEFAULT_PALETTE } from "../projects/types.ts";
+import { polishDashboardHtml } from "../projects/dashboard-crud.ts";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const ARTIFACT = join(here, "fixtures/contract-eval.json");
@@ -41,9 +42,11 @@ describe("BuildContract planner (deterministic, no LLM)", () => {
     assert.ok(dash.screens.length >= 3);
     assert.ok(dash.entities.some((e) => e.crud));
     assert.ok(dash.files.includes("index.html"));
-    assert.equal(dash.files.includes("data/ordini.json"), true);
+    assert.equal(dash.files.includes("data/ordini.json"), false);
     assert.deepEqual(filesFor("dashboard", "gestionale magazzino"), ["index.html"]);
-    assert.deepEqual(filesFor("dashboard", "dashboard ordini della bottega"), ["index.html", "data/ordini.json"]);
+    assert.deepEqual(filesFor("dashboard", "Argilla Viva — magazzino e ordini"), ["index.html"]);
+    assert.deepEqual(filesFor("dashboard", "dashboard ordini della bottega"), ["index.html"]);
+    assert.deepEqual(filesFor("dashboard", "Kiln con ordini, dati mock e API locale"), ["index.html", "data/ordini.json"]);
     assert.equal(dash.visual.aa, true);
     assert.deepEqual([...dash.visual.viewports], ["D", "T", "M"]);
     assert.ok(parseContract(dash));
@@ -259,7 +262,7 @@ describe("false-positive gates closed", () => {
   });
 
   it("file-tree: dashboard without data/ordini.json fails; with file passes; extra mock is not required", () => {
-    const brief = `${formatPrefix("dashboard")}Kiln con ordini della bottega.`;
+    const brief = `${formatPrefix("dashboard")}Kiln con ordini, dati mock e API locale.`;
     const contract = planContract(brief);
     assert.deepEqual(contract.files, ["index.html", "data/ordini.json"]);
     const html = loadContractFixtures()[0]!.html;
@@ -283,6 +286,7 @@ describe("false-positive gates closed", () => {
     assert.equal(present.ok, true, formatContractErrors(present));
     assert.equal(present.checks.find((c) => c.id === "files")?.ok, true);
     assert.ok(multi.files.some((f) => f.path === "api/mock.js"));
+    assert.deepEqual(filesFor("dashboard", "Argilla Viva — magazzino e ordini."), ["index.html"]);
   });
 
   it("eval/secret/missing CRUD pass validateProductHtml then stay blocked by gate", async () => {
@@ -353,6 +357,14 @@ describe("false-positive gates closed", () => {
     });
     assert.equal("error" in gatedCrud, true);
     assert.match((gatedCrud as { error: string }).error, /crud|Fenix|completo/i);
+
+    const argilla = readFileSync(join(here, "../projects/fixtures/argilla-viva.html"), "utf8");
+    const polished = polishDashboardHtml(argilla, "dashboard");
+    const argillaPrompt = "FORMATO: gestionale ufficio. kind=dashboard. Argilla Viva — magazzino e ordini.";
+    assert.deepEqual(planContract(argillaPrompt).files, ["index.html"]);
+    assert.equal(blocksPublish(polished, "dashboard", undefined, argillaPrompt), "");
+    const kiln = loadContractFixtures()[0]!;
+    assert.equal(blocksPublish(kiln.html, "dashboard", kiln.files, argillaPrompt), "");
   });
 });
 

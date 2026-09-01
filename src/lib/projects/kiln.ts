@@ -19,6 +19,7 @@ header{display:flex;align-items:center;justify-content:space-between;padding:12p
 .tabs{display:flex;gap:6px;flex-wrap:wrap}
 .tabs button{height:32px;padding:0 12px;border:1px solid var(--line);background:transparent;color:var(--muted);font:600 12px "IBM Plex Mono",monospace;cursor:pointer}
 .tabs button.on{border-color:var(--accent);color:var(--accent)}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 main{max-width:1120px;margin:0 auto;padding:20px 18px 72px}
 h1{font-size:clamp(2rem,5vw,3rem);margin-bottom:6px}
 .sub{color:var(--muted);font-size:12px;letter-spacing:.08em;text-transform:uppercase}

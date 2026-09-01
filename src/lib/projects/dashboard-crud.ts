@@ -116,24 +116,37 @@ table{width:100%;border-collapse:collapse;background:var(--surface)}
 th{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);text-align:left;padding:10px 12px;border-bottom:1px solid var(--line)}
 td{padding:10px 12px;border-bottom:1px solid var(--line);color:var(--fg)}
 button, .cta{border-radius:2px}
+button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 dialog, [role=dialog], .modal{background:var(--surface);color:var(--fg);border:1px solid var(--line);padding:20px 22px;max-width:420px}
 </style>`;
 
 const VESSEL_MARK = `<span class="fk-appicon" aria-hidden="true" data-fenix-vessel><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M8 8h8l-1 11H9L8 8z"/><path d="M9 8V6h6v2"/><path d="M7 8h10"/></svg></span>`;
 
+function neutralizeIosTemplate(html: string): string {
+  return html
+    .replace(/#f5f5f7/gi, ARGILLA_PALETTE.bg)
+    .replace(/#0071e3/gi, ARGILLA_PALETTE.accent)
+    .replace(/\bInter\b/g, "Source Sans 3")
+    .replace(/\bManrope\b/g, "Fraunces");
+}
+
 export function applyCraftDashboardSkin(html: string): string {
-  if (!html || /data-fenix-craft-desk/.test(html)) return html;
+  if (!html) return html;
   if (/Barlow Condensed/i.test(html) && /#0e0d0b/i.test(html)) return html;
   let next = html;
-  if (/<head[^>]*>/i.test(next)) {
-    next = next.replace(/<head[^>]*>/i, (open) => `${open}${CRAFT_DESK_CSS}`);
-  } else {
-    next = CRAFT_DESK_CSS + next;
+  if (!/data-fenix-craft-desk/.test(next)) {
+    if (/<\/head>/i.test(next)) {
+      next = next.replace(/<\/head>/i, `${CRAFT_DESK_CSS}</head>`);
+    } else if (/<head[^>]*>/i.test(next)) {
+      next = next.replace(/<head[^>]*>/i, (open) => `${open}${CRAFT_DESK_CSS}`);
+    } else {
+      next = CRAFT_DESK_CSS + next;
+    }
+    if (!/data-fenix-vessel/.test(next) && /<header/i.test(next)) {
+      next = next.replace(/<header([^>]*)>/i, `<header$1>${VESSEL_MARK}`);
+    }
   }
-  if (!/data-fenix-vessel/.test(next) && /<header/i.test(next)) {
-    next = next.replace(/<header([^>]*)>/i, `<header$1>${VESSEL_MARK}`);
-  }
-  return next;
+  return neutralizeIosTemplate(next);
 }
 
 export function polishDashboardHtml(html: string, kind?: string): string {

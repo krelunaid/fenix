@@ -60,7 +60,7 @@ export const QUALITY_LEDGER: LedgerRow[] = [
   },
   {
     id: "files-tree",
-    claim: "File obbligatori del contratto devono esistere nell'output. Dashboard senza data/ordini.json fallisce; con file passa. Extra mock non eseguito.",
+    claim: "File obbligatori del contratto devono esistere. Extra mock solo se il brief li chiede (dati mock / API locale / data/ordini.json). Un gestionale con la parola «ordini» non inventa un JSON. Dashboard mock senza il file fallisce; con file passa.",
     evidence: "src/lib/ai/build-contract.test.ts file-tree dashboard without/with data/ordini.json",
     ok: true,
   },
@@ -78,7 +78,7 @@ export const QUALITY_LEDGER: LedgerRow[] = [
   },
   {
     id: "browser-dtm",
-    claim: "D/T/M: console 0, overflow ≤8, focus visibile (outline/box-shadow) e target ≥24px. Screenshot + manifest sha256 in src/lib/ai/fixtures/dtm (Chromium drift: presenza e peso, non pixel-hash in CI).",
+    claim: "D/T/M: console 0, overflow ≤8, focus visibile (outline/box-shadow) e target ≥24px misurati in Chromium sul srcdoc (runtime Fenix + kit preview). Screenshot + manifest sha256 in src/lib/ai/fixtures/dtm (presenza e peso, non pixel-hash in CI). Claim ridotto da 44px: 24px è la soglia asserita.",
     evidence: "src/lib/ai/build-contract-browser.test.ts viewports 1280/768/390 + fixtures/dtm/manifest.json",
     ok: true,
   },

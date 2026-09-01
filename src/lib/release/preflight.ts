@@ -1,4 +1,5 @@
 import { validatePublishable } from "../projects/validate-html.ts";
+import { blocksPublish } from "../ai/build-contract.ts";
 import type { Palette, ProjectKind } from "../projects/types.ts";
 import {
   missingStoreRecord,
@@ -76,10 +77,11 @@ export function gateHtml(html: string, kind: string, projectId: string, palette?
     projectId,
     palette,
   });
-  if (!report.ok) {
+  const contractBlock = blocksPublish(html, kind);
+  if (!report.ok || contractBlock) {
     return {
       ok: false as const,
-      error: report.errors[0] || "Il prodotto non è completo, non pubblico.",
+      error: report.errors[0] || contractBlock || "Il prodotto non è completo, non pubblico.",
       srcDoc: report.srcDoc,
     };
   }

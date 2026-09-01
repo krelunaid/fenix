@@ -28,11 +28,11 @@ function launch() {
 }
 
 async function shot(page: Page, name: string) {
-  mkdirSync(OUT, { recursive: true });
   mkdirSync(DTM, { recursive: true });
   const dest = join(DTM, name);
   await page.screenshot({ path: dest, fullPage: false });
   try {
+    mkdirSync(OUT, { recursive: true });
     await page.screenshot({ path: join(OUT, name), fullPage: false });
   } catch {
     /* CI without the scorecard dir is fine */
