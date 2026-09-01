@@ -19,7 +19,10 @@ export type ContractFixture = {
 export function loadContractFixtures(): ContractFixture[] {
   const kiln = DEMOS.kiln;
   const grotta = DEMOS.grottaglie;
-  const extra = DASHBOARD_MOCK.filter((f) => f.path !== "index.html");
+  const multiHtml = kiln.html
+    .replace(/<\/head>/i, '<link rel="stylesheet" href="./css/theme.css"></head>')
+    .replace(/<\/body>/i, '<script src="./js/app.js"></script></body>');
+  const multiFiles = DASHBOARD_MOCK.filter((f) => f.path !== "index.html");
   return [
     {
       id: "gestionale-crud",
@@ -41,8 +44,8 @@ export function loadContractFixtures(): ContractFixture[] {
       id: "dashboard-multifile",
       family: "dashboard full-stack/multi-file",
       brief: `${formatPrefix("dashboard")}Kiln con ordini, dati mock e API locale. Nessun server inventato.`,
-      html: kiln.html,
-      files: [{ path: "index.html", content: kiln.html }, ...extra],
+      html: multiHtml,
+      files: [{ path: "index.html", content: multiHtml }, ...multiFiles],
       palette: kiln.palette,
     },
   ];

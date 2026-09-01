@@ -9,7 +9,7 @@ const SITE_HTML = readFileSync(join(here, "music-site-no-fenix.html"), "utf8");
 const DASH_HTML = readFileSync(join(here, "argilla-viva.html"), "utf8");
 const APP_HTML = readFileSync(join(here, "valid-app.html"), "utf8");
 
-/** Sito multi-file: HTML + CSS + JS + pagina. Anteprima resta index.html. */
+/** Sito multi-file: sorgenti portabili; solo i riferimenti espliciti vengono eseguiti. */
 export const SITE_MULTIFILE: ProjectFile[] = [
   { path: "index.html", content: SITE_HTML },
   {
@@ -29,7 +29,13 @@ export const SITE_MULTIFILE: ProjectFile[] = [
 
 /** Dashboard con dati e API mock nel tree. Nessun backend inventato. */
 export const DASHBOARD_MOCK: ProjectFile[] = [
-  { path: "index.html", content: DASH_HTML },
+  {
+    path: "index.html",
+    content: DASH_HTML.replace(
+      /<\/head>/i,
+      '<link rel="stylesheet" href="./css/theme.css"></head>',
+    ).replace(/<\/body>/i, '<script src="./js/app.js"></script></body>'),
+  },
   {
     path: "data/ordini.json",
     content: `${JSON.stringify(
@@ -45,12 +51,12 @@ export const DASHBOARD_MOCK: ProjectFile[] = [
     )}\n`,
   },
   {
-    path: "api/mock.js",
+    path: "js/app.js",
     content:
-      "export async function listOrdini(){const r=await fetch('./data/ordini.json');return r.json()}",
+      "window.FenixMock={async listOrdini(){const r=await fetch('./data/ordini.json');return r.json()}}",
   },
   {
-    path: "css/desk.css",
+    path: "css/theme.css",
     content: "table{width:100%;border-collapse:collapse}th,td{padding:8px;border-bottom:1px solid #d7c4b0}",
   },
 ];

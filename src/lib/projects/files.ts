@@ -406,9 +406,106 @@ export function previewHtmlFromTree(files: ProjectFile[], fallbackHtml = ""): st
   return tree.find((f) => f.path === entrypointOf(tree))?.content || fallbackHtml || "";
 }
 
-/** Live preview is the denormalized HTML. Extra tree files are never executed as URLs. */
+function attrValue(attrs: string, name: string): string {
+  const quoted = attrs.match(new RegExp(`\\b${name}\\s*=\\s*(["'])([^"']*)\\1`, "i"));
+  if (quoted) return quoted[2] || "";
+  return attrs.match(new RegExp(`\\b${name}\\s*=\\s*([^\\s>]+)`, "i"))?.[1] || "";
+}
+
+function localTreePath(raw: string): string {
+  const value = raw.trim();
+  if (!value || value.startsWith("#") || value.startsWith("//")) return "";
+  if (/^[a-z][a-z0-9+.-]*:/i.test(value)) return "";
+  const withoutSuffix = value.split(/[?#]/, 1)[0] || "";
+  const canon = canonicalizePath(withoutSuffix.replace(/^\.\//, ""));
+  return canon.ok ? canon.path : "";
+}
+
+function safeStyleBody(css: string): string {
+  return css.replace(/<\/style/gi, "<\\/style");
+}
+
+function safeScriptBody(js: string): string {
+  return js.replace(/<\/script/gi, "<\\/script");
+}
+
+function contentType(path: string): string {
+  if (/\.json$/i.test(path)) return "application/json";
+  if (/\.csv$/i.test(path)) return "text/csv";
+  if (/\.svg$/i.test(path)) return "image/svg+xml";
+  if (/\.xml$/i.test(path)) return "application/xml";
+  return "text/plain";
+}
+
+function treeFetchShim(files: Map<string, ProjectFile>, html: string): string {
+  const resources: Record<string, { body: string; type: string }> = {};
+  for (const match of html.matchAll(/\bfetch\s*\(\s*(["'])([^"']+)\1/gi)) {
+    const path = localTreePath(match[2] || "");
+    const file = path ? files.get(path) : undefined;
+    if (!file || !/\.(?:json|csv|txt|xml|svg)$/i.test(file.path)) continue;
+    resources[file.path] = { body: file.content, type: contentType(file.path) };
+  }
+  if (!Object.keys(resources).length) return "";
+  const payload = JSON.stringify(resources).replace(/</g, "\\u003c");
+  return `<script data-fenix-tree-fetch>(function(){
+var files=${payload};
+var nativeFetch=window.fetch.bind(window);
+window.fetch=function(input,init){
+  var raw=typeof input==='string'?input:(input&&typeof input.url==='string'?input.url:'');
+  if(raw&&!/^[a-z][a-z0-9+.-]*:/i.test(raw)&&raw.slice(0,2)!=='//'){
+    var key=raw.split(/[?#]/,1)[0];
+    while(key.slice(0,2)==='./')key=key.slice(2);
+    var hit=files[key];
+    if(hit)return Promise.resolve(new Response(hit.body,{status:200,headers:{'Content-Type':hit.type}}));
+  }
+  return nativeFetch(input,init);
+};
+})();</script>`;
+}
+
+/**
+ * Produce one sandboxable document from the canonical tree.
+ * Only local files explicitly referenced by index.html are executable; unreferenced
+ * scripts remain portable source. Small data files are exposed through an in-memory
+ * fetch shim, so preview, publish and native wrappers run the same artifact.
+ */
+export function bundleProjectHtml(files: ProjectFile[], fallbackHtml = ""): string {
+  const tree = ingestProjectFiles(files, { html: fallbackHtml || undefined }).files;
+  const index = tree.find((f) => f.path === entrypointOf(tree))?.content || fallbackHtml || "";
+  if (!index) return "";
+  const byPath = new Map(tree.map((file) => [file.path, file]));
+
+  let html = index.replace(/<link\b([^>]*)>/gi, (tag, attrs: string) => {
+    const rel = attrValue(attrs, "rel").toLowerCase();
+    const path = localTreePath(attrValue(attrs, "href"));
+    const file = path ? byPath.get(path) : undefined;
+    if (!file || !/\.css$/i.test(path) || !rel.split(/\s+/).includes("stylesheet")) return tag;
+    return `<style data-fenix-file="${path}">${safeStyleBody(file.content)}</style>`;
+  });
+
+  html = html.replace(
+    /<script\b([^>]*)\bsrc\s*=\s*(["'])([^"']+)\2([^>]*)>\s*<\/script>/gi,
+    (tag, before: string, _quote: string, rawPath: string, after: string) => {
+      const path = localTreePath(rawPath);
+      const file = path ? byPath.get(path) : undefined;
+      if (!file || !/\.(?:js|mjs)$/i.test(path)) return tag;
+      return `<script${before}${after} data-fenix-file="${path}">${safeScriptBody(file.content)}</script>`;
+    },
+  );
+
+  const shim = treeFetchShim(byPath, html);
+  if (shim) {
+    html = /<script\b/i.test(html)
+      ? html.replace(/<script\b/i, `${shim}<script`)
+      : /<\/head>/i.test(html)
+        ? html.replace(/<\/head>/i, `${shim}</head>`)
+        : `${shim}${html}`;
+  }
+  return html;
+}
+
+/** Live preview is a deterministic single document built from the canonical tree. */
 export function authorizedPreviewHtml(input: { html?: string; files?: ProjectFile[] }): string {
   const html = typeof input.html === "string" ? input.html : "";
-  if (html) return html;
-  return previewHtmlFromTree(input.files || []);
+  return bundleProjectHtml(input.files || [], html);
 }

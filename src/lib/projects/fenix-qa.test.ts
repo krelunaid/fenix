@@ -104,6 +104,8 @@ describe("focus-visible and worker model", () => {
     assert.match(zipSrc, /fenix\.json/);
     const publishPanel = readFileSync(join(root, "src/components/publish-panel.tsx"), "utf8");
     assert.match(publishPanel, /zipProject/);
+    assert.match(publishPanel, /authorizedPreviewHtml/);
+    assert.match(publishPanel, /html: publishedHtml/);
     const sito = readFileSync(join(root, "src/routes/sito.$projectId.tsx"), "utf8");
     assert.doesNotMatch(sito, /useProjectStore/);
     assert.match(sito, /loadPublished/);

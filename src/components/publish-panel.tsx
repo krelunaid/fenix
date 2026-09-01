@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { downloadBytes, downloadTextFile, slugify } from "@/lib/utils";
 import { zipProject } from "@/lib/projects/zip";
 import type { ProjectFile } from "@/lib/projects/files";
-import { projectFiles } from "@/lib/projects/files";
+import { authorizedPreviewHtml, projectFiles } from "@/lib/projects/files";
 import type { Palette, ProjectKind } from "@/lib/projects/types";
 import { publishSnapshot, readPublishedId } from "@/lib/projects/publish-client";
 import type { PublishedSnapshot } from "@/lib/projects/published";
@@ -72,6 +72,10 @@ export function PublishPanel({
     }),
     [name],
   );
+  const publishedHtml = useMemo(
+    () => authorizedPreviewHtml({ html, files }),
+    [html, files],
+  );
 
   useEffect(() => {
     if (!open) return;
@@ -83,7 +87,7 @@ export function PublishPanel({
   }, [open, onClose]);
 
   useEffect(() => {
-    if (!open || !html) return;
+    if (!open || !publishedHtml) return;
     let cancelled = false;
     setBusy(true);
     setError(null);
@@ -93,7 +97,7 @@ export function PublishPanel({
     void publishSnapshot({
       id: projectId,
       name,
-      html,
+      html: publishedHtml,
       kind,
       palette,
       tagline,
@@ -120,7 +124,7 @@ export function PublishPanel({
     return () => {
       cancelled = true;
     };
-  }, [open, projectId, name, html, kind, palette, tagline, summary, defaults.bundleId, defaults.packageName]);
+  }, [open, projectId, name, publishedHtml, kind, palette, tagline, summary, defaults.bundleId, defaults.packageName]);
 
   useEffect(() => {
     if (!open || !job || job.status !== "run") return;
@@ -170,7 +174,7 @@ export function PublishPanel({
   }
 
   function downloadSite() {
-    downloadTextFile("index.html", html, "text/html;charset=utf-8");
+    downloadTextFile("index.html", publishedHtml, "text/html;charset=utf-8");
     toast(`index.html scaricato · ${slugify(name)}`);
   }
 
@@ -182,7 +186,7 @@ export function PublishPanel({
 
   async function copyHtml() {
     try {
-      await navigator.clipboard.writeText(html);
+      await navigator.clipboard.writeText(publishedHtml);
       toast("HTML copiato. Incollalo sul tuo hosting.");
     } catch {
       toast("Non sono riuscito a copiare. Usa Scarica.");
@@ -207,7 +211,7 @@ export function PublishPanel({
       const next = await startRelease({
         projectId: publicId || projectId,
         name,
-        html,
+        html: publishedHtml,
         kind,
         palette,
         tagline,

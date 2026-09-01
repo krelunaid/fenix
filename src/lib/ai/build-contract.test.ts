@@ -46,7 +46,12 @@ describe("BuildContract planner (deterministic, no LLM)", () => {
     assert.deepEqual(filesFor("dashboard", "gestionale magazzino"), ["index.html"]);
     assert.deepEqual(filesFor("dashboard", "Argilla Viva — magazzino e ordini"), ["index.html"]);
     assert.deepEqual(filesFor("dashboard", "dashboard ordini della bottega"), ["index.html"]);
-    assert.deepEqual(filesFor("dashboard", "Kiln con ordini, dati mock e API locale"), ["index.html", "data/ordini.json"]);
+    assert.deepEqual(filesFor("dashboard", "Kiln con ordini, dati mock e API locale"), [
+      "index.html",
+      "css/theme.css",
+      "js/app.js",
+      "data/ordini.json",
+    ]);
     assert.equal(dash.visual.aa, true);
     assert.deepEqual([...dash.visual.viewports], ["D", "T", "M"]);
     assert.ok(parseContract(dash));
@@ -123,7 +128,7 @@ describe("deterministic evaluator on 3 distinct fixtures", () => {
     });
     const multi = fixtures.find((f) => f.id === "dashboard-multifile");
     assert.ok(multi?.files.some((f) => f.path === "data/ordini.json"));
-    assert.ok(multi?.files.some((f) => f.path === "api/mock.js"));
+    assert.ok(multi?.files.some((f) => f.path === "js/app.js"));
     assert.equal(
       multi?.files.some((f) => fileLooksLikeSecret(f.content, f.path)),
       false,
@@ -261,10 +266,15 @@ describe("false-positive gates closed", () => {
     assert.equal(washed.ok, false);
   });
 
-  it("file-tree: dashboard without data/ordini.json fails; with file passes; extra mock is not required", () => {
+  it("file-tree: requested runtime files are all required and execute as one artifact", () => {
     const brief = `${formatPrefix("dashboard")}Kiln con ordini, dati mock e API locale.`;
     const contract = planContract(brief);
-    assert.deepEqual(contract.files, ["index.html", "data/ordini.json"]);
+    assert.deepEqual(contract.files, [
+      "index.html",
+      "css/theme.css",
+      "js/app.js",
+      "data/ordini.json",
+    ]);
     const html = loadContractFixtures()[0]!.html;
     const missing = evaluateContract({
       html,
@@ -285,7 +295,7 @@ describe("false-positive gates closed", () => {
     });
     assert.equal(present.ok, true, formatContractErrors(present));
     assert.equal(present.checks.find((c) => c.id === "files")?.ok, true);
-    assert.ok(multi.files.some((f) => f.path === "api/mock.js"));
+    assert.ok(multi.files.some((f) => f.path === "js/app.js"));
     assert.deepEqual(filesFor("dashboard", "Argilla Viva — magazzino e ordini."), ["index.html"]);
   });
 

@@ -48,7 +48,7 @@ export const QUALITY_LEDGER: LedgerRow[] = [
   },
   {
     id: "eval-multifile",
-    claim: "Dashboard multi-file: index.html + data/ordini.json + api/mock.js ingestiti, niente secret.",
+    claim: "Dashboard multi-file: index.html collega css/theme.css e js/app.js; il runtime legge data/ordini.json, niente secret.",
     evidence: "src/lib/ai/build-contract.test.ts fixture dashboard-multifile (DASHBOARD_MOCK)",
     ok: true,
   },
@@ -60,8 +60,14 @@ export const QUALITY_LEDGER: LedgerRow[] = [
   },
   {
     id: "files-tree",
-    claim: "File obbligatori del contratto devono esistere. Extra mock solo se il brief li chiede (dati mock / API locale / data/ordini.json). Un gestionale con la parola «ordini» non inventa un JSON. Dashboard mock senza il file fallisce; con file passa.",
-    evidence: "src/lib/ai/build-contract.test.ts file-tree dashboard without/with data/ordini.json",
+    claim: "File obbligatori del contratto devono esistere. CSS, JS e dati mock sono richiesti solo se il brief domanda dati mock/API locale/multi-file. La sola parola «ordini» non inventa file. Un runtime incompleto fallisce; l'albero completo passa.",
+    evidence: "src/lib/ai/build-contract.test.ts requested runtime files missing/complete",
+    ok: true,
+  },
+  {
+    id: "multifile-runtime",
+    claim: "CSS/JS locali referenziati da index.html e fetch di dati del tree diventano un artifact singolo riproducibile. Script non referenziati, traversal e URL esterni non vengono incorporati.",
+    evidence: "src/lib/projects/files.test.ts bundle multi-file + src/components/publish-panel.tsx publishedHtml",
     ok: true,
   },
   {

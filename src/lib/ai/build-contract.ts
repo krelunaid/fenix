@@ -1,6 +1,6 @@
 import { FENIX_MODEL } from "./model.ts";
 import type { ProjectFile } from "../projects/files.ts";
-import { fileLooksLikeSecret, ingestProjectFiles } from "../projects/files.ts";
+import { bundleProjectHtml, fileLooksLikeSecret, ingestProjectFiles } from "../projects/files.ts";
 import {
   inferKind,
   isDeskKind,
@@ -159,7 +159,7 @@ export function filesFor(kind: ProjectKind, brief = ""): string[] {
       /\bapi locale\b/i.test(p) ||
       /\bmulti-?file\b/i.test(p))
   ) {
-    return ["index.html", "data/ordini.json"];
+    return ["index.html", "css/theme.css", "js/app.js", "data/ordini.json"];
   }
   return ["index.html"];
 }
@@ -286,7 +286,7 @@ export function contractInstruction(contract: BuildContract): string {
     `entità: ${entities}`,
     `file obbligatori: ${contract.files.join(", ")}`,
     fileBlocks
-      ? `Emetti ogni extra come ${fileBlocks} … contenuto … poi <<<HTML>>> e <<<END>>>. Niente server, extra file non eseguiti.`
+      ? `Emetti ogni extra come ${fileBlocks} … contenuto … poi <<<HTML>>> e <<<END>>>. Collega CSS/JS locali da index.html e usa fetch per i dati locali: Fenix li assembla nello stesso artifact. Niente server inventato.`
       : 'Documento META + <<<HTML>>> + <<<END>>>. Extra file solo con <<<FILE path="...">>> se servono, e solo se il contratto li elenca.',
     `accetta: ${contract.acceptance.join("; ")}`,
     `a11y: ${contract.constraints.a11y.join("; ")}`,
@@ -349,12 +349,13 @@ export function evaluateContract(input: {
 }): ContractEval {
   const html = String(input.html || "");
   const kind = input.kind || input.contract.kind;
-  const report = validateProductHtml(html, { kind });
   const ingest = ingestProjectFiles(input.files, { html });
+  const runtimeHtml = bundleProjectHtml(ingest.files, html);
+  const report = validateProductHtml(runtimeHtml, { kind });
   const paths = new Set(ingest.files.map((f) => f.path));
-  const code = productScripts(html);
-  const css = styleBlocks(html);
-  const visual = auditCraft(html);
+  const code = productScripts(runtimeHtml);
+  const css = styleBlocks(runtimeHtml);
+  const visual = auditCraft(runtimeHtml);
 
   const secretFile = ingest.files.find((f) => fileLooksLikeSecret(f.content, f.path));
   const secretReject = ingest.rejected.find((r) => r.reason === "segreto");
@@ -364,11 +365,11 @@ export function evaluateContract(input: {
   const expected = input.contract.files.filter(Boolean);
   const missingExpected = expected.filter((p) => !paths.has(p));
 
-  const hasTable = /<table\b/i.test(html);
-  const hasForm = /<form\b/i.test(html);
-  const hasFenix = htmlHasFenixApi(html);
-  const views = new Set([...html.matchAll(/data-view=["']([^"']+)["']/gi)].map((m) => m[1]));
-  const sections = (html.match(/<section\b/gi) || []).length;
+  const hasTable = /<table\b/i.test(runtimeHtml);
+  const hasForm = /<form\b/i.test(runtimeHtml);
+  const hasFenix = htmlHasFenixApi(runtimeHtml);
+  const views = new Set([...runtimeHtml.matchAll(/data-view=["']([^"']+)["']/gi)].map((m) => m[1]));
+  const sections = (runtimeHtml.match(/<section\b/gi) || []).length;
   const crudOk =
     kind === "landing"
       ? hasForm || sections >= 4 || views.size >= 3
@@ -381,11 +382,11 @@ export function evaluateContract(input: {
 
   const bodyOverflow = /(?:^|})\s*body\s*\{[^}]*overflow\s*:\s*hidden/i.test(css);
   const phoneDesktop = isPhoneKind(kind) && /min-width\s*:\s*1[1-9]\d{2,}px/i.test(css);
-  const iframeSameOrigin = /sandbox\s*=\s*["'][^"']*allow-same-origin/i.test(html);
+  const iframeSameOrigin = /sandbox\s*=\s*["'][^"']*allow-same-origin/i.test(runtimeHtml);
   const evalCall = /\beval\s*\(|\bnew Function\s*\(/.test(code);
-  const hasFocus = /:focus-visible|:focus\b/.test(`${html}\n${css}`);
+  const hasFocus = /:focus-visible|:focus\b/.test(`${runtimeHtml}\n${css}`);
 
-  const pair = extractColorPair(html);
+  const pair = extractColorPair(runtimeHtml);
   const contrast = pair ? contrastRatio(pair.fg, pair.bg) : 0;
   const aaOk = Boolean(pair) && contrast >= 4.5;
   const dnaOk = !visual.genericFont && !visual.aiPurple && !(visual.genericIosGray && visual.genericIosBlue);
@@ -400,7 +401,7 @@ export function evaluateContract(input: {
   const checks: ContractCheck[] = [
     check("html", report.ok, report.ok ? "HTML valido" : report.errors.slice(0, 3).join(" · ")),
     check("kind-lock", report.ok || !report.errors.some((e) => /tabbar telefono|gestionale|scaffold/i.test(e)), kind),
-    check("srcdoc", /<!DOCTYPE html/i.test(html) && /<\/html>/i.test(html) && /<body[\s>]/i.test(html), "documento completo"),
+    check("srcdoc", /<!DOCTYPE html/i.test(runtimeHtml) && /<\/html>/i.test(runtimeHtml) && /<body[\s>]/i.test(runtimeHtml), "documento completo"),
     check("files", filesOk, filesDetail),
     check("crud", crudOk, hasFenix ? (hasForm || hasTable ? "Fenix + form/tabella" : "Fenix") : kind === "landing" ? "landing" : "manca Fenix.load/save"),
     check("security", !secretHit && !evalCall && !iframeSameOrigin && !/\blocalStorage\b/.test(code), secretHit ? `segreto ${secretHit}` : evalCall ? "eval" : iframeSameOrigin ? "sandbox allow-same-origin" : "ok"),

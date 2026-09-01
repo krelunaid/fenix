@@ -76,7 +76,7 @@ Desktop-first: h1 clamp(2.5rem, 6vw, 4.6rem), max-width 1120px, niente 100dvh co
 VIETATO: nav.fk-tab, nav.bottom-tab, header.fk-top, template t-home, src/screens/*.tsx, 5 tab, fk-appicon, max-width 430px, Inter, Manrope, Apple, iOS, Fenix, Grok.
 Foto: 1 hero (fk-hero) + 2–4 Unsplash photo- con &w=1600. Form che conferma e salva i messaggi.
 CSS in <style>, Google Fonts del mestiere. Niente commenti.
-File extra solo se il contratto li elenca, come <<<FILE path="css/theme.css">>>. Niente server, extra file non eseguiti. L'HTML resta il documento dell'anteprima.
+File extra solo se il contratto li elenca. Se elenca css/theme.css o js/app.js, collegali da index.html; i dati locali si leggono con fetch. Fenix assembla i riferimenti locali per anteprima, pubblicazione e app. Niente server inventato.
 Rispondi SOLO:
 <<<META>>>
 {"name":"","tagline":"","kind":"site","direction":"3-6 parole","summary":"cosa si visita","palette":{"bg":"#rrggbb","surface":"#rrggbb","fg":"#rrggbb","muted":"#rrggbb","accent":"#rrggbb"}}
@@ -123,7 +123,7 @@ Obbligo:
 4) Documento completo <!DOCTYPE html> … </html>.
 5) Se kind=site/landing: togli scaffold gestionale (.orders, inventario, Nuovo pezzo). Stato = oggetto vuoto, mai null. Non leggere .orders su null.
 6) Cattura TypeError di avvio (DOMContentLoaded, unhandledrejection). Non lasciare stato null.
-7) Se ERRORI elencano file mancanti, emetti <<<FILE path="data/ordini.json">>> (o il path citato) con contenuto onesto. Niente backend, niente server. Extra file non eseguiti.
+7) Se ERRORI elencano file mancanti, emetti tutti i <<<FILE path="...">>> citati con contenuto onesto. Collega CSS/JS da index.html e usa fetch per i dati locali. Niente backend o server inventati.
 8) Contrasto --fg su --bg ≥ 4.5. Niente eval, localStorage, secret.
 
 Rispondi SOLO META + eventuali <<<FILE path="...">>> + <<<HTML>>> + <<<END>>>.`;

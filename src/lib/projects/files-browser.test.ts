@@ -7,6 +7,7 @@ import { requirePreview } from "./ensure-preview.ts";
 import { SITE_MULTIFILE } from "./fixtures/trees.ts";
 import { DEFAULT_PALETTE, type Project } from "./types.ts";
 import { commitIfChanged } from "./revisions.ts";
+import { bundleProjectHtml } from "./files.ts";
 
 const PREVIEW = process.env.PREVIEW_URL || "http://127.0.0.1:8081";
 const OUT = process.env.FENIX_SCORECARD_OUT || "/workspace/screenshots/fase3-tree";
@@ -101,6 +102,38 @@ describe("studio file tree", () => {
         assert.equal(noise.length, 0, `${name} console ${noise.join(" | ")}`);
         await page.close();
       }
+    } finally {
+      await browser.close();
+    }
+  });
+});
+
+describe("multi-file runtime", () => {
+  it("runs linked CSS, linked JS and local JSON fetch in one sandboxable artifact", async () => {
+    const browser = await chromium.launch({ headless: true, args: ["--no-sandbox"] });
+    try {
+      const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+      const errors: string[] = [];
+      page.on("pageerror", (err) => errors.push(String(err)));
+      const html = bundleProjectHtml([
+        {
+          path: "index.html",
+          content: `<!doctype html><html><head><link rel="stylesheet" href="./css/app.css"></head>
+          <body><output id="result">attesa</output><script src="./js/app.js"></script></body></html>`,
+        },
+        { path: "css/app.css", content: "#result{color:rgb(31,95,139)}" },
+        {
+          path: "js/app.js",
+          content: "fetch('./data/items.json').then(r=>r.json()).then(x=>document.getElementById('result').textContent=x.items[0])",
+        },
+        { path: "data/items.json", content: '{"items":["Ciotola"]}' },
+        { path: "js/unreferenced.js", content: "window.unreferencedRan=true" },
+      ]);
+      await page.setContent(html, { waitUntil: "domcontentloaded" });
+      await page.locator("#result").getByText("Ciotola").waitFor({ timeout: 3000 });
+      assert.equal(await page.locator("#result").evaluate((el) => getComputedStyle(el).color), "rgb(31, 95, 139)");
+      assert.equal(await page.evaluate(() => Boolean((window as Window & { unreferencedRan?: boolean }).unreferencedRan)), false);
+      assert.deepEqual(errors, []);
     } finally {
       await browser.close();
     }

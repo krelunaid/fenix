@@ -31,7 +31,7 @@ export const FASE3_GAPS: Fase3Gap[] = [
     id: "project-tree",
     area: "Progetti multi-file / full-stack",
     emergent: "Albero React/Next + backend Node/FastAPI + Mongo, file veri.",
-    fenix: "Albero POSIX durevole: ingest (no .., no assoluti, no secret/binari, 48 file / 1.5MB). Entrypoint index.html, migrazione HTML-only senza perdere kind/storage/publish. ZIP+fenix.json. Studio ispeziona l'albero D/T/M. Preview/publish solo HTML validato. Extra file non eseguiti.",
+    fenix: "Albero POSIX durevole: ingest (no .., no assoluti, no secret/binari, 48 file / 1.5MB). Entrypoint index.html, migrazione HTML-only senza perdere kind/storage/publish. ZIP+fenix.json. Studio ispeziona l'albero D/T/M. CSS/JS locali esplicitamente referenziati e dati fetch vengono assemblati in un unico artifact validabile per preview, pubblicazione e wrapper nativi; file non referenziati non vengono eseguiti. Nessun server generato.",
     impact: "high",
     cost: "high",
     slice: "now",

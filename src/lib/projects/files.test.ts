@@ -14,6 +14,7 @@ import {
   MAX_PROJECT_FILES,
   MAX_TREE_BYTES,
   authorizedPreviewHtml,
+  bundleProjectHtml,
   canonicalizePath,
   fileTree,
   ingestProjectFiles,
@@ -188,6 +189,37 @@ describe("file tree and authorized preview", () => {
     });
     assert.match(empty, /doctype html/i);
     assert.doesNotMatch(empty, /alert\(1\)/);
+  });
+
+  it("bundles only explicitly referenced local CSS, JS and fetched data", () => {
+    const source = `<!doctype html><html><head>
+      <link rel="stylesheet" href="./css/app.css?v=1">
+      <link rel="stylesheet" href="https://cdn.example.com/remote.css">
+    </head><body><output id="result">attesa</output>
+      <script src="./js/app.js"></script>
+      <script src="../escape.js"></script>
+    </body></html>`;
+    const bundled = bundleProjectHtml([
+      { path: "index.html", content: source },
+      { path: "css/app.css", content: "body{color:#123456}" },
+      {
+        path: "js/app.js",
+        content: "fetch('./data/items.json').then(r=>r.json()).then(x=>document.getElementById('result').textContent=x.items[0])",
+      },
+      { path: "data/items.json", content: '{"items":["Ciotola"]}' },
+      { path: "js/unreferenced.js", content: "window.unreferencedRan=true" },
+      { path: "escape.js", content: "window.escaped=true" },
+    ]);
+    assert.match(bundled, /data-fenix-file="css\/app\.css"/);
+    assert.match(bundled, /body\{color:#123456\}/);
+    assert.match(bundled, /data-fenix-file="js\/app\.js"/);
+    assert.match(bundled, /data-fenix-tree-fetch/);
+    assert.match(bundled, /Ciotola/);
+    assert.match(bundled, /https:\/\/cdn\.example\.com\/remote\.css/);
+    assert.match(bundled, /src="\.\.\/escape\.js"/);
+    assert.doesNotMatch(bundled, /unreferencedRan/);
+    assert.doesNotMatch(bundled, /window\.escaped=true/);
+    assert.equal(authorizedPreviewHtml({ html: source, files: [] }), source);
   });
 });
 
