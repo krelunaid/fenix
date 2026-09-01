@@ -1,17 +1,10 @@
 import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import {
-  ArrowLeft,
-  Check,
-  Code2,
-  Globe,
-  Monitor,
-  Smartphone,
-  Tablet,
-} from "lucide-react";
+import { ArrowLeft, Check, Code2, Globe, Monitor, Smartphone, Tablet } from "lucide-react";
 import { BuildOverlay } from "@/components/build-overlay";
 import { PreviewFrame, type Device } from "@/components/preview-frame";
 import { PublishPanel } from "@/components/publish-panel";
+import { RevisionPanel, VersionsButton } from "@/components/revision-panel";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Wordmark } from "@/components/wordmark";
@@ -40,10 +33,12 @@ function StudioPage() {
   const hydrated = useProjectStore((s) => s.hydrated);
   const project = useProjectStore((s) => s.projects.find((p) => p.id === projectId));
   const addMessage = useProjectStore((s) => s.addMessage);
+  const restoreRevision = useProjectStore((s) => s.restoreRevision);
   const [device, setDevice] = useState<Device>(previewDevice(project?.kind));
   const [pane, setPane] = useState<Pane>("preview");
   const [draft, setDraft] = useState("");
   const [publishOpen, setPublishOpen] = useState(false);
+  const [versionsOpen, setVersionsOpen] = useState(false);
   const threadRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -118,6 +113,11 @@ function StudioPage() {
           </p>
         </div>
         <CreditMeter className="hidden sm:inline-flex" />
+        <VersionsButton
+          count={project.revisions?.length ?? 0}
+          disabled={!project.html}
+          onClick={() => setVersionsOpen(true)}
+        />
         <div className="hidden items-center rounded-md border border-border p-0.5 md:flex">
           {(
             [
@@ -308,6 +308,14 @@ function StudioPage() {
         ))}
       </nav>
 
+      <RevisionPanel
+        open={versionsOpen}
+        onClose={() => setVersionsOpen(false)}
+        project={project}
+        onRestore={(revisionId) => {
+          if (restoreRevision(project.id, revisionId)) setVersionsOpen(false);
+        }}
+      />
       <PublishPanel
         open={publishOpen}
         onClose={() => setPublishOpen(false)}

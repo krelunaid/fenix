@@ -21,6 +21,32 @@ export function parseProjectFiles(text: string): ProjectFile[] {
   return files.slice(0, 24);
 }
 
+export function normalizeFilePath(path: string): string {
+  return String(path || "")
+    .replace(/\\/g, "/")
+    .replace(/^\/+/, "")
+    .trim();
+}
+
+/** Canonical project tree. HTML is denormalized; files[] is the extensible source. */
+export function projectFiles(input: { html?: string; files?: ProjectFile[] }): ProjectFile[] {
+  const out: ProjectFile[] = [];
+  const seen = new Set<string>();
+  const push = (path: string, content: string) => {
+    const clean = normalizeFilePath(path);
+    if (!clean || seen.has(clean) || typeof content !== "string" || !content) return;
+    seen.add(clean);
+    out.push({ path: clean, content });
+  };
+  for (const file of input.files || []) push(file.path, file.content);
+  if (input.html && !seen.has("index.html")) {
+    out.unshift({ path: "index.html", content: input.html });
+    seen.add("index.html");
+  }
+  return out.slice(0, 48);
+}
+
+
 function screenIdFromAttrs(attrs: string) {
   return (
     attrs.match(/\bid=["']t-([^"']+)["']/)?.[1] ||

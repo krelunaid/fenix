@@ -18,6 +18,7 @@ import {
   type Project,
   type ProjectKind,
 } from "./types";
+import { commitIfChanged, restoreProjectRevision } from "./revisions";
 
 import {
   APP_DB_KEY,
@@ -55,6 +56,7 @@ type ProjectStore = {
   createFromBrief: (input: NewProjectInput) => Project;
   openDemo: (demoId: string) => Project;
   updateProject: (id: string, patch: Partial<Project>) => void;
+  restoreRevision: (id: string, revisionId: string) => boolean;
   addMessage: (id: string, message: Omit<ChatMessage, "id" | "at"> & { id?: string }) => void;
   removeProject: (id: string) => void;
   getProject: (id: string) => Project | undefined;
@@ -270,15 +272,31 @@ export const useProjectStore = create<ProjectStore>()(
               demoId,
             }
           : blankProject("Esempio");
-        set((s) => ({ projects: trimList([project, ...s.projects]) }));
-        return project;
+        const stored = commitIfChanged(project, { source: "create", label: "Esempio" });
+        set((s) => ({ projects: trimList([stored, ...s.projects]) }));
+        return stored;
       },
       updateProject: (id, patch) => {
         set((s) => ({
-          projects: s.projects.map((p) =>
-            p.id === id ? { ...p, ...patch, updatedAt: Date.now() } : p,
-          ),
+          projects: s.projects.map((p) => {
+            if (p.id !== id) return p;
+            const next: Project = { ...p, ...patch, updatedAt: Date.now() };
+            if (next.status !== "ready" || !String(next.html || "").trim()) return next;
+            const source = (p.revisions?.length ?? 0) > 0 ? "polish" : "build";
+            const label = source === "polish" ? "Rifinitura" : p.demoId ? "Esempio" : "Pronto";
+            return commitIfChanged(next, { source, label });
+          }),
         }));
+      },
+      restoreRevision: (id, revisionId) => {
+        const current = get().getProject(id);
+        if (!current) return false;
+        const next = restoreProjectRevision(current, revisionId);
+        if (!next) return false;
+        set((s) => ({
+          projects: s.projects.map((p) => (p.id === id ? { ...next, updatedAt: Date.now() } : p)),
+        }));
+        return true;
       },
       addMessage: (id, message) => {
         const full: ChatMessage = {

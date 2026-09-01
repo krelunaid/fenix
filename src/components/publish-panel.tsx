@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { downloadBytes, downloadTextFile, slugify } from "@/lib/utils";
 import { zipFiles } from "@/lib/projects/zip";
 import type { ProjectFile } from "@/lib/projects/files";
+import { projectFiles } from "@/lib/projects/files";
 import type { Palette, ProjectKind } from "@/lib/projects/types";
 import { publishSnapshot, readPublishedId } from "@/lib/projects/publish-client";
 import type { PublishedSnapshot } from "@/lib/projects/published";
@@ -171,13 +172,7 @@ export function PublishPanel({
   }
 
   function downloadProject() {
-    const bundle =
-      files && files.length > 0
-        ? files
-        : [{ path: "index.html", content: html }];
-    if (!bundle.some((f) => /index\.html$/i.test(f.path))) {
-      bundle.unshift({ path: "index.html", content: html });
-    }
+    const bundle = projectFiles({ html, files });
     downloadBytes(`${slugify(name)}.zip`, zipFiles(bundle), "application/zip");
     toast("Progetto scaricato. File, stile, dati e logica.");
   }

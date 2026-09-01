@@ -20,6 +20,23 @@ export type ChatMessage = {
 
 export type BuildStatus = "draft" | "building" | "ready" | "error";
 
+export type RevisionSource = "create" | "build" | "polish" | "restore" | "manual";
+
+/** Snapshot of the project tree. Never secrets, never job ids, never messages. */
+export type ProjectRevision = {
+  id: string;
+  at: number;
+  source: RevisionSource;
+  label: string;
+  hash: string;
+  html: string;
+  files: ProjectFile[];
+  name: string;
+  tagline: string;
+  summary: string;
+  palette: Palette;
+};
+
 export type Project = {
   id: string;
   name: string;
@@ -48,6 +65,10 @@ export type Project = {
   appData?: Record<string, unknown>;
   /** One refund per failed build. Retry spend resets this. */
   creditRefunded?: boolean;
+  /** Cotture precedenti. Ripristino sicuro dopo una rifinitura. */
+  revisions?: ProjectRevision[];
+  /** Id della revisione attualmente in anteprima. */
+  revisionId?: string;
 };
 
 export const DEFAULT_PALETTE: Palette = {
