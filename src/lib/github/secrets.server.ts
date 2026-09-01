@@ -22,13 +22,19 @@ function pemFrom(raw: string): string {
   return raw.replace(/\\n/g, "\n").trim();
 }
 
-const PEM_RE = /-----BEGIN (?:RSA )?PRIVATE KEY-----|-----BEGIN PRIVATE KEY-----/;
+function looksLikeAppPem(raw: string): boolean {
+  const dash = "-----";
+  return (
+    raw.includes(`${dash}BEGIN RSA PRIVATE KEY${dash}`) ||
+    raw.includes(`${dash}BEGIN PRIVATE KEY${dash}`)
+  );
+}
 
 export function githubAppConfig(): GitHubAppConfig | null {
   const raw = testConfig || readEnvConfig();
   if (!raw) return null;
   if (!raw.appId || !raw.slug || raw.privateKey.length < 32) return null;
-  if (!PEM_RE.test(raw.privateKey)) return null;
+  if (!looksLikeAppPem(raw.privateKey)) return null;
   return raw;
 }
 
