@@ -1,4 +1,5 @@
 import { looksLikeLeakedCss } from "./color-scheme.ts";
+import { hydratePortableBackendFiles } from "./portable-backend.ts";
 
 export type ProjectFile = {
   path: string;
@@ -40,6 +41,7 @@ const ALLOWED_EXT = new Set([
   ".csv",
   ".xml",
   ".map",
+  ".sql",
   ".ts",
   ".tsx",
   ".jsx",
@@ -177,7 +179,8 @@ export function parseProjectFiles(text: string): ProjectFile[] {
     if (!path || !content) continue;
     raw.push({ path, content });
   }
-  return ingestProjectFiles(raw).files;
+  const hydrated = hydratePortableBackendFiles(raw);
+  return ingestProjectFiles(hydrated.files).files;
 }
 
 /** Desk kinds keep src/css/js. Phone `screens/` templates stay out of the portable tree. */

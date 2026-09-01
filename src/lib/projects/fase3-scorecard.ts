@@ -58,9 +58,17 @@ export const FASE3_SCORECARD: ScoreDimension[] = [
           "Albero e import sono usabili in studio desktop, tablet e telefono con console pulita.",
         reproduce: "npm test -- src/lib/projects/files-browser.test.ts",
       },
+      {
+        id: "portable-node-backend",
+        points: 5,
+        claim:
+          "Un brief full-stack esplicito aggiunge al tree un backend Node+SQLite deterministico, esportabile e avviabile con schema, package e runtime reali; manifest invalidi bloccano ready/pubblica.",
+        reproduce:
+          "npm test -- src/lib/projects/portable-backend.test.ts src/lib/ai/build-contract.test.ts",
+      },
     ],
     remaining:
-      "Manca un backend generato e distribuibile insieme al tree; i dati cloud sono un servizio gestito Fenix, non file server del progetto.",
+      "Il backend portabile è reale ma resta un singolo nodo SQLite: mancano deploy accoppiato frontend+server, migrazioni evolutive e un database distribuito generato.",
   },
   {
     id: "versions-git",
@@ -157,9 +165,16 @@ export const FASE3_SCORECARD: ScoreDimension[] = [
         reproduce:
           "npm test -- src/lib/projects/app-collaboration.test.ts src/lib/projects/cloud-data.test.ts src/lib/projects/app-collaboration-browser.test.ts",
       },
+      {
+        id: "portable-api-auth-cas",
+        points: 2,
+        claim:
+          "Backend portabile con Bearer server-only obbligatorio in produzione, origine allowlist, corpo bounded, CRUD validato e If-Match CAS; burst concorrente provato su runtime reale.",
+        reproduce: "npm test -- src/lib/projects/portable-backend.test.ts",
+      },
     ],
     remaining:
-      "La collaborazione dati usa capability revocabili, non account nominativi: mancano OAuth/magic-link degli utenti finali, API server generate e connettori applicativi.",
+      "L'API server è generata ma usa Bearer applicativo, non account nominativi: mancano OAuth/magic-link degli utenti finali, ruoli per-record e connettori applicativi.",
   },
   {
     id: "collaboration-operations",
@@ -251,7 +266,7 @@ export const FASE3_SCORECARD: ScoreDimension[] = [
       },
     ],
     remaining:
-      "La dimensione resta 80/100: i gate Vesti (collection token + patch no-op) sono nel ledger, non alzano il punteggio. Resta utile una valutazione comparativa cieca esterna, che non viene simulata nel repository.",
+      "La dimensione qualità resta al massimo; i gate Vesti sono nel ledger ma non aggiungono punti. Resta utile una valutazione comparativa cieca esterna, che non viene simulata nel repository.",
   },
   {
     id: "reliability-deploy",

@@ -21,6 +21,10 @@ import {
   invalidFenixCollectionError,
   slugFenixCollection,
 } from "../projects/fenix-collection.ts";
+import {
+  hydratePortableBackendFiles,
+  PORTABLE_BACKEND_MANIFEST,
+} from "../projects/portable-backend.ts";
 
 export const BUILD_CONTRACT_VERSION = 1 as const;
 export const CONTRACT_REPAIR_MAX = 2;
@@ -159,9 +163,23 @@ function journeysFor(kind: ProjectKind): ContractJourney[] {
   return [{ id: "salva", steps: ["apri nuovo", "compila", "salva", "vedi in lista"] }];
 }
 
-/** Only files the product actually needs. Mock JSON only if the brief asks for extra data files. Never invent a backend. */
+export function briefWantsPortableBackend(brief: string): boolean {
+  const p = brief.toLowerCase();
+  if (/\bnessun server\b|\bsenza backend\b|\bno backend\b/.test(p)) return false;
+  return (
+    /\bfull[ -]?stack\b/.test(p) ||
+    /\bbackend\b/.test(p) ||
+    /\bserver\b/.test(p) ||
+    /\bdatabase\b/.test(p) ||
+    /\bapi\s+(?:rest|server|pubblic[ae]|privat[ae])\b/.test(p) ||
+    /\bautenticazione\b|\blogin\b/.test(p)
+  );
+}
+
+/** Only files the product actually needs. Server runtime is deterministic and only materialized from its schema manifest. */
 export function filesFor(kind: ProjectKind, brief = ""): string[] {
   const p = brief.toLowerCase();
+  const backend = briefWantsPortableBackend(brief) ? [PORTABLE_BACKEND_MANIFEST] : [];
   if (
     kind === "dashboard" &&
     (/data\/ordini\.json/i.test(brief) ||
@@ -169,9 +187,9 @@ export function filesFor(kind: ProjectKind, brief = ""): string[] {
       /\bapi locale\b/i.test(p) ||
       /\bmulti-?file\b/i.test(p))
   ) {
-    return ["index.html", "css/theme.css", "js/app.js", "data/ordini.json"];
+    return ["index.html", "css/theme.css", "js/app.js", "data/ordini.json", ...backend];
   }
-  return ["index.html"];
+  return ["index.html", ...backend];
 }
 
 function intentFrom(brief: string): string {
@@ -287,6 +305,7 @@ export function contractInstruction(contract: BuildContract): string {
   const extras = contract.files.filter((p) => p !== "index.html");
   const fileBlocks = extras.map((p) => `<<<FILE path="${p}">>>`).join(" ");
   const collections = contract.entities.map((e) => e.name).join(", ");
+  const portableBackend = contract.files.includes(PORTABLE_BACKEND_MANIFEST);
   return [
     "CONTRATTO DI BUILD (legge):",
     `kind=${contract.kind}`,
@@ -298,7 +317,11 @@ export function contractInstruction(contract: BuildContract): string {
     "Nomi collection: solo [A-Za-z0-9._-]{1,80}. Vietati spazi, accenti, slash, titoli. Usa esattamente questi nomi (es. capi, mai \"capi vesti\").",
     `file obbligatori: ${contract.files.join(", ")}`,
     fileBlocks
-      ? `Emetti ogni extra come ${fileBlocks} … contenuto … poi <<<HTML>>> e <<<END>>>. Collega CSS/JS locali da index.html e usa fetch per i dati locali: Fenix li assembla nello stesso artifact. Niente server inventato.`
+      ? `Emetti ogni extra come ${fileBlocks} … contenuto … poi <<<HTML>>> e <<<END>>>. Collega CSS/JS locali da index.html e usa fetch per i dati locali: Fenix li assembla nello stesso artifact. ${
+          portableBackend
+            ? `Per ${PORTABLE_BACKEND_MANIFEST} emetti JSON {"collections":[{"name":"${contract.entities[0]?.name || "voci"}","fields":[{"name":"nome","type":"text","required":true}]}]}. Tipi: text, integer, number, boolean, json. Fenix materializza server Node+SQLite, schema e package: non emettere server, token o segreti.`
+            : "Niente server inventato."
+        }`
       : 'Documento META + <<<HTML>>> + <<<END>>>. Extra file solo con <<<FILE path="...">>> se servono, e solo se il contratto li elenca.',
     `accetta: ${contract.acceptance.join("; ")}`,
     `a11y: ${contract.constraints.a11y.join("; ")}`,
@@ -357,7 +380,8 @@ export function evaluateContract(input: {
 }): ContractEval {
   const html = String(input.html || "");
   const kind = input.kind || input.contract.kind;
-  const ingest = ingestProjectFiles(input.files, { html });
+  const backend = hydratePortableBackendFiles(input.files || []);
+  const ingest = ingestProjectFiles(backend.files, { html });
   const runtimeHtml = bundleProjectHtml(ingest.files, html);
   const report = validateProductHtml(runtimeHtml, { kind });
   const paths = new Set(ingest.files.map((f) => f.path));
@@ -401,10 +425,15 @@ export function evaluateContract(input: {
     !visual.genericFont && !visual.aiPurple && !(visual.genericIosGray && visual.genericIosBlue);
 
   const filesOk =
-    ingest.rejected.length === 0 && missingProvided.length === 0 && missingExpected.length === 0;
+    ingest.rejected.length === 0 &&
+    backend.errors.length === 0 &&
+    missingProvided.length === 0 &&
+    missingExpected.length === 0;
   const filesDetail = ingest.rejected[0]
     ? `${ingest.rejected[0].path}: ${ingest.rejected[0].reason}`
-    : missingExpected.length
+    : backend.errors.length
+      ? backend.errors[0]!
+      : missingExpected.length
       ? `mancano ${missingExpected.join(", ")}`
       : `${ingest.files.length} file`;
 
@@ -426,6 +455,17 @@ export function evaluateContract(input: {
       "documento completo",
     ),
     check("files", filesOk, filesDetail),
+    check(
+      "backend",
+      !expected.includes(PORTABLE_BACKEND_MANIFEST) ||
+        (backend.present &&
+          backend.errors.length === 0 &&
+          paths.has("backend/server.mjs") &&
+          paths.has("backend/schema.sql")),
+      expected.includes(PORTABLE_BACKEND_MANIFEST)
+        ? backend.errors[0] || (backend.present ? "runtime Node+SQLite materializzato" : "manifest backend mancante")
+        : "non richiesto",
+    ),
     check(
       "crud",
       crudOk,

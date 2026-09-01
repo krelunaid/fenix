@@ -159,6 +159,14 @@ export const QUALITY_LEDGER: LedgerRow[] = [
     ok: true,
   },
   {
+    id: "portable-generated-backend",
+    claim:
+      "Un brief che chiede esplicitamente full-stack/backend/API server aggiunge un manifest schema al contratto. Fenix sostituisce ogni server arbitrario con un runtime Node+SQLite deterministico nel tree: Bearer obbligatorio in produzione, Origin allowlist, corpo 256 KB, campi validati, CRUD e If-Match CAS. ZIP round-trip e 16 scritture concorrenti sono provati avviando il server reale.",
+    evidence:
+      "portable-backend.ts + portable-backend.test.ts runtime/ZIP/auth/validation/CAS/burst + build-contract.ts gate blocking",
+    ok: true,
+  },
+  {
     id: "github-verified-roundtrip",
     claim:
       "Un albero esportato da Fenix può tornare da un repo/branch GitHub solo dopo un click esplicito. L'installation token resta server-only; tree troncati, repo estranei, blob non UTF-8/100644, limiti, secret e mismatch manifest/checksum fermano l'import. Il risultato è un progetto nuovo senza stato operativo ereditato.",
