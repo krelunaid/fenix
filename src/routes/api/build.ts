@@ -123,7 +123,7 @@ export const Route = createFileRoute("/api/build")({
         ];
         if (lockKind === "dashboard") {
           userParts.push(
-            "COMPLETO: gestionale desktop con almeno 3 viste, tabella o elenco, form, filtri, numeri. Niente nav.fk-tab, niente tabbar iPhone.",
+            "COMPLETO: gestionale desktop con almeno 3 viste, tabella o elenco, form, filtri, numeri. Campi form e colonne devono descrivere la stessa entità del brief. Controlli e azioni completamente stilizzati, tabella responsive, palette professionale con superfici distinguibili. Niente nav.fk-tab, niente tabbar iPhone.",
           );
         } else if (lockKind === "site" || lockKind === "landing") {
           userParts.push("COMPLETO: sito con sezioni, nav in alto, footer. NON un'app telefono. NON un gestionale: niente .orders, niente inventario magazzino, niente form Nuovo pezzo. Stato mai null.");

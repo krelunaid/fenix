@@ -1,7 +1,12 @@
-import { dashboardCrudScript, discoverAppCollection, shouldRepairDashboard } from "./dashboard-crud.ts";
+import {
+  ARGILLA_PALETTE,
+  dashboardCrudScript,
+  discoverAppCollection,
+  shouldRepairDashboard,
+} from "./dashboard-crud.ts";
 import { replaceAppleTabIcons, rewriteIosWidgetHome } from "./craft-icons.ts";
 import { scrubCraftMedia } from "../ai/hero-image.ts";
-import { accentButtonPair } from "./visual-quality.ts";
+import { accentButtonPair, contrastRatio } from "./visual-quality.ts";
 
 export function isLightHex(hex: string) {
   const h = hex.replace("#", "").trim();
@@ -54,20 +59,62 @@ function mixHex(a: string, b: string, t: number): string {
   );
 }
 
+function hueOf(hex: string): number | null {
+  const rgb = hexToRgb(hex);
+  if (!rgb) return null;
+  const [r, g, b] = rgb.map((n) => n / 255);
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const d = max - min;
+  if (d < 0.02) return null;
+  let h = max === r ? ((g - b) / d) % 6 : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
+  h *= 60;
+  return h < 0 ? h + 360 : h;
+}
+
+function hueDistance(a: string, b: string) {
+  const ha = hueOf(a);
+  const hb = hueOf(b);
+  if (ha == null || hb == null) return 180;
+  const d = Math.abs(ha - hb);
+  return Math.min(d, 360 - d);
+}
+
 /** Fill missing tokens from bg luminance so PHONE_KIT never paints dark ink on dark paper. */
 export function resolvePalette(input?: string | SrcPalette): Required<SrcPalette> {
   const raw: SrcPalette =
     typeof input === "string" || !input
       ? { bg: typeof input === "string" && input ? input : "#efe6d4" }
       : { ...input };
-  const bg = raw.bg || "#efe6d4";
+  let bg = raw.bg || "#efe6d4";
   const light = isLightHex(bg);
-  const fg = raw.fg || (light ? "#1c1712" : "#efe6d4");
-  const surface =
+  let fg = raw.fg || (light ? "#1c1712" : "#efe6d4");
+  let surface =
     raw.surface || (light ? mixHex(bg, "#ffffff", 0.4) : mixHex(bg, "#ffffff", 0.08));
-  const muted = raw.muted || (light ? "#5c5348" : "#9a8f7a");
-  const accent = raw.accent || "#c45c26";
-  const line = raw.line || mixHex(bg, fg, 0.22);
+  let muted = raw.muted || (light ? "#5c5348" : "#9a8f7a");
+  if (!light && contrastRatio(bg, surface) < 1.18) surface = mixHex(bg, "#ffffff", 0.15);
+  let accent = raw.accent || "#c45c26";
+  const bgHue = hueOf(bg);
+  const accentHue = hueOf(accent);
+  const muddyWarmDark =
+    !light &&
+    bgHue != null &&
+    accentHue != null &&
+    (bgHue <= 55 || bgHue >= 330) &&
+    (accentHue <= 75 || accentHue >= 335) &&
+    hueDistance(bg, accent) < 42;
+  if (muddyWarmDark) {
+    bg = "#111827";
+    surface = "#1f2937";
+    fg = "#f8fafc";
+    muted = "#cbd5e1";
+    accent = "#2dd4bf";
+  }
+  const line = muddyWarmDark
+    ? "#475569"
+    : raw.line && contrastRatio(bg, raw.line) >= 1.35
+      ? raw.line
+      : mixHex(bg, fg, 0.26);
   return { bg, surface, fg, muted, accent, line };
 }
 
@@ -96,8 +143,10 @@ document.addEventListener("click", function (e) {
 </script>`;
 
 const PHONE_KIT = `<style data-fenix-phone>
+*,*::before,*::after{box-sizing:border-box}
 html,body{height:100%!important;margin:0;max-width:100%;overflow:hidden;color:var(--fg,#1c1712);background:var(--bg,#efe6d4)}
-body{display:flex!important;flex-direction:column!important;min-height:100dvh;max-height:100dvh;font-size:16px;-webkit-font-smoothing:antialiased;touch-action:pan-y}
+body{display:flex!important;flex-direction:column!important;min-height:100dvh;max-height:100dvh;padding-bottom:calc(64px + env(safe-area-inset-bottom));font-size:16px;-webkit-font-smoothing:antialiased;touch-action:pan-y}
+body>:is(.app,.fk-app,#app,#root):has(.fk-tab,.tabbar,nav[aria-label]){display:flex!important;flex-direction:column!important;width:100%;height:100%!important;min-height:0!important;overflow:hidden!important}
 .fk-top,body>header{flex-shrink:0;padding:14px 16px 10px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
 .fk-top>div{display:flex;align-items:flex-start;gap:10px;min-width:0}
 .fk-appicon{width:36px;height:36px;border-radius:8px;background:var(--fg,#1c1712);color:var(--bg,#efe6d4);display:inline-grid;place-items:center;flex-shrink:0}
@@ -151,10 +200,11 @@ input::placeholder,textarea::placeholder{
 .fk-hero,.fk-hero-craft{width:100%;height:140px;object-fit:cover;border-radius:0;display:block;margin:8px 0 14px;background:var(--line,#c4b49a)}
 .fk-tab,.tabbar,nav[aria-label]{
   flex-shrink:0;display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr))!important;
-  height:64px!important;max-height:72px;padding:6px 4px calc(6px + env(safe-area-inset-bottom));
+  height:calc(64px + env(safe-area-inset-bottom))!important;min-height:calc(64px + env(safe-area-inset-bottom))!important;max-height:none!important;padding:6px 4px calc(6px + env(safe-area-inset-bottom));
   border-top:1px solid color-mix(in srgb, currentColor 12%, transparent);
-  background:var(--bg,#efe6d4);color:var(--muted,#5c5348);
-  position:sticky;bottom:0;z-index:20;
+  background:var(--surface,#f7f1e4);color:var(--muted,#5c5348);
+  box-shadow:0 -10px 30px color-mix(in srgb,var(--fg,#1c1712) 8%,transparent);
+  position:fixed!important;left:0!important;right:0!important;bottom:0!important;top:auto!important;z-index:20;
 }
 .fk-tab button,.tabbar button,nav[aria-label] button{
   min-width:0;max-height:56px;display:flex;flex-direction:column;align-items:center;justify-content:center;
@@ -202,6 +252,7 @@ img[src=""],img:not([src]){display:none!important}
 
 
 const DASHBOARD_KIT = `<style data-fenix-site data-fenix-desk>
+*,*::before,*::after{box-sizing:border-box}
 html,body{height:auto!important;min-height:100%;margin:0;max-width:100%;overflow:auto!important;overflow-x:hidden!important;color:var(--fg,#2b211c);background:var(--bg,#f3eadc);font:400 15px/1.45 "Source Sans 3",system-ui,sans-serif}
 body{display:block!important;padding:0}
 header,body>header{padding:12px 20px;display:flex;flex-wrap:wrap;align-items:center;gap:12px;border-bottom:1px solid var(--line,#d7c4b0);background:var(--surface,#fbf6ee)}
@@ -211,17 +262,26 @@ nav button.on,nav a.on{color:var(--cobalt,#1e3a5f);border-bottom-color:var(--acc
 main,body>main{display:block!important;overflow:visible!important;flex:none!important;padding:22px 24px 64px;max-width:1120px;margin:0 auto}
 h1{font-family:"Fraunces",Georgia,serif;font-size:28px;letter-spacing:-.02em;margin:0 0 8px;color:var(--fg,#2b211c)}
 h2{font-size:18px;margin:20px 0 10px}
-table{width:100%;border-collapse:collapse;background:var(--surface,#fbf6ee)}
+table{display:block;width:100%;max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;border-collapse:collapse;background:var(--surface,#fbf6ee);border:1px solid var(--line,#d7c4b0);border-radius:10px;box-shadow:0 12px 34px color-mix(in srgb,var(--fg,#2b211c) 7%,transparent)}
+thead,tbody{display:table;width:100%;min-width:680px;table-layout:auto}
 th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line,#d7c4b0);color:var(--fg,#2b211c)}
 th{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted,#6e5648)}
 .card,.fk-tile{background:var(--surface,#fbf6ee);border-radius:4px;padding:16px;margin:0 0 12px;border:1px solid var(--line,#d7c4b0);color:var(--fg,#2b211c)}
-button,.cta{border-radius:2px}
+button,.cta{appearance:none;min-height:40px;padding:9px 14px;border:1px solid var(--line,#d7c4b0);border-radius:7px;background:var(--surface,#fbf6ee);color:var(--fg,#2b211c);font:650 13px/1.2 inherit;cursor:pointer}
+button:hover,.cta:hover{border-color:var(--accent,#b85c38);color:var(--accent,#b85c38)}
+button[type=submit],[data-fenix=save],.cta.primary{background:var(--btn,var(--accent,#b85c38));border-color:var(--btn,var(--accent,#b85c38));color:var(--btn-ink,#fff)}
+td button{min-height:34px;padding:7px 10px;margin:2px 4px 2px 0;white-space:nowrap}
 button:focus-visible,a:focus-visible,[tabindex]:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline:2px solid var(--accent,#b85c38);outline-offset:2px}
-dialog,[role=dialog],.modal{background:var(--surface,#fbf6ee);color:var(--fg,#2b211c);border:1px solid var(--line,#d7c4b0);padding:20px 22px}
+dialog,[role=dialog],.modal{width:min(560px,calc(100vw - 28px));max-height:calc(100dvh - 28px);overflow:auto;background:var(--surface,#fbf6ee);color:var(--fg,#2b211c);border:1px solid var(--line,#d7c4b0);border-radius:12px;padding:22px 24px;box-shadow:0 24px 70px color-mix(in srgb,var(--fg,#2b211c) 25%,transparent)}
+dialog::backdrop{background:color-mix(in srgb,var(--fg,#2b211c) 42%,transparent);backdrop-filter:blur(3px)}
+form{display:grid;gap:12px}
+form label{display:grid;gap:6px;color:var(--muted,#6e5648);font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase}
+form>div:last-child{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;margin-top:4px}
 input:not([type=hidden]):not([type=checkbox]):not([type=radio]):not([type=submit]):not([type=button]),
 textarea,select{
-  background:#fbf6ee!important;color:#1c1712!important;-webkit-text-fill-color:#1c1712!important;
-  caret-color:#1c1712!important;color-scheme:light!important;font-size:16px!important;opacity:1!important
+  appearance:none;width:100%;min-height:44px;padding:10px 12px;border:1px solid var(--line,#d7c4b0);border-radius:7px;
+  background:#fff!important;color:#172033!important;-webkit-text-fill-color:#172033!important;
+  caret-color:#172033!important;color-scheme:light!important;font:500 15px/1.4 inherit!important;opacity:1!important
 }
 input::placeholder,textarea::placeholder{color:#6e5648!important;-webkit-text-fill-color:#6e5648!important;opacity:1!important}
 img[src=""],img:not([src]){display:none!important}
@@ -613,8 +673,12 @@ function markupWithoutStyleOrScript(html: string) {
     .replace(/<style\b[\s\S]*?<\/style>/gi, " ");
 }
 
-const FK_CSS_SEL =
-  /\.fk-(hello|tab|sheet|main|top|btn|appicon|role|date|ledger|tile|stat|panel|field|lbl|kicker|chip|hero|seg)\b/;
+const VISIBLE_CSS_SELECTOR =
+  /(?:^|\s)(?::root|html|body|main|header|footer|nav|section|article|form|dialog|button|input|textarea|select|table|thead|tbody|tr|th|td|img|svg|span|p|h[1-6]|\*|[.#][a-z][\w-]*|\[[^\]]+\])(?:\s*[,>+~ ]\s*(?::[\w()-]+|[.#]?[a-z][\w-]*|\[[^\]]+\]))*\s*\{\s*(?:--?[\w-]+|[a-z-]+)\s*:/im;
+
+function hasVisibleCssRule(text: string) {
+  return VISIBLE_CSS_SELECTOR.test(String(text || ""));
+}
 
 const ESCAPED_STYLE = /\u0026lt;\/?style/i;
 
@@ -626,7 +690,7 @@ export function looksLikeLeakedCss(html: string): boolean {
   const text = String(html || "");
   if (ESCAPED_STYLE.test(text)) return true;
   const markup = markupWithoutStyleOrScript(text);
-  return FK_CSS_SEL.test(markup) && /\{\s*[\w-]+\s*:/.test(markup);
+  return hasVisibleCssRule(markup);
 }
 
 /** Inner of main/template is a CSS dump, not markup. */
@@ -638,11 +702,11 @@ export function looksLikeCssDump(inner: string): boolean {
     .replace(/<\/?style\b[^>]*>/gi, " ")
     .trim();
   if (!withoutStyle || /<[a-z]/i.test(withoutStyle)) return false;
-  return FK_CSS_SEL.test(withoutStyle) && /\{\s*[\w-]+\s*:/.test(withoutStyle);
+  return hasVisibleCssRule(withoutStyle);
 }
 
 const CSS_RUN =
-  /(?:html\s*,\s*body|:root|\.fk-[\w-]+)[^{]*\{[^{}]*\}(?:\s*(?:html|body|main|header|nav|img|button|input|textarea|select|svg|span|p|h[1-6]|:root|\.[\w-]+|\*|\[(?:data-|aria-|src)[^\]]+\]|:{1,2}[\w()-]+)[^{]*\{[^{}]*\})*/gi;
+  /(?::root|html(?:\s*,\s*body)?|body|main|header|footer|nav|section|article|form|dialog|button|input|textarea|select|table|thead|tbody|tr|th|td|img|svg|span|p|h[1-6]|\*|[.#][a-z][\w-]*|\[[^\]]+\])(?:\s*[,>+~ ]\s*(?::[\w()-]+|[.#]?[a-z][\w-]*|\[[^\]]+\]))*\s*\{[^{}]*:[^{}]*\}(?:\s*(?::root|html|body|main|header|footer|nav|section|article|form|dialog|button|input|textarea|select|table|thead|tbody|tr|th|td|img|svg|span|p|h[1-6]|\*|[.#][a-z][\w-]*|\[[^\]]+\])(?:\s*[,>+~ ]\s*(?::[\w()-]+|[.#]?[a-z][\w-]*|\[[^\]]+\]))*\s*\{[^{}]*:[^{}]*\})*/gi;
 
 function splitStyleScript(html: string) {
   const chunks: { code: boolean; text: string }[] = [];
@@ -693,7 +757,7 @@ export function repairLeakedCss(html: string): string {
     .map((chunk) => {
       if (chunk.code) return chunk.text;
       return chunk.text.replace(CSS_RUN, (block) => {
-        if (!FK_CSS_SEL.test(block) && !/\.fk-/.test(block)) return block;
+        if (!hasVisibleCssRule(block)) return block;
         rescued += `${block}\n`;
         return "\n";
       });
@@ -850,7 +914,9 @@ export function prepareSrcDoc(
   kind?: string,
 ) {
   if (!html) return "";
-  const palette = resolvePalette(bgOrPalette);
+  const palette = resolvePalette(
+    kind === "dashboard" && shouldRepairDashboard(html, kind) ? ARGILLA_PALETTE : bgOrPalette,
+  );
   const bg = palette.bg;
   const scheme = isLightHex(bg) ? "light" : "dark";
   let next = sanitizePreviewHtml(html);
@@ -883,7 +949,7 @@ export function prepareSrcDoc(
       ? next.replace(/<head[^>]*>/i, (open) => `${open}${kit}`)
       : `${kit}${next}`;
   }
-  if (shouldRepairDashboard(html, kind) && !/data-fenix-crud="12"/.test(next)) {
+  if (shouldRepairDashboard(html, kind) && !/data-fenix-crud="13"/.test(next)) {
     next = next.replace(/<script[^>]*data-fenix-crud[^>]*>[\s\S]*?<\/script>/gi, "");
     const crud = dashboardCrudScript(discoverAppCollection(html));
     next = /<\/body>/i.test(next)

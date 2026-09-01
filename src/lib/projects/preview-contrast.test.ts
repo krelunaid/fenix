@@ -413,6 +413,88 @@ describe("phone chrome is workshop, not iPhone", () => {
     }
   });
 
+  it("keeps the bottom tabbar pinned to the same geometry across every view", async () => {
+    const browser = await launch();
+    try {
+      for (const viewport of [
+        { width: 390, height: 844 },
+        { width: 430, height: 932 },
+      ]) {
+        const page = await browser.newPage({ viewport });
+        const src = prepareSrcDoc(
+          APP_SHELL_HTML,
+          {
+            bg: "#18120d",
+            surface: "#241b14",
+            fg: "#f3e8d4",
+            muted: "#a99882",
+            accent: "#c95d25",
+          },
+          `tabbar-${viewport.width}`,
+          "app",
+        );
+        await page.setContent(src, { waitUntil: "domcontentloaded", timeout: 15000 });
+        await waitForFenixReady(page, 8000);
+
+        const measures: Array<{
+          top: number;
+          height: number;
+          bottomGap: number;
+          position: string;
+          mainBottom: number;
+          navTop: number;
+          overflow: number;
+        }> = [];
+        const tabs = page.locator(".fk-tab [data-view]");
+        assert.equal(await tabs.count(), 5);
+        for (let index = 0; index < 5; index += 1) {
+          await tabs.nth(index).click();
+          measures.push(
+            await page.evaluate(() => {
+              const nav = document.querySelector(".fk-tab") as HTMLElement;
+              const main = document.querySelector(".fk-main") as HTMLElement;
+              const nr = nav.getBoundingClientRect();
+              const mr = main.getBoundingClientRect();
+              return {
+                top: nr.top,
+                height: nr.height,
+                bottomGap: window.innerHeight - nr.bottom,
+                position: getComputedStyle(nav).position,
+                mainBottom: mr.bottom,
+                navTop: nr.top,
+                overflow: Math.max(0, document.documentElement.scrollWidth - window.innerWidth),
+              };
+            }),
+          );
+        }
+
+        const tops = measures.map((m) => m.top);
+        const heights = measures.map((m) => m.height);
+        assert.ok(Math.max(...tops) - Math.min(...tops) <= 1, "tabbar top moved between views");
+        assert.ok(
+          Math.max(...heights) - Math.min(...heights) <= 1,
+          "tabbar height changed between views",
+        );
+        for (const m of measures) {
+          assert.equal(m.position, "fixed");
+          assert.ok(m.height >= 63 && m.height <= 100, `unexpected tabbar height ${m.height}`);
+          assert.ok(Math.abs(m.bottomGap) <= 1, `tabbar is ${m.bottomGap}px above the viewport`);
+          assert.ok(m.mainBottom <= m.navTop + 1, "content runs behind the tabbar");
+          assert.ok(m.overflow <= 1, `horizontal overflow ${m.overflow}px`);
+        }
+
+        const palette = await page.evaluate(() => {
+          const css = getComputedStyle(document.documentElement);
+          return { bg: css.getPropertyValue("--bg").trim(), accent: css.getPropertyValue("--accent").trim() };
+        });
+        assert.deepEqual(palette, { bg: "#111827", accent: "#2dd4bf" });
+        await page.close();
+      }
+    } finally {
+      await browser.close();
+    }
+  });
+
   it("recover of Taccuino-like Apple+widget HTML paints ledger and craft tabs", async () => {
     assert.equal(looksLikeAppleTabIcons(TACCUINO_OLD), true);
     assert.equal(looksLikeIosWidgetHome(TACCUINO_OLD), true);

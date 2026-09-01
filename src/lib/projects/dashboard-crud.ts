@@ -1,15 +1,15 @@
 import { DASHBOARD_CRUD_SCRIPT, dashboardCrudScript } from "./fenix-crud-runtime.ts";
 export { DASHBOARD_CRUD_SCRIPT, dashboardCrudScript };
 
-/** Repair gestionali: modal Nuovo/Annulla/Salva + pelle terracotta/cobalto/avorio. */
+/** Repair gestionali: modal Nuovo/Annulla/Salva + pelle professionale cobalto/argilla. */
 
 export const ARGILLA_PALETTE = {
-  bg: "#f3eadc",
-  surface: "#fbf6ee",
-  fg: "#2b211c",
-  muted: "#6e5648",
-  accent: "#b85c38",
-  line: "#d7c4b0",
+  bg: "#eef3f8",
+  surface: "#ffffff",
+  fg: "#18212f",
+  muted: "#5a687a",
+  accent: "#1f5f8b",
+  line: "#d5dee9",
 };
 
 const FAKE_COPY =
@@ -107,17 +107,29 @@ export function repairDashboardCrud(html: string): string {
 
 const CRAFT_DESK_CSS = `<style data-fenix-craft-desk>
 @import url("https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Source+Sans+3:wght@400;600;700&display=swap");
-:root{--bg:#f3eadc;--surface:#fbf6ee;--fg:#2b211c;--muted:#6e5648;--accent:#b85c38;--line:#d7c4b0;--cobalt:#1e3a5f}
+:root{--bg:#eef3f8;--surface:#fff;--fg:#18212f;--muted:#5a687a;--accent:#1f5f8b;--line:#d5dee9;--cobalt:#1f5f8b;--clay:#c35d35}
+*,*::before,*::after{box-sizing:border-box}
 html,body{background:var(--bg);color:var(--fg);font:400 15px/1.45 "Source Sans 3",sans-serif}
 h1,h2,.brand,header .mark{font-family:"Fraunces",Georgia,serif;color:var(--fg)}
-header .mark svg, .fk-appicon{color:var(--accent)}
-nav button.on, nav a.on{color:var(--cobalt);border-bottom:2px solid var(--accent)}
-table{width:100%;border-collapse:collapse;background:var(--surface)}
+header{background:var(--surface);border-bottom:1px solid var(--line);box-shadow:0 8px 26px rgba(24,33,47,.05)}
+header .mark svg,.fk-appicon{color:var(--clay)}
+nav button.on,nav a.on{color:var(--cobalt);border-bottom:2px solid var(--clay)}
+main{width:min(1180px,100%);margin:0 auto}
+table{display:block;width:100%;max-width:100%;overflow-x:auto;border-collapse:collapse;background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:0 12px 36px rgba(24,33,47,.07)}
+thead,tbody{display:table;width:100%;min-width:680px;table-layout:auto}
 th{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);text-align:left;padding:10px 12px;border-bottom:1px solid var(--line)}
 td{padding:10px 12px;border-bottom:1px solid var(--line);color:var(--fg)}
-button, .cta{border-radius:2px}
+button,.cta{appearance:none;min-height:40px;padding:9px 14px;border:1px solid var(--line);border-radius:7px;background:var(--surface);color:var(--fg);font:650 13px/1.2 "Source Sans 3",sans-serif;cursor:pointer}
+button:hover,.cta:hover{border-color:var(--cobalt);color:var(--cobalt)}
+button[type=submit],[data-fenix=save],.cta.primary{background:var(--cobalt);border-color:var(--cobalt);color:#fff}
+td button{min-height:34px;padding:7px 10px;margin:2px 4px 2px 0;white-space:nowrap}
 button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-dialog, [role=dialog], .modal{background:var(--surface);color:var(--fg);border:1px solid var(--line);padding:20px 22px;max-width:420px}
+dialog,[role=dialog],.modal{width:min(560px,calc(100vw - 28px));max-width:560px;max-height:calc(100dvh - 28px);overflow:auto;background:var(--surface);color:var(--fg);border:1px solid var(--line);border-radius:12px;padding:22px 24px;box-shadow:0 24px 70px rgba(24,33,47,.28)}
+dialog::backdrop{background:rgba(24,33,47,.46);backdrop-filter:blur(3px)}
+form{display:grid;gap:12px}
+form label{display:grid;gap:6px;color:var(--muted);font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase}
+form>div:last-child{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;margin-top:4px}
+input:not([type=hidden]):not([type=checkbox]):not([type=radio]),textarea,select{appearance:none;width:100%;min-height:44px;padding:10px 12px;border:1px solid var(--line);border-radius:7px;background:#fff;color:var(--fg);font:500 15px/1.4 "Source Sans 3",sans-serif}
 </style>`;
 
 const VESSEL_MARK = `<span class="fk-appicon" aria-hidden="true" data-fenix-vessel><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M8 8h8l-1 11H9L8 8z"/><path d="M9 8V6h6v2"/><path d="M7 8h10"/></svg></span>`;

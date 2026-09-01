@@ -2,48 +2,48 @@
   "files": [
     {
       "name": "gestionale-crud-D.png",
-      "sha256": "b4e5baf90997ef8bfab84cd0b3222b38b97b2f4496b43989ede5786db89119dc",
-      "bytes": 50899
+      "sha256": "88abe0638c28ce982ebdaefb43eb37099fb2e1b6feba1a3d31099adaa6137453",
+      "bytes": 65143
     },
     {
       "name": "gestionale-crud-T.png",
-      "sha256": "09f6d36ee77c79ebab6720736991823a4b68af215a0fa0934f58ee2885103f86",
-      "bytes": 46456
+      "sha256": "9458ea5470fca732b0faeabc192d4f338329a1c57ec95823434189f55b2b9fff",
+      "bytes": 58675
     },
     {
       "name": "gestionale-crud-M.png",
-      "sha256": "fd7ae046f4bb2f6ec3cffbe6e845b9e54f84fdacf9c39b7bc3c73b5d377d2a0f",
-      "bytes": 33273
+      "sha256": "86caf09a0b3103054876d7cee6ef6298ef78a721bf4451fbda1c13857bf348a9",
+      "bytes": 41523
     },
     {
       "name": "consumer-mobile-D.png",
-      "sha256": "55bcba0c889a669de9ccbeb0c0eabfee724e11d6daa356e0e75996cbfd5193ff",
-      "bytes": 54380
+      "sha256": "c7c0af31e3a2c4932e5004a543e2e5b2e48c574411fd217ec734852ab06a4169",
+      "bytes": 61709
     },
     {
       "name": "consumer-mobile-T.png",
-      "sha256": "178b285109d2e9a5a17885b8ca68e0eddfb8fe8e00cad9c4c1a3e62beba6a18f",
-      "bytes": 60686
+      "sha256": "509d92dd83293a4148d17083b22b11efe06ce25294df1f6f59c41ffdb8a050b6",
+      "bytes": 68081
     },
     {
       "name": "consumer-mobile-M.png",
-      "sha256": "1ca70bd2b29d8aeb5060d0e664105c4b31db1bc5efe03beb65eb4eb082ce26e4",
-      "bytes": 41772
+      "sha256": "18af626940c079f7fe464ce047dc4e74d66a58bf4b2f8ec53d780d9ce595f1a9",
+      "bytes": 47719
     },
     {
       "name": "dashboard-multifile-D.png",
-      "sha256": "b4e5baf90997ef8bfab84cd0b3222b38b97b2f4496b43989ede5786db89119dc",
-      "bytes": 50899
+      "sha256": "88abe0638c28ce982ebdaefb43eb37099fb2e1b6feba1a3d31099adaa6137453",
+      "bytes": 65143
     },
     {
       "name": "dashboard-multifile-T.png",
-      "sha256": "09f6d36ee77c79ebab6720736991823a4b68af215a0fa0934f58ee2885103f86",
-      "bytes": 46456
+      "sha256": "9458ea5470fca732b0faeabc192d4f338329a1c57ec95823434189f55b2b9fff",
+      "bytes": 58675
     },
     {
       "name": "dashboard-multifile-M.png",
-      "sha256": "fd7ae046f4bb2f6ec3cffbe6e845b9e54f84fdacf9c39b7bc3c73b5d377d2a0f",
-      "bytes": 33273
+      "sha256": "86caf09a0b3103054876d7cee6ef6298ef78a721bf4451fbda1c13857bf348a9",
+      "bytes": 41523
     }
   ]
 }

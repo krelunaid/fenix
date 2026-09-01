@@ -22,6 +22,13 @@ const BOTTEGA = readFileSync(join(here, "fixtures/bottega-orders-crash.html"), "
 const NULL_INNER = readFileSync(join(here, "fixtures/null-innerhtml.html"), "utf8");
 const NULL_FIXED = readFileSync(join(here, "fixtures/null-innerhtml-fixed.html"), "utf8");
 const LEAKED_CSS = readFileSync(join(here, "fixtures/leaked-phone-css.html"), "utf8");
+const GENERIC_LEAKED_CSS = `<!DOCTYPE html><html><head><title>Sentinel</title></head><body>
+<header><h1>Sentinel</h1></header><main>
+.app-shell{display:flex;flex-direction:column;min-height:100dvh}
+.bottom-nav{height:64px;background:#111827;color:#f8fafc}
+button.primary{padding:12px 16px;border-radius:8px}
+</main><nav class="bottom-nav"><button>Panoramica</button></nav>
+<script>window.Fenix.load("state");window.Fenix.save("state",{});</script></body></html>`;
 
 describe("validateProductHtml", () => {
   it("extracts inline scripts and reports the exact syntax error", () => {
@@ -234,16 +241,16 @@ describe("looksLikeSite kind lock", () => {
       DEMOS.catenaria.kind,
     );
     assert.match(src, /data-fenix-palette/);
-    assert.match(src, /--bg:#1a1612/);
-    assert.match(src, /--surface:#2a241c/);
-    assert.match(src, /--fg:#e6dcc8/);
-    assert.match(src, /--muted:#9a8f7a/);
-    assert.match(src, /--accent:#c45c26/);
+    assert.match(src, /--bg:#111827/);
+    assert.match(src, /--surface:#1f2937/);
+    assert.match(src, /--fg:#f8fafc/);
+    assert.match(src, /--muted:#cbd5e1/);
+    assert.match(src, /--accent:#2dd4bf/);
     assert.match(src, /--line:/);
     assert.match(src, /--btn:/);
     assert.match(src, /--btn-ink:/);
     const lastRoot = [...src.matchAll(/:root\{([^}]+)\}/g)].at(-1)?.[1] ?? "";
-    assert.match(lastRoot, /--fg:#e6dcc8/);
+    assert.match(lastRoot, /--fg:#f8fafc/);
   });
 
   it("infers light ink when only a dark bg is passed", () => {
@@ -254,8 +261,8 @@ describe("looksLikeSite kind lock", () => {
       "app",
     );
     assert.match(src, /data-fenix-palette/);
-    assert.match(src, /--fg:#efe6d4/);
-    assert.match(src, /--bg:#1a1612/);
+    assert.match(src, /--fg:#f8fafc/);
+    assert.match(src, /--bg:#111827/);
   });
 });
 
@@ -290,6 +297,21 @@ describe("leaked phone-kit CSS", () => {
     assert.doesNotMatch(markup, /\.fk-tab\s*\{/);
     assert.doesNotMatch(markup, /\.fk-sheet\s*\{/);
     assert.equal(canPublishHtml(fixed, "app", "orto-vivo"), true, validatePublishable(fixed, { kind: "app" }).errors.join(" · "));
+  });
+
+  it("blocks and repairs generic CSS text, not only known .fk-* selectors", () => {
+    assert.equal(looksLikeLeakedCss(GENERIC_LEAKED_CSS), true);
+    const report = validateProductHtml(GENERIC_LEAKED_CSS, { kind: "app" });
+    assert.equal(report.ok, false);
+    assert.ok(report.errors.some((e) => /CSS tecnico visibile/i.test(e)));
+    const fixed = repairLeakedCss(GENERIC_LEAKED_CSS);
+    assert.equal(looksLikeLeakedCss(fixed), false);
+    assert.match(fixed, /data-fenix-rescued/);
+    const markup = fixed
+      .replace(/<script\b[\s\S]*?<\/script>/gi, " ")
+      .replace(/<style\b[\s\S]*?<\/style>/gi, " ");
+    assert.doesNotMatch(markup, /\.app-shell\s*\{/);
+    assert.doesNotMatch(markup, /\.bottom-nav\s*\{/);
   });
 
   it("unescapes encoded style tags so the CSS is no longer visible text", () => {

@@ -41,13 +41,14 @@ ICONE — il pezzo che fa la differenza:
 - Famiglia unica: stessa spessore, 5 tab tutte diverse (si capiscono senza testo a 24px).
 - Icona app 52px rx 13, 2 colori, stessa in rel=icon e header. Favicon SVG.
 
-CSS: :root con --bg --surface --fg --muted --accent --line. body 100dvh. App a colonna: header, main flex 1 overflow, tabbar flex-shrink 0 in flusso, mai position:fixed dentro iframe. Contrasto AA, color-scheme e prefers-reduced-motion.
+CSS: :root con --bg --surface --fg --muted --accent --line. body 100dvh. App a colonna: header, main flex 1 overflow, tabbar ancorata al fondo con altezza unica 64px + safe-area e main protetto dal suo ingombro. La tabbar non cambia quota o altezza tra le schermate. Contrasto AA, color-scheme e prefers-reduced-motion.
 
 App — chrome da prodotto in tasca (non admin, non landing):
 - TELEFONO 390×844. html/body colonna 100dvh. Vietato desktop, 3 colonne, min-width 1100, bande.
 - USA queste classi (il CSS .fk-* è già iniettato, non copiarlo): header.fk-top (h1.fk-hello + p.fk-role), p.fk-date, main.fk-main, nav.fk-tab.
 - Home: oggetto del mestiere + registro a righe (.fk-ledger) + CTA. VIETATO home fatta solo di 4 riquadri .fk-stat + «Ultimo» + «Stato» (è lo scheletro iPhone). VIETATO main vuoto / pagina bianca al primo HTML.
 - Tab: 5 button in .fk-tab, SVG 24 + span, data-view uguale al file screens/*.html, .on sull'attivo.
+- Tutte le 5 viste conservano la stessa geometria della .fk-tab; nessun contenuto può spingerla verso l'alto o lasciarle vuoto sotto.
 - Schermate OBLIGATORIE in file separati (home, new, list, stats, more). Ogni file è una vista vera, non un titolo.
 - Form in screens/new.html: .fk-lbl + .fk-field, .fk-chiprow, button.fk-btn.
 - Periodo: .fk-seg > button.on.
@@ -91,6 +92,7 @@ export const VISUAL_PROMPT = `Sei l'art director di Fenix. Inventi un sistema vi
 
 Regole dure:
 - App: chrome telefono (tab, aria) ma palette, font e icona DAL BRIEF. Sito: materiale del mestiere (mattone, inchiostro, calce, zinco). Dashboard: denso, tabellare, non landing.
+- Palette: gerarchia professionale, superfici distinguibili, un accento intenzionale e stati coerenti. Vietato fondo/surface/line tutti nello stesso marrone fangoso o quasi indistinguibili anche se il contrasto testo passa.
 - Vietato: viola AI, Inter, Manrope, neon, emoji, icone copiate tutte uguali, coppia #f5f5f7+#0071e3 come default.
 - Font: coppia rara dal mestiere (serif da manifesto + sans/mono da bottega). System-ui solo se il brief è “nudo”.
 - Icona = oggetto del brief, path originali, leggibile a 16px.`;
@@ -98,7 +100,7 @@ Regole dure:
 export const QA_PROMPT = `Sei il secondo agente di Fenix. Guardi l'HTML come uno screenshot di app telefono.
 
 Se manca ANCHE UNO di questi, riscrivi il chrome (tieni i dati e il JS che già girano):
-- tab bar in flusso, 4–5 voci, SVG diversi, label 10px
+- tab bar fissata al fondo del viewport, altezza invariabile su ogni vista, safe-area, 4–5 voci, SVG diversi, label 10px
 - header saluto + azione
 - home: metriche + blocco eroico del mestiere + CTA
 - form con label, campo, chip se serve, salva; lista che mostra i nomi; niente righe Rimuovi vuote

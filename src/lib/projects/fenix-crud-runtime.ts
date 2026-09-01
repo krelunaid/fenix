@@ -1,8 +1,8 @@
 /** Injected into gestionale HTML. %%COL%% is replaced by dashboardCrudScript. */
-const CRUD_TEMPLATE = `<script data-fenix-crud="12">
+const CRUD_TEMPLATE = `<script data-fenix-crud="13">
 (function(){
-  if (window.__fenixCrud >= 12) return;
-  window.__fenixCrud = 12;
+  if (window.__fenixCrud >= 13) return;
+  window.__fenixCrud = 13;
   var COL = "%%COL%%";
   function qsa(s, r){ return Array.prototype.slice.call((r || document).querySelectorAll(s)); }
   function qs(s, r){ return (r || document).querySelector(s); }
@@ -45,11 +45,41 @@ const CRUD_TEMPLATE = `<script data-fenix-crud="12">
     var t = txt(el).toLowerCase();
     return /^(inventario|dashboard|ordini|clienti|magazzino|home)$/.test(t);
   }
+  function esc(s){
+    return String(s || "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\\x22/g,"&quot;");
+  }
+  function fieldType(label){
+    var key = fold(label);
+    if (/email|mail/.test(key)) return "email";
+    if (/telefono|phone|cellulare|tel$/.test(key)) return "tel";
+    if (/data|date|giorno|scadenza/.test(key)) return "date";
+    if (/quant|qty|qta|prezzo|price|importo|euro|numero/.test(key)) return "number";
+    return "text";
+  }
+  function inferredForm(){
+    var labels = [];
+    qsa("table").filter(function(table){
+      return !(table.closest && table.closest("dialog, .modal, form, [role=dialog]"));
+    }).forEach(function(table){
+      var heads = qsa("thead th", table);
+      if (!heads.length) heads = qsa("tr:first-child th", table);
+      var candidate = heads.map(txt).filter(function(label){ return label && !/azioni|opzioni|modifica|elimina/i.test(label); });
+      if (candidate.length > labels.length) labels = candidate;
+    });
+    if (labels.length < 2) labels = ["Nome", "Categoria", "Stato", "Quantità", "Prezzo"];
+    var fields = labels.map(function(label, index){
+      var key = kindOf(label) || ("campo" + index);
+      var type = fieldType(label);
+      var extra = type === "number" ? ' step="any"' : "";
+      return '<label for="fenix-'+esc(key)+'">'+esc(label)+'</label><input id="fenix-'+esc(key)+'" name="'+esc(key)+'" type="'+type+'" placeholder="'+esc(label)+'"'+extra+'/>';
+    }).join("");
+    return '<form id="fenix-crud-form" data-fenix-schema="'+esc(labels.join("|"))+'">'+fields+'<div><button type="button" data-fenix="cancel">Annulla</button><button type="button" data-fenix="save">Salva</button></div></form>';
+  }
   var dlg = qs("dialog") || qs("[role=dialog]") || qs(".modal, .drawer, .sheet, #modal, #dialog, [data-modal]");
   if (!dlg) {
     dlg = document.createElement("dialog");
     dlg.id = "fenix-sheet";
-    dlg.innerHTML = '<form id="fenix-crud-form"><label>Nome</label><input id="p-nome" placeholder="Nome"/><label>Categoria</label><input id="p-categoria" placeholder="Terraglia"/><label>Stato</label><input id="p-stato" placeholder="in laboratorio"/><label>Quantità</label><input id="p-qty" type="number" value="1"/><label>Prezzo</label><input id="p-prezzo" type="number" step="0.01"/><div><button type="button" data-fenix="cancel">Annulla</button><button type="button" data-fenix="save">Salva</button></div></form>';
+    dlg.innerHTML = inferredForm();
     document.body.appendChild(dlg);
   }
   var editTr = null;
@@ -523,6 +553,10 @@ const CRUD_TEMPLATE = `<script data-fenix-crud="12">
     return null;
   }
   function fillForm(data){
+    qsa("input, select, textarea", dlg).forEach(function(el){
+      var key = kindOf(el.name || el.id || (el.labels && el.labels[0] ? txt(el.labels[0]) : "") || el.getAttribute("placeholder") || "");
+      if (key && data[key] != null && data[key] !== "") el.value = data[key];
+    });
     var map = [
       [["nome","name","pezzo","titolo"], data.nome],
       [["categoria","cat","tipo"], data.categoria],

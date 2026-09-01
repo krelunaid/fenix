@@ -94,7 +94,7 @@ export const FASE3_GAPS: Fase3Gap[] = [
     id: "quality",
     area: "Qualità generata",
     emergent: "Agente di test che ripara; output lento (45–60 min in prove terze).",
-    fenix: "Contratto di build v1 (planner deterministico, 0 token) + ruoli grok-build-0.1 con ricevute, niente CoT. Evaluator su 3 fixture (kiln CRUD, grottaglie mobile, kiln+mock multi-file). Gate condiviso API/Edge: blocking ContractCheck ferma t:ok/ready/Pubblica. File extra solo se il brief li chiede (niente JSON inventato). AA fail-closed. Critic LLM saltato se i gate statici passano. Repair max 2. Ledger in quality-ledger.ts.",
+    fenix: "Contratto di build v1 (planner deterministico, 0 token) + ruoli grok-build-0.1 con ricevute, niente CoT. Evaluator su 3 fixture (kiln CRUD, grottaglie mobile, kiln+mock multi-file). Gate condiviso API/Edge: blocking ContractCheck ferma t:ok/ready/Pubblica. File extra solo se il brief li chiede. AA fail-closed. Critic LLM saltato se i gate statici passano. Repair max 2. Regressivi visivi: CSS generico mai visibile, gestionali con entità/form coerenti e controlli rifiniti, tabbar app fissa e invariabile D/T/M, normalizzazione palette fangose. Ledger in quality-ledger.ts.",
     impact: "high",
     cost: "medium",
     slice: "now",

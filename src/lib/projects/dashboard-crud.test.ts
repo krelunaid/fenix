@@ -121,7 +121,7 @@ describe("dashboard CRUD repair", () => {
     });
     assert.match(recovered.html, /data-fenix-crud/);
     assert.match(recovered.html, /data-fenix-craft-desk/);
-    assert.match(recovered.html, /b85c38/);
+    assert.match(recovered.html, /1f5f8b|c35d35/);
     assert.doesNotMatch(recovered.html, /Persistenza via/);
     const after = validateProductHtml(recovered.html, { kind: "dashboard" });
     assert.equal(after.ok, true, after.errors.join(" · "));
@@ -133,6 +133,56 @@ describe("dashboard CRUD repair", () => {
     assert.equal(report.ok, true, report.errors.join(" · "));
     assert.doesNotMatch(kiln, /data-fenix-craft-desk/);
     assert.doesNotMatch(kiln, /data-fenix-crud/);
+  });
+
+  it("builds a professional client form from the table schema, never inventory fields", async () => {
+    const clients = `<!DOCTYPE html><html lang="it"><head><meta charset="utf-8"><title>Clienti</title></head><body>
+    <header><strong>Anagrafica Clienti</strong></header><main><button type="button">Nuovo cliente</button>
+    <table aria-label="Riepilogo"><thead><tr><th>Metrica</th><th>Valore</th></tr></thead><tbody><tr><td>Totale clienti</td><td>2</td></tr></tbody></table>
+    <table><thead><tr><th>Nome e cognome</th><th>Email</th><th>Telefono</th><th>Azienda</th><th>Data inserimento</th><th>Azioni</th></tr></thead>
+    <tbody><tr><td>Giulia Bianchi</td><td>giulia@example.it</td><td>347 1234567</td><td>Bianchi Design</td><td>1 settembre 2026</td><td><button>Modifica</button></td></tr></tbody></table></main>
+    <script>window.Fenix.load("clienti");window.Fenix.save("clienti",[]);document.documentElement.setAttribute("data-fenix-ready","1")</script></body></html>`;
+    const polished = polishDashboardHtml(clients, "dashboard");
+    const src = prepareSrcDoc(polished, { bg: "#201812", surface: "#2a211b", fg: "#f3eadc", muted: "#a8927e", accent: "#d26a2e" }, "clienti", "dashboard");
+    const browser = await chromium.launch({ headless: true });
+    try {
+      const page = await browser.newPage({ viewport: { width: 1024, height: 768 } });
+      await page.setContent(src, { waitUntil: "domcontentloaded", timeout: 15000 });
+      await page.getByRole("button", { name: /nuovo cliente/i }).click();
+      const dialog = page.locator("#fenix-sheet");
+      await dialog.waitFor({ state: "visible", timeout: 4000 });
+      const schema = (await dialog.locator("label").allTextContents()).join(" | ");
+      assert.match(schema, /Nome e cognome/i);
+      assert.match(schema, /Email/i);
+      assert.match(schema, /Telefono/i);
+      assert.match(schema, /Azienda/i);
+      assert.match(schema, /Data inserimento/i);
+      assert.doesNotMatch(schema, /Categoria|Stato|Quantità|Prezzo/i);
+      assert.equal(await dialog.locator('input[type="email"]').count(), 1);
+      assert.equal(await dialog.locator('input[type="tel"]').count(), 1);
+      assert.equal(await dialog.locator('input[type="date"]').count(), 1);
+      const visual = await page.evaluate(() => {
+        const input = document.querySelector("#fenix-sheet input") as HTMLElement;
+        const action = document.querySelector("#fenix-sheet [data-fenix=save]") as HTMLElement;
+        const table = document.querySelector("table") as HTMLElement;
+        const root = getComputedStyle(document.documentElement);
+        return {
+          inputRadius: parseFloat(getComputedStyle(input).borderRadius),
+          inputHeight: input.getBoundingClientRect().height,
+          actionRadius: parseFloat(getComputedStyle(action).borderRadius),
+          tableOverflow: getComputedStyle(table).overflowX,
+          bg: root.getPropertyValue("--bg").trim(),
+          surface: root.getPropertyValue("--surface").trim(),
+        };
+      });
+      assert.ok(visual.inputRadius >= 6 && visual.inputHeight >= 40);
+      assert.ok(visual.actionRadius >= 6);
+      assert.match(visual.tableOverflow, /auto|scroll/);
+      assert.equal(visual.bg, "#eef3f8");
+      assert.equal(visual.surface, "#ffffff");
+    } finally {
+      await browser.close();
+    }
   });
 
   it("fixture matches production .summary/.summary-item, not data-summary", () => {
@@ -161,7 +211,7 @@ describe("dashboard CRUD repair", () => {
       `<script data-fenix-crud>window.__fenixCrud=1;</script></body>`,
     );
     const html = repairDashboardCrud(withV1);
-    assert.match(html, /data-fenix-crud="12"/);
+    assert.match(html, /data-fenix-crud="13"/);
     assert.match(html, /var COL = "argilla_viva"/);
     assert.equal((html.match(/data-fenix-crud/g) || []).length, 1);
     const src = prepareSrcDoc(

@@ -214,7 +214,7 @@ describe("focus-visible and worker model", () => {
     assert.match(look, /fenix-boot-ok/);
     const crud = readFileSync(join(root, "src/lib/projects/dashboard-crud.ts"), "utf8");
     assert.match(crud, /data-fenix-crud/);
-    assert.match(crud, /b85c38/);
+    assert.match(crud, /1f5f8b/);
     const runBuild = readFileSync(join(root, "src/lib/ai/run-build.ts"), "utf8");
     assert.doesNotMatch(runBuild, /Fenix 2: Vite \+ React/);
     assert.match(runBuild, /BOOT_REPAIR_MAX = 2/);
