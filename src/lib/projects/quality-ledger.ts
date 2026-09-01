@@ -119,6 +119,14 @@ export const QUALITY_LEDGER: LedgerRow[] = [
     ok: true,
   },
   {
+    id: "data-api-local-first",
+    claim:
+      "Le app generate hanno un'API JSON local-first query/list/get/insert/update/remove. Le mutazioni concorrenti nella stessa app sono serializzate per collezione; token riservati o traversal non raggiungono il bridge. Il runtime dichiara shared=false.",
+    evidence:
+      "src/lib/projects/fenix-data-api.ts + fenix-browser.test.ts CRUD Promise.all, filtri, isolamento collezioni, remount e console 0",
+    ok: true,
+  },
+  {
     id: "emergent",
     claim: "Emergent resta solo un banco di prova. Nessun claim di completezza sul prodotto.",
     evidence: "src/lib/projects/fase3-gap.ts quality.slice=now; revisions.test.ts now list",

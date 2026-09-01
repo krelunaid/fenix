@@ -360,9 +360,10 @@ describe("published site is server-side, not localStorage", () => {
 
   it("home/vetrina Apri href GETs the published snapshot in a clean browser; missing stays missing", async () => {
     const PREVIEW = await requirePreview();
-    const originalId = "49c14680-a504-436d-a0db-84e4f3583dbe";
-    const publishedId = "7e2a1c90-bb12-4d33-9e40-0f6c8a11d4aa";
-    const unpublishedId = "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee";
+    const run = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+    const originalId = `source-${run}`;
+    const publishedId = `published-${run}`;
+    const unpublishedId = `missing-${run}`;
     const put = await fetch(`${PREVIEW}/api/sites/${publishedId}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json", [OWNER_HEADER]: OWNER_A },

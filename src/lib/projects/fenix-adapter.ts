@@ -1,7 +1,13 @@
-import { formatHtmlErrors, htmlHasFenixApi, validateProductHtml, type HtmlReport } from "./validate-html.ts";
+import {
+  formatHtmlErrors,
+  htmlHasFenixApi,
+  validateProductHtml,
+  type HtmlReport,
+} from "./validate-html.ts";
 import { kindFromPrompt } from "./infer.ts";
 import type { Palette, ProjectKind } from "./types.ts";
 import type { ProjectFile } from "./files.ts";
+import { FENIX_DATA_API_RUNTIME } from "./fenix-data-api.ts";
 import {
   CONTRACT_REPAIR_MAX,
   contractAllowsReady,
@@ -17,7 +23,7 @@ export const FENIX_ADAPTER_SCRIPT = `<script data-fenix-adapter>
 (function(){
   function host(){ return window.__fenixHost; }
   var prev = window.Fenix || {};
-  window.Fenix = {
+  var api = {
     load: function(col){
       var h = host();
       if (h && typeof h.load === "function") return h.load(col);
@@ -31,6 +37,8 @@ export const FENIX_ADAPTER_SCRIPT = `<script data-fenix-adapter>
       return Promise.resolve(false);
     }
   };
+  ${FENIX_DATA_API_RUNTIME}
+  window.Fenix = api;
 })();
 </script>`;
 
@@ -157,7 +165,8 @@ export async function gateIncompleteHtml(input: {
         lockKind,
       );
       scored = assess(current);
-      if (scored.ok) return { result: current, report: scored.report, evaluation: scored.evaluation };
+      if (scored.ok)
+        return { result: current, report: scored.report, evaluation: scored.evaluation };
     } catch {
       /* retry */
     } finally {

@@ -59,8 +59,13 @@ describe("Fenix bridge in browser", () => {
         null,
         { timeout: 5000 },
       );
-      const saved = await page.evaluate(() => (window as unknown as { __db: { state?: { costs?: unknown[] } } }).__db);
-      assert.ok(saved?.state?.costs && saved.state.costs.length >= 3, "parent store received Fenix.save");
+      const saved = await page.evaluate(
+        () => (window as unknown as { __db: { state?: { costs?: unknown[] } } }).__db,
+      );
+      assert.ok(
+        saved?.state?.costs && saved.state.costs.length >= 3,
+        "parent store received Fenix.save",
+      );
       await page.locator("#f").evaluate((el, srcDoc: string) => {
         (el as HTMLIFrameElement).srcdoc = srcDoc;
       }, src);
@@ -178,6 +183,106 @@ init();
       await browser.close();
     }
   });
+
+  it("Fenix.data serializes CRUD mutations, filters safely and survives remount", async () => {
+    const html = `<!DOCTYPE html><html lang="it"><head><meta charset="utf-8"><title>Banco ordini</title></head>
+<body><header><h1>Banco ordini</h1></header><main>
+<nav><button data-view="orders">Ordini</button><button data-view="stock">Scorte</button><button data-view="reports">Report</button></nav>
+<p id="boot">avvio</p><button id="run" type="button">Esegui prova dati</button><pre id="result"></pre>
+</main><script>
+async function boot(){
+  const rows = await window.Fenix.data.query("orders");
+  document.getElementById("boot").textContent = "righe:" + rows.length;
+}
+document.getElementById("run").addEventListener("click", async function(){
+  const db = window.Fenix.data;
+  const jobs = [];
+  for (let i = 0; i < 20; i++) jobs.push(db.insert("orders", { id:"o"+i, stato:i%2?"aperto":"chiuso", totale:i }));
+  await Promise.all(jobs);
+  await Promise.all([
+    db.update("orders", "o3", { cliente:"Ada" }),
+    db.update("orders", "o3", { pagato:true })
+  ]);
+  await db.insert("tickets", { id:"t1", titolo:"Consegna" });
+  const open = await db.query("orders", { where:{ stato:"aperto" }, orderBy:"totale", direction:"desc", limit:3 });
+  const ada = await db.get("orders", "o3");
+  const removed = await db.remove("orders", "o0");
+  const all = await db.list("orders");
+  const tickets = await db.list("tickets");
+  let unsafe = false;
+  try { await db.query("../private"); } catch (error) { unsafe = true; }
+  document.getElementById("result").textContent = JSON.stringify({
+    mode:db.mode, shared:db.shared, count:all.length, open:open.map(x=>x.totale),
+    ada:ada, removed:removed, tickets:tickets.length, unsafe:unsafe
+  });
+});
+boot();
+</script></body></html>`;
+    const src = prepareSrcDoc(html, { bg: "#f4ede2", fg: "#211d18" }, "data-api-demo", "dashboard");
+    const browser = await launch();
+    try {
+      const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+      const consoleErrors: string[] = [];
+      page.on("console", (message) => {
+        if (message.type() === "error") consoleErrors.push(message.text());
+      });
+      await page.setContent(`<!DOCTYPE html><html><body>
+<iframe id="f" style="width:1100px;height:700px;border:0"></iframe>
+<script>
+window.__db = {};
+window.__ops = [];
+window.addEventListener("message", function(e){
+  var m=e.data;
+  if(!m || m.t!=="fenix-db" || !m.id) return;
+  window.__ops.push({op:m.op,col:m.col});
+  if(m.op==="save") window.__db[m.col]=m.data;
+  var value=m.op==="load" ? (window.__db[m.col] || null) : {ok:true,v:m.data,durable:Array.isArray(m.data)?m.data.length:0};
+  e.source.postMessage({t:"fenix-db",id:m.id,v:value},"*");
+});
+</script></body></html>`);
+      const load = () =>
+        page.locator("#f").evaluate((element, srcDoc: string) => {
+          (element as HTMLIFrameElement).srcdoc = srcDoc;
+        }, src);
+      await load();
+      const frame = page.frameLocator("#f");
+      await frame.getByText("righe:0").waitFor({ timeout: 8000 });
+      await frame.locator("#run").click();
+      await frame.locator("#result").filter({ hasText: '"count":19' }).waitFor({ timeout: 15000 });
+      const result = JSON.parse((await frame.locator("#result").textContent()) || "{}") as {
+        mode: string;
+        shared: boolean;
+        count: number;
+        open: number[];
+        ada: { cliente?: string; pagato?: boolean };
+        removed: boolean;
+        tickets: number;
+        unsafe: boolean;
+      };
+      assert.deepEqual(result, {
+        mode: "local-first",
+        shared: false,
+        count: 19,
+        open: [19, 17, 15],
+        ada: { id: "o3", stato: "aperto", totale: 3, cliente: "Ada", pagato: true },
+        removed: true,
+        tickets: 1,
+        unsafe: true,
+      });
+      const privateOps = await page.evaluate(
+        () =>
+          (window as unknown as { __ops: { col?: string }[] }).__ops.filter(
+            (entry) => entry.col === "../private",
+          ).length,
+      );
+      assert.equal(privateOps, 0, "invalid collections must be rejected before postMessage");
+      await load();
+      await frame.getByText("righe:19").waitFor({ timeout: 8000 });
+      assert.deepEqual(consoleErrors, []);
+    } finally {
+      await browser.close();
+    }
+  });
 });
 
 describe("leaked phone-kit CSS in the preview", () => {
@@ -206,7 +311,9 @@ describe("leaked phone-kit CSS in the preview", () => {
       assert.doesNotMatch(visible, /\.fk-tab\s*\{/);
       assert.doesNotMatch(visible, /\.fk-sheet\s*\{/);
       assert.match(visible, /Orto Vivo/);
-      const weight = await page.locator(".fk-hello").evaluate((el) => getComputedStyle(el).fontWeight);
+      const weight = await page
+        .locator(".fk-hello")
+        .evaluate((el) => getComputedStyle(el).fontWeight);
       assert.ok(Number(weight) >= 600, `rescued CSS should bold the hello, got ${weight}`);
     } finally {
       await browser.close();
@@ -237,7 +344,13 @@ describe("studio overlay and resume in browser", () => {
             prompt: "test overlay",
             kind: "app",
             summary: "",
-            palette: { bg: "#16110c", surface: "#221c16", fg: "#efe6d4", muted: "#9a8f7a", accent: "#c45c26" },
+            palette: {
+              bg: "#16110c",
+              surface: "#221c16",
+              fg: "#efe6d4",
+              muted: "#9a8f7a",
+              accent: "#c45c26",
+            },
             html,
             messages: [],
             buildLog: ["Direzione visiva", "Codice"],
@@ -263,15 +376,26 @@ describe("studio overlay and resume in browser", () => {
         },
         { html: VALID, resumeError: RESUME_ERROR },
       );
-      await page.goto(PREVIEW + "/studio/p-overlay", { waitUntil: "domcontentloaded", timeout: 20000 });
-      const compact = page.locator("section.hidden.md\\:block .pointer-events-none.absolute.inset-x-0.top-0.z-20");
+      await page.goto(PREVIEW + "/studio/p-overlay", {
+        waitUntil: "domcontentloaded",
+        timeout: 20000,
+      });
+      const compact = page.locator(
+        "section.hidden.md\\:block .pointer-events-none.absolute.inset-x-0.top-0.z-20",
+      );
       await compact.waitFor({ timeout: 12000 });
       const box = await compact.boundingBox();
       assert.ok(box && box.height < 160, `overlay too tall: ${box?.height}`);
       const full = page.locator(".absolute.inset-0.z-10.grid.place-items-center");
       assert.equal(await full.count(), 0);
-      await page.goto(PREVIEW + "/studio/p-resume", { waitUntil: "domcontentloaded", timeout: 20000 });
-      await page.getByRole("button", { name: "Riprendi rifinitura" }).first().waitFor({ timeout: 12000 });
+      await page.goto(PREVIEW + "/studio/p-resume", {
+        waitUntil: "domcontentloaded",
+        timeout: 20000,
+      });
+      await page
+        .getByRole("button", { name: "Riprendi rifinitura" })
+        .first()
+        .waitFor({ timeout: 12000 });
     } finally {
       await browser?.close();
     }
@@ -369,7 +493,10 @@ describe("studio overlay and resume in browser", () => {
         },
         { html: APP_SHELL_HTML, resumeError: RESUME_ERROR, prompt: ARGILLA_PROMPT },
       );
-      await page.goto(PREVIEW + "/studio/p-argilla", { waitUntil: "domcontentloaded", timeout: 20000 });
+      await page.goto(PREVIEW + "/studio/p-argilla", {
+        waitUntil: "domcontentloaded",
+        timeout: 20000,
+      });
       await page.getByRole("button", { name: "Riprendi rifinitura" }).first().click();
       const waitUniqueArgilla = async () => {
         await page.waitForFunction(
@@ -377,7 +504,9 @@ describe("studio overlay and resume in browser", () => {
             const raw = localStorage.getItem("officina-projects");
             if (!raw) return false;
             try {
-              const project = JSON.parse(raw).state.projects.find((p: { id: string }) => p.id === "p-argilla");
+              const project = JSON.parse(raw).state.projects.find(
+                (p: { id: string }) => p.id === "p-argilla",
+              );
               const logs: string[] = project?.buildLog ?? [];
               return (
                 project?.visualJobId === "job-argilla-reattach" &&
@@ -400,7 +529,9 @@ describe("studio overlay and resume in browser", () => {
       assert.equal(polishPosts, 1, "reload must not start a second polish job");
       const afterReload = await page.evaluate(() => {
         const raw = localStorage.getItem("officina-projects");
-        const project = JSON.parse(raw || "{}").state.projects.find((p: { id: string }) => p.id === "p-argilla");
+        const project = JSON.parse(raw || "{}").state.projects.find(
+          (p: { id: string }) => p.id === "p-argilla",
+        );
         return {
           jobId: project?.visualJobId,
           status: project?.status,
@@ -419,7 +550,9 @@ describe("studio overlay and resume in browser", () => {
       assert.equal(polishPosts, 1);
       const logsTwice = await page.evaluate(() => {
         const raw = localStorage.getItem("officina-projects");
-        const project = JSON.parse(raw || "{}").state.projects.find((p: { id: string }) => p.id === "p-argilla");
+        const project = JSON.parse(raw || "{}").state.projects.find(
+          (p: { id: string }) => p.id === "p-argilla",
+        );
         const logs: string[] = project?.buildLog ?? [];
         return {
           riprendo: logs.filter((s) => s === "Riprendo rifinitura").length,
@@ -440,7 +573,9 @@ describe("studio overlay and resume in browser", () => {
           try {
             const state = JSON.parse(raw).state;
             const project = state.projects.find((p: { id: string }) => p.id === "p-argilla");
-            return project?.status === "ready" && !project?.visualJobId && state.creditsRemaining === 46;
+            return (
+              project?.status === "ready" && !project?.visualJobId && state.creditsRemaining === 46
+            );
           } catch {
             return false;
           }
@@ -526,7 +661,9 @@ describe("studio overlay and resume in browser", () => {
                       accent: "#b85c38",
                     },
                     html,
-                    messages: [{ id: "m1", role: "assistant", content: "JOB_STILL_RUNNING", at: now }],
+                    messages: [
+                      { id: "m1", role: "assistant", content: "JOB_STILL_RUNNING", at: now },
+                    ],
                     buildLog: [
                       "Motore visivo in sottofondo",
                       "Partito",
@@ -554,7 +691,10 @@ describe("studio overlay and resume in browser", () => {
         },
         { html: DEMOS.kiln.html, prompt: ARGILLA_PROMPT },
       );
-      await page.goto(PREVIEW + "/studio/p-terra", { waitUntil: "domcontentloaded", timeout: 20000 });
+      await page.goto(PREVIEW + "/studio/p-terra", {
+        waitUntil: "domcontentloaded",
+        timeout: 20000,
+      });
       await page.waitForFunction(
         () => {
           const raw = localStorage.getItem("officina-projects");
@@ -644,7 +784,9 @@ describe("studio overlay and resume in browser", () => {
           try {
             const state = JSON.parse(raw).state;
             const project = state.projects.find((p: { id: string }) => p.id === "p-terra");
-            return project?.status === "ready" && !project?.visualJobId && state.creditsRemaining === 42;
+            return (
+              project?.status === "ready" && !project?.visualJobId && state.creditsRemaining === 42
+            );
           } catch {
             return false;
           }
@@ -721,8 +863,7 @@ describe("studio overlay and resume in browser", () => {
                   id: "p-gone",
                   name: "Bottega Terra",
                   tagline: "",
-                  prompt:
-                    "FORMATO: gestionale ufficio. kind=dashboard. Bottega Terra",
+                  prompt: "FORMATO: gestionale ufficio. kind=dashboard. Bottega Terra",
                   kind: "dashboard",
                   requestedKind: "dashboard",
                   summary: "",
@@ -750,7 +891,10 @@ describe("studio overlay and resume in browser", () => {
           }),
         );
       });
-      await page.goto(PREVIEW + "/studio/p-gone", { waitUntil: "domcontentloaded", timeout: 20000 });
+      await page.goto(PREVIEW + "/studio/p-gone", {
+        waitUntil: "domcontentloaded",
+        timeout: 20000,
+      });
       await page.getByRole("button", { name: "Riprova. Lo ricostruisco." }).first().click();
       await page.getByText("Bloccato").first().waitFor({ timeout: 40000 });
       const snap = await page.evaluate(() => {
@@ -861,7 +1005,10 @@ describe("studio overlay and resume in browser", () => {
             "FORMATO: gestionale ufficio. kind=dashboard. Desktop: elenco, filtri, form nuovo, numeri.\n\nBottega del Tornio.",
         },
       );
-      await page.goto(PREVIEW + `/studio/${projectId}`, { waitUntil: "domcontentloaded", timeout: 20000 });
+      await page.goto(PREVIEW + `/studio/${projectId}`, {
+        waitUntil: "domcontentloaded",
+        timeout: 20000,
+      });
       await page.waitForFunction(
         () => {
           const raw = localStorage.getItem("officina-projects");
@@ -1013,7 +1160,10 @@ describe("studio overlay and resume in browser", () => {
             "FORMATO: gestionale ufficio. kind=dashboard. Desktop: elenco, filtri, form nuovo, numeri.\n\nBottega del Tornio.",
         },
       );
-      await page.goto(PREVIEW + `/studio/${projectId}`, { waitUntil: "domcontentloaded", timeout: 20000 });
+      await page.goto(PREVIEW + `/studio/${projectId}`, {
+        waitUntil: "domcontentloaded",
+        timeout: 20000,
+      });
       await page.waitForFunction(
         () => {
           const raw = localStorage.getItem("officina-projects");
@@ -1099,7 +1249,12 @@ describe("studio overlay and resume in browser", () => {
             html: NULL_INNER,
             meta: { kind: "dashboard", name: "Bottega Terra" },
             log: ["Rifinitura"],
-            files: [{ path: "src/screens/Home.tsx", content: "export default function Home(){return null}" }],
+            files: [
+              {
+                path: "src/screens/Home.tsx",
+                content: "export default function Home(){return null}",
+              },
+            ],
           }),
         });
       });
@@ -1152,14 +1307,19 @@ describe("studio overlay and resume in browser", () => {
           prompt: "FORMATO: gestionale ufficio. kind=dashboard. Bottega Terra.",
         },
       );
-      await page.goto(PREVIEW + `/studio/${projectId}`, { waitUntil: "domcontentloaded", timeout: 20000 });
+      await page.goto(PREVIEW + `/studio/${projectId}`, {
+        waitUntil: "domcontentloaded",
+        timeout: 20000,
+      });
       await page.waitForFunction(
         () => {
           const raw = localStorage.getItem("officina-projects");
           if (!raw) return false;
           try {
             const state = JSON.parse(raw).state;
-            const project = state.projects.find((p: { id: string }) => p.id === "p-innerhtml-crash");
+            const project = state.projects.find(
+              (p: { id: string }) => p.id === "p-innerhtml-crash",
+            );
             return (
               project?.status === "error" &&
               !project?.visualJobId &&
@@ -1268,17 +1428,29 @@ describe("studio overlay and resume in browser", () => {
           prompt: "FORMATO: gestionale ufficio. kind=dashboard. Bottega Terra.",
         },
       );
-      await page.goto(PREVIEW + `/studio/${projectId}`, { waitUntil: "domcontentloaded", timeout: 20000 });
+      await page.goto(PREVIEW + `/studio/${projectId}`, {
+        waitUntil: "domcontentloaded",
+        timeout: 20000,
+      });
       await page.waitForFunction(
         () => {
           const raw = localStorage.getItem("officina-projects");
           if (!raw) return false;
           try {
             const state = JSON.parse(raw).state;
-            const project = state.projects.find((p: { id: string }) => p.id === "p-innerhtml-fixed");
+            const project = state.projects.find(
+              (p: { id: string }) => p.id === "p-innerhtml-fixed",
+            );
             const msgs = (project?.messages ?? []) as { content?: string }[];
-            const pronto = msgs.some((m) => /Pronto\. Bottega Terra è in anteprima/i.test(m.content || ""));
-            return project?.status === "ready" && !project?.visualJobId && pronto && state.creditsRemaining === 46;
+            const pronto = msgs.some((m) =>
+              /Pronto\. Bottega Terra è in anteprima/i.test(m.content || ""),
+            );
+            return (
+              project?.status === "ready" &&
+              !project?.visualJobId &&
+              pronto &&
+              state.creditsRemaining === 46
+            );
           } catch {
             return false;
           }
@@ -1329,7 +1501,10 @@ describe("studio overlay and resume in browser", () => {
         ({ html }: { html: string }) => {
           if (window !== window.parent) return;
           const now = Date.now();
-          localStorage.setItem("fenix.session", JSON.stringify({ email: "qa@fenix.test", name: "QA" }));
+          localStorage.setItem(
+            "fenix.session",
+            JSON.stringify({ email: "qa@fenix.test", name: "QA" }),
+          );
           localStorage.setItem(
             "officina-projects",
             JSON.stringify({
@@ -1371,8 +1546,15 @@ describe("studio overlay and resume in browser", () => {
         },
         { html: LEAKED_CSS },
       );
-      await page.goto(PREVIEW + `/studio/${projectId}`, { waitUntil: "domcontentloaded", timeout: 20000 });
-      await page.locator("section.hidden.md\\:block").getByText(/Partito|Rifinitura/i).first().waitFor({ timeout: 12000 });
+      await page.goto(PREVIEW + `/studio/${projectId}`, {
+        waitUntil: "domcontentloaded",
+        timeout: 20000,
+      });
+      await page
+        .locator("section.hidden.md\\:block")
+        .getByText(/Partito|Rifinitura/i)
+        .first()
+        .waitFor({ timeout: 12000 });
       const frame = page.frameLocator("iframe").first();
       await frame.locator(".fk-hello").waitFor({ timeout: 12000 });
       const visible = await frame.locator("body").innerText();
@@ -1380,7 +1562,13 @@ describe("studio overlay and resume in browser", () => {
       assert.doesNotMatch(visible, /\.fk-tab\s*\{/);
       assert.doesNotMatch(visible, /\.fk-sheet\s*\{/);
       assert.match(visible, /Orto Vivo/);
-      assert.equal(await page.getByRole("button", { name: /pubblica/i }).first().isDisabled(), true);
+      assert.equal(
+        await page
+          .getByRole("button", { name: /pubblica/i })
+          .first()
+          .isDisabled(),
+        true,
+      );
       assert.equal(polishPosts, 0);
     } finally {
       await browser.close();

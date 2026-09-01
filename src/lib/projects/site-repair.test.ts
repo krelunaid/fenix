@@ -36,7 +36,7 @@ describe("Fenix adapter + gate", () => {
     assert.equal(report.syntaxOk, true, report.errors.join(" · "));
     assert.equal(htmlHasFenixApi(SITE), false);
     assert.equal(report.ok, false);
-    assert.ok(report.errors.some((e) => /Fenix\.load\/save/i.test(e)));
+    assert.ok(report.errors.some((e) => /API dati Fenix/i.test(e)));
   });
 
   it("rejects Fenix.load without save (and the reverse)", () => {
@@ -48,6 +48,16 @@ describe("Fenix adapter + gate", () => {
     assert.equal(htmlHasFenixApi(onlyObj), false);
     assert.equal(validateProductHtml(onlyLoad, { kind: "site" }).ok, false);
     assert.equal(validateProductHtml(onlySave, { kind: "site" }).ok, false);
+  });
+
+  it("accepts only a complete Fenix.data read/write pair", () => {
+    const readOnly = `${SITE}<script>window.Fenix.data.query("items")</script>`;
+    const writeOnly = `${SITE}<script>window.Fenix.data.insert("items", { id: "1" })</script>`;
+    const crud = `${SITE}<script>window.Fenix.data.query("items");window.Fenix.data.insert("items", { id: "1" })</script>`;
+    assert.equal(htmlHasFenixApi(readOnly), false);
+    assert.equal(htmlHasFenixApi(writeOnly), false);
+    assert.equal(htmlHasFenixApi(crud), true);
+    assert.equal(validateProductHtml(crud, { kind: "site" }).ok, true);
   });
 
   it("injects a bridge adapter and the site becomes complete", () => {

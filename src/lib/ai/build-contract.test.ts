@@ -392,5 +392,6 @@ describe("quality ledger cites tests, not parity", () => {
     assert.ok(QUALITY_LEDGER.some((r) => r.id === "browser-dtm"));
     assert.ok(QUALITY_LEDGER.some((r) => r.id === "files-tree"));
     assert.ok(QUALITY_LEDGER.some((r) => r.id === "aa-fail-closed"));
+    assert.ok(QUALITY_LEDGER.some((r) => r.id === "data-api-local-first"));
   });
 });

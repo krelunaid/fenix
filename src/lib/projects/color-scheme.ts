@@ -7,6 +7,7 @@ import {
 import { replaceAppleTabIcons, rewriteIosWidgetHome } from "./craft-icons.ts";
 import { scrubCraftMedia } from "../ai/hero-image.ts";
 import { accentButtonPair, contrastRatio } from "./visual-quality.ts";
+import { FENIX_DATA_API_RUNTIME } from "./fenix-data-api.ts";
 
 export function isLightHex(hex: string) {
   const h = hex.replace("#", "").trim();
@@ -30,18 +31,10 @@ export type SrcPalette = {
 function hexToRgb(hex: string): [number, number, number] | null {
   const h = hex.replace("#", "").trim();
   if (h.length === 3) {
-    return [
-      parseInt(h[0] + h[0], 16),
-      parseInt(h[1] + h[1], 16),
-      parseInt(h[2] + h[2], 16),
-    ];
+    return [parseInt(h[0] + h[0], 16), parseInt(h[1] + h[1], 16), parseInt(h[2] + h[2], 16)];
   }
   if (h.length >= 6) {
-    return [
-      parseInt(h.slice(0, 2), 16),
-      parseInt(h.slice(2, 4), 16),
-      parseInt(h.slice(4, 6), 16),
-    ];
+    return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
   }
   return null;
 }
@@ -51,12 +44,7 @@ function mixHex(a: string, b: string, t: number): string {
   const B = hexToRgb(b);
   if (!A || !B) return a;
   const m = (i: number) => Math.round(A[i] * (1 - t) + B[i] * t);
-  return (
-    "#" +
-    [m(0), m(1), m(2)]
-      .map((n) => n.toString(16).padStart(2, "0"))
-      .join("")
-  );
+  return "#" + [m(0), m(1), m(2)].map((n) => n.toString(16).padStart(2, "0")).join("");
 }
 
 function hueOf(hex: string): number | null {
@@ -89,8 +77,7 @@ export function resolvePalette(input?: string | SrcPalette): Required<SrcPalette
   let bg = raw.bg || "#efe6d4";
   const light = isLightHex(bg);
   let fg = raw.fg || (light ? "#1c1712" : "#efe6d4");
-  let surface =
-    raw.surface || (light ? mixHex(bg, "#ffffff", 0.4) : mixHex(bg, "#ffffff", 0.08));
+  let surface = raw.surface || (light ? mixHex(bg, "#ffffff", 0.4) : mixHex(bg, "#ffffff", 0.08));
   let muted = raw.muted || (light ? "#5c5348" : "#9a8f7a");
   if (!light && contrastRatio(bg, surface) < 1.18) surface = mixHex(bg, "#ffffff", 0.15);
   let accent = raw.accent || "#c45c26";
@@ -249,7 +236,6 @@ img[src=""],img:not([src]){display:none!important}
 .fk-tab,.tabbar,nav.bottom-tab,nav.fk-tab{display:none!important}
 .btn,a.btn,button[type=submit]{background:var(--btn,var(--accent))!important;color:var(--btn-ink,#fff)!important}
 </style>`;
-
 
 const DASHBOARD_KIT = `<style data-fenix-site data-fenix-desk>
 *,*::before,*::after{box-sizing:border-box}
@@ -454,6 +440,7 @@ export function fenixRuntimeScript(projectId: string, kind?: string) {
     save: function(col, data){ fallbackSave(col, data); return call("save", col, data); },
     ready: function(){ document.documentElement.setAttribute("data-fenix-ready","1"); }
   };
+  ${FENIX_DATA_API_RUNTIME}
   try {
     Object.defineProperty(window, "__fenixHost", { value: api, writable: false, configurable: false });
   } catch (e) { window.__fenixHost = api; }
@@ -767,7 +754,6 @@ export function repairLeakedCss(html: string): string {
   return injectRescued(rebuilt, rescued);
 }
 
-
 /**
  * HTML parser closes <script> at the first </script>, even inside a JS string.
  * That yields `SyntaxError: missing ) after argument list` on about:srcdoc.
@@ -804,7 +790,10 @@ export function escapeEmbeddedScriptEnds(html: string): string {
   return out;
 }
 
-function scanScriptBody(html: string, start: number): { body: string; closer: string; end: number } {
+function scanScriptBody(
+  html: string,
+  start: number,
+): { body: string; closer: string; end: number } {
   let i = start;
   let body = "";
   let quote: string | null = null;
@@ -871,7 +860,7 @@ function scanScriptBody(html: string, start: number): { body: string; closer: st
       i += 2;
       continue;
     }
-    if (ch === "\"" || ch === "'" || ch === "`") {
+    if (ch === '"' || ch === "'" || ch === "`") {
       quote = ch;
       body += ch;
       i += 1;
@@ -944,7 +933,8 @@ export function prepareSrcDoc(
       : `${next}${NAV_GUARD}`;
   }
   if (!/data-fenix-phone/.test(next) && !/data-fenix-site/.test(next)) {
-    const kit = kind === "dashboard" ? DASHBOARD_KIT : looksLikeSite(next, kind) ? SITE_KIT : PHONE_KIT;
+    const kit =
+      kind === "dashboard" ? DASHBOARD_KIT : looksLikeSite(next, kind) ? SITE_KIT : PHONE_KIT;
     next = /<head[^>]*>/i.test(next)
       ? next.replace(/<head[^>]*>/i, (open) => `${open}${kit}`)
       : `${kit}${next}`;
@@ -952,17 +942,13 @@ export function prepareSrcDoc(
   if (shouldRepairDashboard(html, kind) && !/data-fenix-crud="13"/.test(next)) {
     next = next.replace(/<script[^>]*data-fenix-crud[^>]*>[\s\S]*?<\/script>/gi, "");
     const crud = dashboardCrudScript(discoverAppCollection(html));
-    next = /<\/body>/i.test(next)
-      ? next.replace(/<\/body>/i, `${crud}</body>`)
-      : `${next}${crud}`;
+    next = /<\/body>/i.test(next) ? next.replace(/<\/body>/i, `${crud}</body>`) : `${next}${crud}`;
   }
   // Last :root in <head> so the kit's var(--fg,#1c1712) resolves to the
   // project ink, not the phone-kit paper default, after authored CSS.
   if (!/data-fenix-palette/.test(next)) {
     const pal = paletteRootStyle(palette);
-    next = /<\/head>/i.test(next)
-      ? next.replace(/<\/head>/i, `${pal}</head>`)
-      : `${pal}${next}`;
+    next = /<\/head>/i.test(next) ? next.replace(/<\/head>/i, `${pal}</head>`) : `${pal}${next}`;
   }
   return escapeEmbeddedScriptEnds(absolutizeCraftHero(next));
 }

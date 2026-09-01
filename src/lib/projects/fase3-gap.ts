@@ -53,10 +53,10 @@ export const FASE3_GAPS: Fase3Gap[] = [
     area: "Backend / db / auth / API nelle app generate",
     emergent: "Auth (Google), DB, Stripe, API nel primo build.",
     fenix:
-      "Fenix.load/save IndexedDB nel runtime. Auth Fenix è del titolare, non dell'app generata. Mock JSON nel tree, niente server inventato.",
+      "Fenix.load/save IndexedDB più Fenix.data JSON local-first (query/list/get/insert/update/remove), mutazioni serializzate per collezione e token non sicuri bloccati prima del bridge. API dichiara shared=false: auth Fenix è del titolare, non dell'app generata. Mock JSON nel tree, niente server cloud inventato.",
     impact: "high",
     cost: "high",
-    slice: "later",
+    slice: "next",
   },
   {
     id: "collab",

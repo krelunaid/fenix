@@ -130,7 +130,11 @@ function routesFor(kind: ProjectKind, screens: string[]): string[] {
 function entitiesFor(kind: ProjectKind, brief: string): ContractEntity[] {
   const p = brief.toLowerCase();
   if (kind === "dashboard") {
-    const name = /\bordini\b/.test(p) ? "ordini" : /\bpezzi|inventario|magazzino\b/.test(p) ? "pezzi" : "righe";
+    const name = /\bordini\b/.test(p)
+      ? "ordini"
+      : /\bpezzi|inventario|magazzino\b/.test(p)
+        ? "pezzi"
+        : "righe";
     return [{ name, fields: ["id", "nome", "stato"], crud: true }];
   }
   if (kind === "site" || kind === "landing") {
@@ -241,7 +245,8 @@ export function parseContract(raw: unknown): BuildContract | null {
     const steps = asStringList(row.steps, 8, 60);
     if (id && steps.length) journeys.push({ id, steps });
   }
-  const visualIn = rec.visual && typeof rec.visual === "object" ? (rec.visual as Record<string, unknown>) : {};
+  const visualIn =
+    rec.visual && typeof rec.visual === "object" ? (rec.visual as Record<string, unknown>) : {};
   const constraintsIn =
     rec.constraints && typeof rec.constraints === "object"
       ? (rec.constraints as Record<string, unknown>)
@@ -272,9 +277,7 @@ export function parseContract(raw: unknown): BuildContract | null {
 }
 
 export function contractInstruction(contract: BuildContract): string {
-  const entities = contract.entities
-    .map((e) => `${e.name}${e.crud ? " (CRUD)" : ""}`)
-    .join(", ");
+  const entities = contract.entities.map((e) => `${e.name}${e.crud ? " (CRUD)" : ""}`).join(", ");
   const extras = contract.files.filter((p) => p !== "index.html");
   const fileBlocks = extras.map((p) => `<<<FILE path="${p}">>>`).join(" ");
   return [
@@ -296,12 +299,7 @@ export function contractInstruction(contract: BuildContract): string {
   ].join("\n");
 }
 
-function check(
-  id: string,
-  ok: boolean,
-  detail: string,
-  blocking = true,
-): ContractCheck {
+function check(id: string, ok: boolean, detail: string, blocking = true): ContractCheck {
   return { id, ok, blocking, detail };
 }
 
@@ -389,9 +387,11 @@ export function evaluateContract(input: {
   const pair = extractColorPair(runtimeHtml);
   const contrast = pair ? contrastRatio(pair.fg, pair.bg) : 0;
   const aaOk = Boolean(pair) && contrast >= 4.5;
-  const dnaOk = !visual.genericFont && !visual.aiPurple && !(visual.genericIosGray && visual.genericIosBlue);
+  const dnaOk =
+    !visual.genericFont && !visual.aiPurple && !(visual.genericIosGray && visual.genericIosBlue);
 
-  const filesOk = ingest.rejected.length === 0 && missingProvided.length === 0 && missingExpected.length === 0;
+  const filesOk =
+    ingest.rejected.length === 0 && missingProvided.length === 0 && missingExpected.length === 0;
   const filesDetail = ingest.rejected[0]
     ? `${ingest.rejected[0].path}: ${ingest.rejected[0].reason}`
     : missingExpected.length
@@ -400,16 +400,68 @@ export function evaluateContract(input: {
 
   const checks: ContractCheck[] = [
     check("html", report.ok, report.ok ? "HTML valido" : report.errors.slice(0, 3).join(" · ")),
-    check("kind-lock", report.ok || !report.errors.some((e) => /tabbar telefono|gestionale|scaffold/i.test(e)), kind),
-    check("srcdoc", /<!DOCTYPE html/i.test(runtimeHtml) && /<\/html>/i.test(runtimeHtml) && /<body[\s>]/i.test(runtimeHtml), "documento completo"),
+    check(
+      "kind-lock",
+      report.ok || !report.errors.some((e) => /tabbar telefono|gestionale|scaffold/i.test(e)),
+      kind,
+    ),
+    check(
+      "srcdoc",
+      /<!DOCTYPE html/i.test(runtimeHtml) &&
+        /<\/html>/i.test(runtimeHtml) &&
+        /<body[\s>]/i.test(runtimeHtml),
+      "documento completo",
+    ),
     check("files", filesOk, filesDetail),
-    check("crud", crudOk, hasFenix ? (hasForm || hasTable ? "Fenix + form/tabella" : "Fenix") : kind === "landing" ? "landing" : "manca Fenix.load/save"),
-    check("security", !secretHit && !evalCall && !iframeSameOrigin && !/\blocalStorage\b/.test(code), secretHit ? `segreto ${secretHit}` : evalCall ? "eval" : iframeSameOrigin ? "sandbox allow-same-origin" : "ok"),
-    check("overflow", !(kind === "site" || kind === "landing" ? bodyOverflow : false) && !phoneDesktop, phoneDesktop ? "min-width desktop su app" : bodyOverflow ? "overflow:hidden su body" : "ok"),
-    check("aa", aaOk, aaOk ? `contrasto ${contrast.toFixed(2)}` : pair ? `contrasto ${contrast.toFixed(2)} < 4.5` : "contrasto non misurabile"),
-    check("visual-dna", dnaOk, visual.notes.filter((n) => !/contrasto/i.test(n)).join(" · ") || "identità ok"),
+    check(
+      "crud",
+      crudOk,
+      hasFenix
+        ? hasForm || hasTable
+          ? "Fenix + form/tabella"
+          : "Fenix"
+        : kind === "landing"
+          ? "landing"
+          : "manca API dati Fenix",
+    ),
+    check(
+      "security",
+      !secretHit && !evalCall && !iframeSameOrigin && !/\blocalStorage\b/.test(code),
+      secretHit
+        ? `segreto ${secretHit}`
+        : evalCall
+          ? "eval"
+          : iframeSameOrigin
+            ? "sandbox allow-same-origin"
+            : "ok",
+    ),
+    check(
+      "overflow",
+      !(kind === "site" || kind === "landing" ? bodyOverflow : false) && !phoneDesktop,
+      phoneDesktop ? "min-width desktop su app" : bodyOverflow ? "overflow:hidden su body" : "ok",
+    ),
+    check(
+      "aa",
+      aaOk,
+      aaOk
+        ? `contrasto ${contrast.toFixed(2)}`
+        : pair
+          ? `contrasto ${contrast.toFixed(2)} < 4.5`
+          : "contrasto non misurabile",
+    ),
+    check(
+      "visual-dna",
+      dnaOk,
+      visual.notes.filter((n) => !/contrasto/i.test(n)).join(" · ") || "identità ok",
+    ),
     check("a11y-focus", hasFocus, hasFocus ? ":focus-visible" : "manca :focus-visible", false),
-    check("routes", kind === "site" || kind === "landing" ? sections >= 4 || views.size >= 3 : views.size >= 3 || sections >= 3, `${views.size} viste / ${sections} sezioni`),
+    check(
+      "routes",
+      kind === "site" || kind === "landing"
+        ? sections >= 4 || views.size >= 3
+        : views.size >= 3 || sections >= 3,
+      `${views.size} viste / ${sections} sezioni`,
+    ),
   ];
 
   const ok = checks.every((c) => !c.blocking || c.ok);
@@ -419,7 +471,13 @@ export function evaluateContract(input: {
 export function formatContractErrors(evaluation: ContractEval): string {
   return evaluation.checks
     .filter((c) => c.blocking && !c.ok)
-    .map((c) => `${c.id}: ${String(c.detail || "").replace(/\s+/g, " ").trim().slice(0, 80)}`)
+    .map(
+      (c) =>
+        `${c.id}: ${String(c.detail || "")
+          .replace(/\s+/g, " ")
+          .trim()
+          .slice(0, 80)}`,
+    )
     .join(" · ");
 }
 

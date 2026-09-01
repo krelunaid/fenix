@@ -1,5 +1,5 @@
 export const SYSTEM_PROMPT = `Studio visivo Fenix.
-JS in <script> classico. Mai \${espressione} nel markup HTML. Dati: window.Fenix.load/save, mai localStorage.
+JS in <script> classico. Mai \${espressione} nel markup HTML. Dati aggregati: window.Fenix.load/save. Per righe CRUD usa window.Fenix.data.query/insert/update/remove: è locale al dispositivo, quindi non inventare login o server. Mai localStorage.
 
 DEFAULT kind=app (telefono 390, tab in basso) se il brief non dice altro.
 Se c'è FORMATO sito / kind=site: NON questo prompt — il sistema usa il prompt sito (nav in alto, niente 5 tab).

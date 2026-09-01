@@ -16,16 +16,18 @@ export type HtmlReport = {
   scriptErrors: ScriptSyntaxError[];
 };
 
-/** Both load and save, or a verified data-fenix-adapter that defines both. */
+/** A complete read/write pair, or a verified data-fenix-adapter. */
 export function htmlHasFenixApi(html: string): boolean {
   const text = String(html || "");
   const adapter = text.match(/<script\b[^>]*data-fenix-adapter\b[^>]*>([\s\S]*?)<\/script>/i);
-  if (adapter && /\bFenix\.load\b/.test(adapter[1]) && /\bFenix\.save\b/.test(adapter[1])) {
+  if (adapter && /\bload\s*:/.test(adapter[1]) && /\bsave\s*:/.test(adapter[1])) {
     return true;
   }
   const load = /\bFenix\.load\b/.test(text) || /Fenix\s*=\s*\{[\s\S]{0,800}\bload\s*:/.test(text);
   const save = /\bFenix\.save\b/.test(text) || /Fenix\s*=\s*\{[\s\S]{0,800}\bsave\s*:/.test(text);
-  return Boolean(load && save);
+  const dataRead = /\bFenix\.data\.(?:query|list|get)\b/.test(text);
+  const dataWrite = /\bFenix\.data\.(?:insert|update|remove)\b/.test(text);
+  return Boolean((load && save) || (dataRead && dataWrite));
 }
 
 export function extractInlineScripts(html: string) {
@@ -94,10 +96,7 @@ export function looksLikeGestionaleOnSite(html: string, kind?: string): boolean 
   return /\bnuovo pezzo\b/i.test(h) && /<table/i.test(h) && /inventario/i.test(h);
 }
 
-export function validateProductHtml(
-  html: string,
-  opts?: { kind?: string },
-): HtmlReport {
+export function validateProductHtml(html: string, opts?: { kind?: string }): HtmlReport {
   const errors: string[] = [];
   const scriptErrors: ScriptSyntaxError[] = [];
   const text = String(html || "");
@@ -110,7 +109,10 @@ export function validateProductHtml(
   if (!/<body[\s>]/i.test(text) || !/<\/body>/i.test(text)) {
     errors.push("Manca <body> di chiusura.");
   }
-  if (/<script\b[^>]*>[\s\S]*$/i.test(text) && (text.match(/<script\b/gi) || []).length > (text.match(/<\/script>/gi) || []).length) {
+  if (
+    /<script\b[^>]*>[\s\S]*$/i.test(text) &&
+    (text.match(/<script\b/gi) || []).length > (text.match(/<\/script>/gi) || []).length
+  ) {
     errors.push("Tag <script> non chiuso.");
   }
 
@@ -118,7 +120,9 @@ export function validateProductHtml(
   scripts.forEach((script) => {
     const syntax = checkScriptSyntax(script.code);
     if (!syntax.ok) {
-      const loc = syntax.line ? ` (riga ${syntax.line}${syntax.column ? `:${syntax.column}` : ""})` : "";
+      const loc = syntax.line
+        ? ` (riga ${syntax.line}${syntax.column ? `:${syntax.column}` : ""})`
+        : "";
       const message = `Script ${script.index + 1}${loc}: ${syntax.error || "sintassi JS non valida"}`;
       errors.push(message);
       scriptErrors.push({
@@ -148,7 +152,9 @@ export function validateProductHtml(
   const views = new Set(
     [...text.matchAll(/data-view=["']([^"']+)["']/gi)].map((m) => m[1].toLowerCase()),
   );
-  const screens = (text.match(/<(?:template|section)[^>]+id=["']t-(home|new|list|stats|more)/gi) || []).length;
+  const screens = (
+    text.match(/<(?:template|section)[^>]+id=["']t-(home|new|list|stats|more)/gi) || []
+  ).length;
   const tabButtons = (text.match(/<(?:button|a)[^>]*data-view=/gi) || []).length;
   const sections = (text.match(/<section\b/gi) || []).length;
   const hasFenix = htmlHasFenixApi(text);
@@ -164,17 +170,13 @@ export function validateProductHtml(
     errors.push("Il pulsante Nuovo non apre un form. Annulla/Salva devono cambiare il DOM.");
   }
 
-  if (
-    (kind === "app" || kind === "tool" || kind === "game") &&
-    looksLikeAppleTabIcons(text)
-  ) {
+  if ((kind === "app" || kind === "tool" || kind === "game") && looksLikeAppleTabIcons(text)) {
     errors.push("Le tab usano icone iPhone (casa, plus, omino). Servono pittogrammi del mestiere.");
   }
-  if (
-    (kind === "app" || kind === "tool" || kind === "game") &&
-    looksLikeIosWidgetHome(text)
-  ) {
-    errors.push("La home è lo scheletro iPhone (4 riquadri + Ultimo/Stato). Serve un registro del mestiere.");
+  if ((kind === "app" || kind === "tool" || kind === "game") && looksLikeIosWidgetHome(text)) {
+    errors.push(
+      "La home è lo scheletro iPhone (4 riquadri + Ultimo/Stato). Serve un registro del mestiere.",
+    );
   }
 
   if (kind === "site" || kind === "landing") {
@@ -192,7 +194,7 @@ export function validateProductHtml(
     errors.push("Tab/pulsanti non collegati alle viste.");
   }
   if (!hasFenix && kind !== "landing") {
-    errors.push("Manca window.Fenix.load/save per i dati.");
+    errors.push("Manca un'API dati Fenix completa (load/save o data CRUD).");
   }
 
   const syntaxOk =
