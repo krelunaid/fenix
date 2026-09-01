@@ -40,6 +40,7 @@ export function PublishPanel({
   summary,
   files,
   onOpenSite,
+  onPublished,
 }: {
   open: boolean;
   onClose: () => void;
@@ -51,7 +52,8 @@ export function PublishPanel({
   tagline?: string;
   summary?: string;
   files?: ProjectFile[];
-  onOpenSite: () => void;
+  onOpenSite: (siteId: string) => void;
+  onPublished?: (publishedId: string) => void;
 }) {
   const [published, setPublished] = useState<PublishedSnapshot | null>(null);
   const [busy, setBusy] = useState(false);
@@ -101,6 +103,7 @@ export function PublishPanel({
         if (cancelled) return;
         setPublished(snap);
         setBusy(false);
+        onPublished?.(snap.id);
       })
       .catch((err: unknown) => {
         if (cancelled) return;
@@ -434,11 +437,8 @@ export function PublishPanel({
             variant="default"
             size="lg"
             onClick={() => {
-              if (publicId) {
-                window.location.assign(`/sito/${encodeURIComponent(publicId)}`);
-                return;
-              }
-              onOpenSite();
+              if (!publicId) return;
+              onOpenSite(publicId);
             }}
             className="w-full"
             disabled={busy || !publicId}

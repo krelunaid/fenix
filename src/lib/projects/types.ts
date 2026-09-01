@@ -69,6 +69,8 @@ export type Project = {
   revisions?: ProjectRevision[];
   /** Id della revisione attualmente in anteprima. */
   revisionId?: string;
+  /** Snapshot pubblico dopo una pubblicazione riuscita. Mai inventato. */
+  publishedId?: string;
 };
 
 export const DEFAULT_PALETTE: Palette = {

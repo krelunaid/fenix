@@ -284,7 +284,7 @@ export function codePaneFiles(
 ): ProjectFile[] {
   if (!isPhoneKind(opts.kind)) {
     const tree = projectFiles({ html, files });
-    return tree.filter((f) => !f.path.startsWith("src/") && !/^screens\//i.test(f.path));
+    return tree.filter((f) => !/^screens\//i.test(f.path));
   }
   const base =
     files && files.length > 0 ? files : html ? [{ path: "index.html", content: html }] : [];

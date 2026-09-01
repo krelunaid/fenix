@@ -1,4 +1,4 @@
-import { ENTRYPOINT, entrypointOf, projectFiles, type ProjectFile } from "./files.ts";
+import { ENTRYPOINT, entrypointOf, projectFiles, utf8Bytes, type ProjectFile } from "./files.ts";
 
 function crc32(data: Uint8Array) {
   let c = ~0 >>> 0;
@@ -47,7 +47,7 @@ export function treeManifest(files: ProjectFile[], meta?: { kind?: string }): Tr
     v: 1,
     entrypoint: entrypointOf(tree) || ENTRYPOINT,
     ...(meta?.kind ? { kind: meta.kind } : {}),
-    files: tree.map((f) => ({ path: f.path, hash: fnv1a(f.content), bytes: f.content.length })),
+    files: tree.map((f) => ({ path: f.path, hash: fnv1a(f.content), bytes: utf8Bytes(f.content) })),
   };
 }
 

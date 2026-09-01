@@ -12,16 +12,19 @@ import {
   ENTRYPOINT,
   MAX_FILE_BYTES,
   MAX_PROJECT_FILES,
+  MAX_TREE_BYTES,
   authorizedPreviewHtml,
   canonicalizePath,
   fileTree,
   ingestProjectFiles,
   migrateProjectTree,
   parseProjectFiles,
+  dropPhoneScreenFiles,
   projectFiles,
+  utf8Bytes,
 } from "./files.ts";
+import { unzipProject, zipProject, treeManifest } from "./zip.ts";
 import { recoverPersistedProject, type Recoverable } from "./recover.ts";
-import { unzipProject, zipProject } from "./zip.ts";
 import { commitIfChanged, restoreProjectRevision } from "./revisions.ts";
 import { DEFAULT_PALETTE, type Project } from "./types.ts";
 
@@ -89,6 +92,34 @@ describe("ingest POSIX tree", () => {
     );
   });
 
+  it("counts UTF-8 bytes, not UTF-16 code units, at the file and tree boundary", () => {
+    const e = "é";
+    assert.equal(utf8Bytes(e), 2);
+    assert.equal(e.length, 1);
+    assert.equal(utf8Bytes("😀"), 4);
+    const atFile = e.repeat(MAX_FILE_BYTES / 2);
+    assert.equal(utf8Bytes(atFile), MAX_FILE_BYTES);
+    assert.equal(atFile.length, MAX_FILE_BYTES / 2);
+    assert.equal(ingestProjectFiles([{ path: "a.md", content: atFile }]).rejected.length, 0);
+    assert.equal(
+      ingestProjectFiles([{ path: "a.md", content: atFile + e }]).rejected[0]?.reason,
+      "file troppo grande",
+    );
+    const chunk = e.repeat(MAX_FILE_BYTES / 2);
+    const five = Array.from({ length: 5 }, (_, i) => ({ path: `f${i}.md`, content: chunk }));
+    assert.equal(ingestProjectFiles(five).rejected.length, 0);
+    assert.ok(utf8Bytes(chunk) * 5 < MAX_TREE_BYTES);
+    assert.ok(utf8Bytes(chunk) * 6 > MAX_TREE_BYTES);
+    const six = ingestProjectFiles([...five, { path: "overflow.md", content: chunk }]);
+    assert.ok(six.rejected.some((r) => r.reason === "albero troppo grande"));
+    const man = treeManifest([{ path: "note.md", content: "é😀" }]);
+    assert.equal(
+      man.files.find((f) => f.path === "note.md")?.bytes,
+      utf8Bytes("é😀"),
+    );
+    assert.notEqual(man.files.find((f) => f.path === "note.md")?.bytes, "é😀".length);
+  });
+
   it("caps file count", () => {
     const input = Array.from({ length: MAX_PROJECT_FILES + 3 }, (_, i) => ({
       path: `f${i}.txt`,
@@ -136,6 +167,7 @@ describe("migration of HTML-only projects", () => {
     assert.equal(recovered.files?.[0]?.content, recovered.html);
     const again = migrateProjectTree(recovered);
     assert.equal(again.files, recovered.files);
+    assert.equal(recovered.publishedId, undefined);
   });
 });
 
@@ -233,3 +265,70 @@ describe("rollback photographs the whole tree", () => {
     assert.doesNotMatch(snap, /sk-hidden|visualJobId/);
   });
 });
+
+describe("desktop parse keeps portable src/ for export and rollback", () => {
+  it("src/components survives parse -> store tree -> revision -> ZIP", () => {
+    const card = APP_COMPONENTS.find((f) => f.path === "src/components/Card.tsx")!.content;
+    const html = ARGILLA;
+    const raw = `
+<<<FILE path="src/components/Card.tsx">>>
+${card}
+<<<FILE path="screens/home.html">>>
+<section>telefono</section>
+<<<FILE path="data/ordini.json">>>
+{"ok":true}
+<<<END>>>`;
+    const parsed = dropPhoneScreenFiles(parseProjectFiles(raw));
+    const cardKept = parsed.find((f) => f.path === "src/components/Card.tsx")?.content;
+    assert.ok(cardKept);
+    assert.match(cardKept, /function Card/);
+    assert.equal(parsed.some((f) => f.path === "screens/home.html"), false);
+    const stored = projectFiles({ html, files: parsed });
+    assert.equal(stored.find((f) => f.path === "src/components/Card.tsx")?.content, cardKept);
+    assert.equal(stored.find((f) => f.path === ENTRYPOINT)?.content, html);
+    const now = 1_720_000_111_000;
+    const project: Project = {
+      id: "p-desk-tree",
+      name: "Argilla Viva",
+      tagline: "Magazzino",
+      prompt: "FORMATO: gestionale. kind=dashboard",
+      kind: "dashboard",
+      requestedKind: "dashboard",
+      summary: "",
+      palette: DEFAULT_PALETTE,
+      html,
+      files: stored,
+      messages: [],
+      buildLog: ["Pronto"],
+      status: "ready",
+      createdAt: now,
+      updatedAt: now,
+    };
+    const committed = commitIfChanged(project, {
+      source: "build",
+      label: "Pronto",
+      id: "rev-desk",
+      at: now,
+    });
+    assert.ok(committed.files?.some((f) => f.path === "src/components/Card.tsx"));
+    const preview = authorizedPreviewHtml({ html: committed.html, files: committed.files });
+    assert.equal(preview, committed.html);
+    assert.doesNotMatch(preview, /export default function Card/);
+    const zipped = zipProject(committed.files || [], { kind: "dashboard" });
+    const round = unzipProject(zipped);
+    assert.equal(
+      round.files.find((f) => f.path === "src/components/Card.tsx")?.content,
+      cardKept,
+    );
+    const later = (committed.files || []).map((f) =>
+      f.path === "src/components/Card.tsx" ? { ...f, content: "export default function Card(){return null}" } : f,
+    );
+    const polished = commitIfChanged(
+      { ...committed, files: later, html: `${committed.html}<!-- v2 -->` },
+      { source: "polish", label: "Rifinitura", id: "rev-desk-2", at: now + 1 },
+    );
+    const restored = restoreProjectRevision(polished, "rev-desk");
+    assert.equal(restored!.files?.find((f) => f.path === "src/components/Card.tsx")?.content, cardKept);
+  });
+});
+

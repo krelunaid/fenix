@@ -157,16 +157,19 @@ describe("dashboard parse and code pane", () => {
     const fakeReact = [
       { path: "index.html", content: "<!doctype html><div id=root></div>" },
       { path: "src/App.tsx", content: "export default function App(){return null}" },
+      { path: "src/components/Card.tsx", content: "export default function Card(){return null}" },
     ];
     const files = codePaneFiles(DEMOS.kiln.html, fakeReact, {
       name: "Kiln",
       palette: DEMOS.kiln.palette,
       kind: "dashboard",
     });
-    assert.equal(files.some((f) => f.path === "src/App.tsx"), false);
-    assert.equal(files.length, 1);
-    assert.equal(files[0]?.path, "index.html");
-    assert.match(files[0]?.content ?? "", /Kiln/);
+    const index = files.find((f) => f.path === "index.html");
+    assert.ok(index);
+    assert.match(index!.content, /Kiln/);
+    assert.doesNotMatch(index!.content, /id=root/);
+    assert.equal(files.some((f) => f.path === "src/components/Card.tsx"), true);
+    assert.equal(files.some((f) => /^screens\//i.test(f.path)), false);
   });
 });
 

@@ -33,6 +33,7 @@ export type Recoverable = {
   visualJobStartedAt?: number;
   files?: ProjectFile[];
   appData?: Record<string, unknown>;
+  publishedId?: string;
 };
 
 function htmlRecoveryError(

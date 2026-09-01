@@ -1,4 +1,4 @@
-import { assembleHtml, ensureScreenFiles, ingestProjectFiles, parseProjectFiles, seedFiveScreens, type ProjectFile } from "@/lib/projects/files";
+import { assembleHtml, dropPhoneScreenFiles, ensureScreenFiles, ingestProjectFiles, parseProjectFiles, seedFiveScreens, type ProjectFile } from "@/lib/projects/files";
 import { DEFAULT_PALETTE, type Palette, type ProjectKind } from "@/lib/projects/types";
 import { isPhoneKind } from "@/lib/projects/infer";
 import { fenix2Files } from "@/lib/projects/fenix2";
@@ -115,10 +115,7 @@ export function parseBuildOutput(text: string, lockKind?: ProjectKind): BuildRes
     files = fenix2Files(files, { name: meta.name, palette: meta.palette });
     files = ingestProjectFiles(files, { html }).files;
   } else {
-    files = ingestProjectFiles(
-      files.filter((f) => f.path === "index.html" || (!/^screens\//i.test(f.path) && !f.path.startsWith("src/"))),
-      { html },
-    ).files;
+    files = ingestProjectFiles(dropPhoneScreenFiles(files), { html }).files;
   }
 
   return { ...meta, html, files };

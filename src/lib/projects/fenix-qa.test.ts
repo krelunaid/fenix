@@ -93,6 +93,12 @@ describe("focus-visible and worker model", () => {
     const filesSrc = readFileSync(join(root, "src/lib/projects/files.ts"), "utf8");
     assert.match(filesSrc, /export function ingestProjectFiles/);
     assert.match(filesSrc, /authorizedPreviewHtml/);
+    assert.match(filesSrc, /utf8Bytes/);
+    assert.match(filesSrc, /TextEncoder/);
+    assert.match(filesSrc, /dropPhoneScreenFiles/);
+    const parseSrc = readFileSync(join(root, "src/lib/ai/parse.ts"), "utf8");
+    assert.match(parseSrc, /dropPhoneScreenFiles/);
+    assert.doesNotMatch(parseSrc, /!f\.path\.startsWith\("src\/"\)/);
     const zipSrc = readFileSync(join(root, "src/lib/projects/zip.ts"), "utf8");
     assert.match(zipSrc, /export function zipProject/);
     assert.match(zipSrc, /fenix\.json/);
@@ -261,6 +267,7 @@ describe("focus-visible and worker model", () => {
     assert.match(publishClient, /randomUUID/);
     assert.match(publishClient, /rememberPublishedId/);
     assert.match(publishClient, /readPublishedId/);
+    assert.match(publishClient, /resolvePublishedId/);
     assert.match(publishClient, /PUBLISHED_MAP_KEY/);
     const sitoSrc = readFileSync(join(root, "src/routes/sito.$projectId.tsx"), "utf8");
     assert.match(sitoSrc, /absolute inset-0/);

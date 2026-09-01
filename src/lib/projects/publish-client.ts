@@ -72,6 +72,39 @@ export async function loadPublished(id: string): Promise<PublishedSnapshot | nul
   return (await res.json()) as PublishedSnapshot;
 }
 
+/**
+ * Public /sito/ id for a studio project. GET is the source of truth.
+ * Never invents an id, never PUTs, never claims an ownerless snapshot.
+ */
+export async function resolvePublishedId(
+  originalId: string,
+  persisted?: string | null,
+): Promise<string | null> {
+  const mapped = readPublishedId(originalId);
+  const hinted =
+    mapped ||
+    (persisted && persisted !== originalId && isPublishedId(persisted) ? persisted : "") ||
+    originalId;
+
+  async function peek(id: string): Promise<string | null> {
+    if (!isPublishedId(id)) return null;
+    try {
+      const snap = await loadPublished(id);
+      return snap?.id && snap.html ? snap.id : null;
+    } catch {
+      return null;
+    }
+  }
+
+  const found = await peek(hinted);
+  if (found) {
+    if (found !== originalId) rememberPublishedId(originalId, found);
+    return found;
+  }
+  if (hinted !== originalId) return peek(originalId);
+  return null;
+}
+
 export async function publishSnapshot(input: {
   id: string;
   name: string;

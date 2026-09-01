@@ -1,5 +1,7 @@
+import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { validatePublishable } from "@/lib/projects/validate-html";
+import { resolvePublishedId } from "@/lib/projects/publish-client";
 import type { Project } from "@/lib/projects/types";
 import { cn } from "@/lib/utils";
 
@@ -24,6 +26,21 @@ export function ProjectCard({
       : null;
   const src = report?.syntaxOk ? report.srcDoc : "";
   const frameH = Math.round(844 * SCALE);
+  const [publicId, setPublicId] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (project.status !== "ready" || !project.html) {
+      setPublicId(null);
+      return;
+    }
+    void resolvePublishedId(project.id, project.publishedId).then((id) => {
+      if (!cancelled) setPublicId(id);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [project.id, project.publishedId, project.status, project.html]);
 
   return (
     <article className="flex flex-col items-center rounded-3xl border border-white/8 bg-[#120e24] p-5">
@@ -60,12 +77,13 @@ export function ProjectCard({
       </p>
 
       <div className="mt-4 flex w-full flex-wrap justify-center gap-2">
-        {project.html && project.status === "ready" ? (
+        {publicId ? (
           <Link
             to="/sito/$projectId"
-            params={{ projectId: project.id }}
+            params={{ projectId: publicId }}
+            aria-label="Apri sito pubblicato"
             className={cn(
-              "inline-flex h-9 items-center rounded-full bg-white px-3.5",
+              "inline-flex h-11 min-h-11 items-center rounded-full bg-white px-3.5",
               "text-xs font-semibold text-[#1d1d1f] no-underline hover:opacity-90",
             )}
           >
@@ -75,7 +93,7 @@ export function ProjectCard({
         <Link
           to="/studio/$projectId"
           params={{ projectId: project.id }}
-          className="inline-flex h-9 items-center rounded-full border border-white/15 px-3.5 text-xs text-white no-underline hover:bg-white/8"
+          className="inline-flex h-11 min-h-11 items-center rounded-full border border-white/15 px-3.5 text-xs text-white no-underline hover:bg-white/8"
         >
           Modifica
         </Link>
@@ -85,7 +103,7 @@ export function ProjectCard({
             onClick={() => {
               if (window.confirm(`Eliminare ${project.name}?`)) onDelete(project.id);
             }}
-            className="inline-flex h-9 items-center rounded-full px-3 text-xs text-[#9b93c2] hover:text-white"
+            className="inline-flex h-11 min-h-11 items-center rounded-full px-3 text-xs text-[#9b93c2] hover:text-white"
           >
             Elimina
           </button>

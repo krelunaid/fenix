@@ -35,6 +35,7 @@ function StudioPage() {
   const project = useProjectStore((s) => s.projects.find((p) => p.id === projectId));
   const addMessage = useProjectStore((s) => s.addMessage);
   const restoreRevision = useProjectStore((s) => s.restoreRevision);
+  const updateProject = useProjectStore((s) => s.updateProject);
   const [device, setDevice] = useState<Device>(previewDevice(project?.kind));
   const [pane, setPane] = useState<Pane>("preview");
   const [draft, setDraft] = useState("");
@@ -328,9 +329,10 @@ function StudioPage() {
         tagline={project.tagline}
         summary={project.summary}
         files={project.files}
-        onOpenSite={() => {
+        onPublished={(id) => updateProject(project.id, { publishedId: id })}
+        onOpenSite={(siteId) => {
           setPublishOpen(false);
-          void navigate({ to: "/sito/$projectId", params: { projectId: project.id } });
+          void navigate({ to: "/sito/$projectId", params: { projectId: siteId } });
         }}
       />
     </div>

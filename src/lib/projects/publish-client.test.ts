@@ -6,6 +6,7 @@ import {
   publishSnapshot,
   readPublishedId,
   rememberPublishedId,
+  resolvePublishedId,
 } from "./publish-client.ts";
 import {
   OWNER_HEADER,
@@ -251,5 +252,34 @@ describe("legacy publish id mapping", () => {
   it("detects the immutable legacy error", () => {
     assert.equal(isLegacyImmutableError("Sito pubblico senza titolare: immutabile."), true);
     assert.equal(isLegacyImmutableError("Versione non attuale."), false);
+  });
+
+  it("resolvePublishedId follows mapping, falls back to original, never PUTs, never invents", async () => {
+    const published = "c1d2e3f4-1111-4111-8111-aaaaaaaaaaaa";
+    const sites = new Map<string, { version: number; html: string; owner: string | null }>();
+    sites.set(published, { version: 1, html: HTML_V1, owner: OWNER_A });
+    const mock = installFetch(sites);
+    restoreFetch = mock.restore;
+
+    rememberPublishedId(LEGACY_ID, published);
+    assert.equal(await resolvePublishedId(LEGACY_ID), published);
+    assert.equal(mock.puts.length, 0);
+
+    localStorage.removeItem(PUBLISHED_MAP_KEY);
+    assert.equal(await resolvePublishedId(LEGACY_ID, published), published);
+    assert.equal(readPublishedId(LEGACY_ID), published);
+    assert.equal(mock.puts.length, 0);
+
+    localStorage.removeItem(PUBLISHED_MAP_KEY);
+    sites.delete(published);
+    sites.set(LEGACY_ID, { version: 1, html: HTML_V1, owner: OWNER_A });
+    assert.equal(await resolvePublishedId(LEGACY_ID, published), LEGACY_ID);
+    assert.equal(mock.puts.length, 0);
+
+    sites.clear();
+    localStorage.removeItem(PUBLISHED_MAP_KEY);
+    assert.equal(await resolvePublishedId(LEGACY_ID), null);
+    assert.equal(await resolvePublishedId(LEGACY_ID, published), null);
+    assert.equal(mock.puts.length, 0);
   });
 });

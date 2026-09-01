@@ -11,6 +11,11 @@ export const MAX_FILE_BYTES = 256 * 1024;
 export const MAX_TREE_BYTES = 1_500_000;
 export const MAX_PATH_LENGTH = 180;
 
+export function utf8Bytes(text: string): number {
+  return new TextEncoder().encode(text).byteLength;
+}
+
+
 export type FileReject = { path: string; reason: string };
 
 export type IngestResult = {
@@ -98,7 +103,7 @@ export function inspectFile(path: string, content: string): { ok: true } | { ok:
   if (typeof content !== "string" || !content) return { ok: false, reason: "vuoto" };
   const ext = extOf(path);
   if (!ext || !ALLOWED_EXT.has(ext)) return { ok: false, reason: "estensione non ammessa" };
-  if (content.length > MAX_FILE_BYTES) return { ok: false, reason: "file troppo grande" };
+  if (utf8Bytes(content) > MAX_FILE_BYTES) return { ok: false, reason: "file troppo grande" };
   if (looksBinary(content)) return { ok: false, reason: "binario" };
   if (fileLooksLikeSecret(content, path)) return { ok: false, reason: "segreto" };
   return { ok: true };
@@ -148,7 +153,7 @@ export function ingestProjectFiles(
       rejected.push({ path: canon.path, reason: "limite file" });
       return;
     }
-    const nextBytes = bytes - (existing?.content.length || 0) + content.length;
+    const nextBytes = bytes - (existing ? utf8Bytes(existing.content) : 0) + utf8Bytes(content);
     if (nextBytes > MAX_TREE_BYTES) {
       rejected.push({ path: canon.path, reason: "albero troppo grande" });
       return;
@@ -174,6 +179,11 @@ export function parseProjectFiles(text: string): ProjectFile[] {
     raw.push({ path, content });
   }
   return ingestProjectFiles(raw).files;
+}
+
+/** Desk kinds keep src/css/js. Phone `screens/` templates stay out of the portable tree. */
+export function dropPhoneScreenFiles(files: ProjectFile[]): ProjectFile[] {
+  return files.filter((f) => f.path === "index.html" || !/^screens\//i.test(f.path));
 }
 
 export function normalizeFilePath(path: string): string {

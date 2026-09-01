@@ -52,6 +52,8 @@ describe("published site is server-side, not localStorage", () => {
     assert.doesNotMatch(preview, /allow-same-origin/);
     const card = readFileSync(join(root, "src/components/project-card.tsx"), "utf8");
     assert.doesNotMatch(card, /allow-same-origin/);
+    assert.match(card, /resolvePublishedId/);
+    assert.match(card, /Apri sito pubblicato/);
   });
 
   it("anonymous PUT is 401 and GET stays public", async () => {
@@ -351,6 +353,132 @@ describe("published site is server-side, not localStorage", () => {
       const otherPuts = puts.map((u) => decodeURIComponent(u.split("/api/sites/")[1] || "").split("?")[0]);
       assert.equal(otherPuts.includes(publishedId), true);
       assert.equal(otherPuts.some((id) => id !== originalId && id !== publishedId), false);
+    } finally {
+      await browser.close();
+    }
+  });
+
+  it("home/vetrina Apri href GETs the published snapshot in a clean browser; missing stays missing", async () => {
+    const PREVIEW = await requirePreview();
+    const originalId = "49c14680-a504-436d-a0db-84e4f3583dbe";
+    const publishedId = "7e2a1c90-bb12-4d33-9e40-0f6c8a11d4aa";
+    const unpublishedId = "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee";
+    const put = await fetch(`${PREVIEW}/api/sites/${publishedId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", [OWNER_HEADER]: OWNER_A },
+      body: JSON.stringify({
+        name: "Argilla Viva",
+        kind: "site",
+        palette: PALETTE,
+        html: ADAPTED,
+      }),
+    });
+    assert.equal(put.ok, true, await put.text());
+    const missingGet = await fetch(`${PREVIEW}/api/sites/${originalId}`, { cache: "no-store" });
+    assert.equal(missingGet.status, 404);
+
+    const browser = await chromium.launch({ headless: true, args: ["--no-sandbox"] });
+    try {
+      const seed = {
+        originalId,
+        publishedId,
+        unpublishedId,
+        html: ADAPTED,
+        owner: OWNER_A,
+        palette: PALETTE,
+        mapKey: PUBLISHED_MAP_KEY,
+      };
+      async function openWithCards(path: string) {
+        const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+        await page.addInitScript(
+          (s: typeof seed) => {
+            if (window !== window.parent) return;
+            localStorage.setItem("fenix.session", JSON.stringify({ email: "qa@fenix.test", name: "QA" }));
+            localStorage.setItem("fenix.owner-id", s.owner);
+            localStorage.setItem(s.mapKey, JSON.stringify({ [s.originalId]: s.publishedId }));
+            const now = Date.now();
+            const ready = {
+              tagline: "",
+              prompt: "FORMATO: sito web. kind=site. Argilla Viva",
+              kind: "site",
+              requestedKind: "site",
+              summary: "",
+              palette: s.palette,
+              html: s.html,
+              messages: [],
+              buildLog: ["Pronto"],
+              status: "ready",
+              createdAt: now,
+              updatedAt: now,
+            };
+            localStorage.setItem(
+              "officina-projects",
+              JSON.stringify({
+                state: {
+                  projects: [
+                    { ...ready, id: s.originalId, name: "Argilla Viva", publishedId: s.publishedId },
+                    { ...ready, id: s.unpublishedId, name: "Bozza locale" },
+                  ],
+                  creditsRemaining: 46,
+                  appDb: {},
+                },
+                version: 3,
+              }),
+            );
+          },
+          seed,
+        );
+        const errors: string[] = [];
+        page.on("pageerror", (err) => errors.push(String(err)));
+        page.on("console", (msg) => {
+          if (msg.type() === "error") errors.push(msg.text());
+        });
+        await page.goto(`${PREVIEW}${path}`, { waitUntil: "domcontentloaded", timeout: 20000 });
+        const article = page.locator("article").filter({ hasText: "Argilla Viva" });
+        await article.getByRole("heading", { name: "Argilla Viva" }).waitFor({ timeout: 12000 });
+        const apri = article.getByRole("link", { name: /Apri/ });
+        await apri.waitFor({ timeout: 12000 });
+        const href = await apri.getAttribute("href");
+        assert.equal(href, `/sito/${publishedId}`);
+        assert.equal((href || "").includes(originalId), false);
+        const draft = page.locator("article").filter({ hasText: "Bozza locale" });
+        await draft.getByRole("link", { name: /^Modifica$/ }).waitFor({ timeout: 8000 });
+        assert.equal(await draft.getByRole("link", { name: /Apri/ }).count(), 0);
+        const noise = errors.filter(
+          (e) => !/favicon|net::ERR|Download the React DevTools|hydration|status of 404|\/api\/sites\//i.test(e),
+        );
+        assert.equal(noise.length, 0, noise.join(" | "));
+        await page.close();
+        return href!;
+      }
+
+      const href = await openWithCards("/");
+      await openWithCards("/vetrina");
+
+      for (const viewport of [
+        { width: 1440, height: 900 },
+        { width: 768, height: 1024 },
+        { width: 390, height: 844 },
+      ]) {
+        const clean = await browser.newPage({ viewport });
+        const errors: string[] = [];
+        clean.on("pageerror", (err) => errors.push(String(err)));
+        await clean.goto(`${PREVIEW}${href}`, { waitUntil: "domcontentloaded", timeout: 20000 });
+        const frame = clean.frameLocator("iframe").first();
+        await frame.getByRole("heading", { name: "Onda" }).waitFor({ timeout: 15000 });
+        assert.equal(await clean.getByText("Sito non trovato").count(), 0);
+        const noise = errors.filter(
+          (e) => !/favicon|net::ERR|Download the React DevTools|hydration/i.test(e),
+        );
+        assert.equal(noise.length, 0, `${viewport.width} ${noise.join(" | ")}`);
+        await clean.close();
+      }
+
+      const ghost = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+      await ghost.goto(`${PREVIEW}/sito/${originalId}`, { waitUntil: "domcontentloaded", timeout: 20000 });
+      await ghost.getByText("Sito non trovato").first().waitFor({ timeout: 12000 });
+      assert.equal(await ghost.locator("iframe").count(), 0);
+      await ghost.close();
     } finally {
       await browser.close();
     }
