@@ -107,6 +107,64 @@ function childrenOf(ppid) {
   return kids;
 }
 
+function killTree(pid) {
+  if (!pid) return;
+  const pgid = pgidOf(pid);
+  if (pgid && pgid > 1) {
+    try {
+      process.kill(-pgid, "SIGKILL");
+    } catch {
+      /* gone */
+    }
+  }
+  if (alive(pid)) {
+    try {
+      process.kill(pid, "SIGKILL");
+    } catch {
+      /* gone */
+    }
+  }
+}
+
+function listenPids() {
+  try {
+    const out = execFileSync("lsof", ["-nP", "-iTCP:8081", "-sTCP:LISTEN"], {
+      encoding: "utf8",
+      timeout: 3000,
+      stdio: ["ignore", "pipe", "ignore"],
+    });
+    return [
+      ...new Set(
+        out
+          .split("\n")
+          .slice(1)
+          .map((l) => Number.parseInt(l.trim().split(/\s+/)[1], 10))
+          .filter((n) => n > 1),
+      ),
+    ];
+  } catch {
+    return [];
+  }
+}
+
+async function waitPreviewChild(leaderPid, ms = 5000) {
+  const deadline = Date.now() + ms;
+  while (Date.now() < deadline) {
+    const kids = childrenOf(leaderPid);
+    for (const kid of kids) {
+      const cmd = cmdlineOf(kid);
+      if (looksLikePreviewChild(cmd) || /vite(?:\.js)?/.test(cmd)) return kid;
+    }
+    const pids = listenPids().filter((p) => p !== leaderPid);
+    for (const pid of pids) {
+      const cmd = cmdlineOf(pid);
+      if (looksLikePreviewChild(cmd) || /vite(?:\.js)?/.test(cmd)) return pid;
+    }
+    await sleep(50);
+  }
+  return childrenOf(leaderPid)[0] ?? listenPids().find((p) => p !== leaderPid) ?? null;
+}
+
 test("clone B restart kills clone A's vite.js preview group and takes 8081", async () => {
   execFileSync(process.execPath, [PREVIEW_BIN, "stop"], { cwd: ROOT, stdio: "ignore" });
   assert.equal(await waitFree(), true, "8081 still held after stop");
@@ -140,40 +198,25 @@ child.on("exit", (c) => process.exit(c ?? 0));
   leader.unref();
   const leaderPid = leader.pid;
   assert.ok(leaderPid);
+  const leaderPgid = pgidOf(leaderPid) ?? leaderPid;
   let childPid = null;
 
   try {
     assert.equal(await waitHeld(), true, "clone A did not bind 8081");
     const fromA = await fetch("http://127.0.0.1:8081/").then((r) => r.text());
     assert.equal(fromA, "clone-a");
-    const kids = childrenOf(leaderPid);
-    childPid = kids[0] ?? null;
-    if (!childPid) {
-      try {
-        const out = execFileSync("lsof", ["-nP", "-iTCP:8081", "-sTCP:LISTEN"], {
-          encoding: "utf8",
-          timeout: 3000,
-          stdio: ["ignore", "pipe", "ignore"],
-        });
-        const pids = [
-          ...new Set(
-            out
-              .split("\n")
-              .slice(1)
-              .map((l) => Number.parseInt(l.trim().split(/\s+/)[1], 10))
-              .filter((n) => n > 1),
-          ),
-        ];
-        childPid = pids.find((p) => p !== leaderPid) ?? pids[0] ?? null;
-      } catch {
-        childPid = null;
-      }
-    }
+    childPid = await waitPreviewChild(leaderPid);
     const childCmd = childPid ? cmdlineOf(childPid) : "";
     const leaderCmd = cmdlineOf(leaderPid);
-    assert.match(childCmd || leaderCmd, /vite\.js preview/);
-    assert.equal(looksLikePreviewChild(childCmd || leaderCmd), true);
+    // Leader is `with-app-env.mjs vite preview`; the listener is the vite.js child.
+    assert.match(leaderCmd, /with-app-env\.mjs/);
     assert.equal(looksLikePreviewLeader(leaderCmd), true);
+    if (childCmd) {
+      assert.match(childCmd, /vite(?:\.js)?(?:\s+preview|\s*$)/);
+      assert.equal(looksLikePreviewChild(childCmd), true);
+    } else {
+      assert.match(leaderCmd, /with-app-env\.mjs.*\bvite\s+preview\b/);
+    }
 
     writeFileSync(PID_FILE, "99999\n"); // stale pidfile in clone B
     const restart = spawn(process.execPath, [PREVIEW_BIN, "restart"], {
@@ -193,13 +236,27 @@ child.on("exit", (c) => process.exit(c ?? 0));
       assert.ok(bPid > 1 && bPid !== leaderPid);
     }
   } finally {
+    killTree(leaderPgid);
+    killTree(leaderPid);
+    killTree(childPid);
+    for (const pid of listenPids()) {
+      const cmd = cmdlineOf(pid);
+      if (cmd.includes(cloneA) || pid === childPid || pid === leaderPid) killTree(pid);
+    }
     try {
-      for (const pid of [childPid, leaderPid]) {
-        if (alive(pid)) process.kill(pid, "SIGKILL");
+      const leftover = await fetch("http://127.0.0.1:8081/")
+        .then((r) => r.text())
+        .catch(() => "");
+      if (leftover === "clone-a") {
+        for (const pid of listenPids()) killTree(pid);
       }
+    } catch {
+      /* port free */
+    }
+    try {
+      rmSync(cloneA, { recursive: true, force: true });
     } catch {
       /* gone */
     }
-    rmSync(cloneA, { recursive: true, force: true });
   }
 });

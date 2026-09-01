@@ -163,6 +163,8 @@ describe("focus-visible and worker model", () => {
     assert.match(scheme, /max-width:1120px/);
     assert.doesNotMatch(scheme, /max-width:40rem/);
     assert.match(scheme, /nav\.bottom-tab,nav\.fk-tab\{display:none!important\}/);
+    assert.match(scheme, /min-height:44px/);
+    assert.match(scheme, /:focus-visible/);
     assert.match(scheme, /fenix-boot-error/);
     assert.match(scheme, /fenix-boot-ok/);
     assert.match(scheme, /ev\.target !== window/);

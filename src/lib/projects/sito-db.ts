@@ -20,6 +20,9 @@ export function isAllowedSiteDbToken(value: unknown): value is string {
   return typeof value === "string" && TOKEN_RE.test(value);
 }
 
+/** Opaque srcdoc origin is the string "null"; a real URL targetOrigin would
+ *  drop the reply. "*" is allowed only then. Isolation is event.source ===
+ *  iframe.contentWindow, not the origin string. */
 export function siteDbReplyOrigin(origin: string): string {
   if (/^https?:\/\//i.test(origin)) return origin;
   return "*";

@@ -28,6 +28,7 @@ describe("published /sito Fenix db", () => {
     assert.match(db, /writeDurable/);
     assert.match(db, /iframeRef\?\.current\?\.contentWindow/);
     assert.match(db, /event\.source !== expectedSource/);
+    assert.match(db, /Opaque srcdoc origin is the string "null"/);
     assert.doesNotMatch(db, /useProjectStore/);
     assert.doesNotMatch(db, /allow-same-origin/);
   });
