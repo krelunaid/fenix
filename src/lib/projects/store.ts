@@ -5,7 +5,7 @@ import type { ProjectFile } from "./files";
 import { projectFiles } from "./files";
 import { CREDITS_GRANT, CREDIT_COST } from "./credits";
 import { DEMOS } from "./demos";
-import { resolveProjectKind, isPhoneKind } from "./infer";
+import { formatPrefix, resolveProjectKind, isPhoneKind } from "./infer";
 import { validatePublishable, type HtmlReport } from "./validate-html";
 import { blocksPublish } from "../ai/build-contract";
 import { recoverPersistedProject, STALE_BUILD_MS, RESUME_ERROR } from "./recover";
@@ -27,6 +27,7 @@ import {
 } from "./types";
 import { branchProjectRevision, commitIfChanged, restoreProjectRevision } from "./revisions";
 import { appendProjectActivity, type ActivityInput } from "./activity";
+import { importProjectArchive } from "./zip";
 
 import {
   APP_DB_KEY,
@@ -55,6 +56,11 @@ type NewProjectInput = {
   kind?: ProjectKind;
 };
 
+type ImportArchiveInput = {
+  bytes: Uint8Array;
+  filename?: string;
+};
+
 type ProjectStore = {
   hydrated: boolean;
   projects: Project[];
@@ -62,6 +68,7 @@ type ProjectStore = {
   appDb: Record<string, Record<string, unknown>>;
   setHydrated: () => void;
   createFromBrief: (input: NewProjectInput) => Project;
+  importArchive: (input: ImportArchiveInput) => Project;
   openDemo: (demoId: string) => Project;
   updateProject: (id: string, patch: Partial<Project>) => void;
   restoreRevision: (id: string, revisionId: string) => boolean;
@@ -206,6 +213,40 @@ function blankProject(prompt: string, kind: ProjectKind = "app"): Project {
   );
 }
 
+const PROJECT_KINDS = new Set<ProjectKind>(["landing", "app", "dashboard", "tool", "game", "site"]);
+
+function importedName(html: string, manifestName: string | undefined, filename = ""): string {
+  const title = html.match(/<title[^>]*>([^<]+)<\/title>/i)?.[1] || "";
+  const file = filename.replace(/\.zip$/i, "").replace(/[-_]+/g, " ");
+  const raw = manifestName || title || file || "Progetto importato";
+  return (
+    raw
+      .replace(/&amp;/gi, "&")
+      .replace(/&quot;/gi, '"')
+      .replace(/&#39;|&apos;/gi, "'")
+      .replace(/&lt;|&gt;/gi, " ")
+      .replace(/[\p{Cc}\p{Cf}]+/gu, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, 80) || "Progetto importato"
+  );
+}
+
+function importedPalette(html: string): Palette {
+  const color = (key: keyof Palette, fallback: string): string => {
+    const hit = html.match(new RegExp(`--${key}\\s*:\\s*(#[0-9a-f]{6})(?:[^0-9a-f]|$)`, "i"));
+    return hit?.[1] || fallback;
+  };
+  return {
+    bg: color("bg", DEFAULT_PALETTE.bg),
+    surface: color("surface", DEFAULT_PALETTE.surface),
+    fg: color("fg", DEFAULT_PALETTE.fg),
+    muted: color("muted", DEFAULT_PALETTE.muted),
+    accent: color("accent", DEFAULT_PALETTE.accent),
+    line: color("line", DEFAULT_PALETTE.line || "#3d3428"),
+  };
+}
+
 export const useProjectStore = create<ProjectStore>()(
   persist(
     (set, get) => ({
@@ -311,6 +352,70 @@ export const useProjectStore = create<ProjectStore>()(
         const project = blankProject(prompt.trim(), kind ?? "app");
         set((s) => ({ projects: trimList([project, ...s.projects]) }));
         return project;
+      },
+      importArchive: ({ bytes, filename }) => {
+        const archive = importProjectArchive(bytes);
+        if (!archive.ok) throw new Error(archive.error);
+        const rawKind = archive.manifest.kind;
+        if (!rawKind || !PROJECT_KINDS.has(rawKind as ProjectKind)) {
+          throw new Error("Tipo di progetto assente o non valido in fenix.json.");
+        }
+        const kind = rawKind as ProjectKind;
+        const html = archive.files.find((file) => file.path === "index.html")?.content || "";
+        const id = uid();
+        const prompt = `${formatPrefix(kind)}Importato da archivio Fenix verificato.`;
+        const palette = importedPalette(html);
+        const report = validatePublishable(html, {
+          kind,
+          projectId: id,
+          palette,
+        });
+        const contractBlock = blocksPublish(html, kind, archive.files, prompt);
+        if (!report.ok || contractBlock) {
+          const reason =
+            contractBlock || report.errors.slice(0, 3).join(" · ") || "gate non superato";
+          throw new Error(`Importazione fermata: ${reason}`);
+        }
+        const now = Date.now();
+        const name = importedName(html, archive.manifest.name, filename);
+        const project: Project = {
+          id,
+          name,
+          tagline: "Archivio Fenix verificato",
+          prompt,
+          kind,
+          requestedKind: kind,
+          summary: "Albero importato senza dati, chat, job, deploy o credenziali.",
+          direction: "Import ZIP",
+          palette,
+          html,
+          files: archive.files,
+          messages: [
+            {
+              id: uid(),
+              role: "assistant",
+              content: "Archivio verificato. Il progetto è pronto in un nuovo studio indipendente.",
+              at: now,
+            },
+          ],
+          buildLog: ["ZIP Fenix verificato", "Gate anteprima superato"],
+          status: "ready",
+          createdAt: now,
+          updatedAt: now,
+        };
+        const stored = appendProjectActivity(
+          commitIfChanged(project, { source: "create", label: "Import ZIP", at: now }),
+          {
+            kind: "import",
+            outcome: "ok",
+            label: "ZIP importato",
+            detail: "Nuovo studio indipendente",
+            metrics: { files: archive.files.length, revisions: 1 },
+            at: now,
+          },
+        );
+        set((s) => ({ projects: trimList([stored, ...s.projects]) }));
+        return stored;
       },
       openDemo: (demoId) => {
         const demo = DEMOS[demoId];
@@ -506,7 +611,7 @@ export const useProjectStore = create<ProjectStore>()(
               state.creditsRemaining = CREDITS_GRANT;
             }
             const disk = readWebStorage();
-            let merged: AppDb = mergeAppDb(idb, disk);
+            const merged: AppDb = mergeAppDb(idb, disk);
             for (const p of state.projects) {
               if (!p.appData) continue;
               merged[p.id] = { ...(merged[p.id] ?? {}) };

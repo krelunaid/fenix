@@ -3,11 +3,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, it } from "node:test";
-import {
-  APP_COMPONENTS,
-  DASHBOARD_MOCK,
-  SITE_MULTIFILE,
-} from "./fixtures/trees.ts";
+import { APP_COMPONENTS, DASHBOARD_MOCK, SITE_MULTIFILE } from "./fixtures/trees.ts";
 import {
   ENTRYPOINT,
   MAX_FILE_BYTES,
@@ -24,7 +20,14 @@ import {
   projectFiles,
   utf8Bytes,
 } from "./files.ts";
-import { unzipProject, zipProject, treeManifest } from "./zip.ts";
+import {
+  MAX_PROJECT_ARCHIVE_BYTES,
+  importProjectArchive,
+  unzipProject,
+  zipFiles,
+  zipProject,
+  treeManifest,
+} from "./zip.ts";
 import { recoverPersistedProject, type Recoverable } from "./recover.ts";
 import { commitIfChanged, restoreProjectRevision } from "./revisions.ts";
 import { DEFAULT_PALETTE, type Project } from "./types.ts";
@@ -40,7 +43,11 @@ describe("ingest POSIX tree", () => {
       ["app", APP_COMPONENTS],
     ] as const) {
       const got = ingestProjectFiles(files);
-      assert.equal(got.rejected.length, 0, `${label} ${got.rejected.map((r) => r.reason).join(",")}`);
+      assert.equal(
+        got.rejected.length,
+        0,
+        `${label} ${got.rejected.map((r) => r.reason).join(",")}`,
+      );
       assert.equal(got.entrypoint, ENTRYPOINT);
       assert.equal(got.files[0]?.path, ENTRYPOINT);
       assert.ok(got.files.length >= 3, label);
@@ -76,7 +83,10 @@ describe("ingest POSIX tree", () => {
       { path: "css/app.css", content: "b{}" },
       { path: "bin.dat", content: "nope" },
       { path: "a.js", content: "hello\0world" },
-      { path: "secrets.js", content: "-----BEGIN PRIVATE KEY-----\nabc\n-----END PRIVATE KEY-----" },
+      {
+        path: "secrets.js",
+        content: "-----BEGIN PRIVATE KEY-----\nabc\n-----END PRIVATE KEY-----",
+      },
       { path: "tok.js", content: 'const t = "sk-abcdefghijk"' },
       { path: "ok.css", content: "body{margin:0}" },
     ]);
@@ -88,7 +98,8 @@ describe("ingest POSIX tree", () => {
     assert.ok(secret.files.some((f) => f.path === "css/App.css"));
     assert.ok(secret.files.some((f) => f.path === "ok.css"));
     assert.equal(
-      ingestProjectFiles([{ path: "big.md", content: "x".repeat(MAX_FILE_BYTES + 1) }]).rejected[0]?.reason,
+      ingestProjectFiles([{ path: "big.md", content: "x".repeat(MAX_FILE_BYTES + 1) }]).rejected[0]
+        ?.reason,
       "file troppo grande",
     );
   });
@@ -114,10 +125,7 @@ describe("ingest POSIX tree", () => {
     const six = ingestProjectFiles([...five, { path: "overflow.md", content: chunk }]);
     assert.ok(six.rejected.some((r) => r.reason === "albero troppo grande"));
     const man = treeManifest([{ path: "note.md", content: "é😀" }]);
-    assert.equal(
-      man.files.find((f) => f.path === "note.md")?.bytes,
-      utf8Bytes("é😀"),
-    );
+    assert.equal(man.files.find((f) => f.path === "note.md")?.bytes, utf8Bytes("é😀"));
     assert.notEqual(man.files.find((f) => f.path === "note.md")?.bytes, "é😀".length);
   });
 
@@ -204,7 +212,8 @@ describe("file tree and authorized preview", () => {
       { path: "css/app.css", content: "body{color:#123456}" },
       {
         path: "js/app.js",
-        content: "fetch('./data/items.json').then(r=>r.json()).then(x=>document.getElementById('result').textContent=x.items[0])",
+        content:
+          "fetch('./data/items.json').then(r=>r.json()).then(x=>document.getElementById('result').textContent=x.items[0])",
       },
       { path: "data/items.json", content: '{"items":["Ciotola"]}' },
       { path: "js/unreferenced.js", content: "window.unreferencedRan=true" },
@@ -247,16 +256,83 @@ describe("ZIP round-trip", () => {
     const text = new TextDecoder().decode(a);
     assert.match(text, /"entrypoint": "index.html"/);
     assert.doesNotMatch(text, /BEGIN PRIVATE|xai-|sk-abcdefgh/);
+    assert.equal(
+      treeManifest(SITE_MULTIFILE, { name: "xai-abcdefghijk" }).name,
+      undefined,
+    );
     const poisoned = unzipProject(
       zipProject([
         ...SITE_MULTIFILE,
-        { path: "secret.pem", content: "-----BEGIN PRIVATE KEY-----\nno\n-----END PRIVATE KEY-----" },
+        {
+          path: "secret.pem",
+          content: "-----BEGIN PRIVATE KEY-----\nno\n-----END PRIVATE KEY-----",
+        },
       ]),
     );
     assert.equal(
       poisoned.files.some((f) => /\.pem$/i.test(f.path)),
       false,
     );
+  });
+
+  it("imports only a complete Fenix tree whose manifest matches every file", () => {
+    const archive = zipProject(SITE_MULTIFILE, { kind: "site", name: "Onda Portatile" });
+    const imported = importProjectArchive(archive);
+    assert.equal(imported.ok, true);
+    if (!imported.ok) return;
+    assert.equal(imported.manifest.name, "Onda Portatile");
+    assert.equal(imported.manifest.kind, "site");
+    assert.equal(imported.files.length, SITE_MULTIFILE.length);
+    assert.deepEqual(
+      imported.files.map((file) => file.path),
+      projectFiles({ files: SITE_MULTIFILE }).map((file) => file.path),
+    );
+  });
+
+  it("fails closed on corruption, unsupported ZIPs, traversal, extras and oversize", () => {
+    const archive = zipProject(SITE_MULTIFILE, { kind: "site", name: "Onda" });
+    const corrupted = archive.slice();
+    const marker = new TextEncoder().encode("Onda");
+    const at = corrupted.findIndex((value, index) =>
+      marker.every((byte, offset) => corrupted[index + offset] === byte),
+    );
+    assert.ok(at > 0);
+    corrupted[at] = corrupted[at]! ^ 1;
+    const corruptResult = importProjectArchive(corrupted);
+    assert.equal(corruptResult.ok, false);
+    if (!corruptResult.ok) assert.match(corruptResult.error, /Checksum|Manifest/);
+
+    const compressed = archive.slice();
+    compressed[8] = 8;
+    const compressedResult = importProjectArchive(compressed);
+    assert.equal(compressedResult.ok, false);
+    if (!compressedResult.ok) assert.match(compressedResult.error, /non è un export Fenix/);
+
+    const manifest = treeManifest(SITE_MULTIFILE, { kind: "site" });
+    const traversal = importProjectArchive(
+      zipFiles([
+        { path: "fenix.json", content: JSON.stringify(manifest) },
+        ...SITE_MULTIFILE,
+        { path: "../secret.js", content: "console.log('no')" },
+      ]),
+    );
+    assert.equal(traversal.ok, false);
+    if (!traversal.ok) assert.match(traversal.error, /File rifiutato: traversal/);
+
+    const extra = importProjectArchive(
+      zipFiles([
+        { path: "fenix.json", content: JSON.stringify(manifest) },
+        ...SITE_MULTIFILE,
+        { path: "extra.txt", content: "not declared" },
+      ]),
+    );
+    assert.equal(extra.ok, false);
+    if (!extra.ok) assert.match(extra.error, /file non dichiarati/);
+
+    const tooLarge = new Uint8Array(MAX_PROJECT_ARCHIVE_BYTES + 1);
+    const largeResult = importProjectArchive(tooLarge);
+    assert.equal(largeResult.ok, false);
+    if (!largeResult.ok) assert.match(largeResult.error, /troppo grande/);
   });
 });
 
@@ -290,7 +366,10 @@ describe("rollback photographs the whole tree", () => {
     );
     const restored = restoreProjectRevision(project, "old");
     assert.ok(restored);
-    assert.equal(restored!.files?.find((f) => f.path === "css/theme.css")?.content, SITE_MULTIFILE.find((f) => f.path === "css/theme.css")?.content);
+    assert.equal(
+      restored!.files?.find((f) => f.path === "css/theme.css")?.content,
+      SITE_MULTIFILE.find((f) => f.path === "css/theme.css")?.content,
+    );
     assert.doesNotMatch(restored!.html, /<!-- v2 -->/);
     assert.equal(restored!.name, "Onda");
     const snap = JSON.stringify(restored!.revisions);
@@ -314,7 +393,10 @@ ${card}
     const cardKept = parsed.find((f) => f.path === "src/components/Card.tsx")?.content;
     assert.ok(cardKept);
     assert.match(cardKept, /function Card/);
-    assert.equal(parsed.some((f) => f.path === "screens/home.html"), false);
+    assert.equal(
+      parsed.some((f) => f.path === "screens/home.html"),
+      false,
+    );
     const stored = projectFiles({ html, files: parsed });
     assert.equal(stored.find((f) => f.path === "src/components/Card.tsx")?.content, cardKept);
     assert.equal(stored.find((f) => f.path === ENTRYPOINT)?.content, html);
@@ -348,18 +430,20 @@ ${card}
     assert.doesNotMatch(preview, /export default function Card/);
     const zipped = zipProject(committed.files || [], { kind: "dashboard" });
     const round = unzipProject(zipped);
-    assert.equal(
-      round.files.find((f) => f.path === "src/components/Card.tsx")?.content,
-      cardKept,
-    );
+    assert.equal(round.files.find((f) => f.path === "src/components/Card.tsx")?.content, cardKept);
     const later = (committed.files || []).map((f) =>
-      f.path === "src/components/Card.tsx" ? { ...f, content: "export default function Card(){return null}" } : f,
+      f.path === "src/components/Card.tsx"
+        ? { ...f, content: "export default function Card(){return null}" }
+        : f,
     );
     const polished = commitIfChanged(
       { ...committed, files: later, html: `${committed.html}<!-- v2 -->` },
       { source: "polish", label: "Rifinitura", id: "rev-desk-2", at: now + 1 },
     );
     const restored = restoreProjectRevision(polished, "rev-desk");
-    assert.equal(restored!.files?.find((f) => f.path === "src/components/Card.tsx")?.content, cardKept);
+    assert.equal(
+      restored!.files?.find((f) => f.path === "src/components/Card.tsx")?.content,
+      cardKept,
+    );
   });
 });

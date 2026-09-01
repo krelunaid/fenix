@@ -135,6 +135,14 @@ export const QUALITY_LEDGER: LedgerRow[] = [
     ok: true,
   },
   {
+    id: "portable-zip-import",
+    claim:
+      "Un export ZIP Fenix riapre l'intero albero in un nuovo studio indipendente senza consumare crediti. Import fail-closed: formato stored UTF-8, limite 2 MB, CRC, manifest e file devono coincidere; traversal, secret, extra, corruzione e gate anteprima falliti non creano progetti.",
+    evidence:
+      "zip.ts importProjectArchive + files.test.ts casi negativi + files-browser.test.ts import D/T/M, console 0 e isolamento",
+    ok: true,
+  },
+  {
     id: "emergent",
     claim: "Emergent resta solo un banco di prova. Nessun claim di completezza sul prodotto.",
     evidence: "src/lib/projects/fase3-gap.ts quality.slice=now; revisions.test.ts now list",

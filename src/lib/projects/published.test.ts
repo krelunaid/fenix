@@ -405,4 +405,16 @@ describe("sites HTTP handler", () => {
     assert.equal(custom.version, 3);
     assert.match(String(custom.html || ""), /Onda Netlify/);
   });
+
+  it("optional GET reports an unpublished project without a console-producing 404", async () => {
+    const id = "missing-optional-site";
+    const optional = await handleSiteRequest(
+      new Request(`http://local/api/sites/${id}?optional=1`),
+      id,
+    );
+    assert.equal(optional.status, 204);
+    assert.equal(await optional.text(), "");
+    const publicGet = await handleSiteRequest(new Request(`http://local/api/sites/${id}`), id);
+    assert.equal(publicGet.status, 404);
+  });
 });

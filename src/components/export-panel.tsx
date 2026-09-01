@@ -92,7 +92,8 @@ export function ExportPanel({
         setBranch((b) => b || list[0]?.defaultBranch || "main");
       })
       .catch((err: unknown) => {
-        if (!cancelled) setError(err instanceof Error ? err.message : "Repository non disponibili.");
+        if (!cancelled)
+          setError(err instanceof Error ? err.message : "Repository non disponibili.");
       });
     return () => {
       cancelled = true;
@@ -102,7 +103,7 @@ export function ExportPanel({
   if (!open) return null;
 
   function downloadZip() {
-    downloadBytes(`${slugify(name)}.zip`, zipProject(tree, { kind }), "application/zip");
+    downloadBytes(`${slugify(name)}.zip`, zipProject(tree, { kind, name }), "application/zip");
     recordActivity(projectId, {
       kind: "export",
       outcome: "ok",
@@ -233,8 +234,8 @@ export function ExportPanel({
 
         <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
           ZIP locale sempre. GitHub solo su un repository già esistente, dopo un click tuo. Il
-          commit sostituisce l'albero del branch con i file Fenix (fenix.json, README,
-          sorgenti). Non è un merge e non parte da solo.
+          commit sostituisce l'albero del branch con i file Fenix (fenix.json, README, sorgenti).
+          Non è un merge e non parte da solo.
         </p>
 
         {error ? (
@@ -243,7 +244,10 @@ export function ExportPanel({
           </p>
         ) : null}
 
-        <section className="mt-5 space-y-3 border-t border-border pt-5" aria-labelledby="export-zip">
+        <section
+          className="mt-5 space-y-3 border-t border-border pt-5"
+          aria-labelledby="export-zip"
+        >
           <h3 id="export-zip" className="font-display text-lg tracking-tight">
             ZIP
           </h3>
@@ -257,10 +261,15 @@ export function ExportPanel({
           <h3 id="export-gh" className="font-display text-lg tracking-tight">
             GitHub
           </h3>
-          <p className="text-sm text-muted-foreground">{status?.hint || "Controllo il collegamento…"}</p>
+          <p className="text-sm text-muted-foreground">
+            {status?.hint || "Controllo il collegamento…"}
+          </p>
 
           {!status?.configured ? (
-            <p className="rounded-md border border-border bg-raised px-3 py-2 text-sm" role="status">
+            <p
+              className="rounded-md border border-border bg-raised px-3 py-2 text-sm"
+              role="status"
+            >
               GitHub non configurato
             </p>
           ) : null}
@@ -344,7 +353,10 @@ export function ExportPanel({
           ) : null}
         </section>
 
-        <section className="mt-5 space-y-3 border-t border-border pt-5" aria-labelledby="export-files">
+        <section
+          className="mt-5 space-y-3 border-t border-border pt-5"
+          aria-labelledby="export-files"
+        >
           <h3 id="export-files" className="font-display text-lg tracking-tight">
             File
           </h3>

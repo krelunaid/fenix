@@ -1,5 +1,10 @@
 import { createHash } from "node:crypto";
-import { fileLooksLikeSecret, projectFiles, utf8Bytes, type ProjectFile } from "../projects/files.ts";
+import {
+  fileLooksLikeSecret,
+  projectFiles,
+  utf8Bytes,
+  type ProjectFile,
+} from "../projects/files.ts";
 import { treeManifest } from "../projects/zip.ts";
 
 export function parseRepo(
@@ -31,11 +36,15 @@ export function parseInstallationId(raw: string | null | undefined): string | nu
 }
 
 export function buildReadme(name: string, files: ProjectFile[]): string {
-  const title = String(name || "Progetto").replace(/[\r\n#]+/g, " ").trim() || "Progetto";
+  const title =
+    String(name || "Progetto")
+      .replace(/[\r\n#]+/g, " ")
+      .trim() || "Progetto";
   const list = files
     .slice(0, 24)
-    .map((f) => `- \`${f.path}\``)
+    .map((f) => "- `" + f.path + "`")
     .join("\n");
+  const fileList = list || "- `index.html`";
   return `# ${title}
 
 Esportato da Fenix.
@@ -48,7 +57,7 @@ Questo commit non contiene chiavi, token, chat o credenziali.
 
 ## File
 
-${list || "- \`index.html\`"}
+${fileList}
 `;
 }
 
@@ -60,7 +69,7 @@ export function exportFiles(input: {
   files?: ProjectFile[];
 }): ProjectFile[] {
   const tree = projectFiles({ html: input.html, files: input.files });
-  const manifest = treeManifest(tree, { kind: input.kind });
+  const manifest = treeManifest(tree, { kind: input.kind, name: input.name });
   const out: ProjectFile[] = [
     { path: "fenix.json", content: `${JSON.stringify(manifest, null, 2)}\n` },
   ];

@@ -13,7 +13,15 @@ function json(data: unknown, status = 200) {
 export async function handleSiteRequest(request: Request, id: string): Promise<Response> {
   if (request.method === "GET") {
     const snap = await readPublished(id);
-    if (!snap) return json({ error: "Sito non trovato" }, 404);
+    if (!snap) {
+      if (new URL(request.url).searchParams.get("optional") === "1") {
+        return new Response(null, {
+          status: 204,
+          headers: { "Cache-Control": "no-store" },
+        });
+      }
+      return json({ error: "Sito non trovato" }, 404);
+    }
     return json(publicSnapshot(snap));
   }
   if (request.method === "PUT") {

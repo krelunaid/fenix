@@ -25,7 +25,11 @@ import { REVIEW_NOTE } from "@/lib/release/types";
 const PLATFORM_META: { id: Platform; label: string; blurb: string }[] = [
   { id: "web", label: "Web", blurb: "Netlify production dopo HTML valido." },
   { id: "ios", label: "iOS", blurb: "TestFlight. La store pubblica resta in review." },
-  { id: "android", label: "Android", blurb: "Internal testing. La scheda pubblica resta in review." },
+  {
+    id: "android",
+    label: "Android",
+    blurb: "Internal testing. La scheda pubblica resta in review.",
+  },
 ];
 
 export function PublishPanel({
@@ -72,10 +76,7 @@ export function PublishPanel({
     }),
     [name],
   );
-  const publishedHtml = useMemo(
-    () => authorizedPreviewHtml({ html, files }),
-    [html, files],
-  );
+  const publishedHtml = useMemo(() => authorizedPreviewHtml({ html, files }), [html, files]);
 
   useEffect(() => {
     if (!open) return;
@@ -124,7 +125,18 @@ export function PublishPanel({
     return () => {
       cancelled = true;
     };
-  }, [open, projectId, name, publishedHtml, kind, palette, tagline, summary, defaults.bundleId, defaults.packageName]);
+  }, [
+    open,
+    projectId,
+    name,
+    publishedHtml,
+    kind,
+    palette,
+    tagline,
+    summary,
+    defaults.bundleId,
+    defaults.packageName,
+  ]);
 
   useEffect(() => {
     if (!open || !job || job.status !== "run") return;
@@ -162,7 +174,6 @@ export function PublishPanel({
       ? job.tracks.web.artifact
       : "");
 
-
   function togglePlatform(id: Platform) {
     setPlatforms((prev) => {
       if (prev.includes(id)) {
@@ -180,7 +191,7 @@ export function PublishPanel({
 
   function downloadProject() {
     const bundle = projectFiles({ html, files });
-    downloadBytes(`${slugify(name)}.zip`, zipProject(bundle, { kind }), "application/zip");
+    downloadBytes(`${slugify(name)}.zip`, zipProject(bundle, { kind, name }), "application/zip");
     toast("Progetto scaricato. File, stile, dati e logica.");
   }
 
@@ -294,7 +305,10 @@ export function PublishPanel({
           </p>
         ) : null}
 
-        <section className="mt-5 space-y-3 border-t border-border pt-5" aria-labelledby="release-accounts">
+        <section
+          className="mt-5 space-y-3 border-t border-border pt-5"
+          aria-labelledby="release-accounts"
+        >
           <h3 id="release-accounts" className="font-display text-lg tracking-tight">
             Account
           </h3>
@@ -327,7 +341,10 @@ export function PublishPanel({
           </ul>
         </section>
 
-        <section className="mt-5 space-y-3 border-t border-border pt-5" aria-labelledby="release-config">
+        <section
+          className="mt-5 space-y-3 border-t border-border pt-5"
+          aria-labelledby="release-config"
+        >
           <h3 id="release-config" className="font-display text-lg tracking-tight">
             App
           </h3>
@@ -379,7 +396,10 @@ export function PublishPanel({
           </label>
         </section>
 
-        <section className="mt-5 space-y-3 border-t border-border pt-5" aria-labelledby="release-run">
+        <section
+          className="mt-5 space-y-3 border-t border-border pt-5"
+          aria-labelledby="release-run"
+        >
           <h3 id="release-run" className="font-display text-lg tracking-tight">
             Compila, firma, carica
           </h3>
@@ -391,12 +411,14 @@ export function PublishPanel({
             disabled={busy || releasing || !published}
             onClick={() => void launchRelease()}
           >
-            Pubblica su {platforms.map((p) => PLATFORM_META.find((m) => m.id === p)?.label).join(", ")}
+            Pubblica su{" "}
+            {platforms.map((p) => PLATFORM_META.find((m) => m.id === p)?.label).join(", ")}
           </Button>
           {job ? (
             <div className="rounded-md border border-border bg-raised p-3">
               <p className="font-mono text-[10px] tracking-[0.14em] uppercase text-faint">
-                {job.status === "ok" ? "Pronto" : job.status === "err" ? "Errore" : "In corso"} · {job.step}
+                {job.status === "ok" ? "Pronto" : job.status === "err" ? "Errore" : "In corso"} ·{" "}
+                {job.step}
               </p>
               <ul className="mt-2 space-y-1">
                 {job.platforms.map((p) => {
@@ -409,7 +431,8 @@ export function PublishPanel({
                         {t?.fixture ? " · banco prova" : ""}
                         {t?.status === "ok" ? " · ok" : ""}
                         {t?.error ? ` · ${t.error}` : ""}
-                        {p === "web" && (t?.provider?.liveUrl || (t?.artifact && /^https?:\/\//.test(t.artifact)))
+                        {p === "web" &&
+                        (t?.provider?.liveUrl || (t?.artifact && /^https?:\/\//.test(t.artifact)))
                           ? ` · ${t.provider?.liveUrl || t.artifact}`
                           : ""}
                       </span>
@@ -468,7 +491,8 @@ export function PublishPanel({
 
         <p className="mt-4 flex items-start gap-2 text-xs leading-relaxed text-faint">
           <Check className="mt-0.5 size-3.5 shrink-0" />
-          Bozza nello studio, snapshot pubblico a parte. Il preflight blocca l'upload se l'HTML non è valido.
+          Bozza nello studio, snapshot pubblico a parte. Il preflight blocca l'upload se l'HTML non
+          è valido.
         </p>
         <button type="button" className="sr-only" onClick={downloadSite}>
           Scarica HTML

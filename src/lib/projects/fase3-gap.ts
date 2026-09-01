@@ -33,7 +33,7 @@ export const FASE3_GAPS: Fase3Gap[] = [
     area: "Progetti multi-file / full-stack",
     emergent: "Albero React/Next + backend Node/FastAPI + Mongo, file veri.",
     fenix:
-      "Albero POSIX durevole: ingest (no .., no assoluti, no secret/binari, 48 file / 1.5MB). Entrypoint index.html, migrazione HTML-only senza perdere kind/storage/publish. ZIP+fenix.json. Studio ispeziona l'albero D/T/M. CSS/JS locali esplicitamente referenziati e dati fetch vengono assemblati in un unico artifact validabile per preview, pubblicazione e wrapper nativi; file non referenziati non vengono eseguiti. Nessun server generato.",
+      "Albero POSIX durevole: ingest (no .., no assoluti, no secret/binari, 48 file / 1.5MB). Entrypoint index.html, migrazione HTML-only senza perdere kind/storage/publish. ZIP+fenix.json esportabile e reimportabile in uno studio indipendente: solo entry UTF-8 non compresse, checksum e manifest/file verificati, gate anteprima prima di ready. Studio ispeziona l'albero D/T/M. CSS/JS locali esplicitamente referenziati e dati fetch vengono assemblati in un unico artifact validabile per preview, pubblicazione e wrapper nativi; file non referenziati non vengono eseguiti. Nessun server generato.",
     impact: "high",
     cost: "high",
     slice: "now",
@@ -43,7 +43,7 @@ export const FASE3_GAPS: Fase3Gap[] = [
     area: "Git / GitHub export",
     emergent: "Sync su repo dell'utente (Standard+), push/pull VS Code.",
     fenix:
-      "GitHub App server-only (Contents + Metadata): install/connect/status/disconnect owner-bound, cookie HttpOnly CSRF, nonce UNIQUE SQL. Token breve mai persistito. Export Git Data API blob→tree→commit→ref force=false su repo esistenti. ZIP locale resta. Pronto solo con App + DATABASE_URL (migrazione 0003); altrimenti «GitHub non configurato». Niente pull VS Code, niente token nel browser.",
+      "GitHub App server-only (Contents + Metadata): install/connect/status/disconnect owner-bound, cookie HttpOnly CSRF, nonce UNIQUE SQL. Token breve mai persistito. Export Git Data API blob→tree→commit→ref force=false su repo esistenti. ZIP locale resta e torna in Fenix senza crediti, dati o deploy ereditati. Pronto solo con App + DATABASE_URL (migrazione 0003); altrimenti «GitHub non configurato». Niente pull VS Code, niente token nel browser.",
     impact: "high",
     cost: "medium",
     slice: "now",

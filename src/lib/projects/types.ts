@@ -30,7 +30,8 @@ export type ProjectActivityKind =
   | "restore"
   | "branch"
   | "publish"
-  | "export";
+  | "export"
+  | "import";
 
 export type ProjectActivityOutcome = "info" | "run" | "ok" | "err";
 

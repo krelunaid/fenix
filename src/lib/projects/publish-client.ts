@@ -70,9 +70,13 @@ export function isLegacyImmutableError(error: string) {
   return /senza titolare:\s*immutabile/i.test(error);
 }
 
-export async function loadPublished(id: string): Promise<PublishedSnapshot | null> {
-  const res = await fetch(`/api/sites/${encodeURIComponent(id)}`, { cache: "no-store" });
-  if (res.status === 404) return null;
+export async function loadPublished(
+  id: string,
+  options?: { optional?: boolean },
+): Promise<PublishedSnapshot | null> {
+  const query = options?.optional ? "?optional=1" : "";
+  const res = await fetch(`/api/sites/${encodeURIComponent(id)}${query}`, { cache: "no-store" });
+  if (res.status === 404 || res.status === 204) return null;
   if (!res.ok) throw new Error("Non riesco a leggere il sito pubblicato.");
   return (await res.json()) as PublishedSnapshot;
 }
@@ -97,7 +101,7 @@ export async function resolvePublishedId(
 
   async function peek(id: string): Promise<string | null> {
     try {
-      const snap = await loadPublished(id);
+      const snap = await loadPublished(id, { optional: true });
       return snap?.id && snap.html ? snap.id : null;
     } catch {
       return null;
@@ -152,7 +156,7 @@ export async function publishSnapshot(input: {
     });
   }
 
-  const current = await loadPublished(id);
+  const current = await loadPublished(id, { optional: true });
   let res = await put(id, current ? `"${current.version}"` : undefined);
   if (res.status === 409 && !mapped) {
     const payload = (await res.clone().json().catch(() => ({}))) as { error?: string };

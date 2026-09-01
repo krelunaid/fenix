@@ -1,4 +1,15 @@
-import { ENTRYPOINT, entrypointOf, projectFiles, utf8Bytes, type ProjectFile } from "./files.ts";
+import {
+  ENTRYPOINT,
+  MAX_PROJECT_FILES,
+  entrypointOf,
+  fileLooksLikeSecret,
+  ingestProjectFiles,
+  projectFiles,
+  utf8Bytes,
+  type ProjectFile,
+} from "./files.ts";
+
+export const MAX_PROJECT_ARCHIVE_BYTES = 2_000_000;
 
 function crc32(data: Uint8Array) {
   let c = ~0 >>> 0;
@@ -25,7 +36,7 @@ function u32(n: number) {
   return b;
 }
 
-function fnv1a(text: string): string {
+export function treeFileHash(text: string): string {
   let h = 2166136261;
   for (let i = 0; i < text.length; i++) {
     h ^= text.charCodeAt(i);
@@ -38,16 +49,36 @@ export type TreeManifest = {
   v: 1;
   entrypoint: string;
   kind?: string;
+  name?: string;
   files: { path: string; hash: string; bytes: number }[];
 };
 
-export function treeManifest(files: ProjectFile[], meta?: { kind?: string }): TreeManifest {
+function manifestName(value: unknown): string | undefined {
+  if (typeof value !== "string") return undefined;
+  const name = value
+    .replace(/[\p{Cc}\p{Cf}]+/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 80);
+  return name && !fileLooksLikeSecret(name, "fenix.json") ? name : undefined;
+}
+
+export function treeManifest(
+  files: ProjectFile[],
+  meta?: { kind?: string; name?: string },
+): TreeManifest {
   const tree = projectFiles({ files });
+  const name = manifestName(meta?.name);
   return {
     v: 1,
     entrypoint: entrypointOf(tree) || ENTRYPOINT,
     ...(meta?.kind ? { kind: meta.kind } : {}),
-    files: tree.map((f) => ({ path: f.path, hash: fnv1a(f.content), bytes: utf8Bytes(f.content) })),
+    ...(name ? { name } : {}),
+    files: tree.map((f) => ({
+      path: f.path,
+      hash: treeFileHash(f.content),
+      bytes: utf8Bytes(f.content),
+    })),
   };
 }
 
@@ -107,7 +138,10 @@ export function zipFiles(files: { path: string; content: string }[]) {
 }
 
 /** Canonical tree + reproducible fenix.json. Never secrets, never prompt/messages. */
-export function zipProject(files: ProjectFile[], meta?: { kind?: string }): Uint8Array {
+export function zipProject(
+  files: ProjectFile[],
+  meta?: { kind?: string; name?: string },
+): Uint8Array {
   const tree = projectFiles({ files });
   const manifest = treeManifest(tree, meta);
   return zipFiles([
@@ -127,7 +161,8 @@ export function unzipFiles(buf: Uint8Array): { path: string; content: string }[]
     if (buf[i + 2] !== 0x03 || buf[i + 3] !== 0x04) break;
     const nameLen = buf[i + 26]! | (buf[i + 27]! << 8);
     const extraLen = buf[i + 28]! | (buf[i + 29]! << 8);
-    const bodyLen = buf[i + 22]! | (buf[i + 23]! << 8) | (buf[i + 24]! << 16) | (buf[i + 25]! << 24);
+    const bodyLen =
+      buf[i + 22]! | (buf[i + 23]! << 8) | (buf[i + 24]! << 16) | (buf[i + 25]! << 24);
     const nameStart = i + 30;
     const name = dec.decode(buf.subarray(nameStart, nameStart + nameLen));
     const bodyStart = nameStart + nameLen + extraLen;
@@ -157,4 +192,146 @@ export function unzipProject(buf: Uint8Array): {
     files: projectFiles({ files: raw.filter((f) => f.path !== "fenix.json") }),
     manifest,
   };
+}
+
+export type ProjectArchiveResult =
+  { ok: true; files: ProjectFile[]; manifest: TreeManifest } | { ok: false; error: string };
+
+function readU16(buf: Uint8Array, at: number): number {
+  return buf[at]! | (buf[at + 1]! << 8);
+}
+
+function readU32(buf: Uint8Array, at: number): number {
+  return (buf[at]! | (buf[at + 1]! << 8) | (buf[at + 2]! << 16) | (buf[at + 3]! << 24)) >>> 0;
+}
+
+/**
+ * Strict reader for archives created by Fenix. Only stored UTF-8 entries are
+ * accepted, so compressed bombs, data descriptors and partial imports never
+ * reach the project store. The manifest is checked against every accepted file.
+ */
+export function importProjectArchive(buf: Uint8Array): ProjectArchiveResult {
+  if (!(buf instanceof Uint8Array) || buf.length < 22) {
+    return { ok: false, error: "Archivio ZIP vuoto o incompleto." };
+  }
+  if (buf.length > MAX_PROJECT_ARCHIVE_BYTES) {
+    return { ok: false, error: "Archivio ZIP troppo grande." };
+  }
+
+  const decoder = new TextDecoder("utf-8", { fatal: true });
+  const raw: { path: string; content: string }[] = [];
+  const paths = new Set<string>();
+  let at = 0;
+  let central = false;
+  try {
+    while (at + 4 <= buf.length) {
+      const signature = readU32(buf, at);
+      if (signature === 0x02014b50 || signature === 0x06054b50) {
+        central = true;
+        break;
+      }
+      if (signature !== 0x04034b50 || at + 30 > buf.length) {
+        return { ok: false, error: "Struttura ZIP non valida." };
+      }
+      const flags = readU16(buf, at + 6);
+      const method = readU16(buf, at + 8);
+      const crc = readU32(buf, at + 14);
+      const packed = readU32(buf, at + 18);
+      const unpacked = readU32(buf, at + 22);
+      const nameLength = readU16(buf, at + 26);
+      const extraLength = readU16(buf, at + 28);
+      if (flags !== 0 || method !== 0 || packed !== unpacked) {
+        return { ok: false, error: "Il ZIP non è un export Fenix supportato." };
+      }
+      const nameStart = at + 30;
+      const bodyStart = nameStart + nameLength + extraLength;
+      const end = bodyStart + unpacked;
+      if (!nameLength || bodyStart < nameStart || end < bodyStart || end > buf.length) {
+        return { ok: false, error: "Archivio ZIP troncato." };
+      }
+      const path = decoder.decode(buf.subarray(nameStart, nameStart + nameLength));
+      const key = path.toLowerCase();
+      if (!path || path.endsWith("/") || paths.has(key)) {
+        return { ok: false, error: "Percorsi duplicati o non validi nel ZIP." };
+      }
+      const bytes = buf.subarray(bodyStart, end);
+      if (crc32(bytes) !== crc) return { ok: false, error: `Checksum non valido: ${path}.` };
+      raw.push({ path, content: decoder.decode(bytes) });
+      paths.add(key);
+      if (raw.length > MAX_PROJECT_FILES + 1) {
+        return { ok: false, error: "Troppi file nell'archivio ZIP." };
+      }
+      at = end;
+    }
+  } catch {
+    return { ok: false, error: "Il ZIP contiene testo non UTF-8." };
+  }
+  if (!central || raw.length < 2) {
+    return { ok: false, error: "Archivio ZIP incompleto." };
+  }
+
+  const manifests = raw.filter((file) => file.path === "fenix.json");
+  if (manifests.length !== 1) {
+    return { ok: false, error: "Manca il manifest fenix.json univoco." };
+  }
+  let manifest: TreeManifest;
+  try {
+    manifest = JSON.parse(manifests[0]!.content) as TreeManifest;
+  } catch {
+    return { ok: false, error: "fenix.json non è JSON valido." };
+  }
+  if (
+    !manifest ||
+    manifest.v !== 1 ||
+    manifest.entrypoint !== ENTRYPOINT ||
+    !Array.isArray(manifest.files) ||
+    manifest.files.length < 1 ||
+    manifest.files.length > MAX_PROJECT_FILES
+  ) {
+    return { ok: false, error: "Manifest Fenix non supportato." };
+  }
+  if (
+    manifest.name !== undefined &&
+    (manifest.name !== manifestName(manifest.name) || manifest.name.length > 80)
+  ) {
+    return { ok: false, error: "Nome progetto non valido nel manifest." };
+  }
+
+  const source = raw.filter((file) => file.path !== "fenix.json");
+  const ingested = ingestProjectFiles(source);
+  if (ingested.rejected.length || ingested.files.length !== source.length) {
+    const why = ingested.rejected[0]?.reason || "albero non valido";
+    return { ok: false, error: `File rifiutato: ${why}.` };
+  }
+  if (!ingested.files.some((file) => file.path === ENTRYPOINT)) {
+    return { ok: false, error: "Manca index.html." };
+  }
+
+  const actual = new Map(ingested.files.map((file) => [file.path, file]));
+  const declared = new Set<string>();
+  for (const item of manifest.files) {
+    if (
+      !item ||
+      typeof item.path !== "string" ||
+      typeof item.hash !== "string" ||
+      !Number.isSafeInteger(item.bytes) ||
+      item.bytes < 1 ||
+      declared.has(item.path)
+    ) {
+      return { ok: false, error: "Elenco file non valido in fenix.json." };
+    }
+    declared.add(item.path);
+    const file = actual.get(item.path);
+    if (
+      !file ||
+      utf8Bytes(file.content) !== item.bytes ||
+      treeFileHash(file.content) !== item.hash
+    ) {
+      return { ok: false, error: `Manifest non corrispondente: ${item.path}.` };
+    }
+  }
+  if (declared.size !== actual.size) {
+    return { ok: false, error: "Il ZIP contiene file non dichiarati." };
+  }
+  return { ok: true, files: ingested.files, manifest };
 }

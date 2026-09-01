@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { Activity, Sparkles } from "lucide-react";
+import { Activity, Sparkles, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/app-shell";
 import { ProjectCard } from "@/components/project-card";
@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { getAiStatus } from "@/lib/ai/generate";
 import { formatPrefix, inferKind, type ProductChoice } from "@/lib/projects/infer";
 import { useProjectStore } from "@/lib/projects/store";
+import { MAX_PROJECT_ARCHIVE_BYTES } from "@/lib/projects/zip";
 
 export const Route = createFileRoute("/")({ component: Home });
 
@@ -17,11 +18,14 @@ function Home() {
   const projects = useProjectStore((s) => s.projects);
   const creditsRemaining = useProjectStore((s) => s.creditsRemaining);
   const createFromBrief = useProjectStore((s) => s.createFromBrief);
+  const importArchive = useProjectStore((s) => s.importArchive);
   const removeProject = useProjectStore((s) => s.removeProject);
   const [brief, setBrief] = useState("");
   const [choice, setChoice] = useState<ProductChoice>("auto");
   const [ai, setAi] = useState<boolean | null>(null);
   const [mounted, setMounted] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const archiveRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -51,6 +55,25 @@ function Home() {
     const kind = choice === "auto" ? inferKind(text) : choice;
     const project = createFromBrief({ prompt: `${formatPrefix(kind)}${text}`, kind });
     void navigate({ to: "/studio/$projectId", params: { projectId: project.id } });
+  }
+
+  async function handleArchive(file: File | undefined) {
+    if (!file || importing || !hydrated) return;
+    setImporting(true);
+    try {
+      if (file.size > MAX_PROJECT_ARCHIVE_BYTES) throw new Error("Archivio ZIP troppo grande.");
+      const project = importArchive({
+        bytes: new Uint8Array(await file.arrayBuffer()),
+        filename: file.name,
+      });
+      toast(`${project.name} importato. Nessun credito usato.`);
+      await navigate({ to: "/studio/$projectId", params: { projectId: project.id } });
+    } catch (error: unknown) {
+      toast(error instanceof Error ? error.message : "Importazione ZIP rifiutata.");
+    } finally {
+      setImporting(false);
+      if (archiveRef.current) archiveRef.current.value = "";
+    }
   }
 
   const recents = mounted && hydrated ? projects.slice(0, 6) : [];
@@ -110,8 +133,8 @@ function Home() {
       </div>
 
       <p className="mt-2 max-w-[520px] text-[15px] leading-relaxed text-[#9b93c2]">
-        Descrivi la tua idea. Fenix crea un prototipo funzionante, con codice esportabile e
-        opzioni di pubblicazione.
+        Descrivi la tua idea. Fenix crea un prototipo funzionante, con codice esportabile e opzioni
+        di pubblicazione.
       </p>
 
       <form
@@ -186,6 +209,29 @@ function Home() {
             className="h-9 rounded-full bg-[#7c6bff] px-4 text-sm font-medium text-white disabled:opacity-40"
           >
             Crea
+          </button>
+        </div>
+        <div className="mt-4 flex flex-col gap-3 border-t border-white/8 pt-4 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-xs leading-relaxed text-[#6e6794]">
+            Hai già un export Fenix? Riapri i file in un nuovo studio con una prima versione, senza
+            crediti.
+          </p>
+          <input
+            ref={archiveRef}
+            type="file"
+            accept=".zip,application/zip"
+            aria-label="Importa archivio Fenix ZIP"
+            className="sr-only"
+            onChange={(event) => void handleArchive(event.currentTarget.files?.[0])}
+          />
+          <button
+            type="button"
+            disabled={importing || !hydrated}
+            onClick={() => archiveRef.current?.click()}
+            className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-full border border-white/15 px-4 text-sm text-white hover:bg-white/8 disabled:opacity-40"
+          >
+            <Upload className="size-4" />
+            {importing ? "Verifico…" : "Importa .zip Fenix"}
           </button>
         </div>
       </form>

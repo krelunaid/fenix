@@ -60,14 +60,19 @@ function installFetch(sites: Map<string, { version: number; html: string; owner:
   const orig = globalThis.fetch;
   globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input);
-    const id = decodeURIComponent(url.split("/api/sites/").pop() || "");
+    const parsed = new URL(url, "http://local");
+    const id = decodeURIComponent(parsed.pathname.split("/api/sites/").pop() || "");
     const method = String(init?.method || "GET").toUpperCase();
     const headers = new Headers(init?.headers);
     const owner = headers.get(OWNER_HEADER);
     if (method === "GET") {
       gets.push(id);
       const snap = sites.get(id);
-      if (!snap) return new Response("missing", { status: 404 });
+      if (!snap) {
+        return parsed.searchParams.get("optional") === "1"
+          ? new Response(null, { status: 204 })
+          : new Response("missing", { status: 404 });
+      }
       return Response.json({
         id,
         name: "Bottega Terra",
