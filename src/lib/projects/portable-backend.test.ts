@@ -1,9 +1,11 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
+import { createHash, randomBytes, scryptSync } from "node:crypto";
 import { once } from "node:events";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
+import { DatabaseSync } from "node:sqlite";
 import { describe, it } from "node:test";
 import { contractInstruction, evaluateContract, planContract } from "../ai/build-contract.ts";
 import { APP_COMPONENTS } from "./fixtures/trees.ts";
@@ -12,9 +14,14 @@ import {
   hydratePortableBackendFiles,
   materializePortableBackend,
   PORTABLE_BACKEND_MANIFEST,
+  PORTABLE_BACKEND_VERSION,
+  PORTABLE_DEPLOY_MANIFEST,
+  PORTABLE_SCHEMA_VERSION,
+  portableBackendMigrations,
   validatePortableBackendSpec,
   type PortableBackendSpec,
 } from "./portable-backend.ts";
+import { FULLSTACK_FIXTURES, materializeFullstackProject } from "./portable-fullstack.ts";
 import { unzipProject, zipProject } from "./zip.ts";
 
 const SPEC: PortableBackendSpec = {
@@ -52,16 +59,25 @@ function cookieFrom(response: Response) {
   return value.split(";", 1)[0];
 }
 
-async function startBackend() {
-  const root = mkdtempSync(join(tmpdir(), "fenix-portable-backend-"));
-  const files = materializePortableBackend(SPEC);
+function writeTree(root: string, files: { path: string; content: string }[]) {
   for (const file of files) {
     const path = join(root, file.path);
     mkdirSync(dirname(path), { recursive: true });
     writeFileSync(path, file.content);
   }
-  const child = spawn(process.execPath, ["server.mjs"], {
-    cwd: join(root, "backend"),
+}
+
+async function startTree(
+  files: { path: string; content: string }[],
+  env: Record<string, string> = {},
+  opts: { expectFail?: boolean } = {},
+) {
+  const root = mkdtempSync(join(tmpdir(), "fenix-portable-backend-"));
+  writeTree(root, files);
+  const stderrChunks: Buffer[] = [];
+  const stdoutChunks: Buffer[] = [];
+  const child = spawn(process.execPath, ["backend/server.mjs"], {
+    cwd: root,
     env: {
       ...process.env,
       NODE_ENV: "production",
@@ -69,23 +85,66 @@ async function startBackend() {
       FENIX_API_TOKEN: "test-token",
       FENIX_DB_PATH: join(root, "data.sqlite"),
       FENIX_ALLOWED_ORIGIN: "https://app.example",
+      ...env,
     },
     stdio: ["ignore", "pipe", "pipe"],
   });
-  const [chunk] = (await once(child.stdout!, "data")) as [Buffer];
-  const ready = JSON.parse(chunk.toString("utf8").trim());
+  child.stderr!.on("data", (chunk) => stderrChunks.push(chunk as Buffer));
+  child.stdout!.on("data", (chunk) => stdoutChunks.push(chunk as Buffer));
+  const logs = () =>
+    `${Buffer.concat(stdoutChunks).toString("utf8")}\n${Buffer.concat(stderrChunks).toString("utf8")}`;
+  if (opts.expectFail) {
+    const outcome = await Promise.race([
+      once(child, "exit").then(([code]) => ({ kind: "exit" as const, code: (code as number | null) ?? 1 })),
+      once(child.stdout!, "data").then(() => ({ kind: "ready" as const, code: 0 })),
+    ]);
+    if (child.exitCode === null) {
+      child.kill("SIGTERM");
+      await once(child, "exit").catch(() => undefined);
+    }
+    return {
+      root,
+      child,
+      base: "",
+      ready: { ready: false, port: 0, schema: 0, origin: "same" },
+      code: outcome.code,
+      logs,
+      async close() {
+        rmSync(root, { recursive: true, force: true });
+      },
+    };
+  }
+  const [chunk] = (await Promise.race([
+    once(child.stdout!, "data"),
+    once(child, "exit").then(([code]) => {
+      throw new Error(`backend exited ${code}: ${logs()}`);
+    }),
+  ])) as [Buffer];
+  const ready = JSON.parse(chunk.toString("utf8").trim().split("\n")[0]!);
   assert.equal(ready.ready, true);
   assert.ok(Number.isInteger(ready.port) && ready.port > 0);
   return {
     root,
     child,
     base: `http://127.0.0.1:${ready.port}`,
+    ready,
+    code: 0,
+    logs,
     async close() {
       if (child.exitCode === null) child.kill("SIGTERM");
       if (child.exitCode === null) await once(child, "exit");
       rmSync(root, { recursive: true, force: true });
     },
   };
+}
+
+async function startBackend() {
+  return startTree(materializePortableBackend(SPEC));
+}
+
+function passwordRecord(password: string) {
+  const salt = randomBytes(16).toString("hex");
+  return `${salt}:${scryptSync(password, salt, 32).toString("hex")}`;
 }
 
 describe("portable generated backend", () => {
@@ -106,8 +165,21 @@ describe("portable generated backend", () => {
     const manifest = JSON.parse(
       backend.find((file) => file.path === PORTABLE_BACKEND_MANIFEST)!.content,
     );
-    assert.equal(manifest.version, 2);
+    assert.equal(manifest.version, PORTABLE_BACKEND_VERSION);
+    assert.equal(manifest.schemaVersion, PORTABLE_SCHEMA_VERSION);
+    assert.equal(manifest.origin, "same");
     assert.equal(manifest.auth, "session-cookie+bearer-env");
+    const deploy = JSON.parse(backend.find((file) => file.path === PORTABLE_DEPLOY_MANIFEST)!.content);
+    assert.equal(deploy.origin, "same");
+    assert.equal(deploy.health, "/health");
+    assert.equal(deploy.start, "node backend/server.mjs");
+    assert.ok(backend.some((file) => file.path === "backend/migrations/0001_init.sql"));
+    assert.ok(backend.some((file) => file.path === "backend/migrations/0002_meta.sql"));
+    const again = materializePortableBackend(SPEC);
+    assert.equal(
+      createHash("sha256").update(backend.find((file) => file.path === "backend/server.mjs")!.content).digest("hex"),
+      createHash("sha256").update(again.find((file) => file.path === "backend/server.mjs")!.content).digest("hex"),
+    );
     const tree = ingestProjectFiles([
       { path: "index.html", content: "<!doctype html><title>Tasks</title>" },
       ...backend,
@@ -115,7 +187,8 @@ describe("portable generated backend", () => {
     assert.deepEqual(tree.rejected, []);
     assert.ok(tree.files.some((file) => file.path === "backend/server.mjs"));
     assert.ok(tree.files.some((file) => file.path === "backend/schema.sql"));
-    assert.doesNotMatch(JSON.stringify(tree.files), /test-token|DATABASE_URL=|PRIVATE KEY/);
+    assert.ok(tree.files.some((file) => file.path === PORTABLE_DEPLOY_MANIFEST));
+    assert.doesNotMatch(JSON.stringify(tree.files), /test-token|DATABASE_URL=|PRIVATE KEY|xai-/);
     const round = unzipProject(zipProject(tree.files, { kind: "dashboard" }));
     assert.equal(
       round.files.find((file) => file.path === "backend/server.mjs")?.content,
@@ -124,17 +197,26 @@ describe("portable generated backend", () => {
     const hydrated = hydratePortableBackendFiles([
       { path: PORTABLE_BACKEND_MANIFEST, content: JSON.stringify(SPEC) },
       { path: "backend/server.mjs", content: "throw new Error('untrusted')" },
+      { path: "package.json", content: '{"name":"evil"}' },
+      { path: "backend/migrations/0009_evil.sql", content: "DROP TABLE _fenix_users;" },
     ]);
     assert.deepEqual(hydrated.errors, []);
     assert.doesNotMatch(
       hydrated.files.find((file) => file.path === "backend/server.mjs")!.content,
       /untrusted/,
     );
+    assert.doesNotMatch(hydrated.files.find((file) => file.path === "package.json")!.content, /evil/);
+    assert.equal(
+      hydrated.files.some((file) => file.path === "backend/migrations/0009_evil.sql"),
+      false,
+    );
     const parsed = parseProjectFiles(
       `<<<FILE path="${PORTABLE_BACKEND_MANIFEST}">>>\n${JSON.stringify(SPEC)}\n<<<END>>>`,
     );
     assert.ok(parsed.some((file) => file.path === "backend/server.mjs"));
     assert.ok(parsed.some((file) => file.path === "backend/schema.sql"));
+    assert.ok(parsed.some((file) => file.path === "backend/migrations/0001_init.sql"));
+    assert.ok(parsed.some((file) => file.path === PORTABLE_DEPLOY_MANIFEST));
   });
 
   it("is requested only by an explicit full-stack brief and blocks invalid manifests", () => {
@@ -143,6 +225,7 @@ describe("portable generated backend", () => {
     const contract = planContract("kind=app gestionale full-stack con backend e API REST");
     assert.equal(contract.files.includes(PORTABLE_BACKEND_MANIFEST), true);
     assert.match(contractInstruction(contract), /materializza server Node\+SQLite/);
+    assert.match(contractInstruction(contract), /stessa origine/);
     const html = APP_COMPONENTS.find((file) => file.path === "index.html")!.content;
     const valid = evaluateContract({
       html,
@@ -166,7 +249,15 @@ describe("portable generated backend", () => {
     try {
       const health = await fetch(`${runtime.base}/health`);
       assert.equal(health.status, 200);
-      assert.deepEqual(await health.json(), { ok: true, service: "fenix-backend", version: 2 });
+      assert.deepEqual(await health.json(), {
+        ok: true,
+        service: "fenix-backend",
+        version: PORTABLE_BACKEND_VERSION,
+        schema: PORTABLE_SCHEMA_VERSION,
+        origin: "same",
+      });
+      assert.equal(runtime.ready.schema, PORTABLE_SCHEMA_VERSION);
+      assert.equal(runtime.ready.origin, "same");
 
       assert.equal((await fetch(`${runtime.base}/api/tasks`)).status, 401);
       const preflight = await fetch(`${runtime.base}/api/tasks`, {
@@ -247,6 +338,7 @@ describe("portable generated backend", () => {
         (await fetch(`${runtime.base}/api/tasks/${created.id}`, { headers: headers() })).status,
         404,
       );
+      assert.doesNotMatch(runtime.logs(), /test-token|xai-|PRIVATE KEY|password_hash/i);
     } finally {
       await runtime.close();
     }
@@ -345,6 +437,183 @@ describe("portable generated backend", () => {
       );
     } finally {
       await runtime.close();
+    }
+  });
+
+  it("serves three coupled full-stack fixtures on the same origin after a real check", async () => {
+    assert.equal(FULLSTACK_FIXTURES.length, 3);
+    for (const fixture of FULLSTACK_FIXTURES) {
+      const files = materializeFullstackProject(fixture);
+      const collection = fixture.spec.collections[0]!.name;
+      const root = mkdtempSync(join(tmpdir(), `fenix-fs-check-${fixture.id}-`));
+      writeTree(root, files);
+      const verified = spawn(process.execPath, ["--check", "backend/server.mjs"], { cwd: root, stdio: "ignore" });
+      const [checkCode] = (await once(verified, "exit")) as [number | null];
+      assert.equal(checkCode, 0, fixture.id);
+      const runtime = await startTree(files, { FENIX_ALLOWED_ORIGIN: "" });
+      try {
+        const page = await fetch(runtime.base);
+        assert.equal(page.status, 200);
+        const html = await page.text();
+        assert.match(html, new RegExp(fixture.name));
+        assert.match(html, /<html lang="it">/);
+        assert.equal((await fetch(`${runtime.base}/backend/server.mjs`)).status, 404);
+        assert.equal((await fetch(`${runtime.base}/backend/migrations/0001_init.sql`)).status, 404);
+        const health = await (await fetch(`${runtime.base}/health`)).json();
+        assert.equal(health.origin, "same");
+        assert.equal(health.schema, PORTABLE_SCHEMA_VERSION);
+        const signup = await fetch(`${runtime.base}/auth/signup`, {
+          method: "POST",
+          headers: { "content-type": "application/json", origin: runtime.base },
+          body: JSON.stringify({
+            email: `${fixture.id}@fenix.test`,
+            password: "forno argilla viva",
+          }),
+        });
+        assert.equal(signup.status, 201, fixture.id);
+        const cookie = cookieFrom(signup);
+        const sample =
+          collection === "lotti"
+            ? { nome: "Piatto", pezzi: 4, scaffale: "A1" }
+            : collection === "cotture"
+              ? { titolo: "Biscotto", temperatura: 980, pronta: false }
+              : { cliente: "Studio Luce", pezzi: 6, pronto: false };
+        const created = await fetch(`${runtime.base}/api/${collection}`, {
+          method: "POST",
+          headers: { cookie, origin: runtime.base, "content-type": "application/json" },
+          body: JSON.stringify(sample),
+        });
+        assert.equal(created.status, 201, fixture.id);
+        const listed = (await (
+          await fetch(`${runtime.base}/api/${collection}`, {
+            headers: { cookie, origin: runtime.base },
+          })
+        ).json()) as { items: unknown[] };
+        assert.equal(listed.items.length, 1);
+        assert.doesNotMatch(runtime.logs(), /forno argilla viva|xai-|PRIVATE KEY|test-token/);
+      } finally {
+        await runtime.close();
+        rmSync(root, { recursive: true, force: true });
+      }
+    }
+  });
+
+  it("upgrades a v1 fixture to v2 without losing rows, then fail-closes a bad migration", async () => {
+    const files = materializePortableBackend(SPEC);
+    const v1 = portableBackendMigrations(SPEC)[0]!;
+    const root = mkdtempSync(join(tmpdir(), "fenix-migrate-"));
+    const dbPath = join(root, "data.sqlite");
+    writeTree(root, files);
+    const db = new DatabaseSync(dbPath);
+    db.exec("PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON;");
+    db.exec(v1.sql);
+    const password = "correct horse battery staple";
+    const userId = "11111111-1111-4111-8111-111111111111";
+    db.prepare("INSERT INTO _fenix_users (id,email,password_hash,created_at) VALUES (?,?,?,?)").run(
+      userId,
+      "keeper@fenix.test",
+      passwordRecord(password),
+      new Date().toISOString(),
+    );
+    db.prepare(
+      'INSERT INTO "tasks" (id,owner_id,data,created_at,updated_at,version) VALUES (?,?,?,?,?,1)',
+    ).run(
+      "task-keep",
+      userId,
+      JSON.stringify({ title: "Crudo v1", done: false, priority: 3 }),
+      new Date().toISOString(),
+      new Date().toISOString(),
+    );
+    db.close();
+
+    const runtime = await startTree(files, { FENIX_DB_PATH: dbPath });
+    try {
+      const health = await (await fetch(`${runtime.base}/health`)).json();
+      assert.equal(health.schema, PORTABLE_SCHEMA_VERSION);
+      const login = await fetch(`${runtime.base}/auth/login`, {
+        method: "POST",
+        headers: { origin: "https://app.example", "content-type": "application/json" },
+        body: JSON.stringify({ email: "keeper@fenix.test", password }),
+      });
+      assert.equal(login.status, 200);
+      const cookie = cookieFrom(login);
+      const listed = (await (
+        await fetch(`${runtime.base}/api/tasks`, { headers: sessionHeaders(cookie) })
+      ).json()) as { items: Array<{ id: string; title: string }> };
+      assert.equal(listed.items.length, 1);
+      assert.equal(listed.items[0]?.id, "task-keep");
+      assert.equal(listed.items[0]?.title, "Crudo v1");
+      const created = await fetch(`${runtime.base}/api/tasks`, {
+        method: "POST",
+        headers: sessionHeaders(cookie),
+        body: JSON.stringify({ title: "Dopo v2", done: true, priority: 1 }),
+      });
+      assert.equal(created.status, 201);
+    } finally {
+      await runtime.close();
+    }
+
+    const upgraded = new DatabaseSync(dbPath);
+    const loginAt = upgraded.prepare("SELECT last_login_at FROM _fenix_users WHERE id=?").get(userId) as
+      | { last_login_at: string | null }
+      | undefined;
+    assert.ok(loginAt?.last_login_at);
+    const meta = upgraded.prepare("SELECT value FROM _fenix_meta WHERE key='product'").get() as
+      | { value: string }
+      | undefined;
+    assert.equal(meta?.value, "fenix-portable");
+    const applied = upgraded.prepare("SELECT id FROM _fenix_migrations ORDER BY id").all() as Array<{ id: string }>;
+    assert.deepEqual(
+      applied.map((row) => row.id),
+      ["0001_init", "0002_meta"],
+    );
+    upgraded.close();
+
+    writeFileSync(join(root, "backend/migrations/0003_bad.sql"), "ALTER TABLE _fenix_missing ADD COLUMN x TEXT;\n");
+    const failed = await startTree(files.concat([{ path: "backend/migrations/0003_bad.sql", content: "ALTER TABLE _fenix_missing ADD COLUMN x TEXT;\n" }]), { FENIX_DB_PATH: dbPath }, { expectFail: true });
+    try {
+      assert.notEqual(failed.code, 0);
+      assert.match(failed.logs(), /Migrazione fallita/);
+      assert.doesNotMatch(failed.logs(), /keeper@fenix.test|correct horse|password_hash/);
+      const after = new DatabaseSync(dbPath);
+      const rows = after.prepare("SELECT id, data FROM tasks ORDER BY id").all() as Array<{ id: string; data: string }>;
+      assert.equal(rows.length, 2);
+      assert.ok(rows.some((row) => row.id === "task-keep" && row.data.includes("Crudo v1")));
+      const ids = after.prepare("SELECT id FROM _fenix_migrations ORDER BY id").all() as Array<{ id: string }>;
+      assert.deepEqual(
+        ids.map((row) => row.id),
+        ["0001_init", "0002_meta"],
+      );
+      after.close();
+    } finally {
+      await failed.close();
+    }
+  });
+
+  it("starts two isolated ports against the same database idempotently", async () => {
+    const files = materializePortableBackend(SPEC);
+    const root = mkdtempSync(join(tmpdir(), "fenix-concurrent-"));
+    const dbPath = join(root, "data.sqlite");
+    writeTree(root, files);
+    const first = await startTree(files, { FENIX_DB_PATH: dbPath });
+    const second = await startTree(files, { FENIX_DB_PATH: dbPath });
+    try {
+      assert.notEqual(first.base, second.base);
+      const a = await (await fetch(`${first.base}/health`)).json();
+      const b = await (await fetch(`${second.base}/health`)).json();
+      assert.equal(a.schema, PORTABLE_SCHEMA_VERSION);
+      assert.equal(b.schema, PORTABLE_SCHEMA_VERSION);
+      assert.equal(a.origin, "same");
+      const restart = await startTree(files, { FENIX_DB_PATH: dbPath });
+      try {
+        const again = await (await fetch(`${restart.base}/health`)).json();
+        assert.equal(again.schema, PORTABLE_SCHEMA_VERSION);
+      } finally {
+        await restart.close();
+      }
+    } finally {
+      await first.close();
+      await second.close();
     }
   });
 });

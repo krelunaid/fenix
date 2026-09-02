@@ -36,6 +36,9 @@ Le app pubblicate possono usare **Collabora sui dati**: il titolare genera link 
 
 Lo **studio condiviso** è un workspace progetto distinto: il titolare invita viewer/editor, il viewer legge l'albero, editor e titolare scrivono file con If-Match CAS e conflitti fail-closed. Inviti one-shot hash-only, revoca immediata, presenza TTL, registro redatto. Serve `DATABASE_URL` con la migrazione `0006_project_workspaces`. Non è un editor simultaneo tipo CRDT e non dichiara parità con Emergent.
 
+Un brief **full-stack** esplicito esporta un'app avviabile con `npm start`: frontend e API Node+SQLite sulla stessa origine, `GET /health`, `fenix.deploy.json` e migrazioni in `backend/migrations/` (forward-only, idempotenti). Il codice server del modello non entra nel tree. Non è un database distribuito.
+
+
 
 ## Locale
 

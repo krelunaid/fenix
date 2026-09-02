@@ -167,6 +167,14 @@ export const QUALITY_LEDGER: LedgerRow[] = [
     ok: true,
   },
   {
+    id: "portable-fullstack-deploy",
+    claim:
+      "Il progetto full-stack esportato avvia frontend e API sulla stessa origine, con health, node --check e fenix.deploy.json. Tre fixture distinte (Argilla, forno, bottega) fanno signup/CRUD dopo l'upgrade v1→v2; una migrazione rotta resta atomica. D/T/M sulla UI accoppiata, cookie HttpOnly, niente secret nei log.",
+    evidence:
+      "portable-backend.test.ts 3 fixture/same-origin/upgrade/fail-closed/porte isolate + portable-backend-browser.test.ts D/T/M console overflow focus",
+    ok: true,
+  },
+  {
     id: "github-verified-roundtrip",
     claim:
       "Un albero esportato da Fenix può tornare da un repo/branch GitHub solo dopo un click esplicito. L'installation token resta server-only; tree troncati, repo estranei, blob non UTF-8/100644, limiti, secret e mismatch manifest/checksum fermano l'import. Il risultato è un progetto nuovo senza stato operativo ereditato.",

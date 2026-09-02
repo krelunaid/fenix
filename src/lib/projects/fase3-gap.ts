@@ -33,7 +33,7 @@ export const FASE3_GAPS: Fase3Gap[] = [
     area: "Progetti multi-file / full-stack",
     emergent: "Albero React/Next + backend Node/FastAPI + Mongo, file veri.",
     fenix:
-      "Albero POSIX durevole: ingest (no .., no assoluti, no secret/binari, 48 file / 1.5MB). Entrypoint index.html, migrazione HTML-only senza perdere kind/storage/publish. ZIP+fenix.json esportabile e reimportabile in uno studio indipendente: solo entry UTF-8 non compresse, checksum e manifest/file verificati, gate anteprima prima di ready. Studio ispeziona l'albero D/T/M. CSS/JS locali esplicitamente referenziati e dati fetch vengono assemblati in un artifact validabile. Un brief full-stack esplicito include un manifest schema e Fenix materializza nel tree un backend Node+SQLite avviabile, con package, schema, API e README deterministici; codice server arbitrario del modello non prevale. Resta singolo nodo, senza deploy accoppiato o database distribuito generato.",
+      "Albero POSIX durevole: ingest (no .., no assoluti, no secret/binari, 48 file / 1.5MB). Entrypoint index.html, migrazione HTML-only senza perdere kind/storage/publish. ZIP+fenix.json esportabile e reimportabile in uno studio indipendente: solo entry UTF-8 non compresse, checksum e manifest/file verificati, gate anteprima prima di ready. Studio ispeziona l'albero D/T/M. CSS/JS locali esplicitamente referenziati e dati fetch vengono assemblati in un artifact validabile. Un brief full-stack esplicito include un manifest schema e Fenix materializza nel tree un backend Node+SQLite avviabile sulla stessa origine del frontend, con package, schema, migrazioni versionate forward-only, health e fenix.deploy.json; codice server arbitrario del modello non prevale. Resta un singolo nodo SQLite, senza database distribuito generato.",
     impact: "high",
     cost: "high",
     slice: "now",
@@ -53,7 +53,7 @@ export const FASE3_GAPS: Fase3Gap[] = [
     area: "Backend / db / auth / API nelle app generate",
     emergent: "Auth (Google), DB, Stripe, API nel primo build.",
     fenix:
-      "Fenix.load/save e Fenix.data JSON usano sulle app pubblicate un archivio Postgres cloud-private con cookie HttpOnly, isolamento, corpo bounded e CAS; link viewer/editor revocabili condividono il dataset cross-device. In più, i brief full-stack espliciti esportano un backend Node+SQLite separato con signup/login email-password scrypt, sessioni opache hash-only HttpOnly, isolamento record per utente, Bearer server-to-server, allowlist Origin, CRUD schema-validato, If-Match CAS e burst concorrente reale. Nessun segreto viene generato. Mancano OAuth/magic-link, recupero password, ruoli granulari per-record, database distribuito generato e connettori applicativi.",
+      "Fenix.load/save e Fenix.data JSON usano sulle app pubblicate un archivio Postgres cloud-private con cookie HttpOnly, isolamento, corpo bounded e CAS; link viewer/editor revocabili condividono il dataset cross-device. In più, i brief full-stack espliciti esportano un backend Node+SQLite accoppiato al frontend sulla stessa origine, con signup/login email-password scrypt, sessioni opache hash-only HttpOnly, isolamento record per utente, Bearer server-to-server, allowlist Origin, CRUD schema-validato, If-Match CAS, burst concorrente reale e migrazioni v1→v2 senza perdita dati. Nessun segreto viene generato. Mancano OAuth/magic-link, recupero password, ruoli granulari per-record, database distribuito generato e connettori applicativi.",
     impact: "high",
     cost: "high",
     slice: "next",

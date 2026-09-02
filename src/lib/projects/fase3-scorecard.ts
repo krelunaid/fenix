@@ -66,9 +66,17 @@ export const FASE3_SCORECARD: ScoreDimension[] = [
         reproduce:
           "npm test -- src/lib/projects/portable-backend.test.ts src/lib/ai/build-contract.test.ts",
       },
+      {
+        id: "portable-fullstack-deploy",
+        points: 3,
+        claim:
+          "Il progetto esportato avvia frontend e API sulla stessa origine con health, build `node --check` e manifest di deploy; migrazioni SQL versionate, idempotenti e forward-only aggiornano una fixture v1 a v2 senza perdita dati e restano fail-closed.",
+        reproduce:
+          "npm test -- src/lib/projects/portable-backend.test.ts src/lib/projects/portable-backend-browser.test.ts",
+      },
     ],
     remaining:
-      "Il backend portabile è reale ma resta un singolo nodo SQLite: mancano deploy accoppiato frontend+server, migrazioni evolutive e un database distribuito generato.",
+      "Il deploy accoppiato è un processo Node+SQLite sulla stessa origine, con migrazioni forward-only: resta fuori un database distribuito generato.",
   },
   {
     id: "versions-git",

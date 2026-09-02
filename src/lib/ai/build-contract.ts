@@ -320,7 +320,7 @@ export function contractInstruction(contract: BuildContract): string {
     fileBlocks
       ? `Emetti ogni extra come ${fileBlocks} … contenuto … poi <<<HTML>>> e <<<END>>>. Collega CSS/JS locali da index.html e usa fetch per i dati locali: Fenix li assembla nello stesso artifact. ${
           portableBackend
-            ? `Per ${PORTABLE_BACKEND_MANIFEST} emetti JSON {"collections":[{"name":"${contract.entities[0]?.name || "voci"}","fields":[{"name":"nome","type":"text","required":true}]}]}. Tipi: text, integer, number, boolean, json. Fenix materializza server Node+SQLite, schema e package: non emettere server, token o segreti.`
+            ? `Per ${PORTABLE_BACKEND_MANIFEST} emetti JSON {"collections":[{"name":"${contract.entities[0]?.name || "voci"}","fields":[{"name":"nome","type":"text","required":true}]}]}. Tipi: text, integer, number, boolean, json. Fenix materializza server Node+SQLite, migrazioni versionate e deploy sulla stessa origine: non emettere server, token o segreti.`
             : "Niente server inventato."
         }`
       : 'Documento META + <<<HTML>>> + <<<END>>>. Extra file solo con <<<FILE path="...">>> se servono, e solo se il contratto li elenca.',
@@ -463,9 +463,12 @@ export function evaluateContract(input: {
         (backend.present &&
           backend.errors.length === 0 &&
           paths.has("backend/server.mjs") &&
-          paths.has("backend/schema.sql")),
+          paths.has("backend/schema.sql") &&
+          paths.has("fenix.deploy.json") &&
+          paths.has("backend/migrations/0001_init.sql") &&
+          paths.has("backend/migrations/0002_meta.sql")),
       expected.includes(PORTABLE_BACKEND_MANIFEST)
-        ? backend.errors[0] || (backend.present ? "runtime Node+SQLite materializzato" : "manifest backend mancante")
+        ? backend.errors[0] || (backend.present ? "runtime Node+SQLite same-origin" : "manifest backend mancante")
         : "non richiesto",
     ),
     check(
