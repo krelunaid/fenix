@@ -176,7 +176,7 @@ export function lookInstruction(audit: PreviewAudit | null, hasShot: boolean) {
     (audit?.mainChars ?? 0) < 80
       ? "HOME VUOTA. Riempi main: metriche, blocco, CTA, lista. Non lasciare il bianco."
       : "Header saluto. Main overflow auto. CTA visibile senza scroll orizzontale.",
-    "Palette, font e icona DAL MESTIERE già in pagina. Non ripitturare. --fg su --bg almeno 4.5:1. Vietato #f5f5f7, #0071e3, Manrope, Inter.",
+    "Palette, font e icona DAL BRIEF. Qualità nativa da tasca (tipo, ritmo, profondità) consentita; vietato clonare schermate o la coppia #f5f5f7+#0071e3. --fg su --bg almeno 4.5:1.",
     "META+HTML completo.",
   ].join("\n");
 }

@@ -15,6 +15,12 @@ import {
   validateProductHtml,
 } from "../projects/validate-html.ts";
 import { auditCraft, contrastRatio, extractCssVars } from "../projects/visual-quality.ts";
+import { tokensFromBrief, tokensInstruction } from "../projects/design-tokens.ts";
+import {
+  auditGraphicQuality,
+  formatGraphicErrors,
+  type RenderedGraphicMetrics,
+} from "../projects/graphic-quality.ts";
 import {
   collectionForBrief,
   extractFenixCollectionHits,
@@ -102,7 +108,7 @@ export type RoleReceipt = {
 
 export type CriticBudget = {
   call: boolean;
-  reason: "desk" | "screenshot" | "static-ok" | "iterate" | "incomplete";
+  reason: "desk" | "static-ok" | "iterate" | "incomplete" | "graphic";
 };
 
 function asKind(value: unknown): ProjectKind | null {
@@ -208,12 +214,14 @@ export function planContract(brief: string): BuildContract {
   const screens = screensFor(kind);
   const entities = entitiesFor(kind, brief);
   const crud = entities.some((e) => e.crud);
+  const tokens = tokensFromBrief(brief);
   const acceptance = [
     "HTML completo, JS che compila",
     "window.Fenix.load/save, niente localStorage",
     crud ? "CRUD o persistenza su entità" : "form che conferma",
     "kind lock rispettato",
     "contrasto fg/bg ≥ 4.5",
+    "qualità grafica oltre la compilazione (niente dead zone, empty contraddittorio, palette ripetuta)",
     "niente secret, eval, sandbox allow-same-origin",
   ];
   return {
@@ -226,7 +234,7 @@ export function planContract(brief: string): BuildContract {
     journeys: journeysFor(kind),
     acceptance,
     visual: {
-      dna: "dal mestiere, niente iOS/#f5f5f7",
+      dna: tokens.dna,
       aa: true,
       viewports: ["D", "T", "M"],
     },
@@ -325,6 +333,8 @@ export function contractInstruction(contract: BuildContract): string {
         }`
       : 'Documento META + <<<HTML>>> + <<<END>>>. Extra file solo con <<<FILE path="...">>> se servono, e solo se il contratto li elenca.',
     `accetta: ${contract.acceptance.join("; ")}`,
+    tokensInstruction(tokensFromBrief(contract.intent)),
+    "Schermata ready/pubblicabile solo se passa il gate grafico: gerarchia, densità, originalità, colore dal brief, immagini di mestiere, controlli rifiniti, empty-state coerente, responsive, AA, console pulita. Compilare non basta.",
     `a11y: ${contract.constraints.a11y.join("; ")}`,
     `sicurezza: ${contract.constraints.security.join("; ")}`,
     `responsive: ${contract.constraints.responsive.join("; ")}`,
@@ -378,6 +388,8 @@ export function evaluateContract(input: {
   files?: ProjectFile[];
   contract: BuildContract;
   kind?: ProjectKind;
+  brief?: string;
+  rendered?: RenderedGraphicMetrics;
 }): ContractEval {
   const html = String(input.html || "");
   const kind = input.kind || input.contract.kind;
@@ -389,6 +401,11 @@ export function evaluateContract(input: {
   const code = productScripts(runtimeHtml);
   const css = styleBlocks(runtimeHtml);
   const visual = auditCraft(runtimeHtml);
+  const graphic = auditGraphicQuality(runtimeHtml, {
+    brief: input.brief || input.contract.intent,
+    kind,
+    rendered: input.rendered,
+  });
 
   const secretFile = ingest.files.find((f) => fileLooksLikeSecret(f.content, f.path));
   const secretReject = ingest.rejected.find((r) => r.reason === "segreto");
@@ -514,6 +531,13 @@ export function evaluateContract(input: {
       dnaOk,
       visual.notes.filter((n) => !/contrasto/i.test(n)).join(" · ") || "identità ok",
     ),
+    check(
+      "graphic",
+      graphic.ok,
+      graphic.ok
+        ? `score ${graphic.score} · ${graphic.family}`
+        : formatGraphicErrors(graphic) || `score ${graphic.score} < ${graphic.threshold}`,
+    ),
     check("a11y-focus", hasFocus, hasFocus ? ":focus-visible" : "manca :focus-visible", false),
     check(
       "routes",
@@ -560,7 +584,7 @@ export function blocksPublish(
 ): string {
   const k = asKind(kind) ?? "app";
   const contract = planContract(`${formatPrefix(k)}${prompt || ""}`);
-  const evaluation = evaluateContract({ html, files, contract, kind: k });
+  const evaluation = evaluateContract({ html, files, contract, kind: k, brief: prompt });
   return evaluation.ok ? "" : formatContractErrors(evaluation);
 }
 
@@ -571,9 +595,10 @@ export function criticBudget(input: {
   evaluation: ContractEval;
 }): CriticBudget {
   if (isDeskKind(input.kind)) return { call: false, reason: "desk" };
-  if (input.shot) return { call: false, reason: "screenshot" };
-  if (input.evaluation.ok) return { call: false, reason: "static-ok" };
   if (input.instruction) return { call: false, reason: "iterate" };
+  const graphicFail = input.evaluation.checks.some((c) => c.id === "graphic" && !c.ok);
+  if (graphicFail) return { call: false, reason: "graphic" };
+  if (input.evaluation.ok) return { call: false, reason: "static-ok" };
   return { call: true, reason: "incomplete" };
 }
 

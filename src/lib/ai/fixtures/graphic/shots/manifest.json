@@ -1,0 +1,89 @@
+{
+  "threshold": 72,
+  "files": [
+    {
+      "name": "essenza-fail-D.png",
+      "sha256": "4b825886bb3105478e2eb9c40ce027065f087a0c1d0a6c10392054336159496f",
+      "bytes": 20769,
+      "score": 0,
+      "ok": false
+    },
+    {
+      "name": "essenza-fail-T.png",
+      "sha256": "6c9cb33d18aeca329636fe91748f83db886545a487fa9656dade9b2f23ae5ab1",
+      "bytes": 20737,
+      "score": 0,
+      "ok": false
+    },
+    {
+      "name": "essenza-fail-M.png",
+      "sha256": "3575ec17e676efa4ecb88a7f41670a7bf730a98c7152d99d1132e8fc03a5bd8b",
+      "bytes": 18045,
+      "score": 0,
+      "ok": false
+    },
+    {
+      "name": "maison-lumiere-D.png",
+      "sha256": "1a820181fe83de896633dcce168750b0e112e7702d007134b38a1af95ca0507a",
+      "bytes": 60645,
+      "score": 100,
+      "ok": true
+    },
+    {
+      "name": "maison-lumiere-T.png",
+      "sha256": "45dccbb13d2cb89b13d1c5c50999d697b1a75f82cf97828bb47d2119a53db42f",
+      "bytes": 60440,
+      "score": 100,
+      "ok": true
+    },
+    {
+      "name": "maison-lumiere-M.png",
+      "sha256": "5c61e9104d88e9ba8fd990a1df2cdddabd0785beac50891874b12c93acffc977",
+      "bytes": 43384,
+      "score": 100,
+      "ok": true
+    },
+    {
+      "name": "sfilata-atelier-D.png",
+      "sha256": "0d66badd9999259b040dd4c12ccf15989f9d439b8a7fbce8ff795890ac3e406e",
+      "bytes": 21926,
+      "score": 100,
+      "ok": true
+    },
+    {
+      "name": "sfilata-atelier-T.png",
+      "sha256": "f97bc2d0b705effc60de8ccfe7c799ec4dc13fe388c4c691fa00d21b62e38103",
+      "bytes": 22502,
+      "score": 100,
+      "ok": true
+    },
+    {
+      "name": "sfilata-atelier-M.png",
+      "sha256": "68964aa0278be8f8dcb95e4f416bb5a40fa72a50edae002e57ebc59911c75f25",
+      "bytes": 18284,
+      "score": 100,
+      "ok": true
+    },
+    {
+      "name": "sala-ore-D.png",
+      "sha256": "09f806fff47d809df1d2a44a0f29c71dac3e5d95365915303a81a6ea731790c9",
+      "bytes": 37007,
+      "score": 100,
+      "ok": true
+    },
+    {
+      "name": "sala-ore-T.png",
+      "sha256": "e9addb9d637277df312cb8c09b8e4fd89a5cf957fe564c76582b140a1952af93",
+      "bytes": 36324,
+      "score": 100,
+      "ok": true
+    },
+    {
+      "name": "sala-ore-M.png",
+      "sha256": "4f5eb4d3976c58f27e010dbd5c8355963c486a121b73f6dd26d2b33682c91403",
+      "bytes": 28854,
+      "score": 100,
+      "ok": true
+    }
+  ]
+}

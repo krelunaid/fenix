@@ -58,6 +58,11 @@
           "blocking": true
         },
         {
+          "id": "graphic",
+          "ok": true,
+          "blocking": true
+        },
+        {
           "id": "a11y-focus",
           "ok": true,
           "blocking": false
@@ -127,6 +132,11 @@
         },
         {
           "id": "visual-dna",
+          "ok": true,
+          "blocking": true
+        },
+        {
+          "id": "graphic",
           "ok": true,
           "blocking": true
         },
@@ -204,6 +214,11 @@
           "blocking": true
         },
         {
+          "id": "graphic",
+          "ok": true,
+          "blocking": true
+        },
+        {
           "id": "a11y-focus",
           "ok": true,
           "blocking": false
@@ -273,6 +288,11 @@
         },
         {
           "id": "visual-dna",
+          "ok": true,
+          "blocking": true
+        },
+        {
+          "id": "graphic",
           "ok": true,
           "blocking": true
         },
@@ -350,6 +370,11 @@
           "blocking": true
         },
         {
+          "id": "graphic",
+          "ok": true,
+          "blocking": true
+        },
+        {
           "id": "a11y-focus",
           "ok": false,
           "blocking": false
@@ -419,6 +444,11 @@
         },
         {
           "id": "visual-dna",
+          "ok": true,
+          "blocking": true
+        },
+        {
+          "id": "graphic",
           "ok": true,
           "blocking": true
         },

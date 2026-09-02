@@ -161,8 +161,8 @@ export const EMERGENT_COMPETITIVE_AXES: CompetitiveAxis[] = [
     status: "partial",
     emergentClaimed: "Build e test automatici dalla stessa conversazione.",
     fenixEvidence:
-      "Sei prodotti e 18 journey D/T/M con screenshot, console, overflow, focus, target e AA provati da build-contract-browser.test.ts.",
-    remainingGap: "Valutazione cieca degli output generati dallo stesso prompt non ancora eseguita.",
+      "Sei prodotti storici e tre identità visive premium (profumi, moda, prenotazioni) con journey D/T/M, gate grafico blocking, screenshot e console/overflow/focus/target. Essenza scheletrica è rifiutata. Nessun confronto testa-a-testa con Emergent.",
+    remainingGap: "Valutazione cieca degli output generati dallo stesso prompt, e un confronto testa-a-testa, non ancora eseguiti.",
     sourceIds: ["emergent-features"],
     headToHeadRun: false,
   },

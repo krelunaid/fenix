@@ -459,6 +459,7 @@ export default async function build(request: Request) {
                 files: result.files,
                 contract,
                 kind: (lockKind as typeof contract.kind | undefined) ?? contract.kind,
+                brief: prompt,
               })
             : { ok: false, kind: contract.kind, checks: [] };
           const budget = criticBudget({

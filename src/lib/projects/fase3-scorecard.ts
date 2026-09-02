@@ -287,9 +287,9 @@ export const FASE3_SCORECARD: ScoreDimension[] = [
         id: "visual-regressions",
         points: 3,
         claim:
-          "CSS grezzo, schema gestionale, tabbar mobile e palette fangose hanno regressivi dedicati.",
+          "CSS grezzo, schema gestionale, tabbar, palette fangose e gate grafico (Essenza scheletrica, token dal brief, D/T/M) hanno regressivi dedicati.",
         reproduce:
-          "npm test -- src/lib/projects/validate-html.test.ts src/lib/projects/dashboard-crud.test.ts src/lib/projects/preview-contrast.test.ts",
+          "npm test -- src/lib/projects/validate-html.test.ts src/lib/projects/dashboard-crud.test.ts src/lib/projects/preview-contrast.test.ts src/lib/projects/graphic-quality.test.ts src/lib/ai/graphic-quality-browser.test.ts",
       },
       {
         id: "accessibility",
@@ -308,7 +308,7 @@ export const FASE3_SCORECARD: ScoreDimension[] = [
       },
     ],
     remaining:
-      "La dimensione qualità resta al massimo; i gate Vesti sono nel ledger ma non aggiungono punti. Resta utile una valutazione comparativa cieca esterna, che non viene simulata nel repository.",
+      "La dimensione qualità resta al massimo interno: il gate grafico blocca ready/pubblica su scheletri tipo Essenza e tre identità visive sono provate. Resta utile una valutazione comparativa cieca esterna, che non viene simulata nel repository e non equivale a un benchmark competitivo.",
   },
   {
     id: "reliability-deploy",

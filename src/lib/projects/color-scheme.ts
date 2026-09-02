@@ -109,7 +109,20 @@ export function resolvePalette(input?: string | SrcPalette): Required<SrcPalette
 export function paletteRootStyle(palette: Required<SrcPalette>): string {
   const p = palette;
   const btn = accentButtonPair(p.accent);
-  return `<style data-fenix-palette>:root{--bg:${p.bg};--surface:${p.surface};--fg:${p.fg};--muted:${p.muted};--accent:${p.accent};--line:${p.line};--btn:${btn.bg};--btn-ink:${btn.ink}}</style>`;
+  const light = isLightHex(p.bg);
+  const elevated = mixHex(p.surface, "#ffffff", light ? 0.35 : 0.08);
+  // Fields stay a light paper with dark ink so typed text never vanishes on a
+  // dark ground. Light apps use elevated (palette paper, not one beige).
+  const field = light ? elevated : mixHex("#f8f4ec", p.surface, 0.14);
+  const fieldInk = isLightHex(field)
+    ? !isLightHex(p.fg) && contrastRatio(field, p.fg) >= 4.5
+      ? p.fg
+      : "#1c1712"
+    : isLightHex(p.fg) && contrastRatio(field, p.fg) >= 4.5
+      ? p.fg
+      : "#f8fafc";
+  const fieldMuted = mixHex(fieldInk, field, 0.45);
+  return `<style data-fenix-palette>:root{--bg:${p.bg};--surface:${p.surface};--elevated:${elevated};--field:${field};--field-ink:${fieldInk};--field-muted:${fieldMuted};--fg:${p.fg};--muted:${p.muted};--accent:${p.accent};--line:${p.line};--btn:${btn.bg};--btn-ink:${btn.ink};--radius:12px}</style>`;
 }
 
 const NAV_GUARD = `<script data-officina-guard>
@@ -174,7 +187,7 @@ body>:is(.app,.fk-app,#app,#root):has(.fk-tab,.tabbar,nav[aria-label]){display:f
 .fk-top>div{display:flex;align-items:flex-start;gap:10px;min-width:0}
 .fk-appicon{width:36px;height:36px;border-radius:8px;background:var(--fg,#1c1712);color:var(--bg,#efe6d4);display:inline-grid;place-items:center;flex-shrink:0}
 .fk-appicon svg{width:20px;height:20px;stroke:currentColor}
-.fk-hello{margin:0;font-size:22px;font-weight:700;letter-spacing:-.03em;line-height:1.15}
+.fk-hello{margin:0;font-size:clamp(1.35rem,5vw,1.75rem);font-weight:700;letter-spacing:-.03em;line-height:1.12}
 .fk-role{margin:4px 0 0;font-size:12px;color:var(--muted,#5c5348);opacity:1}
 .fk-date{margin:0 16px 10px;font-size:12px;color:var(--muted,#5c5348)}
 .fk-main,body>main,main{
@@ -182,7 +195,7 @@ body>:is(.app,.fk-app,#app,#root):has(.fk-tab,.tabbar,nav[aria-label]){display:f
   padding:0 16px 28px;-webkit-overflow-scrolling:touch!important;overscroll-behavior:contain;
   touch-action:pan-y;
 }
-.fk-panel{background:var(--surface,#f7f1e4);color:var(--fg,#1c1712);border:1px solid var(--line,#c4b49a);border-radius:4px;padding:16px 14px;margin:0 0 14px}
+.fk-panel{background:var(--surface,#f7f1e4);color:var(--fg,#1c1712);border:1px solid var(--line,#c4b49a);border-radius:var(--radius,12px);padding:16px 14px;margin:0 0 14px;box-shadow:0 12px 32px color-mix(in srgb,var(--fg,#1c1712) 8%,transparent)}
 .fk-panel h2,.fk-panel h3{margin:0 0 12px;font-size:15px;color:var(--fg,#1c1712)}
 .fk-grid2{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line,#c4b49a);border:1px solid var(--line,#c4b49a)}
 .fk-stat{background:var(--surface,#f7f1e4);border-radius:0;padding:12px 12px 10px;color:var(--fg,#1c1712)}
@@ -198,19 +211,19 @@ body>:is(.app,.fk-app,#app,#root):has(.fk-tab,.tabbar,nav[aria-label]){display:f
 .fk-btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;border:0;border-radius:2px;padding:14px 16px;font:700 15px/1 inherit;background:var(--accent,#3d4a1f);color:#fff;letter-spacing:.02em}
 .fk-chiprow{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 14px}
 .fk-chip{border:1px solid var(--line,#c4b49a);border-radius:2px;padding:8px 10px;font:650 13px/1 inherit;background:transparent;color:var(--fg,#1c1712)}
-.fk-field{display:flex;align-items:center;gap:10px;background:#fbf6ee!important;border:1px solid var(--line,#c4b49a);border-radius:2px;padding:12px 14px;margin:6px 0 14px;color:#1c1712!important}
+.fk-field{display:flex;align-items:center;gap:10px;background:var(--field,var(--elevated,#fbf6ee))!important;border:1px solid var(--line,#c4b49a);border-radius:var(--radius,12px);padding:12px 14px;margin:6px 0 14px;color:var(--field-ink,#1c1712)!important}
 .fk-field input,.fk-field select,.fk-field textarea,
 input:not([type=hidden]):not([type=checkbox]):not([type=radio]):not([type=submit]):not([type=button]),
 textarea,select{
-  flex:1;border:0;background:#fbf6ee!important;font:400 16px/1.4 "IBM Plex Sans",system-ui,sans-serif!important;
-  color:#1c1712!important;-webkit-text-fill-color:#1c1712!important;caret-color:#1c1712!important;
+  flex:1;border:0;background:var(--field,var(--elevated,#fbf6ee))!important;font:400 16px/1.4 inherit!important;
+  color:var(--field-ink,#1c1712)!important;-webkit-text-fill-color:var(--field-ink,#1c1712)!important;caret-color:var(--field-ink,#1c1712)!important;
   outline:none;min-width:0;color-scheme:light!important;opacity:1!important
 }
 button:focus-visible,a:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--accent,#3d4a1f);outline-offset:2px}
 input:focus-visible,textarea:focus-visible,select:focus-visible{outline:2px solid var(--accent,#3d4a1f);outline-offset:2px}
 .fk-field input::placeholder,.fk-field textarea::placeholder,
 input::placeholder,textarea::placeholder{
-  color:#6e5648!important;-webkit-text-fill-color:#6e5648!important;opacity:1!important
+  color:var(--field-muted,#6e5648)!important;-webkit-text-fill-color:var(--field-muted,#6e5648)!important;opacity:1!important
 }
 .fk-lbl{display:block;font-size:11px;font-weight:650;margin:10px 0 0;color:var(--muted,#5c5348);letter-spacing:.08em;text-transform:uppercase}
 .fk-sheet{padding:4px 0 8px}
@@ -240,7 +253,8 @@ input::placeholder,textarea::placeholder{
 img[src=""],img:not([src]){display:none!important}
 main,.fk-main,main p,main li,main b,.fk-tile,.fk-tile b,.fk-hello,.fk-lbl{color:var(--fg,#1c1712)!important;opacity:1!important}
 .fk-role,.fk-date,main .muted,.fk-stat span{color:var(--muted,#5c5348)!important;opacity:1!important}
-.fk-btn{color:#fff!important}
+.fk-btn{color:var(--btn-ink,#fff)!important}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
 </style>`;
 
 const SITE_KIT = `<style data-fenix-site data-fenix-desk>

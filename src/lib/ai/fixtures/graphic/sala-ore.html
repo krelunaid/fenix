@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+<meta name="color-scheme" content="light"/>
+<title>Sala delle Ore</title>
+<link href="https://fonts.googleapis.com/css2?family=Karla:wght@400;600;700&family=Newsreader:opsz,wght@6..72,500;6..72,650&display=swap" rel="stylesheet"/>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Crect width='48' height='48' rx='14' fill='%231f6f68'/%3E%3Ccircle cx='24' cy='24' r='10' fill='none' stroke='%23f7faf4' stroke-width='2'/%3E%3Cpath d='M24 18v6l4 2' stroke='%23f7faf4' stroke-width='2' fill='none'/%3E%3C/svg%3E"/>
+<style data-fenix-phone>
+:root{color-scheme:light;--bg:#eef3ea;--surface:#f7faf4;--elevated:#fff;--fg:#1a2a24;--muted:#5c6e64;--accent:#1f6f68;--line:#c9d6c8;--accent-ink:#f7faf4;--r:14px}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg);color:var(--fg);font:400 16px/1.45 Karla,system-ui,sans-serif}
+.app{min-height:100dvh;height:100dvh;display:flex;flex-direction:column}
+header{padding:18px 18px 10px}
+.brand{font-family:Newsreader,Georgia,serif;font-size:clamp(1.6rem,5vw,2.2rem);font-weight:650;letter-spacing:-.03em}
+.sub{color:var(--muted);margin-top:4px;font-size:13px}
+main{flex:1;min-height:0;overflow-y:auto;padding:8px 16px 24px}
+.day{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:8px;margin-bottom:12px}
+.slot{display:grid;grid-template-columns:72px 1fr auto;gap:10px;align-items:center;padding:12px;border-bottom:1px solid var(--line)}
+.slot:last-child{border-bottom:0}
+.slot time{font-variant-numeric:tabular-nums;font-weight:700;color:var(--accent)}
+.slot h2{font-family:Newsreader,serif;font-size:1.05rem;font-weight:500}
+.muted{color:var(--muted);font-size:13px}
+.hero{height:160px;border-radius:var(--r);margin-bottom:14px;overflow:hidden;border:1px solid var(--line);background:linear-gradient(160deg,#1f6f68,#eef3ea 62%)}
+.hero svg{width:100%;height:100%;display:block}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px;margin-bottom:12px;box-shadow:0 10px 28px color-mix(in srgb,var(--fg) 6%,transparent)}
+.btn{appearance:none;border:0;cursor:pointer;font:700 14px/1 Karla,sans-serif;border-radius:999px;padding:12px 16px;min-height:44px;background:var(--accent);color:var(--accent-ink)}
+.btn.ghost{background:transparent;color:var(--fg);border:1px solid var(--line)}
+label{display:block;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:10px 0 4px}
+input,select{width:100%;font:inherit;padding:12px 14px;border-radius:12px;border:1px solid var(--line);background:var(--elevated);color:var(--fg)}
+.tabs{height:calc(64px + env(safe-area-inset-bottom));display:grid;grid-template-columns:repeat(4,1fr);padding:6px 6px calc(6px + env(safe-area-inset-bottom));border-top:1px solid var(--line);background:var(--surface)}
+.tabs button{border:0;background:none;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:3px;font:700 10px/1.1 Karla,sans-serif}
+.tabs button.on{color:var(--accent)}
+.tabs svg{width:22px;height:22px}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.empty{padding:28px;text-align:center;color:var(--muted)}
+@media(min-width:768px){
+  .app{display:grid;grid-template-columns:220px 1fr;width:min(1080px,100%);margin:0 auto;height:auto;min-height:100dvh}
+  header{grid-column:1;border-right:1px solid var(--line)}
+  .tabs{grid-column:1;display:flex;flex-direction:column;height:auto;border-top:0;border-right:1px solid var(--line);padding:12px}
+  .tabs button{flex-direction:row;font-size:13px;min-height:44px;gap:10px}
+  main{grid-column:2;grid-row:1 / span 2;padding:22px}
+}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="app">
+<header>
+  <h1 class="brand">Sala delle Ore</h1>
+  <p class="sub">Trattamenti · via dei Giardini 4</p>
+</header>
+<main id="root"></main>
+<nav class="tabs" id="tabs">
+  <button type="button" data-view="oggi" class="on">Oggi</button>
+  <button type="button" data-view="prenota">Prenota</button>
+  <button type="button" data-view="agenda">Agenda</button>
+  <button type="button" data-view="studio">Studio</button>
+</nav>
+</div>
+<script>
+const defaultData={
+  prenotazioni:[
+    {id:"p1",ora:"09:30",nome:"Marta V.",servizio:"Taglio e piega",min:45},
+    {id:"p2",ora:"11:00",nome:"Luca B.",servizio:"Barba e olio",min:30},
+    {id:"p3",ora:"16:00",nome:"Elena S.",servizio:"Colore radici",min:75}
+  ]
+};
+let data=structuredClone(defaultData);
+let view="oggi";
+const tabDefs=[
+  {id:"oggi",label:"Oggi",svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg>'},
+  {id:"prenota",label:"Prenota",svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M8 3v4M16 3v4M4 10h16"/></svg>'},
+  {id:"agenda",label:"Agenda",svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M6 4h12v16H6z"/><path d="M9 8h6M9 12h6M9 16h3"/></svg>'},
+  {id:"studio",label:"Studio",svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 20V8l8-4 8 4v12"/><path d="M10 20v-6h4v6"/></svg>'}
+];
+function save(){ if(window.Fenix) void window.Fenix.save("state", data); }
+function sala(){
+  return '<div class="hero" aria-hidden="true"><svg viewBox="0 0 640 280" preserveAspectRatio="xMidYMid slice"><rect width="640" height="280" fill="#1f6f68"/><rect x="40" y="40" width="260" height="180" rx="18" fill="#eef3ea"/><rect x="340" y="70" width="220" height="130" rx="18" fill="#c9d6c8"/><circle cx="170" cy="130" r="36" fill="#1a2a24"/><rect x="70" y="190" width="200" height="10" fill="#1a2a24"/></svg></div>';
+}
+function renderTabs(){
+  document.getElementById("tabs").innerHTML=tabDefs.map(t=>`<button type="button" data-view="${t.id}" class="${view===t.id?"on":""}">${t.svg}<span>${t.label}</span></button>`).join("");
+}
+function render(){
+  renderTabs();
+  const root=document.getElementById("root");
+  let html="";
+  if(view==="oggi"){
+    html+=sala()+'<div class="day">';
+    data.prenotazioni.forEach(p=>{
+      html+=`<article class="slot" data-id="${p.id}"><time>${p.ora}</time><div><h2>${p.nome}</h2><p class="muted">${p.servizio} · ${p.min} min</p></div><button class="btn ghost" data-act="done" data-id="${p.id}">Fine</button></article>`;
+    });
+    if(!data.prenotazioni.length) html+='<p class="empty">Nessuna prenotazione oggi. Aprine una da Prenota.</p>';
+    html+="</div>";
+  }
+  if(view==="prenota"){
+    html+=`<div class="card"><p class="muted">Nuovo appuntamento</p><h2 class="brand" style="font-size:1.4rem">Prenota la sala</h2>
+      <form id="fnew">
+        <label for="n">Nome</label><input class="field" id="n" name="n" required placeholder="Nome e cognome">
+        <label for="s">Servizio</label><select class="field" id="s" name="s"><option>Taglio e piega</option><option>Barba e olio</option><option>Colore radici</option><option>Trattamento</option></select>
+        <label for="o">Ora</label><input class="field" id="o" name="o" type="time" value="15:00">
+        <button class="btn" type="submit" style="margin-top:14px;width:100%">Conferma prenotazione</button>
+      </form></div>`;
+  }
+  if(view==="agenda"){
+    html+='<div class="card"><p class="muted">Settimana</p><h2 class="brand" style="font-size:1.4rem">'+data.prenotazioni.length+' in sala</h2></div>';
+    data.prenotazioni.forEach(p=>{
+      html+=`<div class="card" data-id="${p.id}"><div class="slot" style="border:0;padding:0"><time>${p.ora}</time><div><h2>${p.nome}</h2><p class="muted">${p.servizio}</p></div><button class="btn ghost" data-act="done" data-id="${p.id}">Togli</button></div></div>`;
+    });
+  }
+  if(view==="studio"){
+    const min=data.prenotazioni.reduce((s,p)=>s+p.min,0);
+    html+=sala()+`<div class="card"><p class="muted">Studio</p><h2 class="brand" style="font-size:1.5rem">${min} minuti prenotati</h2><p class="muted">Poltrona 1 libera dopo l'ultimo taglio.</p></div>`;
+  }
+  root.innerHTML=html;
+}
+document.getElementById("tabs").addEventListener("click",e=>{
+  const b=e.target.closest("[data-view]"); if(!b) return; view=b.getAttribute("data-view"); render();
+});
+document.getElementById("root").addEventListener("click",e=>{
+  const b=e.target.closest("[data-act]"); if(!b) return;
+  if(b.getAttribute("data-act")==="done"){
+    data.prenotazioni=data.prenotazioni.filter(x=>x.id!==b.getAttribute("data-id")); save(); render();
+  }
+});
+document.getElementById("root").addEventListener("submit",e=>{
+  e.preventDefault();
+  const f=e.target; if(f.id!=="fnew") return;
+  const nome=(f.n.value||"").trim(); if(!nome) return;
+  data.prenotazioni.push({id:"p"+Date.now(),ora:f.o.value||"15:00",nome,servizio:f.s.value,min:45});
+  f.reset(); save(); view="oggi"; render();
+});
+function markReady(){ document.documentElement.setAttribute("data-fenix-ready","1"); }
+async function boot(){ try{ if(window.Fenix&&window.Fenix.load){ const r=await window.Fenix.load("state"); if(r&&typeof r==="object"&&Array.isArray(r.prenotazioni)) data=r; } }catch(err){} render(); markReady(); }
+boot();
+setTimeout(function(){ if(!document.documentElement.getAttribute("data-fenix-ready")) { render(); markReady(); } }, 500);
+</script>
+</body>
+</html>

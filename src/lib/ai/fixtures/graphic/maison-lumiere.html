@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+<meta name="color-scheme" content="dark"/>
+<title>Maison Lumière</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Outfit:wght@400;500;600&display=swap" rel="stylesheet"/>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Crect width='48' height='48' rx='14' fill='%23120e0c'/%3E%3Cellipse cx='24' cy='30' rx='8' ry='10' fill='%23c4a15a'/%3E%3Crect x='22' y='10' width='4' height='10' fill='%23f4ead8'/%3E%3C/svg%3E"/>
+<style data-fenix-phone>
+:root{color-scheme:dark;--bg:#120e0c;--surface:#1d1714;--elevated:#2a211c;--fg:#f4ead8;--muted:#b7a48c;--accent:#c4a15a;--line:#3a3028;--accent-ink:#120e0c;--r:18px}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg);color:var(--fg);font:400 16px/1.45 Outfit,system-ui,sans-serif}
+body{min-height:100dvh}
+.app{min-height:100dvh;height:100dvh;display:flex;flex-direction:column}
+header{padding:18px 20px 8px;display:flex;align-items:flex-end;justify-content:space-between;gap:12px}
+.brand{font-family:"Cormorant Garamond",Georgia,serif;font-size:clamp(1.8rem,6vw,2.4rem);font-weight:600;letter-spacing:-.03em;line-height:1}
+header p{color:var(--muted);font-size:12px;letter-spacing:.14em;text-transform:uppercase}
+main{flex:1;min-height:0;overflow-y:auto;padding:8px 16px 28px;-webkit-overflow-scrolling:touch}
+.hero{position:relative;height:210px;border-radius:var(--r);overflow:hidden;margin-bottom:16px;background:radial-gradient(120% 80% at 70% 20%,#3a2a1c,#120e0c 70%);border:1px solid var(--line)}
+.hero svg{width:100%;height:100%;display:block}
+.kicker{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--accent);margin-bottom:6px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px 16px 14px;margin-bottom:12px;box-shadow:0 18px 40px color-mix(in srgb,#000 28%,transparent)}
+.card h2{font-family:"Cormorant Garamond",serif;font-size:1.35rem;font-weight:600;margin-bottom:4px}
+.notes{color:var(--muted);font-size:13px}
+.row{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:10px}
+.ml{font-variant-numeric:tabular-nums;color:var(--accent)}
+.btn{appearance:none;border:0;cursor:pointer;font:600 14px/1 Outfit,system-ui,sans-serif;border-radius:999px;padding:12px 16px;background:var(--accent);color:var(--accent-ink);min-height:44px}
+.btn.ghost{background:transparent;color:var(--fg);border:1px solid var(--line)}
+.btn.sm{padding:8px 12px;min-height:40px;font-size:13px}
+label{display:block;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:10px 0 4px}
+input,select,textarea{width:100%;font:inherit;padding:12px 14px;border-radius:12px;border:1px solid var(--line);background:var(--elevated);color:var(--fg)}
+.tabs{flex-shrink:0;height:calc(64px + env(safe-area-inset-bottom));display:grid;grid-template-columns:repeat(4,1fr);padding:6px 6px calc(6px + env(safe-area-inset-bottom));border-top:1px solid var(--line);background:color-mix(in srgb,var(--surface) 92%,transparent)}
+.tabs button{border:0;background:none;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:3px;font:600 10px/1.1 Outfit,sans-serif;padding:4px}
+.tabs button.on{color:var(--accent)}
+.tabs svg{width:22px;height:22px}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.empty{padding:28px 8px;color:var(--muted);text-align:center}
+@media(min-width:768px){
+  .app{display:grid;grid-template-columns:220px 1fr;width:min(1080px,100%);margin:0 auto;height:auto;min-height:100dvh}
+  header{grid-column:1;flex-direction:column;align-items:flex-start;border-right:1px solid var(--line)}
+  .tabs{grid-column:1;flex-direction:column;height:auto;display:flex;border-top:0;border-right:1px solid var(--line);padding:12px}
+  .tabs button{flex-direction:row;gap:10px;font-size:13px;min-height:44px}
+  main{grid-column:2;grid-row:1 / span 2;padding:24px;display:grid;grid-template-columns:1fr 1fr;gap:14px;align-content:start}
+  .hero,.span{grid-column:1 / -1}
+}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="app">
+<header>
+  <div>
+    <p>Parfums · Milano</p>
+    <h1 class="brand">Maison Lumière</h1>
+  </div>
+</header>
+<main id="root"></main>
+<nav class="tabs" id="tabs">
+  <button type="button" data-view="collezione" class="on">Collezione</button>
+  <button type="button" data-view="note">Note</button>
+  <button type="button" data-view="atelier">Atelier</button>
+  <button type="button" data-view="guardaroba">Pelle</button>
+</nav>
+</div>
+<script>
+const defaultData={
+  essenze:[
+    {id:"e1",nome:"Bois de Nuit",famiglia:"legnosa",note:"vetiver, fumo, cedro",ml:50},
+    {id:"e2",nome:"Acqua Chiara",famiglia:"citrica",note:"bergamotto, tè bianco",ml:30},
+    {id:"e3",nome:"Fleur Ambrée",famiglia:"orientale",note:"ambra, rosa, vaniglia",ml:100}
+  ]
+};
+let data=structuredClone(defaultData);
+let view="collezione";
+const tabDefs=[
+  {id:"collezione",label:"Collezione",svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M9 3h6l1 4H8z"/><path d="M10 7c0 8-2 12-2 12h8s-2-4-2-12"/><path d="M10 21h4"/></svg>'},
+  {id:"note",label:"Note",svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg>'},
+  {id:"atelier",label:"Atelier",svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 20V8l8-4 8 4v12"/><path d="M9 20v-6h6v6"/></svg>'},
+  {id:"guardaroba",label:"Pelle",svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="5" y="4" width="14" height="16" rx="2"/><path d="M9 8h6M9 12h6"/></svg>'}
+];
+function save(){ if(window.Fenix) void window.Fenix.save("state", data); }
+function bottle(){
+  return '<div class="hero" aria-hidden="true"><svg viewBox="0 0 640 360" preserveAspectRatio="xMidYMid slice"><rect width="640" height="360" fill="#120e0c"/><ellipse cx="430" cy="220" rx="90" ry="110" fill="#2a211c"/><rect x="412" y="70" width="36" height="70" rx="6" fill="#c4a15a"/><path d="M360 210c20-80 120-80 140 0v90H360z" fill="#c4a15a" opacity=".9"/><circle cx="160" cy="240" r="70" fill="#1d1714"/><text x="40" y="60" fill="#c4a15a" font-size="18" font-family="serif">FLACONE · 2026</text></svg></div>';
+}
+function renderTabs(){
+  document.getElementById("tabs").innerHTML=tabDefs.map(t=>`<button type="button" data-view="${t.id}" class="${view===t.id?"on":""}">${t.svg}<span>${t.label}</span></button>`).join("");
+}
+function render(){
+  renderTabs();
+  const root=document.getElementById("root");
+  let html="";
+  if(view==="collezione"){
+    html+=bottle()+'<div class="card span"><p class="kicker">Collezione privata</p><h2>Tre essenze in casa</h2><p class="notes">Olfatto, non magazzino. Tocca una formula per il guardaroba.</p></div>';
+    data.essenze.forEach(e=>{
+      html+=`<article class="card fragrance" data-id="${e.id}"><p class="kicker">${e.famiglia}</p><h2>${e.nome}</h2><p class="notes">${e.note}</p><div class="row"><span class="ml">${e.ml} ml</span><button class="btn sm ghost" data-act="wear" data-id="${e.id}">Metti oggi</button></div></article>`;
+    });
+  }
+  if(view==="note"){
+    const fam={};
+    data.essenze.forEach(e=>{fam[e.famiglia]=(fam[e.famiglia]||0)+1;});
+    html+='<div class="card span"><p class="kicker">Piramide</p><h2>Note in casa</h2></div>';
+    Object.keys(fam).forEach(k=>{
+      html+=`<div class="card"><h2>${k}</h2><p class="notes">${fam[k]} formule</p></div>`;
+    });
+  }
+  if(view==="atelier"){
+    html+=`<div class="card span"><p class="kicker">Nuova formula</p><h2>Componi</h2>
+      <form id="fnew">
+        <label for="n">Nome</label><input class="field" id="n" name="n" required placeholder="Es. Vetiver Latte">
+        <label for="f">Famiglia</label><select class="field" id="f" name="f"><option>legnosa</option><option>citrica</option><option>orientale</option><option>fiorita</option></select>
+        <label for="note">Note</label><input class="field" id="note" name="note" placeholder="cuore, fondo">
+        <label for="ml">Millilitri</label><input class="field" id="ml" name="ml" type="number" min="10" step="10" value="50">
+        <button class="btn" type="submit" style="margin-top:14px;width:100%">Registra in collezione</button>
+      </form></div>`;
+  }
+  if(view==="guardaroba"){
+    html+='<div class="card span"><p class="kicker">Pelle</p><h2>Guardaroba</h2></div>';
+    if(!data.essenze.length) html+='<p class="empty">Nessuna essenza in guardaroba. Componine una in atelier.</p>';
+    else data.essenze.forEach(e=>{
+      html+=`<div class="card" data-id="${e.id}"><div class="row"><h2>${e.nome}</h2><button class="btn sm ghost" data-act="del" data-id="${e.id}">Archivia</button></div><p class="notes">${e.note}</p></div>`;
+    });
+  }
+  root.innerHTML=html;
+}
+document.getElementById("tabs").addEventListener("click",e=>{
+  const b=e.target.closest("[data-view]"); if(!b) return; view=b.getAttribute("data-view"); render();
+});
+document.getElementById("root").addEventListener("click",e=>{
+  const b=e.target.closest("[data-act]"); if(!b) return;
+  const id=b.getAttribute("data-id");
+  if(b.getAttribute("data-act")==="del"){ data.essenze=data.essenze.filter(x=>x.id!==id); save(); render(); }
+  if(b.getAttribute("data-act")==="wear"){ const e=data.essenze.find(x=>x.id===id); if(e){ data.essenze=[e,...data.essenze.filter(x=>x.id!==id)]; save(); view="guardaroba"; render(); } }
+});
+document.getElementById("root").addEventListener("submit",e=>{
+  e.preventDefault();
+  const f=e.target;
+  if(f.id!=="fnew") return;
+  const nome=(f.n.value||"").trim(); if(!nome) return;
+  data.essenze.unshift({id:"e"+Date.now(),nome,famiglia:f.f.value,note:(f.note.value||"").trim()||"—",ml:+f.ml.value||50});
+  f.reset(); save(); view="collezione"; render();
+});
+function markReady(){ document.documentElement.setAttribute("data-fenix-ready","1"); }
+async function boot(){ try{ if(window.Fenix&&window.Fenix.load){ const r=await window.Fenix.load("state"); if(r&&typeof r==="object"&&Array.isArray(r.essenze)) data=r; } }catch(err){} render(); markReady(); }
+boot();
+setTimeout(function(){ if(!document.documentElement.getAttribute("data-fenix-ready")) { render(); markReady(); } }, 500);
+</script>
+</body>
+</html>

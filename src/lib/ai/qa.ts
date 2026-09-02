@@ -12,14 +12,17 @@ function isDeskKind(kind?: string) {
 export function looksCheap(html: string, kind?: string) {
   const h = html.toLowerCase();
   if (!html || html.length < 400) return true;
-  const apple = h.includes("#f5f5f7") || h.includes("manrope") || h.includes("font-family: inter");
+  const appleClone =
+    h.includes("#f5f5f7") && (h.includes("#0071e3") || h.includes("#007aff")) && (h.includes("manrope") || h.includes("sf pro") || h.includes("-apple-system"));
   if (isDeskKind(kind)) {
-    return apple || !h.includes("<nav");
+    return appleClone || !h.includes("<nav");
   }
   const svgs = (h.match(/<svg/g) || []).length;
   const noMark = !h.includes('rel="icon"') && !h.includes("rel='icon'");
   const noTabs = !h.includes("data-view") && !h.includes("tabbar") && !h.includes("id=\"tabs\"");
-  return apple || noMark || noTabs || svgs < 6;
+  const skeletal = h.includes("ciao") && h.includes("operatore") && (h.match(/fk-stat/g) || []).length >= 4;
+  const emptyLie = h.includes("nessun elemento") && (h.match(/id:\s*["']e?\d/g) || []).length >= 2;
+  return appleClone || noMark || noTabs || svgs < 6 || skeletal || emptyLie;
 }
 
 export async function reviewBuild(input: {

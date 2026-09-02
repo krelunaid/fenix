@@ -6,7 +6,7 @@ SOSTITUISCI testi, numeri, icone SVG, nomi delle tab e i campi col BRIEF.
 Le 5 icone tab devono essere OGGETTI del mestiere (quaderno, pennino, forno, chiave…), silhouette diverse, leggibili a 24px.
 VIETATO: casetta Lucide, plus in cerchio, omino, hamburger, barre iPhone, lettera in un quadrato, emoji.
 NON cancellare sezioni. NON lasciare main vuoto. NON fare un sito.
-Palette unica dal brief (carta e inchiostro del mestiere, mai grigio iPhone). Date in italiano, non ISO.
+Palette unica dal brief (carta e inchiostro del mestiere, mai clone grigio-sistema + blu-sistema). Date in italiano, non ISO.
 Tieni header.fk-top, main, nav.fk-tab, form, liste, Fenix.load/save.
 Collezioni Fenix.data: solo [A-Za-z0-9._-]{1,80}, mai "capi vesti".
 Ogni tab mostra una vista vera. Form: preventDefault, niente righe vuote.

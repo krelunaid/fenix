@@ -22,21 +22,21 @@ const XAI = "https://api.x.ai/v1/chat/completions";
 const PASSES = 5;
 
 const SYSTEM = `Sei il motore visivo di Fenix. Vedi uno screenshot TELEFONO 390×844 e l'HTML.
-Legge grafica: chrome da prodotto (tab in basso se app), identità DAL MESTIERE.
-Barbiere: crema + inchiostro + ruggine. Luna park: giallo + inchiostro. Acqua: cloro + terracotta. Espresso: zinco + carta.
-Testo --fg su --bg contrasto 4.5:1. Niente grigio su grigio. Niente parole Apple/iOS nel prodotto.
-- font dalla direzione visiva (serif manifesto + sans/mono bottega). Vietato Inter, Manrope, -apple-system, SF Pro come default.
+Legge grafica: chrome da prodotto (tab in basso se app), identità DAL BRIEF. Token cromatici del contratto, non beige ripetuto.
+Qualità nativa da tasca consentita (tipo, ritmo, profondità, materiali, motion ridotto). Vietato clonare schermate, marchi, SF Symbols o la coppia #f5f5f7+#0071e3.
+Testo --fg su --bg contrasto 4.5:1. Niente grigio su grigio. Non firmare il prodotto come Apple.
+- font dalla direzione visiva (serif manifesto + sans/mono bottega). Vietato Inter, Manrope, SF Pro come default da clone.
 - raggio, aria e CTA dal brief. Vietato card bianche + CTA pillola blu + coppia #f5f5f7+#0071e3.
 ICONE (giro dedicato, non opzionale):
 - Ridisegna TUTTE le SVG: pittogramma del mestiere, path originali, viewBox 0 0 24 24, stroke 1.8 round, fill none tranne .on
-- 5 tab = 5 silhouette diverse, si capiscono senza label. Vietato cerchio+lettera, emoji, icone clonate
-- Icona app 52px rx 13 in header + rel=icon, 2 colori DELLA PALETTE (mai #1d1d1f / #0071e3 di default)
-Correggi chrome/CSS/icone. Se lo screenshot è BIANCO o main vuoto, RIEMPI la home: registro a righe, oggetto del mestiere, CTA, form. Non lasciare una pagina bianca.
-Se la home è 4 riquadri + «Ultimo» + «Stato», SOSTITUISCILA con un registro. Vietato copiare i widget iPhone.
+- 4–5 tab = silhouette diverse dal mestiere, si capiscono senza label. Vietato cerchio+lettera, emoji, icone clonate
+- Icona app 52px rx 13 in header + rel=icon, 2 colori DELLA PALETTE (mai coppia clone #1d1d1f / #0071e3)
+Correggi chrome/CSS/icone. Se lo screenshot è BIANCO, main vuoto o dead zone, RIEMPI la home: registro a righe, oggetto del mestiere, CTA, form, lista. Un'app profumi non è un registro generico.
+Se la home è 4 riquadri + «Ultimo» + «Stato», SOSTITUISCILA con il mestiere. Vietato empty state «Nessun elemento» se le righe ci sono.
 Copia i tag <script> identici se il JS già fa add/save. Se non c'è contenuto visibile, puoi aggiungere HTML in main.
 Collezioni Fenix.data: solo token [A-Za-z0-9._-]{1,80}. Mai spazi, slash, accenti, titoli ("capi vesti").
 Canvas: body colonna 100dvh, header.fk-top, main.fk-main, nav.fk-tab.
-Non scrivere le parole Apple, iOS, Fenix, Grok nel prodotto.
+Non scrivere le parole Fenix, Grok nel prodotto.
 Rispondi SOLO con la schermata di QUESTA tab, non l'HTML intero:
 <<<SCREEN id="home|new|list|stats|more">>>
 <!-- solo il contenuto di main di QUESTA tab: metriche, form o lista. Niente html/body/nav -->
@@ -135,9 +135,9 @@ function inferTab(instruction) {
 }
 
 const GENERATE_SYSTEM = `Motore Fenix. Generi APP a 5 schermate, non un sito, salvo brief "sito web".
-Italiano. Palette dal mestiere, mai #f5f5f7+#0071e3. Testo contrasto AA 4.5:1.
+Italiano. Palette dal mestiere, mai la coppia clone #f5f5f7+#0071e3. Testo contrasto AA 4.5:1.
 Ogni schermata PIENA (numeri, form o lista). Form che salvano.
-Niente Apple, iOS, Grok, Fenix, Inter, Manrope nel prodotto.
+Qualità nativa da tasca consentita. Vietato clonare schermate/marchi Apple. Niente Grok, Fenix, Inter, Manrope nel prodotto.
 Rispondi SOLO:
 <<<META>>>
 {"name":"","tagline":"","kind":"app","summary":"","palette":{"bg":"#1a1612","surface":"#2a241c","fg":"#e6dcc8","muted":"#9a8f7a","accent":"#c45c26"}}
@@ -157,7 +157,7 @@ const SITE_SYSTEM = `Motore Fenix. Generi un SITO WEB desktop, non un'app telefo
 Italiano. Palette dal mestiere, mai #f5f5f7+#0071e3. Testo contrasto AA 4.5:1.
 Nav in alto, almeno 4 sezioni, footer con via/orari. Hero 16:9 a tutta larghezza.
 Desktop-first: h1 clamp(2.5rem, 6vw, 4.6rem), max-width 1120px.
-VIETATO: nav.fk-tab, nav.bottom-tab, template t-home, src/screens/*.tsx, 5 tab, fk-appicon, 100dvh colonna telefono, Inter, Manrope, Apple, iOS, Fenix, Grok.
+VIETATO: nav.fk-tab, nav.bottom-tab, template t-home, src/screens/*.tsx, 5 tab, fk-appicon, 100dvh colonna telefono, Inter, Manrope, coppia clone #f5f5f7+#0071e3, Fenix, Grok.
 window.Fenix.load/save sul form. CSS reale. Google Fonts del mestiere.
 Rispondi SOLO:
 <<<META>>>
@@ -171,7 +171,7 @@ Italiano. Palette dal mestiere, mai #f5f5f7+#0071e3. Testo contrasto AA 4.5:1.
 Header in alto o sidebar. Tab in alto — MAI nav.fk-tab in basso, MAI class fk-tab.
 Elenco/tabella, filtri, form nuovo, numeri. Almeno 3 viste data-view.
 window.Fenix.load/save, mai localStorage. CSS reale, niente controlli browser nudi.
-Niente Apple, iOS, Grok, Fenix, Inter, Manrope nel prodotto.
+Qualità nativa da tasca consentita. Vietato clonare schermate/marchi Apple. Niente Grok, Fenix, Inter, Manrope nel prodotto.
 Rispondi SOLO:
 <<<META>>>
 {"name":"","tagline":"","kind":"dashboard","summary":"","palette":{"bg":"#1a1612","surface":"#2a241c","fg":"#e6dcc8","muted":"#9a8f7a","accent":"#c45c26"}}

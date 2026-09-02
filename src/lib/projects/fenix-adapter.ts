@@ -98,6 +98,7 @@ export function assessProduct(input: {
   files?: ProjectFile[];
   contract: BuildContract;
   kind?: ProjectKind;
+  brief?: string;
 }) {
   const report = validateProductHtml(input.html, { kind: input.kind });
   const evaluation = evaluateContract({
@@ -105,6 +106,7 @@ export function assessProduct(input: {
     files: input.files,
     contract: input.contract,
     kind: input.kind,
+    brief: input.brief || input.contract.intent,
   });
   return { report, evaluation, ok: report.ok && contractAllowsReady(evaluation) };
 }
@@ -136,6 +138,7 @@ export async function gateIncompleteHtml(input: {
       files: product.files,
       contract,
       kind: product.kind,
+      brief: input.prompt,
     });
 
   let scored = assess(current);

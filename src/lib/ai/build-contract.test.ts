@@ -120,6 +120,7 @@ describe("deterministic evaluator on 6 distinct fixtures", () => {
         html: fix.html,
         files: fix.files,
         contract,
+        brief: fix.brief,
       });
       const failed = evaluation.checks.filter((c) => c.blocking && !c.ok);
       assert.equal(
@@ -133,6 +134,7 @@ describe("deterministic evaluator on 6 distinct fixtures", () => {
       assert.equal(byId.security?.ok, true, fix.id);
       assert.equal(byId.files?.ok, true, fix.id);
       assert.equal(byId.aa?.ok, true, fix.id);
+      assert.equal(byId.graphic?.ok, true, `${fix.id} graphic ${byId.graphic?.detail}`);
       return {
         id: fix.id,
         family: fix.family,
@@ -199,23 +201,25 @@ describe("deterministic evaluator on 6 distinct fixtures", () => {
     assert.ok(ios.checks.some((c) => c.id === "visual-dna" && !c.ok) || ios.checks.some((c) => c.id === "html" && !c.ok));
   });
 
-  it("skips critic LLM when static gates pass", () => {
+  it("skips critic LLM; graphic QA is blocking and not skippable", () => {
     const fixtures = loadContractFixtures();
     const mobile = fixtures[1]!;
     const evaluation = evaluateContract({
       html: mobile.html,
       files: mobile.files,
       contract: planContract(mobile.brief),
+      brief: mobile.brief,
     });
     assert.equal(evaluation.ok, true);
+    assert.equal(evaluation.checks.find((c) => c.id === "graphic")?.ok, true);
     assert.deepEqual(criticBudget({ kind: "app", evaluation }), { call: false, reason: "static-ok" });
     assert.deepEqual(criticBudget({ kind: "dashboard", evaluation: { ...evaluation, ok: false } }), {
       call: false,
       reason: "desk",
     });
     assert.deepEqual(criticBudget({ kind: "app", shot: true, evaluation: { ...evaluation, ok: false } }), {
-      call: false,
-      reason: "screenshot",
+      call: true,
+      reason: "incomplete",
     });
     assert.deepEqual(
       criticBudget({ kind: "app", instruction: "sposta il bottone", evaluation: { ...evaluation, ok: false } }),

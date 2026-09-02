@@ -41,7 +41,7 @@ export const generateBuild = createServerFn({ method: "POST" })
     const userParts = [
       `BRIEF:\n${data.prompt}`,
       contractInstruction(planContract(data.prompt)),
-      `VINCOLO UNICITÀ: prodotto visivamente unico, nato dal brief. Vietato #f5f5f7 + Manrope + hero centrato.`,
+      `VINCOLO UNICITÀ: prodotto visivamente unico, nato dal brief. Token cromatici del contratto. Vietato clone #f5f5f7 + Manrope + hero centrato. Vietato beige/terracotta se il brief non è ceramica.`,
     ];
     if (data.html) {
       userParts.push(`HTML ATTUALE:\n${data.html}`);

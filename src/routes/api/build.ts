@@ -330,6 +330,7 @@ export const Route = createFileRoute("/api/build")({
                   files: parsed.files,
                   contract,
                   kind: lockKind,
+                  brief: prompt,
                 });
                 const budget = criticBudget({
                   kind: lockKind,

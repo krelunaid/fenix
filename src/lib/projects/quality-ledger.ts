@@ -90,8 +90,8 @@ export const QUALITY_LEDGER: LedgerRow[] = [
   {
     id: "budget",
     claim:
-      "Critic LLM saltato se i gate statici passano; desk e iterate non pagano un secondo giro. Planner 0 token.",
-    evidence: "src/lib/ai/build-contract.test.ts criticBudget static-ok/desk/iterate",
+      "Critic LLM saltato se i gate (incluso grafico) passano; desk, iterate e graphic fail-closed non pagano un secondo giro. Planner 0 token. La QA visiva a screenshot non è un voto autoassegnato.",
+    evidence: "src/lib/ai/build-contract.test.ts criticBudget static-ok/desk/iterate/graphic",
     ok: true,
   },
   {
@@ -228,6 +228,14 @@ export const QUALITY_LEDGER: LedgerRow[] = [
       "Un job GitHub CI blocking avvia PostgreSQL 16 reale (service postgres:16, healthcheck, credenziale fixture non-secret), applica le migrazioni Fenix e prova carico concorrente, CAS a un vincitore, isolamento tenant/ruoli, replay, pool bounded e un recovery drill pg_dump/pg_restore major 16 con checksum, row count e processo applicativo senza duplicati. PGlite non attribuisce punti. Report JSON redatto.",
     evidence:
       ".github/workflows/ci.yml job postgres-reliability + postgres-reliability.ts store Fenix + scripts/postgres-reliability.mjs + artifacts/postgres-reliability.json",
+    ok: true,
+  },
+  {
+    id: "graphic-quality-gate",
+    claim:
+      "Ready/pubblica richiede un gate grafico riproducibile: token dal brief, niente dead zone, empty state coerente, originalità anti-clone, immagini di mestiere, controlli rifiniti. Essenza scheletrica fallisce; tre prodotti (profumi, moda, prenotazioni) passano D/T/M con screenshot. Compilare non basta. 0 crediti LLM.",
+    evidence:
+      "design-tokens.ts + graphic-quality.ts + graphic-quality.test.ts + graphic-quality-browser.test.ts fixtures/graphic shots",
     ok: true,
   },
   {
