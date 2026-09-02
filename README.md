@@ -32,7 +32,10 @@ Export + pull Fenix da GitHub (opzionale, server only): `GITHUB_APP_ID` (o `GITH
 
 Le app generate (Grottaglie, Catenaria, …) si scaricano da **Pubblica** (ZIP / `index.html`) e si caricano sul sito come HTML statico. **Pubblica** resta disabilitata finché il documento finale (srcdoc compreso il runtime) non è valido.
 
-Le app pubblicate possono usare **Collabora sui dati**: il titolare genera link revocabili in sola lettura o modifica per un archivio cloud condiviso. La capability viene mostrata una volta, conservata nel database soltanto come hash e scambiata con un cookie HttpOnly limitato all'API dati. Non servono account esterni; questi ruoli non equivalgono ancora al co-editing del progetto.
+Le app pubblicate possono usare **Collabora sui dati**: il titolare genera link revocabili in sola lettura o modifica per un archivio cloud condiviso. La capability viene mostrata una volta, conservata nel database soltanto come hash e scambiata con un cookie HttpOnly limitato all'API dati. Non servono account esterni.
+
+Lo **studio condiviso** è un workspace progetto distinto: il titolare invita viewer/editor, il viewer legge l'albero, editor e titolare scrivono file con If-Match CAS e conflitti fail-closed. Inviti one-shot hash-only, revoca immediata, presenza TTL, registro redatto. Serve `DATABASE_URL` con la migrazione `0006_project_workspaces`. Non è un editor simultaneo tipo CRDT e non dichiara parità con Emergent.
+
 
 ## Locale
 

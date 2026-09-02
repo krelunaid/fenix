@@ -218,9 +218,25 @@ export const FASE3_SCORECARD: ScoreDimension[] = [
         reproduce:
           "npm test -- src/lib/projects/revisions.test.ts src/lib/projects/revisions-browser.test.ts",
       },
+      {
+        id: "workspace-roles-cas",
+        points: 3,
+        claim:
+          "Workspace progetto con titolare, viewer ed editor isolati: invito one-shot hash-only, revoca immediata, albero in lettura al viewer, scritture If-Match CAS fail-closed e nessun ruolo dal browser.",
+        reproduce:
+          "npm test -- src/lib/projects/workspace.test.ts src/lib/projects/workspace-browser.test.ts",
+      },
+      {
+        id: "workspace-presence-audit",
+        points: 1,
+        claim:
+          "Presenza multi-sessione con TTL 45s e registro workspace bounded/redatto, senza token o hash identità esposti.",
+        reproduce:
+          "npm test -- src/lib/projects/workspace.test.ts src/lib/projects/workspace-browser.test.ts",
+      },
     ],
     remaining:
-      "I ruoli coprono i dati dell'app pubblicata e la diagnosi è locale; mancano co-editing del codice/progetto, presenza multi-utente, workspace organizzativi e APM centralizzato.",
+      "I ruoli coprono dati pubblicati e co-editing file del progetto con CAS; restano fuori l’editor simultaneo CRDT, i workspace organizzativi SSO e un APM centralizzato.",
   },
   {
     id: "generated-quality",

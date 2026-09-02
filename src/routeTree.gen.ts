@@ -16,6 +16,8 @@ import { Route as ApiBuildRouteImport } from './routes/api/build'
 import { Route as ApiGithubRouteImport } from './routes/api/github'
 import { Route as ApiPolishRouteImport } from './routes/api/polish'
 import { Route as ApiReleaseRouteImport } from './routes/api/release'
+import { Route as ApiWorkspaceRouteImport } from './routes/api/workspace'
+import { Route as CondivisoWorkspaceIdRouteImport } from './routes/condiviso.$workspaceId'
 import { Route as SitoProjectIdRouteImport } from './routes/sito.$projectId'
 import { Route as StudioProjectIdRouteImport } from './routes/studio.$projectId'
 import { Route as ApiAppAccessSiteIdRouteImport } from './routes/api/app-access.$siteId'
@@ -29,6 +31,7 @@ import { Route as ApiJobsIdRouteImport } from './routes/api/jobs.$id'
 import { Route as ApiReleaseIdRouteImport } from './routes/api/release.$id'
 import { Route as ApiReleaseCallbackRouteImport } from './routes/api/release.callback'
 import { Route as ApiSitesIdRouteImport } from './routes/api/sites.$id'
+import { Route as ApiWorkspaceIdRouteImport } from './routes/api/workspace.$id'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -63,6 +66,16 @@ const ApiPolishRoute = ApiPolishRouteImport.update({
 const ApiReleaseRoute = ApiReleaseRouteImport.update({
   id: '/api/release',
   path: '/api/release',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiWorkspaceRoute = ApiWorkspaceRouteImport.update({
+  id: '/api/workspace',
+  path: '/api/workspace',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CondivisoWorkspaceIdRoute = CondivisoWorkspaceIdRouteImport.update({
+  id: '/condiviso/$workspaceId',
+  path: '/condiviso/$workspaceId',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SitoProjectIdRoute = SitoProjectIdRouteImport.update({
@@ -130,6 +143,11 @@ const ApiSitesIdRoute = ApiSitesIdRouteImport.update({
   path: '/api/sites/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiWorkspaceIdRoute = ApiWorkspaceIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => ApiWorkspaceRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -139,6 +157,8 @@ export interface FileRoutesByFullPath {
   '/api/github': typeof ApiGithubRouteWithChildren
   '/api/polish': typeof ApiPolishRoute
   '/api/release': typeof ApiReleaseRouteWithChildren
+  '/api/workspace': typeof ApiWorkspaceRouteWithChildren
+  '/condiviso/$workspaceId': typeof CondivisoWorkspaceIdRoute
   '/sito/$projectId': typeof SitoProjectIdRoute
   '/studio/$projectId': typeof StudioProjectIdRoute
   '/api/app-access/$siteId': typeof ApiAppAccessSiteIdRoute
@@ -152,6 +172,7 @@ export interface FileRoutesByFullPath {
   '/api/release/$id': typeof ApiReleaseIdRoute
   '/api/release/callback': typeof ApiReleaseCallbackRoute
   '/api/sites/$id': typeof ApiSitesIdRoute
+  '/api/workspace/$id': typeof ApiWorkspaceIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -161,6 +182,8 @@ export interface FileRoutesByTo {
   '/api/github': typeof ApiGithubRouteWithChildren
   '/api/polish': typeof ApiPolishRoute
   '/api/release': typeof ApiReleaseRouteWithChildren
+  '/api/workspace': typeof ApiWorkspaceRouteWithChildren
+  '/condiviso/$workspaceId': typeof CondivisoWorkspaceIdRoute
   '/sito/$projectId': typeof SitoProjectIdRoute
   '/studio/$projectId': typeof StudioProjectIdRoute
   '/api/app-access/$siteId': typeof ApiAppAccessSiteIdRoute
@@ -174,6 +197,7 @@ export interface FileRoutesByTo {
   '/api/release/$id': typeof ApiReleaseIdRoute
   '/api/release/callback': typeof ApiReleaseCallbackRoute
   '/api/sites/$id': typeof ApiSitesIdRoute
+  '/api/workspace/$id': typeof ApiWorkspaceIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -184,6 +208,8 @@ export interface FileRoutesById {
   '/api/github': typeof ApiGithubRouteWithChildren
   '/api/polish': typeof ApiPolishRoute
   '/api/release': typeof ApiReleaseRouteWithChildren
+  '/api/workspace': typeof ApiWorkspaceRouteWithChildren
+  '/condiviso/$workspaceId': typeof CondivisoWorkspaceIdRoute
   '/sito/$projectId': typeof SitoProjectIdRoute
   '/studio/$projectId': typeof StudioProjectIdRoute
   '/api/app-access/$siteId': typeof ApiAppAccessSiteIdRoute
@@ -197,6 +223,7 @@ export interface FileRoutesById {
   '/api/release/$id': typeof ApiReleaseIdRoute
   '/api/release/callback': typeof ApiReleaseCallbackRoute
   '/api/sites/$id': typeof ApiSitesIdRoute
+  '/api/workspace/$id': typeof ApiWorkspaceIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -208,6 +235,8 @@ export interface FileRouteTypes {
     | '/api/github'
     | '/api/polish'
     | '/api/release'
+    | '/api/workspace'
+    | '/condiviso/$workspaceId'
     | '/sito/$projectId'
     | '/studio/$projectId'
     | '/api/app-access/$siteId'
@@ -221,6 +250,7 @@ export interface FileRouteTypes {
     | '/api/release/$id'
     | '/api/release/callback'
     | '/api/sites/$id'
+    | '/api/workspace/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -230,6 +260,8 @@ export interface FileRouteTypes {
     | '/api/github'
     | '/api/polish'
     | '/api/release'
+    | '/api/workspace'
+    | '/condiviso/$workspaceId'
     | '/sito/$projectId'
     | '/studio/$projectId'
     | '/api/app-access/$siteId'
@@ -243,6 +275,7 @@ export interface FileRouteTypes {
     | '/api/release/$id'
     | '/api/release/callback'
     | '/api/sites/$id'
+    | '/api/workspace/$id'
   id:
     | '__root__'
     | '/'
@@ -252,6 +285,8 @@ export interface FileRouteTypes {
     | '/api/github'
     | '/api/polish'
     | '/api/release'
+    | '/api/workspace'
+    | '/condiviso/$workspaceId'
     | '/sito/$projectId'
     | '/studio/$projectId'
     | '/api/app-access/$siteId'
@@ -265,6 +300,7 @@ export interface FileRouteTypes {
     | '/api/release/$id'
     | '/api/release/callback'
     | '/api/sites/$id'
+    | '/api/workspace/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -275,6 +311,8 @@ export interface RootRouteChildren {
   ApiGithubRoute: typeof ApiGithubRouteWithChildren
   ApiPolishRoute: typeof ApiPolishRoute
   ApiReleaseRoute: typeof ApiReleaseRouteWithChildren
+  ApiWorkspaceRoute: typeof ApiWorkspaceRouteWithChildren
+  CondivisoWorkspaceIdRoute: typeof CondivisoWorkspaceIdRoute
   SitoProjectIdRoute: typeof SitoProjectIdRoute
   StudioProjectIdRoute: typeof StudioProjectIdRoute
   ApiAppAccessSiteIdRoute: typeof ApiAppAccessSiteIdRoute
@@ -333,6 +371,20 @@ declare module '@tanstack/react-router' {
       path: '/api/release'
       fullPath: '/api/release'
       preLoaderRoute: typeof ApiReleaseRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/workspace': {
+      id: '/api/workspace'
+      path: '/api/workspace'
+      fullPath: '/api/workspace'
+      preLoaderRoute: typeof ApiWorkspaceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/condiviso/$workspaceId': {
+      id: '/condiviso/$workspaceId'
+      path: '/condiviso/$workspaceId'
+      fullPath: '/condiviso/$workspaceId'
+      preLoaderRoute: typeof CondivisoWorkspaceIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/sito/$projectId': {
@@ -426,6 +478,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiSitesIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/workspace/$id': {
+      id: '/api/workspace/$id'
+      path: '/$id'
+      fullPath: '/api/workspace/$id'
+      preLoaderRoute: typeof ApiWorkspaceIdRouteImport
+      parentRoute: typeof ApiWorkspaceRoute
+    }
   }
 }
 
@@ -461,6 +520,18 @@ const ApiReleaseRouteWithChildren = ApiReleaseRoute._addFileChildren(
   ApiReleaseRouteChildren,
 )
 
+interface ApiWorkspaceRouteChildren {
+  ApiWorkspaceIdRoute: typeof ApiWorkspaceIdRoute
+}
+
+const ApiWorkspaceRouteChildren: ApiWorkspaceRouteChildren = {
+  ApiWorkspaceIdRoute: ApiWorkspaceIdRoute,
+}
+
+const ApiWorkspaceRouteWithChildren = ApiWorkspaceRoute._addFileChildren(
+  ApiWorkspaceRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   LoginRoute: LoginRoute,
@@ -469,6 +540,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiGithubRoute: ApiGithubRouteWithChildren,
   ApiPolishRoute: ApiPolishRoute,
   ApiReleaseRoute: ApiReleaseRouteWithChildren,
+  ApiWorkspaceRoute: ApiWorkspaceRouteWithChildren,
+  CondivisoWorkspaceIdRoute: CondivisoWorkspaceIdRoute,
   SitoProjectIdRoute: SitoProjectIdRoute,
   StudioProjectIdRoute: StudioProjectIdRoute,
   ApiAppAccessSiteIdRoute: ApiAppAccessSiteIdRoute,

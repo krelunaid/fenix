@@ -1,0 +1,20 @@
+{
+  "generatedAt": "2026-09-02T01:07:51.754Z",
+  "shots": [
+    {
+      "name": "workspace-D.png",
+      "sha256": "1eee42ecd90cba214c92dc9a958258cf09281cebd0fb5e42beb92d0a98a66d05",
+      "bytes": 88589
+    },
+    {
+      "name": "workspace-T.png",
+      "sha256": "7826d2c8ae75802091d7baacfb938d245cfe248800e93832a0d672ce7fea1832",
+      "bytes": 81382
+    },
+    {
+      "name": "workspace-M.png",
+      "sha256": "dd6defc9b76ae652226cdfa28873dff8e5fd1955ca264f5f7608fe93da8449bb",
+      "bytes": 42393
+    }
+  ]
+}

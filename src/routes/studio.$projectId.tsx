@@ -15,6 +15,7 @@ import { PreviewFrame, type Device } from "@/components/preview-frame";
 import { PublishPanel } from "@/components/publish-panel";
 import { ExportPanel } from "@/components/export-panel";
 import { RevisionPanel, VersionsButton } from "@/components/revision-panel";
+import { ShareButton, SharePanel } from "@/components/share-panel";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Wordmark } from "@/components/wordmark";
@@ -60,6 +61,7 @@ function StudioPage() {
   const [publishOpen, setPublishOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
   const [versionsOpen, setVersionsOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
   const threadRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -167,6 +169,7 @@ function StudioPage() {
           <Code2 />
           Codice
         </Button>
+        <ShareButton disabled={!project.html} onClick={() => setShareOpen(true)} />
         <Button
           variant="secondary"
           size="sm"
@@ -333,6 +336,14 @@ function StudioPage() {
         ))}
       </nav>
 
+      <SharePanel
+        open={shareOpen}
+        onClose={() => setShareOpen(false)}
+        projectId={project.id}
+        name={project.name}
+        files={project.files}
+        html={project.html}
+      />
       <RevisionPanel
         open={versionsOpen}
         onClose={() => setVersionsOpen(false)}

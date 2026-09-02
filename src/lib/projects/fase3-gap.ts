@@ -63,10 +63,10 @@ export const FASE3_GAPS: Fase3Gap[] = [
     area: "Collaborazione",
     emergent: "Workspace condivisi e ruoli (claim 2026; evidenza mista).",
     fenix:
-      "Un titolare del progetto/sito. Sulle app pubblicate crea e revoca link viewer/editor per dati condivisi: frammento URL consumato e rimosso prima del fetch pubblico, token hash-only server-side, cookie HttpOnly, revoca immediata, screenshot D/T/M e prova cross-browser. Non è ancora co-editing del codice, presenza o workspace organizzativo.",
+      "Workspace progetto: il titolare crea uno studio condiviso, invita e revoca viewer/editor. I ruoli vivono solo sul server (hash identità, mai ruolo dal browser). Il viewer legge l'albero; editor e titolare modificano file con If-Match CAS e conflitti fail-closed. Presenza bounded/TTL e registro redatto (max 64). Serve DATABASE_URL con la migrazione 0006; senza archivio durevole la collaborazione resta 503. Non è un editor simultaneo CRDT né un workspace organizzativo SSO.",
     impact: "medium",
     cost: "high",
-    slice: "next",
+    slice: "now",
   },
   {
     id: "integrations",

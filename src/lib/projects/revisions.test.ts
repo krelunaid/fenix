@@ -66,7 +66,7 @@ describe("fase3 gap matrix is evidence, not parity", () => {
     const now = fase3NowGaps();
     assert.deepEqual(
       now.map((g) => g.id),
-      ["revisions", "project-tree", "github-export", "quality"],
+      ["revisions", "project-tree", "github-export", "collab", "quality"],
     );
     assert.equal(now[0]?.impact, "high");
     assert.notEqual(now[0]?.cost, "high");
@@ -91,7 +91,7 @@ describe("fase3 gap matrix is evidence, not parity", () => {
       [20, 15, 15, 15, 15, 20],
     );
     assert.equal(total.max, 100);
-    assert.equal(total.score, 89);
+    assert.equal(total.score, 93);
     assert.equal(total.complete, false);
     for (const dimension of FASE3_SCORECARD) {
       assert.ok(scoreDimension(dimension) <= dimension.max);
