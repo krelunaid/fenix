@@ -56,6 +56,8 @@ export const GEOMETRIC_REGRESSIONS: RegExp[] = [
   /v210c0 16-8 24-20 24s-22-8-22-24V186/,
   /c20-28 70-40 110-18 16 10 8 28-8 34/,
   /M250 210c-20-36 8-70 46-74 36-4 70 22/,
+  /M214 176 C198 148 224 108 268 118/,
+  /C276 86 328 74 364 108 C408 96 428 138 396 164/,
 ];
 
 export type MaterialSignature = {
@@ -230,24 +232,27 @@ function columnDress(cx: number, s: number, ink: boolean): string {
   const fold = ink ? "#000" : "#fff";
   return `${dressForm(cx, ink)}
   <g data-part="garment" data-garment="dress">
-    <path data-part="sleeve" d="M${cx - 46} 108 C${cx - 64} 122 ${cx - 70} 150 ${cx - 58} 168 L${cx - 40} 164 C${cx - 46} 146 ${cx - 44} 124 ${cx - 32} 114Z M${cx + 46} 108 C${cx + 64} 122 ${cx + 70} 150 ${cx + 58} 168 L${cx + 40} 164 C${cx + 46} 146 ${cx + 44} 124 ${cx + 32} 114Z" fill="url(#slv${s})"/>
-    <path data-part="bodice" d="M${cx - 40} 102 C${cx - 48} 118 ${cx - 46} 138 ${cx - 36} 154 C${cx - 28} 168 ${cx - 22} 176 ${cx - 20} 180 L${cx + 20} 180 C${cx + 22} 176 ${cx + 28} 168 ${cx + 36} 154 C${cx + 46} 138 ${cx + 48} 118 ${cx + 40} 102 C${cx + 16} 92 ${cx - 16} 92 ${cx - 40} 102Z" fill="url(#fab${s})"/>
-    <path d="M${cx - 18} 96 C${cx - 22} 88 ${cx - 16} 84 ${cx - 10} 90 L${cx - 14} 104Z M${cx + 18} 96 C${cx + 22} 88 ${cx + 16} 84 ${cx + 10} 90 L${cx + 14} 104Z" fill="${strap}"/>
-    <path data-part="waist" d="M${cx - 22} 178 L${cx + 22} 178 L${cx + 20} 186 L${cx - 20} 186Z" fill="url(#lin${s})"/>
-    <path data-part="column" d="M${cx - 22} 184 C${cx - 28} 230 ${cx - 30} 280 ${cx - 32} 336 L${cx - 28} 348 L${cx - 14} 344 L${cx} 348 L${cx + 14} 344 L${cx + 28} 348 L${cx + 32} 336 C${cx + 30} 280 ${cx + 28} 230 ${cx + 22} 184Z" fill="url(#fab${s})"/>
-    <g data-part="fold" fill="none" stroke="${fold}" stroke-width="1.3" opacity=".22">
-      <path d="M${cx - 16} 190 C${cx - 18} 250 ${cx - 20} 300 ${cx - 22} 340"/>
-      <path d="M${cx} 186 C${cx - 2} 250 ${cx} 300 ${cx} 346"/>
-      <path d="M${cx + 16} 190 C${cx + 18} 250 ${cx + 20} 300 ${cx + 22} 340"/>
+    <path data-part="sleeve" d="M${cx - 48} 106 C${cx - 70} 122 ${cx - 78} 152 ${cx - 62} 174 L${cx - 42} 168 C${cx - 50} 148 ${cx - 46} 124 ${cx - 34} 112Z M${cx + 48} 106 C${cx + 70} 122 ${cx + 78} 152 ${cx + 62} 174 L${cx + 42} 168 C${cx + 50} 148 ${cx + 46} 124 ${cx + 34} 112Z" fill="url(#slv${s})"/>
+    <path data-part="bodice" d="M${cx - 42} 100 C${cx - 52} 118 ${cx - 50} 140 ${cx - 38} 156 C${cx - 28} 172 ${cx - 22} 178 ${cx - 18} 182 L${cx + 18} 182 C${cx + 22} 178 ${cx + 28} 172 ${cx + 38} 156 C${cx + 50} 140 ${cx + 52} 118 ${cx + 42} 100 C${cx + 16} 90 ${cx - 16} 90 ${cx - 42} 100Z" fill="url(#fab${s})"/>
+    <path d="M${cx - 20} 96 C${cx - 24} 86 ${cx - 16} 80 ${cx - 8} 90 L${cx - 14} 106Z M${cx + 20} 96 C${cx + 24} 86 ${cx + 16} 80 ${cx + 8} 90 L${cx + 14} 106Z" fill="${strap}"/>
+    <path data-part="waist" d="M${cx - 20} 178 L${cx + 20} 178 L${cx + 26} 190 L${cx - 26} 190Z" fill="url(#lin${s})"/>
+    <path data-part="column" d="M${cx - 26} 188 C${cx - 34} 230 ${cx - 40} 278 ${cx - 52} 338 L${cx - 40} 352 L${cx - 16} 346 L${cx} 354 L${cx + 16} 346 L${cx + 40} 352 L${cx + 52} 338 C${cx + 40} 278 ${cx + 34} 230 ${cx + 26} 188Z" fill="url(#fab${s})"/>
+    <path data-part="hip" d="M${cx - 28} 200 C${cx - 36} 230 ${cx - 32} 250 ${cx - 24} 258 L${cx + 24} 258 C${cx + 32} 250 ${cx + 36} 230 ${cx + 28} 200Z" fill="url(#slv${s})" opacity=".35"/>
+    <g data-part="fold">
+      <path d="M${cx - 18} 196 C${cx - 28} 250 ${cx - 36} 300 ${cx - 40} 342" fill="none" stroke="${fold}" stroke-width="2.4" opacity=".18"/>
+      <path d="M${cx - 4} 192 C${cx - 8} 250 ${cx - 6} 310 ${cx - 8} 348" fill="none" stroke="${fold}" stroke-width="1.6" opacity=".2"/>
+      <path d="M${cx + 10} 194 C${cx + 18} 250 ${cx + 24} 305 ${cx + 30} 344" fill="none" stroke="${fold}" stroke-width="2" opacity=".16"/>
+      <path d="M${cx + 20} 220 C${cx + 8} 228 ${cx - 8} 226 ${cx - 18} 218" fill="none" stroke="${stitch}" stroke-width="1" opacity=".35"/>
+      <path d="M${cx - 22} 280 C${cx - 10} 292 ${cx + 12} 288 ${cx + 24} 276" fill="url(#slv${s})" opacity=".2"/>
     </g>
-    <path data-part="seam" d="M${cx} 180 v166" fill="none" stroke="${stitch}" stroke-width="1"/>
-    <path d="M${cx - 16} 210 C${cx} 218 ${cx + 16} 210 ${cx + 16} 210" fill="none" stroke="${stitch}" stroke-width="1" opacity=".45"/>
-    <path data-part="hem" d="M${cx - 32} 336 L${cx - 28} 352 C${cx - 10} 358 ${cx + 10} 358 ${cx + 28} 352 L${cx + 32} 336Z" fill="url(#lin${s})"/>
-    <path data-part="lining" d="M${cx - 26} 344 C${cx - 8} 352 ${cx + 8} 352 ${cx + 26} 344" fill="none" stroke="url(#lin${s})" stroke-width="3"/>
-    ${[168, 196, 224].map((y) => `<circle cx="${cx + 10}" cy="${y}" r="2.3" fill="${strap}"/>`).join("")}
-    <path d="M${cx - 28} 120 C${cx} 104 ${cx + 36} 112 ${cx + 44} 136" fill="url(#she${s})"/>
+    <path data-part="seam" d="M${cx} 182 v166" fill="none" stroke="${stitch}" stroke-width="1"/>
+    <path d="M${cx - 14} 214 C${cx} 224 ${cx + 14} 214 ${cx + 14} 214" fill="none" stroke="${stitch}" stroke-width="1" opacity=".45"/>
+    <path data-part="hem" d="M${cx - 52} 336 L${cx - 44} 356 C${cx - 16} 366 ${cx + 16} 366 ${cx + 44} 356 L${cx + 52} 336Z" fill="url(#lin${s})"/>
+    <path data-part="lining" d="M${cx - 40} 348 C${cx - 12} 360 ${cx + 12} 360 ${cx + 40} 348" fill="none" stroke="url(#lin${s})" stroke-width="3.4"/>
+    ${[166, 198, 228].map((y) => `<circle cx="${cx + 11}" cy="${y}" r="2.4" fill="${strap}"/>`).join("")}
+    <path d="M${cx - 30} 118 C${cx} 100 ${cx + 38} 110 ${cx + 48} 138" fill="url(#she${s})"/>
   </g>
-  <ellipse cx="${cx}" cy="396" rx="78" ry="9" fill="#000" opacity=".18"/>`;
+  <ellipse cx="${cx}" cy="396" rx="82" ry="9" fill="#000" opacity=".18"/>`;
 }
 
 function hangTrousers(cx: number, s: number, ink: boolean): string {
@@ -255,34 +260,49 @@ function hangTrousers(cx: number, s: number, ink: boolean): string {
   const wood = ink ? "#e8dcc8" : "#3a322c";
   const stitch = ink ? "#1a1614" : "#c9b496";
   const fold = ink ? "#000" : "#fff";
+  const shadow = ink ? "#000" : "#1a1614";
   return `<g data-part="garment" data-garment="trousers">
     <g data-part="hanger">
-      <path d="M${cx} 42 C${cx + 18} 28 ${cx + 28} 44 ${cx + 22} 58" fill="none" stroke="${hook}" stroke-width="3.4" stroke-linecap="round"/>
-      <path d="M${cx - 78} 70 L${cx} 58 L${cx + 78} 70 L${cx + 70} 82 H${cx - 70}Z" fill="${wood}"/>
-      <path d="M${cx - 70} 82 H${cx + 70}" stroke="${hook}" stroke-width="1.2" opacity=".4"/>
+      <path d="M${cx} 36 C${cx + 16} 22 ${cx + 30} 40 ${cx + 22} 56" fill="none" stroke="${hook}" stroke-width="3.6" stroke-linecap="round"/>
+      <path d="M${cx - 92} 72 L${cx} 54 L${cx + 92} 72 L${cx + 80} 88 H${cx - 80}Z" fill="${wood}"/>
+      <path d="M${cx - 70} 78 L${cx} 64 L${cx + 70} 78" fill="none" stroke="${hook}" stroke-width="1.2" opacity=".35"/>
+      <path d="M${cx - 80} 88 H${cx + 80}" stroke="${shadow}" stroke-width="2" opacity=".2"/>
     </g>
-    <path data-part="waistband" d="M${cx - 58} 84 H${cx + 58} V102 C${cx + 36} 108 ${cx + 16} 110 ${cx} 110 C${cx - 16} 110 ${cx - 36} 108 ${cx - 58} 102Z" fill="url(#fab${s})"/>
-    ${[-46, -24, -6, 6, 24, 46].map((dx) => `<rect x="${cx + dx - 2}" y="88" width="4" height="12" rx="0.8" fill="${hook}" opacity=".75"/>`).join("")}
-    <path data-part="fly" d="M${cx} 102 V142 C${cx - 4} 148 ${cx - 8} 152 ${cx - 12} 154" fill="none" stroke="${stitch}" stroke-width="1.2"/>
+    <path data-part="waistband" d="M${cx - 70} 86 H${cx + 70} V108 C${cx + 42} 118 ${cx + 18} 122 ${cx} 122 C${cx - 18} 122 ${cx - 42} 118 ${cx - 70} 108Z" fill="url(#fab${s})"/>
+    <path d="M${cx - 70} 86 H${cx + 70} V94 H${cx - 70}Z" fill="url(#slv${s})" opacity=".55"/>
+    ${[-56, -34, -12, 12, 34, 56].map((dx) => `<rect x="${cx + dx - 2.4}" y="90" width="4.8" height="14" rx="0.8" fill="${hook}" opacity=".8"/>`).join("")}
+    <path data-part="seat" d="M${cx - 68} 108 C${cx - 74} 128 ${cx - 70} 148 ${cx - 54} 168 C${cx - 28} 186 ${cx + 28} 186 ${cx + 54} 168 C${cx + 70} 148 ${cx + 74} 128 ${cx + 68} 108 C${cx + 40} 120 ${cx - 40} 120 ${cx - 68} 108Z" fill="url(#fab${s})"/>
+    <path d="M${cx - 40} 124 C${cx - 20} 148 ${cx + 20} 148 ${cx + 40} 124" fill="none" stroke="${stitch}" stroke-width="1.1" opacity=".45"/>
+    <path data-part="fly" d="M${cx} 108 V150 C${cx - 6} 158 ${cx - 12} 164 ${cx - 16} 168" fill="none" stroke="${stitch}" stroke-width="1.3"/>
     <g data-part="leg">
-      <path d="M${cx - 56} 104 C${cx - 54} 112 ${cx - 40} 118 ${cx - 18} 120 L${cx - 16} 168 C${cx - 18} 220 ${cx - 22} 280 ${cx - 20} 336 L${cx - 24} 352 H${cx - 62} L${cx - 58} 336 C${cx - 64} 270 ${cx - 70} 200 ${cx - 62} 148 C${cx - 60} 128 ${cx - 58} 112 ${cx - 56} 104Z" fill="url(#fab${s})"/>
-      <path data-part="crease" d="M${cx - 38} 122 C${cx - 40} 200 ${cx - 42} 280 ${cx - 40} 340" fill="none" stroke="${stitch}" stroke-width="1.15"/>
-      <path data-part="cuff" d="M${cx - 64} 348 H${cx - 18} V360 H${cx - 64}Z" fill="url(#lin${s})"/>
-      <path data-part="fold" d="M${cx - 54} 180 C${cx - 48} 188 ${cx - 42} 186 ${cx - 36} 178" fill="none" stroke="${fold}" stroke-width="1.2" opacity=".2"/>
+      <path d="M${cx - 68} 108 C${cx - 72} 130 ${cx - 64} 150 ${cx - 52} 168 L${cx - 18} 176 C${cx - 22} 230 ${cx - 28} 286 ${cx - 22} 340 L${cx - 30} 358 H${cx - 78} L${cx - 70} 340 C${cx - 84} 270 ${cx - 90} 210 ${cx - 78} 160 C${cx - 74} 136 ${cx - 70} 118 ${cx - 68} 108Z" fill="url(#fab${s})"/>
+      <path d="M${cx - 62} 170 C${cx - 70} 220 ${cx - 66} 280 ${cx - 58} 336" fill="${shadow}" opacity=".12"/>
+      <path data-part="crease" d="M${cx - 44} 172 C${cx - 46} 230 ${cx - 50} 290 ${cx - 46} 346" fill="none" stroke="${stitch}" stroke-width="1.25"/>
+      <path data-part="drape" d="M${cx - 74} 210 C${cx - 62} 218 ${cx - 50} 214 ${cx - 40} 204" fill="none" stroke="${fold}" stroke-width="2.2" opacity=".22"/>
+      <path d="M${cx - 76} 268 C${cx - 60} 280 ${cx - 46} 274 ${cx - 36} 262" fill="url(#slv${s})" opacity=".25"/>
+      <path data-part="cuff" d="M${cx - 80} 350 H${cx - 24} V366 H${cx - 80}Z" fill="url(#lin${s})"/>
+      <path d="M${cx - 78} 358 H${cx - 28}" stroke="${stitch}" stroke-width="1" opacity=".4"/>
     </g>
     <g data-part="leg">
-      <path d="M${cx + 56} 104 C${cx + 54} 112 ${cx + 40} 118 ${cx + 18} 120 L${cx + 16} 168 C${cx + 18} 220 ${cx + 22} 280 ${cx + 20} 336 L${cx + 24} 352 H${cx + 62} L${cx + 58} 336 C${cx + 64} 270 ${cx + 70} 200 ${cx + 62} 148 C${cx + 60} 128 ${cx + 58} 112 ${cx + 56} 104Z" fill="url(#fab${s})"/>
-      <path data-part="crease" d="M${cx + 38} 122 C${cx + 40} 200 ${cx + 42} 280 ${cx + 40} 340" fill="none" stroke="${stitch}" stroke-width="1.15"/>
-      <path data-part="cuff" d="M${cx + 18} 348 H${cx + 64} V360 H${cx + 18}Z" fill="url(#lin${s})"/>
-      <path data-part="fold" d="M${cx + 54} 180 C${cx + 48} 188 ${cx + 42} 186 ${cx + 36} 178" fill="none" stroke="${fold}" stroke-width="1.2" opacity=".2"/>
+      <path d="M${cx + 68} 108 C${cx + 72} 130 ${cx + 64} 150 ${cx + 52} 168 L${cx + 18} 176 C${cx + 22} 230 ${cx + 28} 286 ${cx + 22} 340 L${cx + 30} 358 H${cx + 78} L${cx + 70} 340 C${cx + 84} 270 ${cx + 90} 210 ${cx + 78} 160 C${cx + 74} 136 ${cx + 70} 118 ${cx + 68} 108Z" fill="url(#fab${s})"/>
+      <path d="M${cx + 40} 176 C${cx + 48} 230 ${cx + 52} 290 ${cx + 46} 336" fill="${shadow}" opacity=".1"/>
+      <path data-part="crease" d="M${cx + 44} 172 C${cx + 46} 230 ${cx + 50} 290 ${cx + 46} 346" fill="none" stroke="${stitch}" stroke-width="1.25"/>
+      <path data-part="drape" d="M${cx + 74} 210 C${cx + 62} 218 ${cx + 50} 214 ${cx + 40} 204" fill="none" stroke="${fold}" stroke-width="2.2" opacity=".22"/>
+      <path d="M${cx + 76} 268 C${cx + 60} 280 ${cx + 46} 274 ${cx + 36} 262" fill="url(#slv${s})" opacity=".25"/>
+      <path data-part="cuff" d="M${cx + 24} 350 H${cx + 80} V366 H${cx + 24}Z" fill="url(#lin${s})"/>
+      <path d="M${cx + 28} 358 H${cx + 78}" stroke="${stitch}" stroke-width="1" opacity=".4"/>
     </g>
+    <path d="M${cx - 8} 168 C${cx} 210 ${cx} 260 ${cx} 300" fill="none" stroke="${shadow}" stroke-width="10" opacity=".08"/>
     <g data-part="pocket">
-      <path d="M${cx - 52} 126 h20 v26 h-20z" fill="none" stroke="${stitch}" stroke-width="1"/>
-      <path d="M${cx + 32} 126 h20 v26 h-20z" fill="none" stroke="${stitch}" stroke-width="1"/>
+      <path d="M${cx - 62} 128 h24 v30 h-24z" fill="none" stroke="${stitch}" stroke-width="1.15"/>
+      <path d="M${cx + 38} 128 h24 v30 h-24z" fill="none" stroke="${stitch}" stroke-width="1.15"/>
+      <path d="M${cx - 62} 128 h24" stroke="${stitch}" stroke-width="2"/>
+      <path d="M${cx + 38} 128 h24" stroke="${stitch}" stroke-width="2"/>
     </g>
-    <path data-part="seam" d="M${cx - 12} 110 C${cx - 8} 128 ${cx - 16} 148 ${cx - 18} 160 M${cx + 12} 110 C${cx + 8} 128 ${cx + 16} 148 ${cx + 18} 160" fill="none" stroke="${stitch}" stroke-width="1"/>
+    <path data-part="seam" d="M${cx - 16} 118 C${cx - 10} 140 ${cx - 20} 160 ${cx - 22} 174 M${cx + 16} 118 C${cx + 10} 140 ${cx + 20} 160 ${cx + 22} 174" fill="none" stroke="${stitch}" stroke-width="1.05"/>
+    <path d="M${cx - 40} 100 C${cx} 88 ${cx + 48} 98 ${cx + 64} 118" fill="url(#she${s})"/>
   </g>
-  <ellipse cx="${cx}" cy="372" rx="108" ry="11" fill="#000" opacity=".14"/>`;
+  <ellipse cx="${cx}" cy="378" rx="118" ry="12" fill="#000" opacity=".16"/>`;
 }
 
 function skirtOnForm(cx: number, s: number, ink: boolean): string {
@@ -335,7 +355,7 @@ function fashionArt(variant: 0 | 1, slot: number, alt: string): string {
             ? hangTrousers(320, s, ink)
             : skirtOnForm(320, s, ink)
           : coatOnForm(320, s, ink);
-  const framed = `<g transform="translate(320 205) scale(1.05) translate(-320 -205)">${subject}</g>`;
+  const framed = `<g transform="translate(320 208) scale(0.9) translate(-320 -208)">${subject}</g>`;
   return wrap(id, alt, `${set}${framed}`, s, defs);
 }
 
@@ -646,26 +666,49 @@ function scenePozzo(): string {
 
 function sceneOlivo(): string {
   return `<g data-part="scene" data-scene="olivo">
-    <rect width="640" height="420" fill="#c9b496"/>
-    <rect y="0" width="640" height="210" fill="#e4d4b4"/>
-    <circle cx="520" cy="70" r="28" fill="#f3efe6" opacity=".55"/>
-    <path d="M0 250 C80 220 180 240 280 230 C400 216 500 250 640 236 V420 H0Z" fill="#6a7a4a"/>
-    <path d="M0 310 C120 290 240 320 400 300 C500 288 580 310 640 304 V420 H0Z" fill="#4a5a32"/>
-    <g data-part="trunk">
-      <path d="M292 400 C286 340 300 280 308 230 C300 200 288 170 296 140" fill="none" stroke="#3a322c" stroke-width="18" stroke-linecap="round"/>
-      <path d="M308 230 C330 210 350 240 346 270" fill="none" stroke="#2a2420" stroke-width="10" stroke-linecap="round"/>
-      <path d="M296 160 C270 150 250 170 246 196" fill="none" stroke="#3a322c" stroke-width="8" stroke-linecap="round"/>
-      <path d="M300 148 C310 120 340 110 360 128" fill="none" stroke="#2a2420" stroke-width="7" stroke-linecap="round"/>
+    <rect width="640" height="420" fill="#d8c4a0"/>
+    <rect y="0" width="640" height="168" fill="#e8d4b0"/>
+    <path d="M0 0 L220 0 L0 140Z" fill="#f4e0b0" opacity=".35"/>
+    <ellipse cx="528" cy="64" r="36" fill="#f6ead8" opacity=".55"/>
+    <g data-part="grove">
+      <path d="M0 150 C80 128 160 148 240 136 C340 122 430 150 640 130 V250 H0Z" fill="#6a7a48"/>
+      <path d="M40 128 C90 96 150 108 186 128 C160 148 90 150 40 128Z" fill="#3d5a28"/>
+      <path d="M200 118 C250 82 330 90 368 124 C340 146 250 148 200 118Z" fill="#4a6a30"/>
+      <path d="M360 122 C420 86 510 96 560 128 C520 150 430 148 360 122Z" fill="#2c4a18"/>
+      <path d="M520 116 C560 88 620 98 640 118 V150 C600 148 560 140 520 116Z" fill="#3d5a28"/>
+      <path d="M80 138 C110 114 150 118 168 136 C150 148 110 150 80 138Z" fill="#5a7a32" opacity=".85"/>
+      <path d="M280 130 C318 104 360 110 380 130 C360 146 318 148 280 130Z" fill="#6a8a40" opacity=".8"/>
+      <path d="M0 186 C120 168 240 190 360 176 C480 162 560 186 640 174 V260 H0Z" fill="#4a5a32"/>
     </g>
-    <g data-part="canopy">
-      <path d="M214 176 C198 148 224 108 268 118 C276 86 328 74 364 108 C408 96 428 138 396 164 C432 176 416 214 368 204 C344 228 286 230 248 206 C216 220 196 200 214 176Z" fill="#2c4a18"/>
-      <path d="M236 158 C228 132 258 112 292 122 C310 98 354 102 368 128 C392 124 402 150 382 166 C360 188 300 192 262 176 C244 186 230 176 236 158Z" fill="#3d5a1f"/>
-      <path d="M250 132 C246 112 276 96 308 108 C336 92 368 108 362 132 C348 150 300 154 272 142 C258 150 248 144 250 132Z" fill="#4a6a28"/>
-      <path d="M220 186 C212 170 236 160 258 168 C248 186 228 196 220 186Z" fill="#5a7a32" opacity=".9"/>
-      <path d="M352 186 C344 168 376 160 390 176 C382 194 360 198 352 186Z" fill="#2c4a18" opacity=".85"/>
+    <g data-part="trunk" fill="none" stroke="#3a2a1c" stroke-linecap="round">
+      <path d="M96 250 C92 210 100 176 94 150" stroke-width="7"/>
+      <path d="M188 248 C184 206 176 168 182 142" stroke-width="6"/>
+      <path d="M268 246 C274 204 266 170 270 146" stroke-width="8"/>
+      <path d="M356 250 C350 208 360 172 348 144" stroke-width="7"/>
+      <path d="M454 248 C460 206 448 168 456 140" stroke-width="6"/>
+      <path d="M546 252 C540 214 552 176 544 148" stroke-width="5"/>
     </g>
-    <path d="M40 340 C90 320 140 350 190 338 C240 326 280 350 320 340" fill="none" stroke="#3a322c" stroke-width="2" opacity=".25"/>
-    <path d="M80 360 C70 340 90 330 100 350" fill="none" stroke="#5a6a40" stroke-width="2" opacity=".4"/>
+    <g data-part="terrace">
+      <path d="M0 248 L640 236 V420 H0Z" fill="#c4b090"/>
+      <path d="M0 292 L640 274 V420 H0Z" fill="#b8a078"/>
+      <path d="M0 248 L640 236 V268 L0 282Z" fill="#d8c4a0"/>
+      <path d="M0 292 L640 274 V304 L0 322Z" fill="#9a8866"/>
+      <g fill="none" stroke="#6a5e52" stroke-width="1.2" opacity=".45">
+        <path d="M0 262 L640 248"/>
+        <path d="M0 308 L640 290"/>
+        <path d="M80 248 v34M180 246 v38M300 244 v42M430 242 v44M540 240 v46"/>
+      </g>
+      <path d="M0 338 C90 324 180 346 280 332 C400 316 520 340 640 326 V420 H0Z" fill="#8a7a5a"/>
+      <path d="M40 360 C70 348 110 352 130 366 C110 378 70 376 40 360Z" fill="#6a5e52" opacity=".5"/>
+      <path d="M400 370 C440 354 500 358 540 374 C500 388 440 386 400 370Z" fill="#6a5e52" opacity=".4"/>
+    </g>
+    <g data-part="vessel">
+      <ellipse cx="148" cy="392" rx="36" ry="10" fill="#000" opacity=".18"/>
+      <path d="M124 360 C118 378 128 392 148 392 C168 392 178 378 172 360 Z" fill="#9a4a28"/>
+      <ellipse cx="148" cy="360" rx="24" ry="8" fill="#6a3220"/>
+      <ellipse cx="148" cy="358" rx="16" ry="5" fill="#c47848" opacity=".5"/>
+    </g>
+    <path d="M0 0 L180 0 L0 120Z" fill="#f4e0b0" opacity=".2"/>
   </g>`;
 }
 
@@ -779,11 +822,14 @@ function editorialArt(variant: 0 | 1, slot: number, alt: string): string {
   }
   if (s === 3) {
     const clips = `${analog}<clipPath id="cs0${s}"><rect x="40" y="40" width="270" height="176"/></clipPath><clipPath id="cs1${s}"><rect x="330" y="40" width="270" height="176"/></clipPath><clipPath id="cs2${s}"><rect x="40" y="236" width="270" height="148"/></clipPath><clipPath id="cs3${s}"><rect x="330" y="236" width="270" height="148"/></clipPath>`;
-    return wrap(id, alt, `<rect width="640" height="420" fill="#e8e0d2"/>${sprockets()}
-      <g clip-path="url(#cs0${s})"><g transform="translate(40 40) scale(0.42)">${scenePozzo()}</g></g><rect x="40" y="40" width="270" height="176" fill="none" stroke="#ddd4c6"/>
-      <g clip-path="url(#cs1${s})"><g transform="translate(330 40) scale(0.42)">${sceneOlivo()}</g></g><rect x="330" y="40" width="270" height="176" fill="none" stroke="#ddd4c6"/>
-      <g clip-path="url(#cs2${s})"><g transform="translate(40 236) scale(0.42)">${sceneFienile()}</g></g><rect x="40" y="236" width="270" height="148" fill="none" stroke="#ddd4c6"/>
-      <g clip-path="url(#cs3${s})"><g transform="translate(330 236) scale(0.42)">${sceneTorchio()}</g></g><rect x="330" y="236" width="270" height="148" fill="none" stroke="#ddd4c6"/>
+    const rebate = (x: number, y: number, w: number, h: number) =>
+      `<g data-part="frame"><rect x="${x}" y="${y}" width="${w}" height="${h}" fill="none" stroke="#1a1814" stroke-width="2"/><rect x="${x + 8}" y="${y + h - 18}" width="28" height="10" fill="#1a1814"/><rect x="${x + w - 48}" y="${y + 8}" width="36" height="6" fill="#9a4a28"/></g>`;
+    return wrap(id, alt, `<rect width="640" height="420" fill="#d8cbb8"/>${sprockets()}
+      <rect x="24" y="24" width="592" height="372" fill="#1a1814"/>
+      <g clip-path="url(#cs0${s})"><g transform="translate(40 40) scale(0.42)">${scenePozzo()}</g></g>${rebate(40, 40, 270, 176)}
+      <g clip-path="url(#cs1${s})"><g transform="translate(330 40) scale(0.42)">${sceneOlivo()}</g></g>${rebate(330, 40, 270, 176)}
+      <g clip-path="url(#cs2${s})"><g transform="translate(40 236) scale(0.42)">${sceneFienile()}</g></g>${rebate(40, 236, 270, 148)}
+      <g clip-path="url(#cs3${s})"><g transform="translate(330 236) scale(0.42)">${sceneTorchio()}</g></g>${rebate(330, 236, 270, 148)}
       <path d="M40 400h560" stroke="#9a4a28" stroke-width="5"/>`, s, clips);
   }
   const clips = `<clipPath id="edc${s}"><rect x="36" y="36" width="380" height="288"/></clipPath>${analog}`;

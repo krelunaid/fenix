@@ -100,12 +100,13 @@ describe("domain imagery", () => {
     assert.ok(coat.paths >= 22, `coat paths ${coat.paths}`);
     const dress = materialSignature(domainIllustration("fashion", 0, "abito", 1));
     assert.equal(dress.garment, "dress");
-    assert.ok(dress.parts.includes("bodice") && dress.parts.includes("column"), `dress parts ${dress.parts}`);
+    assert.ok(dress.parts.includes("bodice") && dress.parts.includes("column") && dress.parts.includes("hip"), `dress parts ${dress.parts}`);
     const trousers = materialSignature(domainIllustration("fashion", 0, "pantalone", 2));
     assert.equal(trousers.garment, "trousers");
-    for (const part of ["waistband", "crease", "leg", "cuff", "hanger"]) {
+    for (const part of ["waistband", "crease", "leg", "cuff", "hanger", "seat", "drape"]) {
       assert.ok(trousers.parts.includes(part), `trousers missing ${part}`);
     }
+    assert.ok(trousers.paths >= 16, `trousers paths ${trousers.paths}`);
     const ossoSkirt = materialSignature(domainIllustration("fashion", 1, "gonna", 2));
     assert.equal(ossoSkirt.garment, "skirt");
     assert.ok(ossoSkirt.parts.includes("pleat") && ossoSkirt.parts.includes("waistband"));
@@ -151,8 +152,13 @@ describe("domain imagery", () => {
     assert.ok(cover.parts.includes("type"));
     const olivoPlate = materialSignature(domainIllustration("editorial", 0, "olivo", 1));
     assert.ok(olivoPlate.scenes.includes("olivo"));
+    assert.ok(olivoPlate.parts.includes("grove") && olivoPlate.parts.includes("terrace"), `olivo parts ${olivoPlate.parts}`);
+    const oldOlivo = "M214 176 C198 148 224 108 268 118";
+    assert.ok(GEOMETRIC_REGRESSIONS.some((r) => r.test(oldOlivo)));
+    assert.equal(GEOMETRIC_REGRESSIONS.some((r) => r.test(domainIllustration("editorial", 0, "olivo", 1))), false);
     const sheet = materialSignature(domainIllustration("editorial", 0, "lastre", 3));
     assert.ok(sheet.scenes.includes("pozzo") && sheet.scenes.includes("olivo") && sheet.scenes.includes("fienile") && sheet.scenes.includes("torchio"));
+    assert.ok(sheet.parts.includes("frame"), `contact sheet frames ${sheet.parts}`);
     const oldCapsule = "c16-28 48-40 72-28 24-12 56 0 72 28";
     assert.ok(GEOMETRIC_REGRESSIONS.some((r) => r.test(oldCapsule)));
     assert.equal(GEOMETRIC_REGRESSIONS.some((r) => r.test(domainIllustration("fashion", 0, "c", 0))), false);

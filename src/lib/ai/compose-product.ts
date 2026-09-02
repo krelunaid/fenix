@@ -671,6 +671,7 @@ main{flex:1;min-height:0;overflow-y:auto;padding:8px 16px 24px;-webkit-overflow-
 .card h2,.look h2,.slot h2,.ticket h2,.room h2,.deal h2,.plate h2{font-family:var(--display);font-size:1.25rem;font-weight:600;margin:0 0 4px;letter-spacing:-.03em}
 .look{padding:0;overflow:hidden}
 .look h2,.look p{padding:0 14px}
+.look h2{padding-top:12px}
 .look p{padding-bottom:14px}
 ${visualKitCss(tokens, grammar)}
 </style>

@@ -259,7 +259,34 @@ describe("graphic pipeline visual QA D/T/M", () => {
                   const title = el.querySelector("h2")?.textContent || "";
                   const garment = el.querySelector("[data-garment]")?.getAttribute("data-garment") || "";
                   const h2 = el.querySelector("h2")?.getBoundingClientRect();
-                  return { h: b.height, title, garment, titleH: h2?.height || 0, titleW: h2?.width || 0, top: b.top, left: b.left, right: b.right, bottom: b.bottom };
+                  const parts = [...el.querySelectorAll("[data-part]")].map((n) => n.getAttribute("data-part") || "");
+                  const legs = [...el.querySelectorAll("[data-part='leg']")].map((n) => {
+                    try {
+                      const box = (n as SVGGraphicsElement).getBBox();
+                      return { x: box.x, w: box.width };
+                    } catch {
+                      return { x: 0, w: 0 };
+                    }
+                  });
+                  const sil = el.querySelector(".sil")?.getBoundingClientRect();
+                  const svg = el.querySelector("svg")?.getBoundingClientRect();
+                  return {
+                    h: b.height,
+                    title,
+                    garment,
+                    parts,
+                    legs,
+                    titleH: h2?.height || 0,
+                    titleW: h2?.width || 0,
+                    titleTop: h2?.top || 0,
+                    silBottom: sil?.bottom || 0,
+                    silH: sil?.height || 0,
+                    svgH: svg?.height || 0,
+                    top: b.top,
+                    left: b.left,
+                    right: b.right,
+                    bottom: b.bottom,
+                  };
                 });
                 const tickets = [...document.querySelectorAll(".ticket")].map((el) => {
                   const title = el.querySelector("h2")?.textContent || "";
@@ -271,7 +298,8 @@ describe("graphic pipeline visual QA D/T/M", () => {
                   const title = el.querySelector("h2")?.textContent || "";
                   const scene = el.querySelector("[data-scene]")?.getAttribute("data-scene") || "";
                   const h2 = el.querySelector("h2")?.getBoundingClientRect();
-                  return { title, scene, titleH: h2?.height || 0, titleW: h2?.width || 0 };
+                  const parts = [...el.querySelectorAll("[data-part]")].map((n) => n.getAttribute("data-part") || "");
+                  return { title, scene, parts, titleH: h2?.height || 0, titleW: h2?.width || 0 };
                 });
                 let shoulderWaist = { shoulder: 0, waist: 0 };
                 const shoulder = svg.querySelector("[data-part='shoulder']") as SVGGraphicsElement | null;
@@ -356,6 +384,12 @@ describe("graphic pipeline visual QA D/T/M", () => {
                 const looks = material.looks || [];
                 for (const look of looks) {
                   assert.ok(look.titleH >= 14 && look.titleW >= 48, `${fix.id}/${vp} look title unreadable ${look.title} ${look.titleW}x${look.titleH}`);
+                  if (look.silBottom && look.titleTop) {
+                    assert.ok(
+                      look.titleTop + 1 >= look.silBottom - 8,
+                      `${fix.id}/${vp} title overlay on ${look.garment} (title ${look.titleTop} sil ${look.silBottom})`,
+                    );
+                  }
                   const expected =
                     /cappotto/i.test(look.title) ? "coat"
                     : /abito|colonna/i.test(look.title) ? "dress"
@@ -364,6 +398,22 @@ describe("graphic pipeline visual QA D/T/M", () => {
                     : "";
                   if (expected) {
                     assert.equal(look.garment, expected, `${fix.id}/${vp} ${look.title} -> ${look.garment}`);
+                  }
+                  if (look.garment === "trousers") {
+                    assert.ok((look.parts || []).includes("seat"), `${fix.id}/${vp} trousers missing seat`);
+                    assert.ok((look.parts || []).includes("drape"), `${fix.id}/${vp} trousers missing drape`);
+                    if ((look.legs || []).length >= 2) {
+                      const [a, b] = look.legs;
+                      const left = a!.x <= b!.x ? a! : b!;
+                      const right = a!.x <= b!.x ? b! : a!;
+                      assert.ok(
+                        right.x > left.x + left.w * 0.22,
+                        `${fix.id}/${vp} trousers look legs gap ${JSON.stringify(look.legs)}`,
+                      );
+                    }
+                  }
+                  if (look.garment === "dress") {
+                    assert.ok((look.parts || []).includes("hip") && (look.parts || []).includes("column"), `${fix.id}/${vp} dress parts`);
                   }
                 }
                 assert.ok(new Set(looks.map((l) => l.garment).filter(Boolean)).size >= Math.min(3, looks.length), `${fix.id}/${vp} garment diversity`);
@@ -456,6 +506,11 @@ describe("graphic pipeline visual QA D/T/M", () => {
                     : /fienile/i.test(p.title) ? "fienile"
                     : "";
                   if (expected) assert.equal(p.scene, expected, `${fix.id}/${vp} ${p.title} -> ${p.scene}`);
+                  if (p.scene === "olivo") {
+                    assert.ok((p.parts || []).includes("grove"), `${fix.id}/${vp} olivo missing grove`);
+                    assert.ok((p.parts || []).includes("terrace"), `${fix.id}/${vp} olivo missing terrace`);
+                    assert.equal((p.parts || []).includes("canopy"), false, `${fix.id}/${vp} olivo still a lollipop canopy`);
+                  }
                 }
                 if (plates.length >= 3) {
                   assert.equal(new Set(plates.map((p) => p.scene)).size, plates.length, `${fix.id}/${vp} scene diversity`);
