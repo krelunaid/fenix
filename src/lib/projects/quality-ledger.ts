@@ -215,6 +215,14 @@ export const QUALITY_LEDGER: LedgerRow[] = [
     ok: true,
   },
   {
+    id: "postgres-16-reliability-harness",
+    claim:
+      "Un job GitHub CI blocking avvia PostgreSQL 16 reale (service postgres:16, healthcheck, credenziale fixture non-secret), applica le migrazioni Fenix e prova carico concorrente, CAS a un vincitore, isolamento tenant/ruoli, replay, pool bounded e un recovery drill pg_dump/pg_restore major 16 con checksum, row count e processo applicativo senza duplicati. PGlite non attribuisce punti. Report JSON redatto.",
+    evidence:
+      ".github/workflows/ci.yml job postgres-reliability + postgres-reliability.ts store Fenix + scripts/postgres-reliability.mjs + artifacts/postgres-reliability.json",
+    ok: true,
+  },
+  {
     id: "emergent",
     claim: "Emergent resta solo un banco di prova. Nessun claim di completezza sul prodotto.",
     evidence: "src/lib/projects/fase3-gap.ts quality.slice=now; revisions.test.ts now list",

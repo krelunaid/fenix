@@ -44,6 +44,22 @@ Un brief **full-stack** esplicito esporta un'app avviabile con `npm start`: fron
 
 `npm install` poi `npm run dev`. `npm test` e `npm run typecheck`.
 
+Carico e recovery su PostgreSQL 16 reale (non PGlite), con la stessa fixture di CI:
+
+```bash
+docker run --name fenix-pg16 --rm \
+  -e POSTGRES_USER=fenix_ci \
+  -e POSTGRES_PASSWORD=fenix_ci_not_a_secret \
+  -e POSTGRES_DB=fenix_reliability \
+  -p 5432:5432 \
+  --health-cmd "pg_isready -U fenix_ci -d fenix_reliability" \
+  -d postgres:16
+DATABASE_URL=postgres://fenix_ci:fenix_ci_not_a_secret@127.0.0.1:5432/fenix_reliability \
+  npm run test:postgres-reliability
+```
+
+Dettagli: [`src/lib/projects/postgres-reliability-references.md`](src/lib/projects/postgres-reliability-references.md). La password è una fixture, non un secret di produzione.
+
 ## Worker visivo (come Emergent, in piccolo)
 
 Netlify taglia le richieste lunghe. Il motore a 5 giri sta in `workers/visual/` e parla **grok-build-0.1**:

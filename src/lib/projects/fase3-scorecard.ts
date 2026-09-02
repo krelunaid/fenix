@@ -1,6 +1,8 @@
 /**
  * Fase 3 scorecard. Points are awarded only to reproducible repository
  * evidence. This is a conservative capability score, never a parity claim.
+ * 100/100 is the internal evidence ceiling of this repository; it is not a
+ * competitive ranking against Emergent or any other product.
  */
 export type ScoreEvidence = {
   id: string;
@@ -355,9 +357,16 @@ export const FASE3_SCORECARD: ScoreDimension[] = [
         reproduce:
           "FENIX_EXPECTED_SHA=$(git rev-parse HEAD) FENIX_SMOKE_ATTEMPTS=1 npm run smoke:production",
       },
+      {
+        id: "postgres-16-reliability-harness",
+        points: 2,
+        claim:
+          "Harness PostgreSQL 16 reale in CI (non PGlite): migrazioni 0001–0007, carico concorrente multi-soggetto/collezione, CAS un solo vincitore, isolamento tenant/ruoli, replay idempotente, pool bounded, p95/p99 sotto soglie esplicite; recovery drill pg_dump/pg_restore major 16 su database pulito con checksum, row count e processo applicativo senza duplicati. Credenziali solo fixture CI, report JSON redatto.",
+        reproduce: "npm run test:postgres-reliability",
+      },
     ],
     remaining:
-      "TestFlight e Play internal richiedono account/ruoli/secret esterni; manca il carico sul database di produzione, che non è configurato.",
+      "TestFlight e Play internal restano fuori: richiedono account, ruoli e secret di store esterni. Il carico e il recovery sono sul PostgreSQL 16 di CI, non sul database di produzione.",
   },
 ];
 

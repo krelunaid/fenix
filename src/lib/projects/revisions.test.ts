@@ -91,8 +91,19 @@ describe("fase3 gap matrix is evidence, not parity", () => {
       [20, 15, 15, 15, 15, 20],
     );
     assert.equal(total.max, 100);
-    assert.equal(total.score, 98);
-    assert.equal(total.complete, false);
+    assert.equal(total.score, 100);
+    assert.equal(total.complete, true);
+    const reliability = FASE3_SCORECARD.find((dimension) => dimension.id === "reliability-deploy");
+    assert.equal(scoreDimension(reliability!), 20);
+    assert.match(reliability?.remaining || "", /TestFlight|Play/);
+    assert.match(
+      reliability?.evidence.map((row) => row.id).join(" ") || "",
+      /postgres-16-reliability-harness/,
+    );
+    assert.doesNotMatch(
+      JSON.stringify(FASE3_SCORECARD) + JSON.stringify(FASE3_GAPS),
+      /sopra Emergent|oltre Emergent|uguale a Emergent|feature-complete/i,
+    );
     for (const dimension of FASE3_SCORECARD) {
       assert.ok(scoreDimension(dimension) <= dimension.max);
       assert.ok(dimension.remaining.length >= 30);
