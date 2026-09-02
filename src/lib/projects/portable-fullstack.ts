@@ -149,8 +149,29 @@ th,td{text-align:left;padding:10px 6px;border-bottom:1px solid #3a342c}
     <p>
       <button type="submit">Entra</button>
       <button type="button" id="signup" class="ghost">Crea account</button>
+      <button type="button" id="forgot" class="ghost">Recupera accesso</button>
     </p>
     <p id="auth-msg" class="status" role="status"></p>
+  </form>
+  <form id="recover" class="card" hidden aria-label="Recupero accesso">
+    <label for="recover-email">Indirizzo da recuperare</label>
+    <input id="recover-email" name="recover-email" type="email" autocomplete="username" required/>
+    <p>
+      <button type="submit">Invia recupero</button>
+      <button type="button" id="recover-back" class="ghost">Torna all'accesso</button>
+    </p>
+    <p id="recover-msg" class="status" role="status"></p>
+  </form>
+  <form id="reset" class="card" hidden aria-label="Ripristino accesso">
+    <label for="reset-token">Codice di recupero</label>
+    <input id="reset-token" name="reset-token" type="text" autocomplete="off" required minlength="16"/>
+    <label for="reset-password">Nuova chiave</label>
+    <input id="reset-password" name="reset-password" type="password" autocomplete="new-password" required minlength="12"/>
+    <p>
+      <button type="submit">Conferma password</button>
+      <button type="button" id="reset-back" class="ghost">Torna all'accesso</button>
+    </p>
+    <p id="reset-msg" class="status" role="status"></p>
   </form>
   <section id="app" class="card" hidden>
     <form id="create" aria-label="Nuova riga">
@@ -170,8 +191,12 @@ th,td{text-align:left;padding:10px 6px;border-bottom:1px solid #3a342c}
   var FIELDS = ${fieldsJson};
   var who = document.getElementById("who");
   var auth = document.getElementById("auth");
+  var recover = document.getElementById("recover");
+  var reset = document.getElementById("reset");
   var app = document.getElementById("app");
   var authMsg = document.getElementById("auth-msg");
+  var recoverMsg = document.getElementById("recover-msg");
+  var resetMsg = document.getElementById("reset-msg");
   var appMsg = document.getElementById("app-msg");
   var rows = document.getElementById("rows");
   function msg(el, text){ el.textContent = text || ""; }
@@ -215,9 +240,18 @@ th,td{text-align:left;padding:10px 6px;border-bottom:1px solid #3a342c}
   }
   function showApp(email){
     auth.hidden = true;
+    recover.hidden = true;
+    reset.hidden = true;
     app.hidden = false;
     who.textContent = email ? ("Sei " + email) : "Sessione attiva";
     return api("/api/" + COL).then(function(body){ render(body.items || []); });
+  }
+  function showAuth(){
+    app.hidden = true;
+    recover.hidden = true;
+    reset.hidden = true;
+    auth.hidden = false;
+    who.textContent = "Accedi per continuare.";
   }
   function enter(path){
     msg(authMsg, "");
@@ -227,6 +261,42 @@ th,td{text-align:left;padding:10px 6px;border-bottom:1px solid #3a342c}
   }
   auth.addEventListener("submit", function(ev){ ev.preventDefault(); enter("/auth/login"); });
   document.getElementById("signup").addEventListener("click", function(){ enter("/auth/signup"); });
+  document.getElementById("forgot").addEventListener("click", function(){
+    auth.hidden = true;
+    reset.hidden = true;
+    recover.hidden = false;
+    msg(recoverMsg, "");
+    who.textContent = "Recupera l'accesso.";
+  });
+  document.getElementById("recover-back").addEventListener("click", function(){ showAuth(); });
+  document.getElementById("reset-back").addEventListener("click", function(){ showAuth(); });
+  recover.addEventListener("submit", function(ev){
+    ev.preventDefault();
+    msg(recoverMsg, "");
+    api("/auth/recover", { method: "POST", body: { email: document.getElementById("recover-email").value } })
+      .then(function(){
+        recover.hidden = true;
+        reset.hidden = false;
+        document.getElementById("reset-token").value = "";
+        msg(resetMsg, "Se l'account esiste, il codice è stato inviato.");
+        who.textContent = "Inserisci il codice ricevuto.";
+      })
+      .catch(function(err){ msg(recoverMsg, err.message || "Recupero non riuscito"); });
+  });
+  reset.addEventListener("submit", function(ev){
+    ev.preventDefault();
+    msg(resetMsg, "");
+    var tokenEl = document.getElementById("reset-token");
+    var passEl = document.getElementById("reset-password");
+    api("/auth/reset", { method: "POST", body: { token: tokenEl.value, password: passEl.value } })
+      .then(function(){
+        tokenEl.value = "";
+        passEl.value = "";
+        showAuth();
+        msg(authMsg, "Password aggiornata. Accedi.");
+      })
+      .catch(function(err){ msg(resetMsg, err.message || "Reset non riuscito"); });
+  });
   document.getElementById("create").addEventListener("submit", function(ev){
     ev.preventDefault();
     msg(appMsg, "");
@@ -237,9 +307,7 @@ th,td{text-align:left;padding:10px 6px;border-bottom:1px solid #3a342c}
   });
   document.getElementById("logout").addEventListener("click", function(){
     api("/auth/logout", { method: "POST" }).finally(function(){
-      app.hidden = true;
-      auth.hidden = false;
-      who.textContent = "Accedi per continuare.";
+      showAuth();
     });
   });
   fetch("/health", { credentials: "same-origin" }).then(function(res){ return res.json(); }).then(function(body){

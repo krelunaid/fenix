@@ -147,6 +147,24 @@ function passwordRecord(password: string) {
   return `${salt}:${scryptSync(password, salt, 32).toString("hex")}`;
 }
 
+function readOutbox(dbPath: string) {
+  const db = new DatabaseSync(dbPath);
+  try {
+    db.exec("PRAGMA busy_timeout=5000");
+    return (
+      db.prepare("SELECT payload FROM _fenix_outbox WHERE kind=? ORDER BY created_at").all(
+        "password_reset",
+      ) as Array<{ payload: string }>
+    ).map((row) => JSON.parse(row.payload) as { user_id: string; token: string });
+  } finally {
+    db.close();
+  }
+}
+
+function escapeRe(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 describe("portable generated backend", () => {
   it("validates schema names and exports only reproducible, secret-free files", () => {
     assert.deepEqual(validatePortableBackendSpec(SPEC), []);
@@ -175,6 +193,7 @@ describe("portable generated backend", () => {
     assert.equal(deploy.start, "node backend/server.mjs");
     assert.ok(backend.some((file) => file.path === "backend/migrations/0001_init.sql"));
     assert.ok(backend.some((file) => file.path === "backend/migrations/0002_meta.sql"));
+    assert.ok(backend.some((file) => file.path === "backend/migrations/0003_password_reset.sql"));
     const again = materializePortableBackend(SPEC);
     assert.equal(
       createHash("sha256").update(backend.find((file) => file.path === "backend/server.mjs")!.content).digest("hex"),
@@ -344,6 +363,205 @@ describe("portable generated backend", () => {
     }
   });
 
+  it("resets passwords with an enumeration-safe one-shot token and isolates two users", async () => {
+    const runtime = await startBackend();
+    const dbPath = join(runtime.root, "data.sqlite");
+    const origin = { origin: "https://app.example", "content-type": "application/json" };
+    const passOne = "correct horse battery staple";
+    const passTwo = "another secure password";
+    const passNew = "nuova chiave argilla viva";
+    try {
+      const signupOne = await fetch(`${runtime.base}/auth/signup`, {
+        method: "POST",
+        headers: origin,
+        body: JSON.stringify({ email: "one@example.test", password: passOne }),
+      });
+      assert.equal(signupOne.status, 201);
+      const cookieOne = cookieFrom(signupOne);
+      const signupOneBody = (await signupOne.json()) as { id: string; email: string };
+
+      const signupTwo = await fetch(`${runtime.base}/auth/signup`, {
+        method: "POST",
+        headers: origin,
+        body: JSON.stringify({ email: "two@example.test", password: passTwo }),
+      });
+      assert.equal(signupTwo.status, 201);
+      const cookieTwo = cookieFrom(signupTwo);
+      const signupTwoBody = (await signupTwo.json()) as { id: string };
+
+      assert.equal(
+        (
+          await fetch(`${runtime.base}/api/tasks`, {
+            method: "POST",
+            headers: sessionHeaders(cookieOne),
+            body: JSON.stringify({ title: "Crudo uno", done: false, priority: 1 }),
+          })
+        ).status,
+        201,
+      );
+
+      const recover = (email: string) =>
+        fetch(`${runtime.base}/auth/recover`, {
+          method: "POST",
+          headers: origin,
+          body: JSON.stringify({ email }),
+        });
+      const reset = (token: string, password: string) =>
+        fetch(`${runtime.base}/auth/reset`, {
+          method: "POST",
+          headers: origin,
+          body: JSON.stringify({ token, password }),
+        });
+
+      const unknown = await recover("missing@example.test");
+      const known = await recover("one@example.test");
+      assert.equal(unknown.status, 200);
+      assert.equal(known.status, 200);
+      assert.deepEqual(await unknown.json(), { ok: true });
+      assert.deepEqual(await known.json(), { ok: true });
+      assert.equal(unknown.headers.get("set-cookie"), null);
+      assert.equal(known.headers.get("set-cookie"), null);
+      assert.equal((await fetch(`${runtime.base}/auth/outbox`)).status, 404);
+      assert.equal((await fetch(`${runtime.base}/api/_fenix_outbox`)).status, 401);
+      assert.equal(
+        (
+          await fetch(`${runtime.base}/api/_fenix_outbox`, { headers: sessionHeaders(cookieOne) })
+        ).status,
+        404,
+      );
+
+      let box = readOutbox(dbPath);
+      assert.equal(box.length, 1);
+      assert.equal(box[0]?.user_id, signupOneBody.id);
+      const staleOne = box[0]!.token;
+      assert.match(staleOne, /^[A-Za-z0-9_-]{32,}$/);
+      assert.equal(staleOne.includes("@"), false);
+
+      const secondOne = await recover("one@example.test");
+      assert.equal(secondOne.status, 200);
+      const twoRecover = await recover("two@example.test");
+      assert.equal(twoRecover.status, 200);
+      box = readOutbox(dbPath);
+      assert.equal(box.length, 3);
+      const tokenOne = box.filter((row) => row.user_id === signupOneBody.id).at(-1)!.token;
+      const tokenTwo = box.find((row) => row.user_id === signupTwoBody.id)!.token;
+      assert.notEqual(tokenOne, staleOne);
+      assert.notEqual(tokenOne, tokenTwo);
+
+      const stale = await reset(staleOne, passNew);
+      assert.equal(stale.status, 400);
+      assert.deepEqual(await stale.json(), { error: "Token non valido" });
+      const wrong = await reset("totally-invalid-token-value", passNew);
+      assert.equal(wrong.status, 400);
+      assert.deepEqual(await wrong.json(), { error: "Token non valido" });
+
+      const burst = await Promise.all(Array.from({ length: 8 }, () => reset(tokenOne, passNew)));
+      const statuses = burst.map((response) => response.status);
+      assert.equal(statuses.filter((status) => status === 200).length, 1);
+      assert.equal(statuses.filter((status) => status === 400).length, 7);
+      const winner = burst.find((response) => response.status === 200)!;
+      assert.deepEqual(await winner.json(), { ok: true });
+      assert.equal(winner.headers.get("set-cookie"), null);
+
+      assert.equal(
+        (await fetch(`${runtime.base}/auth/me`, { headers: sessionHeaders(cookieOne) })).status,
+        401,
+      );
+      assert.equal(
+        (await fetch(`${runtime.base}/auth/me`, { headers: sessionHeaders(cookieTwo) })).status,
+        200,
+      );
+      assert.equal(
+        (
+          await fetch(`${runtime.base}/auth/login`, {
+            method: "POST",
+            headers: origin,
+            body: JSON.stringify({ email: "one@example.test", password: passOne }),
+          })
+        ).status,
+        401,
+      );
+      const relogin = await fetch(`${runtime.base}/auth/login`, {
+        method: "POST",
+        headers: origin,
+        body: JSON.stringify({ email: "one@example.test", password: passNew }),
+      });
+      assert.equal(relogin.status, 200);
+      const cookieOneNext = cookieFrom(relogin);
+      const list = (await (
+        await fetch(`${runtime.base}/api/tasks`, { headers: sessionHeaders(cookieOneNext) })
+      ).json()) as { items: Array<{ title: string }> };
+      assert.deepEqual(
+        list.items.map((item) => item.title),
+        ["Crudo uno"],
+      );
+      assert.equal(
+        (
+          await fetch(`${runtime.base}/auth/login`, {
+            method: "POST",
+            headers: origin,
+            body: JSON.stringify({ email: "two@example.test", password: passTwo }),
+          })
+        ).status,
+        200,
+      );
+      const replay = await reset(tokenOne, "altra password lunga");
+      assert.equal(replay.status, 400);
+      assert.deepEqual(await replay.json(), { error: "Token non valido" });
+
+      const expiredRaw = randomBytes(32).toString("base64url");
+      const probe = new DatabaseSync(dbPath);
+      probe
+        .prepare(
+          "INSERT INTO _fenix_password_resets (token_hash,user_id,expires_at,used_at,created_at) VALUES (?,?,?,NULL,?)",
+        )
+        .run(
+          createHash("sha256").update(expiredRaw).digest("hex"),
+          signupTwoBody.id,
+          new Date(Date.now() - 60_000).toISOString(),
+          new Date().toISOString(),
+        );
+      probe.close();
+      const expired = await reset(expiredRaw, passNew);
+      assert.equal(expired.status, 400);
+      assert.deepEqual(await expired.json(), { error: "Token non valido" });
+      assert.equal(
+        (
+          await fetch(`${runtime.base}/auth/login`, {
+            method: "POST",
+            headers: origin,
+            body: JSON.stringify({ email: "two@example.test", password: passTwo }),
+          })
+        ).status,
+        200,
+      );
+
+      const thirdOne = await recover("one@example.test");
+      assert.equal(thirdOne.status, 200);
+      const fourth = await recover("one@example.test");
+      assert.equal(fourth.status, 429);
+      assert.deepEqual(await fourth.json(), { error: "Troppi tentativi" });
+
+      const huge = await fetch(`${runtime.base}/auth/recover`, {
+        method: "POST",
+        headers: origin,
+        body: JSON.stringify({ email: `${"a".repeat(300_000)}@x.test` }),
+      });
+      assert.equal(huge.status, 413);
+
+      const logs = runtime.logs();
+      assert.doesNotMatch(logs, /one@example.test|two@example.test|missing@example.test/);
+      assert.doesNotMatch(logs, /correct horse|nuova chiave|another secure|altra password/);
+      assert.doesNotMatch(logs, /password_hash|token_hash|xai-|PRIVATE KEY/i);
+      for (const row of readOutbox(dbPath)) {
+        assert.doesNotMatch(logs, new RegExp(escapeRe(row.token)));
+        assert.equal("email" in row, false);
+      }
+    } finally {
+      await runtime.close();
+    }
+  });
+
   it("creates end-user sessions and isolates records between accounts", async () => {
     const runtime = await startBackend();
     try {
@@ -498,7 +716,7 @@ describe("portable generated backend", () => {
     }
   });
 
-  it("upgrades a v1 fixture to v2 without losing rows, then fail-closes a bad migration", async () => {
+  it("upgrades a v1 fixture to v3 without losing rows, then fail-closes a bad migration", async () => {
     const files = materializePortableBackend(SPEC);
     const v1 = portableBackendMigrations(SPEC)[0]!;
     const root = mkdtempSync(join(tmpdir(), "fenix-migrate-"));
@@ -546,9 +764,17 @@ describe("portable generated backend", () => {
       const created = await fetch(`${runtime.base}/api/tasks`, {
         method: "POST",
         headers: sessionHeaders(cookie),
-        body: JSON.stringify({ title: "Dopo v2", done: true, priority: 1 }),
+        body: JSON.stringify({ title: "Dopo v3", done: true, priority: 1 }),
       });
       assert.equal(created.status, 201);
+      const recover = await fetch(`${runtime.base}/auth/recover`, {
+        method: "POST",
+        headers: { origin: "https://app.example", "content-type": "application/json" },
+        body: JSON.stringify({ email: "keeper@fenix.test" }),
+      });
+      assert.equal(recover.status, 200);
+      assert.deepEqual(await recover.json(), { ok: true });
+      assert.equal(readOutbox(dbPath).length, 1);
     } finally {
       await runtime.close();
     }
@@ -565,12 +791,12 @@ describe("portable generated backend", () => {
     const applied = upgraded.prepare("SELECT id FROM _fenix_migrations ORDER BY id").all() as Array<{ id: string }>;
     assert.deepEqual(
       applied.map((row) => row.id),
-      ["0001_init", "0002_meta"],
+      ["0001_init", "0002_meta", "0003_password_reset"],
     );
     upgraded.close();
 
-    writeFileSync(join(root, "backend/migrations/0003_bad.sql"), "ALTER TABLE _fenix_missing ADD COLUMN x TEXT;\n");
-    const failed = await startTree(files.concat([{ path: "backend/migrations/0003_bad.sql", content: "ALTER TABLE _fenix_missing ADD COLUMN x TEXT;\n" }]), { FENIX_DB_PATH: dbPath }, { expectFail: true });
+    writeFileSync(join(root, "backend/migrations/0004_bad.sql"), "ALTER TABLE _fenix_missing ADD COLUMN x TEXT;\n");
+    const failed = await startTree(files.concat([{ path: "backend/migrations/0004_bad.sql", content: "ALTER TABLE _fenix_missing ADD COLUMN x TEXT;\n" }]), { FENIX_DB_PATH: dbPath }, { expectFail: true });
     try {
       assert.notEqual(failed.code, 0);
       assert.match(failed.logs(), /Migrazione fallita/);
@@ -582,7 +808,7 @@ describe("portable generated backend", () => {
       const ids = after.prepare("SELECT id FROM _fenix_migrations ORDER BY id").all() as Array<{ id: string }>;
       assert.deepEqual(
         ids.map((row) => row.id),
-        ["0001_init", "0002_meta"],
+        ["0001_init", "0002_meta", "0003_password_reset"],
       );
       after.close();
     } finally {

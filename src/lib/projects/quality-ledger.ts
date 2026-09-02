@@ -161,7 +161,7 @@ export const QUALITY_LEDGER: LedgerRow[] = [
   {
     id: "portable-generated-backend",
     claim:
-      "Un brief che chiede esplicitamente full-stack/backend/API server aggiunge un manifest schema al contratto. Fenix sostituisce ogni server arbitrario con un runtime Node+SQLite deterministico nel tree: signup/login email-password scrypt, sessioni opache archiviate solo come hash in cookie HttpOnly, isolamento record per utente, Bearer server-to-server, Origin allowlist, corpo 256 KB, campi validati, CRUD e If-Match CAS. ZIP round-trip, due account isolati e 16 scritture concorrenti sono provati avviando il server reale.",
+      "Un brief che chiede esplicitamente full-stack/backend/API server aggiunge un manifest schema al contratto. Fenix sostituisce ogni server arbitrario con un runtime Node+SQLite deterministico nel tree: signup/login email-password scrypt, sessioni opache archiviate solo come hash in cookie HttpOnly, recupero password enumeration-safe con outbox SQLite, isolamento record per utente, Bearer server-to-server, Origin allowlist, corpo 256 KB, campi validati, CRUD e If-Match CAS. ZIP round-trip, due account isolati e 16 scritture concorrenti sono provati avviando il server reale.",
     evidence:
       "portable-backend.ts + portable-backend.test.ts runtime/ZIP/signup/login/logout/sessioni/isolamento/auth/validation/CAS/burst + build-contract.ts gate blocking",
     ok: true,
@@ -169,9 +169,17 @@ export const QUALITY_LEDGER: LedgerRow[] = [
   {
     id: "portable-fullstack-deploy",
     claim:
-      "Il progetto full-stack esportato avvia frontend e API sulla stessa origine, con health, node --check e fenix.deploy.json. Tre fixture distinte (Argilla, forno, bottega) fanno signup/CRUD dopo l'upgrade v1→v2; una migrazione rotta resta atomica. D/T/M sulla UI accoppiata, cookie HttpOnly, niente secret nei log.",
+      "Il progetto full-stack esportato avvia frontend e API sulla stessa origine, con health, node --check e fenix.deploy.json. Tre fixture distinte (Argilla, forno, bottega) fanno signup/CRUD dopo l'upgrade v1→v3; una migrazione rotta resta atomica. D/T/M sulla UI accoppiata, cookie HttpOnly, niente secret nei log.",
     evidence:
       "portable-backend.test.ts 3 fixture/same-origin/upgrade/fail-closed/porte isolate + portable-backend-browser.test.ts D/T/M console overflow focus",
+    ok: true,
+  },
+  {
+    id: "portable-account-recovery",
+    claim:
+      "Il backend portabile offre recupero account senza SMTP né credenziali esterne: POST /auth/recover è enumeration-safe, il token one-shot vive solo come hash con TTL 15 minuti, il reset scrypt revoca le sessioni e l'outbox SQLite è server-side. Due utenti, replay/expired/wrong, un solo vincitore concorrente e UI D/T/M senza token in localStorage.",
+    evidence:
+      "portable-backend.ts 0003_password_reset + /auth/recover|/auth/reset + portable-backend.test.ts isolamento/outbox/concorrenza + portable-backend-browser.test.ts D/T/M recovery",
     ok: true,
   },
   {

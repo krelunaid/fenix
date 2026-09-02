@@ -25,8 +25,8 @@ export type PortableMigration = {
 
 export const PORTABLE_BACKEND_MANIFEST = "backend/fenix.backend.json";
 export const PORTABLE_DEPLOY_MANIFEST = "fenix.deploy.json";
-export const PORTABLE_BACKEND_VERSION = 3;
-export const PORTABLE_SCHEMA_VERSION = 2;
+export const PORTABLE_BACKEND_VERSION = 4;
+export const PORTABLE_SCHEMA_VERSION = 3;
 
 const GENERATED_BACKEND_PATHS = new Set([
   PORTABLE_BACKEND_MANIFEST,
@@ -134,6 +134,33 @@ CREATE TABLE IF NOT EXISTS _fenix_meta (
 INSERT OR IGNORE INTO _fenix_meta(key, value) VALUES ('product', 'fenix-portable');
 `,
     },
+    {
+      id: "0003_password_reset",
+      filename: "0003_password_reset.sql",
+      sql: `CREATE TABLE IF NOT EXISTS _fenix_password_resets (
+  token_hash TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL REFERENCES _fenix_users(id) ON DELETE CASCADE,
+  expires_at TEXT NOT NULL,
+  used_at TEXT,
+  created_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS _fenix_password_resets_user ON _fenix_password_resets(user_id);
+
+CREATE TABLE IF NOT EXISTS _fenix_outbox (
+  id TEXT PRIMARY KEY,
+  kind TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  payload TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS _fenix_auth_limits (
+  key TEXT PRIMARY KEY,
+  count INTEGER NOT NULL,
+  window_start TEXT NOT NULL
+);
+`,
+    },
   ];
 }
 
@@ -154,7 +181,7 @@ const here = dirname(fileURLToPath(import.meta.url));
 const root = resolve(process.env.FENIX_PUBLIC_ROOT || join(here, ".."));
 const manifest = JSON.parse(readFileSync(join(here, "fenix.backend.json"), "utf8"));
 const db = new DatabaseSync(process.env.FENIX_DB_PATH || join(here, "fenix.sqlite"));
-db.exec("PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON;");
+db.exec("PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON; PRAGMA busy_timeout=5000;");
 const collections = new Map(manifest.collections.map((c) => [c.name, c]));
 const maxBody = 256 * 1024;
 const token = process.env.FENIX_API_TOKEN || "";
@@ -289,6 +316,54 @@ function createSession(userId) {
   const expires = new Date(Date.now() + sessionDays * 86400_000).toISOString();
   db.prepare("INSERT INTO _fenix_sessions (token_hash,user_id,expires_at) VALUES (?,?,?)").run(sha256(raw), userId, expires);
   return raw;
+}
+
+const dummyPassword = passwordRecord("fenix-timing-pad");
+const recoverWindowMs = 15 * 60 * 1000;
+
+function clientIp(req) {
+  const forwarded = String(req.headers["x-forwarded-for"] || "").split(",")[0].trim();
+  if (forwarded) return forwarded.slice(0, 64);
+  const addr = req.socket && req.socket.remoteAddress ? String(req.socket.remoteAddress) : "";
+  return (addr || "unknown").slice(0, 64);
+}
+
+function limited(key, max, windowMs) {
+  try {
+    const now = Date.now();
+    const nowIso = new Date(now).toISOString();
+    db.exec("BEGIN IMMEDIATE");
+    try {
+      const row = db.prepare("SELECT count, window_start FROM _fenix_auth_limits WHERE key=?").get(key);
+      if (!row) {
+        db.prepare("INSERT INTO _fenix_auth_limits(key,count,window_start) VALUES (?,?,?)").run(key, 1, nowIso);
+        db.exec("COMMIT");
+        return false;
+      }
+      const start = Date.parse(row.window_start);
+      if (!Number.isFinite(start) || now - start >= windowMs) {
+        db.prepare("UPDATE _fenix_auth_limits SET count=1, window_start=? WHERE key=?").run(nowIso, key);
+        db.exec("COMMIT");
+        return false;
+      }
+      if (row.count >= max) {
+        db.exec("COMMIT");
+        return true;
+      }
+      db.prepare("UPDATE _fenix_auth_limits SET count=count+1 WHERE key=?").run(key);
+      db.exec("COMMIT");
+      return false;
+    } catch (error) {
+      try { db.exec("ROLLBACK"); } catch {}
+      throw error;
+    }
+  } catch {
+    return true;
+  }
+}
+
+function deliverMail(kind, payload) {
+  db.prepare("INSERT INTO _fenix_outbox (id,kind,created_at,payload) VALUES (?,?,?,?)").run(randomUUID(), kind, new Date().toISOString(), JSON.stringify(payload));
 }
 
 function protoHost(req) {
@@ -429,6 +504,69 @@ const server = createServer(async (req, res) => {
         ? json(res, 200, { id: actor.id, email: actor.email, service: actor.service })
         : json(res, 401, { error: "Non autorizzato" }, { "www-authenticate": "Bearer" });
     }
+    if (url.pathname === "/auth/recover" && req.method === "POST") {
+      const input = await body(req);
+      const email = typeof input.email === "string" ? input.email.trim().toLowerCase() : "";
+      const ip = clientIp(req);
+      if (limited("recover:ip:" + sha256(ip), 8, recoverWindowMs) || (email && limited("recover:mail:" + sha256(email), 3, recoverWindowMs))) {
+        return json(res, 429, { error: "Troppi tentativi" });
+      }
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254) {
+        return json(res, 400, { error: "Email non valida" });
+      }
+      const user = db.prepare("SELECT id FROM _fenix_users WHERE email=?").get(email);
+      if (!user || user.id === serviceId) {
+        passwordMatches("fenix-timing-pad", dummyPassword);
+        return json(res, 200, { ok: true });
+      }
+      const now = new Date();
+      const raw = randomBytes(32).toString("base64url");
+      const stamp = now.toISOString();
+      const expires = new Date(now.getTime() + recoverWindowMs).toISOString();
+      db.exec("BEGIN IMMEDIATE");
+      try {
+        db.prepare("UPDATE _fenix_password_resets SET used_at=? WHERE user_id=? AND used_at IS NULL").run(stamp, user.id);
+        db.prepare("INSERT INTO _fenix_password_resets (token_hash,user_id,expires_at,used_at,created_at) VALUES (?,?,?,NULL,?)").run(sha256(raw), user.id, expires, stamp);
+        deliverMail("password_reset", { user_id: user.id, token: raw });
+        db.exec("COMMIT");
+      } catch (error) {
+        try { db.exec("ROLLBACK"); } catch {}
+        throw error;
+      }
+      return json(res, 200, { ok: true });
+    }
+    if (url.pathname === "/auth/reset" && req.method === "POST") {
+      const input = await body(req);
+      const ip = clientIp(req);
+      if (limited("reset:ip:" + sha256(ip), 20, recoverWindowMs)) {
+        return json(res, 429, { error: "Troppi tentativi" });
+      }
+      const rawToken = typeof input.token === "string" ? input.token.trim() : "";
+      const password = typeof input.password === "string" ? input.password : "";
+      if (rawToken.length < 16 || rawToken.length > 128) {
+        return json(res, 400, { error: "Token non valido" });
+      }
+      if (password.length < 12 || password.length > 128) {
+        return json(res, 400, { error: "La password deve avere da 12 a 128 caratteri" });
+      }
+      const now = new Date().toISOString();
+      db.exec("BEGIN IMMEDIATE");
+      try {
+        const row = db.prepare("SELECT token_hash,user_id FROM _fenix_password_resets WHERE token_hash=? AND used_at IS NULL AND expires_at>?").get(sha256(rawToken), now);
+        if (!row) {
+          db.exec("ROLLBACK");
+          return json(res, 400, { error: "Token non valido" });
+        }
+        db.prepare("UPDATE _fenix_password_resets SET used_at=? WHERE token_hash=? AND used_at IS NULL").run(now, row.token_hash);
+        db.prepare("UPDATE _fenix_users SET password_hash=? WHERE id=?").run(passwordRecord(password), row.user_id);
+        db.prepare("DELETE FROM _fenix_sessions WHERE user_id=?").run(row.user_id);
+        db.exec("COMMIT");
+      } catch (error) {
+        try { db.exec("ROLLBACK"); } catch {}
+        throw error;
+      }
+      return json(res, 200, { ok: true });
+    }
     if (url.pathname.startsWith("/api/")) {
       const actor = principal(req);
       if (!actor) return json(res, 401, { error: "Non autorizzato" }, { "www-authenticate": "Bearer" });
@@ -557,7 +695,7 @@ export function materializePortableBackend(spec: PortableBackendSpec): ProjectFi
     {
       path: "backend/README.md",
       content:
-        "# Backend Fenix portabile\n\nNode 22.5+, SQLite durevole, frontend e API sulla stessa origine. `npm start` dalla radice del progetto serve `index.html` e `/api` insieme. Migrazioni in `backend/migrations/` (forward-only, idempotenti, transazione unica). Include registrazione/login email-password, sessioni opache archiviate solo come hash in cookie HttpOnly e isolamento dei record per utente. `FENIX_API_TOKEN` abilita inoltre l'accesso server-to-server; opzionali `FENIX_ALLOW_SIGNUP=false`, `FENIX_DB_PATH`, `FENIX_ALLOWED_ORIGIN`, `FENIX_PUBLIC_ROOT`, `FENIX_HOST` e `PORT`. Imposta `FENIX_ALLOWED_ORIGIN` solo se serve un'origine extra. Nessun segreto è incluso nell'archivio. Non è un database distribuito.\n",
+        "# Backend Fenix portabile\n\nNode 22.5+, SQLite durevole, frontend e API sulla stessa origine. `npm start` dalla radice del progetto serve `index.html` e `/api` insieme. Migrazioni in `backend/migrations/` (forward-only, idempotenti, transazione unica). Include registrazione/login email-password, sessioni opache archiviate solo come hash in cookie HttpOnly, isolamento dei record per utente e recupero password enumeration-safe (token one-shot solo hash, TTL 15 minuti, outbox SQLite, nessuna SMTP). `FENIX_API_TOKEN` abilita inoltre l'accesso server-to-server; opzionali `FENIX_ALLOW_SIGNUP=false`, `FENIX_DB_PATH`, `FENIX_ALLOWED_ORIGIN`, `FENIX_PUBLIC_ROOT`, `FENIX_HOST` e `PORT`. Imposta `FENIX_ALLOWED_ORIGIN` solo se serve un'origine extra. Nessun segreto è incluso nell'archivio. Non è un database distribuito.\n",
     },
     ...migrations.map((migration) => ({
       path: `backend/migrations/${migration.filename}`,

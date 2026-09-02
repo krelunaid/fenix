@@ -466,7 +466,8 @@ export function evaluateContract(input: {
           paths.has("backend/schema.sql") &&
           paths.has("fenix.deploy.json") &&
           paths.has("backend/migrations/0001_init.sql") &&
-          paths.has("backend/migrations/0002_meta.sql")),
+          paths.has("backend/migrations/0002_meta.sql") &&
+          paths.has("backend/migrations/0003_password_reset.sql")),
       expected.includes(PORTABLE_BACKEND_MANIFEST)
         ? backend.errors[0] || (backend.present ? "runtime Node+SQLite same-origin" : "manifest backend mancante")
         : "non richiesto",

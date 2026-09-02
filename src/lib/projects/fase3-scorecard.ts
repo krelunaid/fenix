@@ -70,7 +70,7 @@ export const FASE3_SCORECARD: ScoreDimension[] = [
         id: "portable-fullstack-deploy",
         points: 3,
         claim:
-          "Il progetto esportato avvia frontend e API sulla stessa origine con health, build `node --check` e manifest di deploy; migrazioni SQL versionate, idempotenti e forward-only aggiornano una fixture v1 a v2 senza perdita dati e restano fail-closed.",
+          "Il progetto esportato avvia frontend e API sulla stessa origine con health, build `node --check` e manifest di deploy; migrazioni SQL versionate, idempotenti e forward-only aggiornano una fixture v1 a v3 senza perdita dati e restano fail-closed.",
         reproduce:
           "npm test -- src/lib/projects/portable-backend.test.ts src/lib/projects/portable-backend-browser.test.ts",
       },
@@ -180,9 +180,17 @@ export const FASE3_SCORECARD: ScoreDimension[] = [
           "Backend portabile con account email/password scrypt, sessioni opache hash-only in cookie HttpOnly, isolamento record per utente e Bearer server-to-server; origine allowlist, corpo bounded, CRUD validato, If-Match CAS e burst concorrente sono provati sul runtime reale.",
         reproduce: "npm test -- src/lib/projects/portable-backend.test.ts",
       },
+      {
+        id: "portable-account-recovery",
+        points: 1,
+        claim:
+          "Recupero account enumeration-safe sul backend portabile: token one-shot ad alta entropia solo come hash, TTL 15 minuti, revoca delle sessioni, nuova password scrypt, outbox server-side senza SMTP e senza token/PII nei log; due utenti isolati, replay/expired/wrong e concorrenza con un solo vincitore.",
+        reproduce:
+          "npm test -- src/lib/projects/portable-backend.test.ts src/lib/projects/portable-backend-browser.test.ts",
+      },
     ],
     remaining:
-      "L'API server ha account nominativi e isolamento per proprietario, ma mancano OAuth/magic-link, ruoli granulari per record, recupero password e connettori applicativi.",
+      "Restano fuori OAuth/magic-link, ruoli granulari per record e connettori applicativi; il recupero password è coperto senza credenziali esterne.",
   },
   {
     id: "collaboration-operations",
