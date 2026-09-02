@@ -34,6 +34,24 @@ function headers(extra: Record<string, string> = {}) {
   return { authorization: "Bearer test-token", "content-type": "application/json", ...extra };
 }
 
+function sessionHeaders(cookie: string, extra: Record<string, string> = {}) {
+  return {
+    cookie,
+    origin: "https://app.example",
+    "content-type": "application/json",
+    ...extra,
+  };
+}
+
+function cookieFrom(response: Response) {
+  const value = response.headers.get("set-cookie") || "";
+  assert.match(value, /^fenix_session=[^;]+;/);
+  assert.match(value, /HttpOnly/);
+  assert.match(value, /SameSite=Strict/);
+  assert.match(value, /Secure/);
+  return value.split(";", 1)[0];
+}
+
 async function startBackend() {
   const root = mkdtempSync(join(tmpdir(), "fenix-portable-backend-"));
   const files = materializePortableBackend(SPEC);
@@ -85,6 +103,11 @@ describe("portable generated backend", () => {
       }).some((error) => /Campo non valido/.test(error)),
     );
     const backend = materializePortableBackend(SPEC);
+    const manifest = JSON.parse(
+      backend.find((file) => file.path === PORTABLE_BACKEND_MANIFEST)!.content,
+    );
+    assert.equal(manifest.version, 2);
+    assert.equal(manifest.auth, "session-cookie+bearer-env");
     const tree = ingestProjectFiles([
       { path: "index.html", content: "<!doctype html><title>Tasks</title>" },
       ...backend,
@@ -143,7 +166,7 @@ describe("portable generated backend", () => {
     try {
       const health = await fetch(`${runtime.base}/health`);
       assert.equal(health.status, 200);
-      assert.deepEqual(await health.json(), { ok: true, service: "fenix-backend", version: 1 });
+      assert.deepEqual(await health.json(), { ok: true, service: "fenix-backend", version: 2 });
 
       assert.equal((await fetch(`${runtime.base}/api/tasks`)).status, 401);
       const preflight = await fetch(`${runtime.base}/api/tasks`, {
@@ -152,6 +175,7 @@ describe("portable generated backend", () => {
       });
       assert.equal(preflight.status, 204);
       assert.equal(preflight.headers.get("access-control-allow-origin"), "https://app.example");
+      assert.equal(preflight.headers.get("access-control-allow-credentials"), "true");
       assert.equal(
         (
           await fetch(`${runtime.base}/api/tasks`, {
@@ -222,6 +246,102 @@ describe("portable generated backend", () => {
       assert.equal(
         (await fetch(`${runtime.base}/api/tasks/${created.id}`, { headers: headers() })).status,
         404,
+      );
+    } finally {
+      await runtime.close();
+    }
+  });
+
+  it("creates end-user sessions and isolates records between accounts", async () => {
+    const runtime = await startBackend();
+    try {
+      const weak = await fetch(`${runtime.base}/auth/signup`, {
+        method: "POST",
+        headers: { origin: "https://app.example", "content-type": "application/json" },
+        body: JSON.stringify({ email: "one@example.test", password: "too-short" }),
+      });
+      assert.equal(weak.status, 400);
+
+      const signupOne = await fetch(`${runtime.base}/auth/signup`, {
+        method: "POST",
+        headers: { origin: "https://app.example", "content-type": "application/json" },
+        body: JSON.stringify({ email: "one@example.test", password: "correct horse battery staple" }),
+      });
+      assert.equal(signupOne.status, 201);
+      const cookieOne = cookieFrom(signupOne);
+      const signupOneBody = (await signupOne.json()) as { id: string; email: string };
+
+      const signupTwo = await fetch(`${runtime.base}/auth/signup`, {
+        method: "POST",
+        headers: { origin: "https://app.example", "content-type": "application/json" },
+        body: JSON.stringify({ email: "two@example.test", password: "another secure password" }),
+      });
+      assert.equal(signupTwo.status, 201);
+      const cookieTwo = cookieFrom(signupTwo);
+
+      const oneCreatedResponse = await fetch(`${runtime.base}/api/tasks`, {
+        method: "POST",
+        headers: sessionHeaders(cookieOne),
+        body: JSON.stringify({ title: "Solo uno", done: false, priority: 1 }),
+      });
+      assert.equal(oneCreatedResponse.status, 201);
+      const oneCreated = (await oneCreatedResponse.json()) as { id: string };
+
+      const twoCreatedResponse = await fetch(`${runtime.base}/api/tasks`, {
+        method: "POST",
+        headers: sessionHeaders(cookieTwo),
+        body: JSON.stringify({ title: "Solo due", done: false, priority: 2 }),
+      });
+      assert.equal(twoCreatedResponse.status, 201);
+
+      const listOne = (await (
+        await fetch(`${runtime.base}/api/tasks`, { headers: sessionHeaders(cookieOne) })
+      ).json()) as { items: Array<{ title: string }> };
+      const listTwo = (await (
+        await fetch(`${runtime.base}/api/tasks`, { headers: sessionHeaders(cookieTwo) })
+      ).json()) as { items: Array<{ title: string }> };
+      assert.deepEqual(listOne.items.map((item) => item.title), ["Solo uno"]);
+      assert.deepEqual(listTwo.items.map((item) => item.title), ["Solo due"]);
+      assert.equal(
+        (
+          await fetch(`${runtime.base}/api/tasks/${oneCreated.id}`, {
+            headers: sessionHeaders(cookieTwo),
+          })
+        ).status,
+        404,
+      );
+
+      const me = await fetch(`${runtime.base}/auth/me`, { headers: sessionHeaders(cookieOne) });
+      assert.equal(me.status, 200);
+      assert.deepEqual(await me.json(), {
+        id: signupOneBody.id,
+        email: "one@example.test",
+        service: false,
+      });
+
+      const invalidLogin = await fetch(`${runtime.base}/auth/login`, {
+        method: "POST",
+        headers: { origin: "https://app.example", "content-type": "application/json" },
+        body: JSON.stringify({ email: "one@example.test", password: "wrong password here" }),
+      });
+      assert.equal(invalidLogin.status, 401);
+      const login = await fetch(`${runtime.base}/auth/login`, {
+        method: "POST",
+        headers: { origin: "https://app.example", "content-type": "application/json" },
+        body: JSON.stringify({ email: "one@example.test", password: "correct horse battery staple" }),
+      });
+      assert.equal(login.status, 200);
+      assert.ok(cookieFrom(login));
+
+      const logout = await fetch(`${runtime.base}/auth/logout`, {
+        method: "POST",
+        headers: sessionHeaders(cookieOne),
+      });
+      assert.equal(logout.status, 200);
+      assert.match(logout.headers.get("set-cookie") || "", /Max-Age=0/);
+      assert.equal(
+        (await fetch(`${runtime.base}/auth/me`, { headers: sessionHeaders(cookieOne) })).status,
+        401,
       );
     } finally {
       await runtime.close();

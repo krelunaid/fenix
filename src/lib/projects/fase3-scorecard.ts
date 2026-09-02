@@ -167,14 +167,14 @@ export const FASE3_SCORECARD: ScoreDimension[] = [
       },
       {
         id: "portable-api-auth-cas",
-        points: 2,
+        points: 4,
         claim:
-          "Backend portabile con Bearer server-only obbligatorio in produzione, origine allowlist, corpo bounded, CRUD validato e If-Match CAS; burst concorrente provato su runtime reale.",
+          "Backend portabile con account email/password scrypt, sessioni opache hash-only in cookie HttpOnly, isolamento record per utente e Bearer server-to-server; origine allowlist, corpo bounded, CRUD validato, If-Match CAS e burst concorrente sono provati sul runtime reale.",
         reproduce: "npm test -- src/lib/projects/portable-backend.test.ts",
       },
     ],
     remaining:
-      "L'API server è generata ma usa Bearer applicativo, non account nominativi: mancano OAuth/magic-link degli utenti finali, ruoli per-record e connettori applicativi.",
+      "L'API server ha account nominativi e isolamento per proprietario, ma mancano OAuth/magic-link, ruoli granulari per record, recupero password e connettori applicativi.",
   },
   {
     id: "collaboration-operations",

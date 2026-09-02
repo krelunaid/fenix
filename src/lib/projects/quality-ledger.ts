@@ -161,9 +161,9 @@ export const QUALITY_LEDGER: LedgerRow[] = [
   {
     id: "portable-generated-backend",
     claim:
-      "Un brief che chiede esplicitamente full-stack/backend/API server aggiunge un manifest schema al contratto. Fenix sostituisce ogni server arbitrario con un runtime Node+SQLite deterministico nel tree: Bearer obbligatorio in produzione, Origin allowlist, corpo 256 KB, campi validati, CRUD e If-Match CAS. ZIP round-trip e 16 scritture concorrenti sono provati avviando il server reale.",
+      "Un brief che chiede esplicitamente full-stack/backend/API server aggiunge un manifest schema al contratto. Fenix sostituisce ogni server arbitrario con un runtime Node+SQLite deterministico nel tree: signup/login email-password scrypt, sessioni opache archiviate solo come hash in cookie HttpOnly, isolamento record per utente, Bearer server-to-server, Origin allowlist, corpo 256 KB, campi validati, CRUD e If-Match CAS. ZIP round-trip, due account isolati e 16 scritture concorrenti sono provati avviando il server reale.",
     evidence:
-      "portable-backend.ts + portable-backend.test.ts runtime/ZIP/auth/validation/CAS/burst + build-contract.ts gate blocking",
+      "portable-backend.ts + portable-backend.test.ts runtime/ZIP/signup/login/logout/sessioni/isolamento/auth/validation/CAS/burst + build-contract.ts gate blocking",
     ok: true,
   },
   {

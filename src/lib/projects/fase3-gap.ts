@@ -53,7 +53,7 @@ export const FASE3_GAPS: Fase3Gap[] = [
     area: "Backend / db / auth / API nelle app generate",
     emergent: "Auth (Google), DB, Stripe, API nel primo build.",
     fenix:
-      "Fenix.load/save e Fenix.data JSON usano sulle app pubblicate un archivio Postgres cloud-private con cookie HttpOnly, isolamento, corpo bounded e CAS; link viewer/editor revocabili condividono il dataset cross-device. In più, i brief full-stack espliciti esportano un backend Node+SQLite separato con Bearer da variabile d'ambiente, allowlist Origin, CRUD schema-validato, If-Match CAS e burst concorrente reale. Nessun segreto viene generato. Mancano OAuth/magic-link finali, ruoli per-record, database distribuito generato e connettori applicativi.",
+      "Fenix.load/save e Fenix.data JSON usano sulle app pubblicate un archivio Postgres cloud-private con cookie HttpOnly, isolamento, corpo bounded e CAS; link viewer/editor revocabili condividono il dataset cross-device. In più, i brief full-stack espliciti esportano un backend Node+SQLite separato con signup/login email-password scrypt, sessioni opache hash-only HttpOnly, isolamento record per utente, Bearer server-to-server, allowlist Origin, CRUD schema-validato, If-Match CAS e burst concorrente reale. Nessun segreto viene generato. Mancano OAuth/magic-link, recupero password, ruoli granulari per-record, database distribuito generato e connettori applicativi.",
     impact: "high",
     cost: "high",
     slice: "next",
