@@ -315,6 +315,24 @@ describe("focus-visible and worker model", () => {
     assert.match(fenixBrowser, /holdVisualWork/);
     assert.match(fenixBrowser, /isolatedPage/);
     assert.match(studioKit, /holdVisualWork/);
+    const harness = readFileSync(join(root, "src/lib/projects/playwright-harness.ts"), "utf8");
+    assert.match(harness, /instrumentBrowser/);
+    assert.match(harness, /browser\.newContext/);
+    assert.match(harness, /fonts\.googleapis\.com/);
+    const testFiles = readdirSync(join(root, "src"), { recursive: true, encoding: "utf8" }) as string[];
+    for (const rel of testFiles) {
+      if (!rel.endsWith(".test.ts")) continue;
+      if (rel.endsWith("playwright-harness.test.ts")) continue;
+      const src = readFileSync(join(root, "src", rel), "utf8");
+      if (!src.includes("playwright")) continue;
+      assert.doesNotMatch(src, /chromium\.launch\(/, rel);
+      if (
+        /launchChromium|browser\.newPage|isolatedPage/.test(src) ||
+        /browser\.test\.ts$/.test(rel.replaceAll("\\", "/"))
+      ) {
+        assert.match(src, /launchChromium/, rel);
+      }
+    }
     const releaseClient = readFileSync(join(root, "src/lib/release/client.ts"), "utf8");
     const releasePanel = readFileSync(join(root, "src/components/publish-panel.tsx"), "utf8");
     const releaseSecrets = readFileSync(join(root, "src/lib/release/secrets.server.ts"), "utf8");

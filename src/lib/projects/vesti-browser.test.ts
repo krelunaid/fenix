@@ -4,7 +4,8 @@ import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "no
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, it } from "node:test";
-import { chromium, type Page } from "playwright";
+import { type Page } from "playwright";
+import { isBlockedPublicNetworkError, launchChromium } from "./playwright-harness.ts";
 import { prepareSrcDoc } from "./color-scheme.ts";
 import { waitForFenixReady } from "../../../scripts/fenix-ready.mjs";
 import { planContract, evaluateContract } from "../ai/build-contract.ts";
@@ -28,10 +29,7 @@ const VIEWPORTS = [
 const PALETTE = { bg: "#f3ead8", fg: "#1c1712", surface: "#fff8ec", muted: "#5c5348", accent: "#8c2f1b" };
 
 function launch() {
-  return chromium.launch({
-    headless: true,
-    args: ["--no-sandbox", "--disable-dev-shm-usage"],
-  });
+  return launchChromium();
 }
 
 async function shot(page: Page, name: string) {
@@ -76,9 +74,11 @@ describe("Vesti collection gate in the browser D/T/M", () => {
     try {
       const badPage = await browser.newPage({ viewport: { width: 390, height: 844 } });
       const bootErrors: string[] = [];
-      badPage.on("pageerror", (err) => bootErrors.push(String(err)));
+      badPage.on("pageerror", (err) => {
+        if (!isBlockedPublicNetworkError(String(err))) bootErrors.push(String(err));
+      });
       badPage.on("console", (msg) => {
-        if (msg.type() === "error") bootErrors.push(msg.text());
+        if (msg.type() === "error" && !isBlockedPublicNetworkError(msg.text())) bootErrors.push(msg.text());
       });
       await badPage.addInitScript(() => {
         window.addEventListener("unhandledrejection", (event) => {
@@ -126,9 +126,11 @@ describe("Vesti collection gate in the browser D/T/M", () => {
       for (const [vp, viewport] of VIEWPORTS) {
         const page = await browser.newPage({ viewport });
         const errors: string[] = [];
-        page.on("pageerror", (err) => errors.push(String(err)));
+        page.on("pageerror", (err) => {
+          if (!isBlockedPublicNetworkError(String(err))) errors.push(String(err));
+        });
         page.on("console", (msg) => {
-          if (msg.type() === "error") errors.push(msg.text());
+          if (msg.type() === "error" && !isBlockedPublicNetworkError(msg.text())) errors.push(msg.text());
         });
         const src = prepareSrcDoc(PRODUCTION, PALETTE, "vesti", "app");
         assert.match(src, /var COL = "capi"/);

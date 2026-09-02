@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { chromium, type Page } from "playwright";
+import { type Page } from "playwright";
+import { launchChromium } from "./playwright-harness.ts";
 import { DEMOS } from "./demos.ts";
 import { prepareSrcDoc } from "./color-scheme.ts";
 import { waitForFenixReady } from "../../../scripts/fenix-ready.mjs";
@@ -21,10 +22,7 @@ type Sample = {
 };
 
 function launch() {
-  return chromium.launch({
-    headless: true,
-    args: ["--no-sandbox", "--disable-dev-shm-usage"],
-  });
+  return launchChromium();
 }
 
 async function openDemo(page: Page, id: (typeof CRAFT)[number]) {

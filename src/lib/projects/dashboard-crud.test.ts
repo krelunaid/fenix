@@ -3,7 +3,8 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, it } from "node:test";
-import { chromium } from "playwright";
+
+import { launchChromium } from "./playwright-harness.ts";
 import { prepareSrcDoc } from "./color-scheme.ts";
 import {
   looksLikeBeigeSaas,
@@ -58,7 +59,6 @@ const BROKEN = `<!DOCTYPE html><html lang="it"><head><meta charset="utf-8"/><tit
   document.documentElement.setAttribute("data-fenix-ready","1");
 </script>
 </body></html>`;
-
 
 describe("dashboard CRUD repair", () => {
   it("restarts preview via node scripts/preview.mjs, not npm", () => {
@@ -144,7 +144,7 @@ describe("dashboard CRUD repair", () => {
     <script>window.Fenix.load("clienti");window.Fenix.save("clienti",[]);document.documentElement.setAttribute("data-fenix-ready","1")</script></body></html>`;
     const polished = polishDashboardHtml(clients, "dashboard");
     const src = prepareSrcDoc(polished, { bg: "#201812", surface: "#2a211b", fg: "#f3eadc", muted: "#a8927e", accent: "#d26a2e" }, "clienti", "dashboard");
-    const browser = await chromium.launch({ headless: true });
+    const browser = await launchChromium();
     try {
       const page = await browser.newPage({ viewport: { width: 1024, height: 768 } });
       await page.setContent(src, { waitUntil: "domcontentloaded", timeout: 15000 });
@@ -220,7 +220,7 @@ describe("dashboard CRUD repair", () => {
       "argilla-viva",
       "dashboard",
     );
-    const browser = await chromium.launch({ headless: true });
+    const browser = await launchChromium();
     try {
       const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
       await page.setContent(`<!DOCTYPE html><html><body>
@@ -318,7 +318,7 @@ describe("dashboard CRUD repair", () => {
     const PREVIEW = await requirePreview();
     const ARGILLA_PID = "49c14680-a504-436d-a0db-84e4f3583dbe";
     const html = polishDashboardHtml(ARGILLA, "dashboard");
-    const browser = await chromium.launch({ headless: true });
+    const browser = await launchChromium();
     try {
       const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
       await page.addInitScript(
@@ -485,7 +485,7 @@ describe("dashboard CRUD repair", () => {
       "argilla-viva",
       "dashboard",
     );
-    const browser = await chromium.launch({ headless: true });
+    const browser = await launchChromium();
     try {
       const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
       const errors: string[] = [];

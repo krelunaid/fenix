@@ -3,7 +3,8 @@ import { mkdirSync, readFileSync, existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, it } from "node:test";
-import { chromium, type Page } from "playwright";
+import { type Page } from "playwright";
+import { launchChromium } from "../projects/playwright-harness.ts";
 import { ensureFenixAdapter } from "../projects/fenix-adapter.ts";
 import { requirePreview } from "../projects/ensure-preview.ts";
 
@@ -71,7 +72,7 @@ const ready = (id: string, now: number) => ({
 describe("studio GitHub export panel", () => {
   it("D/T/M: ZIP stays, unconfigured GitHub is honest, no auto export, no overflow", async () => {
     await requirePreview();
-    const browser = await chromium.launch({ headless: true, args: ["--no-sandbox"] });
+    const browser = await launchChromium();
     try {
       const now = Date.now();
       const pid = "49c14680-a504-436d-a0db-84e4f3583dbe";
@@ -133,7 +134,7 @@ describe("studio GitHub export panel", () => {
 
   it("connected fixture: repo, branch, preview, export only on click, focus-visible", async () => {
     await requirePreview();
-    const browser = await chromium.launch({ headless: true, args: ["--no-sandbox"] });
+    const browser = await launchChromium();
     try {
       const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
       const now = Date.now();
@@ -250,7 +251,7 @@ describe("studio GitHub export panel", () => {
 
   it("D/T/M: GitHub pull starts only on click and creates an isolated project", async () => {
     await requirePreview();
-    const browser = await chromium.launch({ headless: true, args: ["--no-sandbox"] });
+    const browser = await launchChromium();
     try {
       const viewports = [
         { name: "D", width: 1440, height: 900 },

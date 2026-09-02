@@ -30,6 +30,36 @@ test("worker visual shots wait for the ready marker when present", () => {
   assert.match(worker, /waitForSelector/);
 });
 
+const LOCAL = /^(127\.0\.0\.1|localhost|\[::1\]|::1)$/i;
+
+async function isolate(page) {
+  await page.route("**/*", async (route) => {
+    const url = route.request().url();
+    if (/^(data:|blob:|about:)/.test(url)) {
+      await route.fallback();
+      return;
+    }
+    try {
+      const host = new URL(url).hostname;
+      if (LOCAL.test(host)) {
+        await route.fallback();
+        return;
+      }
+    } catch {
+      /* abort unknown */
+    }
+    if (/fonts\.googleapis\.com/i.test(url)) {
+      await route.fulfill({
+        status: 200,
+        contentType: "text/css; charset=utf-8",
+        body: "/* fenix-test */",
+      });
+      return;
+    }
+    await route.abort("blockedbyclient");
+  });
+}
+
 test("screenshotWhenReady refuses a page captured before hydration", async () => {
   const dir = mkdtempSync(join(tmpdir(), "fenix-ready-"));
   const out = join(dir, "too-soon.png");
@@ -39,6 +69,7 @@ test("screenshotWhenReady refuses a page captured before hydration", async () =>
   });
   try {
     const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+    await isolate(page);
     await page.setContent(
       "<!DOCTYPE html><html><body><main>ancora vuoto</main></body></html>",
       { waitUntil: "domcontentloaded" },
@@ -51,6 +82,7 @@ test("screenshotWhenReady refuses a page captured before hydration", async () =>
       },
     );
     const late = await browser.newPage({ viewport: { width: 390, height: 200 } });
+    await isolate(late);
     await late.setContent(
       `<!DOCTYPE html><html><body><script>${MARK_READY_JS};markReady();</script><p>pronto</p></body></html>`,
       { waitUntil: "domcontentloaded" },
@@ -71,6 +103,7 @@ test("waitForFenixReady resolves only after the attribute lands", async () => {
   });
   try {
     const page = await browser.newPage();
+    await isolate(page);
     await page.setContent(
       `<!DOCTYPE html><html><body><script>
         setTimeout(function(){ ${FENIX_READY_SNIPPET} }, 80);

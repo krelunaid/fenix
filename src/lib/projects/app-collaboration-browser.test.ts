@@ -3,7 +3,8 @@ import { existsSync, mkdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, it } from "node:test";
-import { chromium, type Page } from "playwright";
+import { type Page } from "playwright";
+import { launchChromium } from "./playwright-harness.ts";
 import { requirePreview } from "./ensure-preview.ts";
 import { ensureFenixAdapter } from "./fenix-adapter.ts";
 
@@ -74,7 +75,7 @@ async function shot(page: Page, name: string) {
 describe("shared app links in the browser", () => {
   it("D/T/M: creates an editor link once, scrubs the fragment and opens shared cloud data", async () => {
     await requirePreview();
-    const browser = await chromium.launch({ headless: true, args: ["--no-sandbox"] });
+    const browser = await launchChromium();
     try {
       const id = `collab-${Date.now().toString(36)}`;
       const owner = "f".repeat(32);

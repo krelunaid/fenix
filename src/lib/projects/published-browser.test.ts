@@ -3,7 +3,8 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, it } from "node:test";
-import { chromium } from "playwright";
+
+import { launchChromium } from "./playwright-harness.ts";
 import { requirePreview } from "./ensure-preview.ts";
 import { ensureFenixAdapter } from "./fenix-adapter.ts";
 import { OWNER_HEADER, OWNER_STORAGE_KEY, PUBLISHED_MAP_KEY } from "./publish-owner.ts";
@@ -130,7 +131,7 @@ describe("published site is server-side, not localStorage", () => {
     const snap = JSON.parse(raw) as { version?: number; hash?: string };
     assert.equal(snap.version, 1);
 
-    const browser = await chromium.launch({ headless: true });
+    const browser = await launchChromium();
     try {
       const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
       await page.addInitScript(() => {
@@ -190,7 +191,7 @@ describe("published site is server-side, not localStorage", () => {
   it("missing snapshot shows Sito non trovato even if localStorage has html", async () => {
     const PREVIEW = await requirePreview();
     const id = "missing-site-xyz";
-    const browser = await chromium.launch({ headless: true });
+    const browser = await launchChromium();
     try {
       const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
       await page.addInitScript(
@@ -245,7 +246,7 @@ describe("published site is server-side, not localStorage", () => {
     writeFileSync(join(dir, `${originalId}.json`), JSON.stringify(snap));
 
     const puts: string[] = [];
-    const browser = await chromium.launch({ headless: true });
+    const browser = await launchChromium();
     try {
       const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
       page.on("request", (req) => {
@@ -378,7 +379,7 @@ describe("published site is server-side, not localStorage", () => {
     const missingGet = await fetch(`${PREVIEW}/api/sites/${originalId}`, { cache: "no-store" });
     assert.equal(missingGet.status, 404);
 
-    const browser = await chromium.launch({ headless: true, args: ["--no-sandbox"] });
+    const browser = await launchChromium();
     try {
       const seed = {
         originalId,
@@ -491,7 +492,7 @@ describe("published site is server-side, not localStorage", () => {
     const missing = await fetch(`${PREVIEW}/api/sites/${argillaId}`, { cache: "no-store" });
     assert.equal(missing.status, 404);
 
-    const browser = await chromium.launch({ headless: true, args: ["--no-sandbox"] });
+    const browser = await launchChromium();
     try {
       const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
       await page.addInitScript(

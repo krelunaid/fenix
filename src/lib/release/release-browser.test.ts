@@ -3,7 +3,8 @@ import { mkdirSync, readFileSync, existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, it } from "node:test";
-import { chromium, type Page } from "playwright";
+import { type Page } from "playwright";
+import { launchChromium } from "../projects/playwright-harness.ts";
 import { ensureFenixAdapter } from "../projects/fenix-adapter.ts";
 import { requirePreview } from "../projects/ensure-preview.ts";
 
@@ -48,7 +49,7 @@ async function shot(page: Page, name: string, locator?: ReturnType<Page["getByRo
 describe("publish panel multiplatform", () => {
   it("Pubblica stays closed on invalid, opens on ready; D/T/M show Web iOS Android", async () => {
     await requirePreview();
-    const browser = await chromium.launch({ headless: true, args: ["--no-sandbox"] });
+    const browser = await launchChromium();
     try {
       const now = Date.now();
       const readyId = "prel-" + now.toString(36);

@@ -9,18 +9,18 @@
   "files": [
     {
       "name": "vesti-d.png",
-      "sha256": "1b9cd9f9fc60fae02d938f4864173da085004a45c3214ae00ce84ff2aa445ba8",
-      "bytes": 15298
+      "sha256": "ad8127fa09b546b7eb206d509c9cd956e0270628d01fdfae65107260a8d65735",
+      "bytes": 15289
     },
     {
       "name": "vesti-t.png",
-      "sha256": "43535bdac7732198a03ef8d46398203f0c36af248b087416ae182df2c4f72fcc",
-      "bytes": 14979
+      "sha256": "d8cf9efe2cd97835b581df24a232c9405b132b4aebcf3558f3adfcaf4de43eb9",
+      "bytes": 14976
     },
     {
       "name": "vesti-m.png",
-      "sha256": "1a6e9b59a8875a2d0c59c93982e7371d16d52c9df0aafb272ae1ac14adc26d4e",
-      "bytes": 12918
+      "sha256": "5c7f8a75f6a8571a090a5641648a0de0b227da9108d0406ee3b1cae068b3ad1a",
+      "bytes": 12913
     }
   ],
   "credits": 0

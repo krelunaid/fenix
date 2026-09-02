@@ -41,8 +41,8 @@
     },
     {
       "name": "consumer-mobile-D.png",
-      "sha256": "dc7e4112f743e6e5a5a8ac6cc0f6ddf30ffa4ca6272bac73a550a38e6bf4dfe6",
-      "bytes": 71703
+      "sha256": "d17999cbf71885a458fc2c5048f30b888e320e16162bb1145a5f3a22f9392a61",
+      "bytes": 71730
     },
     {
       "name": "consumer-mobile-T.png",
@@ -86,23 +86,23 @@
     },
     {
       "name": "interactive-game-D.png",
-      "sha256": "7782e76fdc7ef67ce9d1d33f9b62b097f6eb62610fc3e539c904a40542da7600",
-      "bytes": 15546
+      "sha256": "355fe39e664041a2afd4dd4dde8be2dc7d4ab2b67c513dea601d407f285eecdd",
+      "bytes": 16300
     },
     {
       "name": "interactive-game-T.png",
-      "sha256": "7511dbc9cb49fd165714a390a85c965c3e222f8ef1c7be83efcff2410717eaaf",
-      "bytes": 16130
+      "sha256": "56bdd2f2142651fddb6f3ec043a2dd389391d5682c376cc09eb5bb6216aebb73",
+      "bytes": 16348
     },
     {
       "name": "interactive-game-M.png",
-      "sha256": "b34a26cb07bbf458fe2942c993c4c9ab946948a23f9579e10b499057a6e7f544",
-      "bytes": 13513
+      "sha256": "c2933e2de129dbd39e0036dea34182290d8d61e32f12dbd271edb48278483603",
+      "bytes": 13985
     },
     {
       "name": "portfolio-contact-D.png",
-      "sha256": "383c599800022832faa7f2767d3a083bf0ccb9bfdcc135e4fa50d646112ce8f2",
-      "bytes": 30350
+      "sha256": "39a3ce2836fbff801a757128bdfeb800c7aa8014d0f63f9932b8b4710390bd5b",
+      "bytes": 30362
     },
     {
       "name": "portfolio-contact-T.png",

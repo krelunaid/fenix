@@ -8,7 +8,8 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, it } from "node:test";
 import { DatabaseSync } from "node:sqlite";
-import { chromium, type Page } from "playwright";
+import { type Page } from "playwright";
+import { launchChromium } from "./playwright-harness.ts";
 import { FULLSTACK_FIXTURES, materializeFullstackProject } from "./portable-fullstack.ts";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -64,7 +65,7 @@ describe("coupled full-stack app in the browser", () => {
       ])) as [Buffer];
       const ready = JSON.parse(chunk.toString("utf8").trim().split("\n")[0]!);
       const base = `http://127.0.0.1:${ready.port}`;
-      const browser = await chromium.launch({ headless: true, args: ["--no-sandbox"] });
+      const browser = await launchChromium();
       try {
         const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
         const noise: string[] = [];
@@ -170,7 +171,7 @@ describe("coupled full-stack app in the browser", () => {
       ])) as [Buffer];
       const ready = JSON.parse(chunk.toString("utf8").trim().split("\n")[0]!);
       const base = `http://127.0.0.1:${ready.port}`;
-      const browser = await chromium.launch({ headless: true, args: ["--no-sandbox"] });
+      const browser = await launchChromium();
       try {
         const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
         const noise: string[] = [];
@@ -317,7 +318,7 @@ describe("coupled full-stack app in the browser", () => {
       ])) as [Buffer];
       const ready = JSON.parse(chunk.toString("utf8").trim().split("\n")[0]!);
       const base = `http://127.0.0.1:${ready.port}`;
-      const browser = await chromium.launch({ headless: true, args: ["--no-sandbox"] });
+      const browser = await launchChromium();
       try {
         const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
         const noise: string[] = [];

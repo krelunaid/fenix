@@ -4,7 +4,8 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, it } from "node:test";
-import { chromium, type Page } from "playwright";
+import { type Page } from "playwright";
+import { launchChromium } from "./playwright-harness.ts";
 import { requirePreview } from "./ensure-preview.ts";
 import { DASHBOARD_MOCK } from "./fixtures/trees.ts";
 
@@ -79,7 +80,7 @@ async function shot(page: Page, name: string) {
 describe("project workspace in the browser", () => {
   it("isolates owner/editor/viewer sessions with CAS, revoke, D/T/M and no token in storage", async () => {
     await requirePreview();
-    const browser = await chromium.launch({ headless: true, args: ["--no-sandbox"] });
+    const browser = await launchChromium();
     try {
       const id = `ws-proj-${Date.now().toString(36)}`;
       const owner = "a".repeat(32);

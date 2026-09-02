@@ -3,7 +3,8 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, it } from "node:test";
-import { chromium } from "playwright";
+
+import { isBlockedPublicNetworkError, launchChromium } from "./playwright-harness.ts";
 import { prepareSrcDoc } from "./color-scheme.ts";
 import { APP_DB_KEY } from "./durable-db.ts";
 import {
@@ -380,7 +381,7 @@ init();
   });
 </script>
 </body></html>`;
-    const browser = await chromium.launch({ headless: true, args: ["--no-sandbox"] });
+    const browser = await launchChromium();
     try {
       const page = await browser.newPage();
       await page.route("http://127.0.0.1/sito-db-harness", async (route) => {
@@ -556,11 +557,13 @@ init();
   });
 </script>
 </body></html>`;
-    const browser = await chromium.launch({ headless: true, args: ["--no-sandbox"] });
+    const browser = await launchChromium();
     try {
       const page = await browser.newPage();
       const errors: string[] = [];
-      page.on("pageerror", (err) => errors.push(String(err)));
+      page.on("pageerror", (err) => {
+        if (!isBlockedPublicNetworkError(String(err))) errors.push(String(err));
+      });
       await page.route("http://127.0.0.1/sito-xss-harness", async (route) => {
         await route.fulfill({ contentType: "text/html", body: parentHtml });
       });
@@ -653,7 +656,7 @@ nav ul{display:flex;flex-wrap:nowrap;margin:0;padding:0;list-style:none}
 <footer>via</footer>
 </body></html>`;
     const src = prepareSrcDoc(html, { bg: "#1a1612", fg: "#e6dcc8" }, "sito-nav-390", "site");
-    const browser = await chromium.launch({ headless: true, args: ["--no-sandbox"] });
+    const browser = await launchChromium();
     try {
       const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
       await page.setContent(src, { waitUntil: "domcontentloaded" });

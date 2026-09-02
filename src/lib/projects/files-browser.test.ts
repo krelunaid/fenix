@@ -2,7 +2,8 @@ import assert from "node:assert/strict";
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { describe, it } from "node:test";
-import { chromium, type Page } from "playwright";
+import { type Page } from "playwright";
+import { isBlockedPublicNetworkError, launchChromium } from "./playwright-harness.ts";
 import { requirePreview } from "./ensure-preview.ts";
 import { APP_COMPONENTS, SITE_MULTIFILE } from "./fixtures/trees.ts";
 import { DEFAULT_PALETTE, type Project } from "./types.ts";
@@ -70,7 +71,7 @@ function readyProject(): Project {
 describe("studio file tree", () => {
   it("inspects the canonical tree on desktop, tablet and phone without console errors", async () => {
     await requirePreview();
-    const browser = await chromium.launch({ headless: true, args: ["--no-sandbox"] });
+    const browser = await launchChromium();
     const project = readyProject();
     try {
       for (const [name, viewport] of [
@@ -119,7 +120,7 @@ describe("studio file tree", () => {
 
 describe("multi-file runtime", () => {
   it("runs linked CSS, linked JS and local JSON fetch in one sandboxable artifact", async () => {
-    const browser = await chromium.launch({ headless: true, args: ["--no-sandbox"] });
+    const browser = await launchChromium();
     try {
       const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
       const errors: string[] = [];
@@ -151,7 +152,10 @@ describe("multi-file runtime", () => {
         ),
         false,
       );
-      assert.deepEqual(errors, []);
+      assert.deepEqual(
+        errors.filter((e) => !isBlockedPublicNetworkError(e)),
+        [],
+      );
     } finally {
       await browser.close();
     }
@@ -163,7 +167,7 @@ describe("portable Fenix ZIP import", () => {
     await requirePreview();
     const archive = zipProject(APP_COMPONENTS, { kind: "app", name: "Onda Portatile" });
     const expectedPaths = APP_COMPONENTS.map((file) => file.path).sort();
-    const browser = await chromium.launch({ headless: true, args: ["--no-sandbox"] });
+    const browser = await launchChromium();
     try {
       for (const [name, viewport] of [
         ["desktop", { width: 1280, height: 800 }],
@@ -261,7 +265,7 @@ describe("portable Fenix ZIP import", () => {
         </head><body><main><h1>Una sola schermata</h1></main></body></html>`,
       },
     ];
-    const browser = await chromium.launch({ headless: true, args: ["--no-sandbox"] });
+    const browser = await launchChromium();
     try {
       const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
       await page.goto(PREVIEW, { waitUntil: "domcontentloaded", timeout: 20_000 });

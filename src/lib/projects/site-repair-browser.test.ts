@@ -3,7 +3,8 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, it } from "node:test";
-import { chromium } from "playwright";
+
+import { isBlockedPublicNetworkError, launchChromium } from "./playwright-harness.ts";
 import { requirePreview } from "./ensure-preview.ts";
 import { ensureFenixAdapter } from "./fenix-adapter.ts";
 import { DEFAULT_PALETTE } from "./types.ts";
@@ -21,12 +22,12 @@ const ADAPTED = ensureFenixAdapter(SITE);
 describe("studio repair for a new site project", () => {
   it("adapter preview is not empty, has 3+ views, Pubblica after valid gate", async () => {
     await requirePreview();
-    const browser = await chromium.launch({ headless: true });
+    const browser = await launchChromium();
     try {
       const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
       const errors: string[] = [];
       page.on("pageerror", (err) => {
-        errors.push(err.message);
+        if (!isBlockedPublicNetworkError(String(err))) errors.push(err.message);
       });
       await page.addInitScript(
         ({ html, pid }) => {
@@ -84,7 +85,7 @@ describe("studio repair for a new site project", () => {
 
   it("empty failed build shows recoverable overlay and retry, not a dead placeholder", async () => {
     await requirePreview();
-    const browser = await chromium.launch({ headless: true });
+    const browser = await launchChromium();
     try {
       const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
       await page.addInitScript(() => {
@@ -144,7 +145,7 @@ describe("studio repair for a new site project", () => {
 
   it("failed retry refunds once", async () => {
     await requirePreview();
-    const browser = await chromium.launch({ headless: true });
+    const browser = await launchChromium();
     try {
       const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
       await page.route(/\/api\/build/, async (route) => {
@@ -208,7 +209,7 @@ describe("studio repair for a new site project", () => {
 
   it("empty/error project walks SSE /api/build through adapter to a ready preview", async () => {
     await requirePreview();
-    const browser = await chromium.launch({ headless: true });
+    const browser = await launchChromium();
     try {
       const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
       const adapted = ensureFenixAdapter(SITE);
@@ -293,7 +294,7 @@ describe("iframe boot error on site null.orders", () => {
       "bottega-tornio",
       "site",
     );
-    const browser = await chromium.launch({ headless: true });
+    const browser = await launchChromium();
     try {
       const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
       const syntax: string[] = [];
@@ -348,7 +349,7 @@ describe("iframe boot error on site null.orders", () => {
       html: BOTTEGA,
       files: [],
     };
-    const browser = await chromium.launch({ headless: true });
+    const browser = await launchChromium();
     try {
       const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
       await page.route(/\/api\/build/, async (route) => {
@@ -428,7 +429,7 @@ describe("iframe boot error on site null.orders", () => {
 
   it("reload of error + stale visualJobId/JOB_STILL_RUNNING drops the job, Pubblica closed, credits unchanged", async () => {
     await requirePreview();
-    const browser = await chromium.launch({ headless: true });
+    const browser = await launchChromium();
     try {
       const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
       let polishPosts = 0;
@@ -549,7 +550,7 @@ describe("iframe boot error on null innerHTML", () => {
       "bottega-terra-inner",
       "dashboard",
     );
-    const browser = await chromium.launch({ headless: true });
+    const browser = await launchChromium();
     try {
       const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
       await page.setContent(`<!DOCTYPE html><html><body>
@@ -590,7 +591,7 @@ describe("iframe boot error on null innerHTML", () => {
       "bottega-terra-hero",
       "site",
     );
-    const browser = await chromium.launch({ headless: true });
+    const browser = await launchChromium();
     try {
       const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
       await page.setContent(`<!DOCTYPE html><html><body>
@@ -629,7 +630,7 @@ describe("iframe boot error on null innerHTML", () => {
       "bottega-terra-fixed",
       "dashboard",
     );
-    const browser = await chromium.launch({ headless: true });
+    const browser = await launchChromium();
     try {
       const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
       await page.setContent(`<!DOCTYPE html><html><body>

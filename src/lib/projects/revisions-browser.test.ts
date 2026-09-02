@@ -4,7 +4,8 @@ import { mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from "n
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, it } from "node:test";
-import { chromium, type Page } from "playwright";
+import { type Page } from "playwright";
+import { launchChromium } from "./playwright-harness.ts";
 import { ensureFenixAdapter } from "./fenix-adapter.ts";
 import { requirePreview } from "./ensure-preview.ts";
 import { appendProjectActivity } from "./activity.ts";
@@ -134,7 +135,7 @@ function readyProject(): Project {
 describe("studio version branches and rollback", () => {
   it("branches and restores an older cottura on desktop, tablet and phone", async () => {
     await requirePreview();
-    const browser = await chromium.launch({ headless: true, args: ["--no-sandbox"] });
+    const browser = await launchChromium();
     const project = readyProject();
     assert.ok((project.revisions?.length ?? 0) >= 2);
     try {
