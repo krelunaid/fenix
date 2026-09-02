@@ -207,6 +207,14 @@ export const QUALITY_LEDGER: LedgerRow[] = [
     ok: true,
   },
   {
+    id: "workspace-simultaneous-doc",
+    claim:
+      "Gli appunti del workspace sono un documento server-authoritative: insert/delete con op id e base/versione, replay idempotente, convergenza tra due editor su parti indipendenti, overlap/stale fail-closed. Viewer e editor revocato 403. Audit bounded senza token, PII o payload. UI D/T/M con stato di sincronizzazione. Non è un CRDT.",
+    evidence:
+      "workspace-doc.ts + workspace.ts op=doc + 0007_workspace_shared_doc + workspace.test.ts convergenza/replay/burst/stale/revoke + workspace-browser.test.ts D/T/M, due editor, viewer 403",
+    ok: true,
+  },
+  {
     id: "emergent",
     claim: "Emergent resta solo un banco di prova. Nessun claim di completezza sul prodotto.",
     evidence: "src/lib/projects/fase3-gap.ts quality.slice=now; revisions.test.ts now list",

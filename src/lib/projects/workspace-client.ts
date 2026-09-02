@@ -1,6 +1,7 @@
 import { OWNER_HEADER } from "./publish-owner";
 import { getOwnerCapability } from "./publish-client";
 import type { ProjectFile } from "./files";
+import { diffDocs, type DocKind } from "./workspace-doc";
 
 export type WorkspaceRole = "owner" | "viewer" | "editor";
 export type MemberRole = "viewer" | "editor";
@@ -35,6 +36,11 @@ export type PublicAudit = {
   detail: string;
 };
 
+export type SharedDocSnapshot = {
+  content: string;
+  version: number;
+};
+
 export type WorkspaceSnapshot = {
   id: string;
   name: string;
@@ -43,6 +49,7 @@ export type WorkspaceSnapshot = {
   casVersion: number;
   casHash: string;
   files: ProjectFile[];
+  doc?: SharedDocSnapshot;
   members?: PublicMember[];
   invites?: PublicInvite[];
   presence?: PublicPresence[];
@@ -73,6 +80,12 @@ export function workspaceJoinSessionId(): string {
   } catch {
     return `s${Date.now().toString(16).padStart(16, "0")}`;
   }
+}
+
+export function mintDocOpId(): string {
+  const bytes = new Uint8Array(12);
+  crypto.getRandomValues(bytes);
+  return `o${Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("")}`;
 }
 
 export async function createProjectWorkspace(input: {
@@ -178,6 +191,63 @@ export async function writeWorkspaceFile(
     body: JSON.stringify({ path, content }),
   });
   return parse<WorkspaceSnapshot>(res, "File non salvato.");
+}
+
+export async function applyWorkspaceDocOp(
+  id: string,
+  input: { opId?: string; kind: DocKind; pos: number; text: string; base: number },
+): Promise<SharedDocSnapshot & { duplicate: boolean }> {
+  const res = await fetch(`/api/workspace/${encodeURIComponent(id)}`, {
+    method: "POST",
+    cache: "no-store",
+    headers: ownerHeaders({ "Content-Type": "application/json" }),
+    body: JSON.stringify({
+      op: "doc",
+      opId: input.opId || mintDocOpId(),
+      kind: input.kind,
+      pos: input.pos,
+      text: input.text,
+      base: input.base,
+    }),
+  });
+  const body = await parse<SharedDocSnapshot & { duplicate?: boolean; error?: string }>(
+    res,
+    "Appunti non salvati.",
+  );
+  return { content: body.content, version: body.version, duplicate: Boolean(body.duplicate) };
+}
+
+export async function flushWorkspaceDoc(
+  id: string,
+  previous: string,
+  next: string,
+  base: number,
+): Promise<SharedDocSnapshot | null> {
+  const diff = diffDocs(previous, next);
+  if (!diff) return null;
+  let version = base;
+  let content = previous;
+  if (diff.deleted) {
+    const deleted = await applyWorkspaceDocOp(id, {
+      kind: "delete",
+      pos: diff.pos,
+      text: diff.deleted,
+      base: version,
+    });
+    content = deleted.content;
+    version = deleted.version;
+  }
+  if (diff.inserted) {
+    const inserted = await applyWorkspaceDocOp(id, {
+      kind: "insert",
+      pos: diff.pos,
+      text: diff.inserted,
+      base: version,
+    });
+    content = inserted.content;
+    version = inserted.version;
+  }
+  return { content, version };
 }
 
 /** Consume a join fragment once and scrub it before any later fetch. */

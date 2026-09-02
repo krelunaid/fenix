@@ -12,6 +12,7 @@ import {
   WORKSPACE_NOT_CONFIGURED,
   workspaceUserHash,
 } from "./workspace.ts";
+import { decideDocOp, emptySharedDoc, MAX_DOC_OPS } from "./workspace-doc.ts";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const ownerA = "a".repeat(32);
@@ -30,6 +31,7 @@ before(async () => {
   pg = new PGlite();
   await pg.waitReady;
   await pg.exec(readFileSync(join(here, "../../../migrations/0006_project_workspaces.sql"), "utf8"));
+  await pg.exec(readFileSync(join(here, "../../../migrations/0007_workspace_shared_doc.sql"), "utf8"));
   const query = async <T = Record<string, unknown>>(text: string, params: unknown[] = []) => {
     const result = await pg.query<T>(text, params);
     return result.rows;
@@ -399,6 +401,320 @@ describe("project workspace collaboration", () => {
 
   it("does not claim parity and keeps the configuration hint honest", () => {
     assert.match(WORKSPACE_NOT_CONFIGURED, /DATABASE_URL/);
-    assert.doesNotMatch(WORKSPACE_NOT_CONFIGURED, /parit[aà]|Emergent/);
+    assert.match(WORKSPACE_NOT_CONFIGURED, /0006/);
+    assert.doesNotMatch(WORKSPACE_NOT_CONFIGURED, /parit[aà]|Emergent|CRDT/);
+  });
+
+  it("converges independent inserts in either arrival order without claiming CRDT", () => {
+    const seed = decideDocOp(emptySharedDoc(), {
+      id: "o" + "1".repeat(16),
+      kind: "insert",
+      pos: 0,
+      text: "Argilla viva. ",
+      base: 0,
+    });
+    assert.equal(seed.status, "apply");
+    if (seed.status !== "apply") return;
+    const left = {
+      id: "o" + "a".repeat(16),
+      kind: "insert" as const,
+      pos: 0,
+      text: "Lotti. ",
+      base: 1,
+    };
+    const right = {
+      id: "o" + "b".repeat(16),
+      kind: "insert" as const,
+      pos: "Argilla viva. ".length,
+      text: "Forno.",
+      base: 1,
+    };
+    const leftFirst = decideDocOp(seed.next, left);
+    assert.equal(leftFirst.status, "apply");
+    if (leftFirst.status !== "apply") return;
+    const ab = decideDocOp(leftFirst.next, right);
+    const rightFirst = decideDocOp(seed.next, right);
+    assert.equal(rightFirst.status, "apply");
+    if (rightFirst.status !== "apply") return;
+    const ba = decideDocOp(rightFirst.next, left);
+    assert.equal(ab.status, "apply");
+    assert.equal(ba.status, "apply");
+    if (ab.status !== "apply" || ba.status !== "apply") return;
+    assert.equal(ab.next.content, "Lotti. Argilla viva. Forno.");
+    assert.equal(ba.next.content, ab.next.content);
+    assert.equal(ab.next.version, 3);
+  });
+
+  it("lets two editors edit independent parts, rejects overlap/stale, and keeps audit redacted", async () => {
+    seq = 80;
+    const ws = "w" + "d".repeat(16);
+    const created = await handleWorkspaceCollection(
+      request(
+        "POST",
+        "/api/workspace",
+        { name: "Argilla Viva", projectId: "proj-notes-01", files, role: "viewer" },
+        { owner: ownerA },
+      ),
+      { ...deps, id: () => ws },
+    );
+    assert.equal(created.status, 201);
+    const createdBody = (await created.json()) as { doc: { content: string; version: number } };
+    assert.deepEqual(createdBody.doc, { content: "", version: 0 });
+
+    const editorInvite = await handleWorkspaceRequest(
+      request("POST", `/api/workspace/${ws}`, { op: "invite", role: "editor" }, { owner: ownerA }),
+      ws,
+      { ...deps, token: () => "e".repeat(64) },
+    );
+    const editorToken = ((await editorInvite.json()) as { token: string }).token;
+    const viewerInvite = await handleWorkspaceRequest(
+      request("POST", `/api/workspace/${ws}`, { op: "invite", role: "viewer" }, { owner: ownerA }),
+      ws,
+      { ...deps, token: () => "f".repeat(64) },
+    );
+    const viewerToken = ((await viewerInvite.json()) as { token: string }).token;
+    assert.equal(
+      (
+        await handleWorkspaceRequest(
+          request("POST", `/api/workspace/${ws}`, { op: "join", token: editorToken }, { owner: ownerB }),
+          ws,
+          deps,
+        )
+      ).status,
+      200,
+    );
+    assert.equal(
+      (
+        await handleWorkspaceRequest(
+          request("POST", `/api/workspace/${ws}`, { op: "join", token: viewerToken }, { owner: ownerC }),
+          ws,
+          deps,
+        )
+      ).status,
+      200,
+    );
+
+    const opId = (n: number) => `o${n.toString(16).padStart(16, "0")}`;
+    const postDoc = (
+      owner: string,
+      body: Record<string, unknown>,
+    ) =>
+      handleWorkspaceRequest(
+        request("POST", `/api/workspace/${ws}`, { op: "doc", role: "owner", ...body }, { owner }),
+        ws,
+        deps,
+      );
+
+    const seed = await postDoc(ownerA, {
+      opId: opId(1),
+      kind: "insert",
+      pos: 0,
+      text: "Argilla viva. ",
+      base: 0,
+    });
+    assert.equal(seed.status, 200, await seed.clone().text());
+    assert.equal(((await seed.json()) as { version: number }).version, 1);
+
+    const replay = await postDoc(ownerA, {
+      opId: opId(1),
+      kind: "insert",
+      pos: 0,
+      text: "Argilla viva. ",
+      base: 0,
+    });
+    const replayBody = (await replay.json()) as { version: number; duplicate: boolean; content: string };
+    assert.equal(replay.status, 200);
+    assert.equal(replayBody.duplicate, true);
+    assert.equal(replayBody.version, 1);
+    assert.equal(replayBody.content, "Argilla viva. ");
+
+    const [left, right] = await Promise.all([
+      postDoc(ownerB, {
+        opId: opId(2),
+        kind: "insert",
+        pos: 0,
+        text: "Lotti. ",
+        base: 1,
+      }),
+      postDoc(ownerA, {
+        opId: opId(3),
+        kind: "insert",
+        pos: "Argilla viva. ".length,
+        text: "Forno.",
+        base: 1,
+      }),
+    ]);
+    assert.equal(left.status, 200, await left.clone().text());
+    assert.equal(right.status, 200, await right.clone().text());
+    await left.json();
+    await right.json();
+
+    const reopen = await handleWorkspaceRequest(
+      request("GET", `/api/workspace/${ws}`, undefined, { owner: ownerB }),
+      ws,
+      deps,
+    );
+    const reopenBody = (await reopen.json()) as {
+      doc: { content: string; version: number };
+      role: string;
+    };
+    assert.equal(reopen.status, 200);
+    assert.equal(reopenBody.doc.content, "Lotti. Argilla viva. Forno.");
+    assert.equal(reopenBody.doc.version, 3);
+
+    const viewerWrite = await postDoc(ownerC, {
+      opId: opId(4),
+      kind: "insert",
+      pos: 0,
+      text: "no",
+      base: 3,
+    });
+    assert.equal(viewerWrite.status, 403);
+
+    const overlapSeed = await postDoc(ownerA, {
+      opId: opId(5),
+      kind: "insert",
+      pos: "Lotti. Argilla viva. Forno.".length,
+      text: " abcdef",
+      base: 3,
+    });
+    assert.equal(overlapSeed.status, 200);
+    const overlapBase = ((await overlapSeed.json()) as { version: number; content: string }).version;
+    const abcStart = "Lotti. Argilla viva. Forno. ".length;
+    const [delOne, delTwo] = await Promise.all([
+      postDoc(ownerA, {
+        opId: opId(6),
+        kind: "delete",
+        pos: abcStart,
+        text: "abc",
+        base: overlapBase,
+      }),
+      postDoc(ownerB, {
+        opId: opId(7),
+        kind: "delete",
+        pos: abcStart + 1,
+        text: "bcd",
+        base: overlapBase,
+      }),
+    ]);
+    const overlapStatuses = [delOne.status, delTwo.status].sort();
+    assert.deepEqual(overlapStatuses, [200, 409]);
+    const afterOverlap = await handleWorkspaceRequest(
+      request("GET", `/api/workspace/${ws}`, undefined, { owner: ownerA }),
+      ws,
+      deps,
+    );
+    const afterOverlapBody = (await afterOverlap.json()) as {
+      doc: { content: string; version: number };
+    };
+    const afterOverlapDoc = afterOverlapBody.doc.content;
+    assert.ok(
+      afterOverlapDoc === "Lotti. Argilla viva. Forno. def" ||
+        afterOverlapDoc === "Lotti. Argilla viva. Forno. aef",
+    );
+
+    const secret = await postDoc(ownerB, {
+      opId: opId(8),
+      kind: "insert",
+      pos: 0,
+      text: "Bearer xai-aaaaaaaaaaaaaaaaaaaa",
+      base: afterOverlapBody.doc.version,
+    });
+    assert.equal(secret.status, 400);
+
+    const dash = "--------------------------------";
+    const pad = await postDoc(ownerA, {
+      opId: opId(9),
+      kind: "insert",
+      pos: afterOverlapDoc.length,
+      text: dash,
+      base: afterOverlapBody.doc.version,
+    });
+    assert.equal(pad.status, 200, await pad.clone().text());
+    const padded = (await pad.json()) as { content: string; version: number };
+    const start = padded.content.length - dash.length;
+    const burst = await Promise.all(
+      Array.from({ length: 8 }, (_, i) =>
+        postDoc(i % 2 === 0 ? ownerA : ownerB, {
+          opId: opId(20 + i),
+          kind: "insert",
+          pos: start + i * 4,
+          text: String(i),
+          base: padded.version,
+        }),
+      ),
+    );
+    assert.ok(
+      burst.every((res) => res.status === 200),
+      await Promise.all(burst.map((res) => res.clone().text())).then((rows) => rows.join(" | ")),
+    );
+    await Promise.all(burst.map((res) => res.json()));
+    const afterBurst = await handleWorkspaceRequest(
+      request("GET", `/api/workspace/${ws}`, undefined, { owner: ownerB }),
+      ws,
+      deps,
+    );
+    const burstDoc = ((await afterBurst.json()) as { doc: { content: string; version: number } }).doc;
+    assert.equal(burstDoc.content.replace(/[^0-7]/g, ""), "01234567");
+
+    let version = burstDoc.version;
+    for (let i = 0; i < MAX_DOC_OPS + 1; i += 1) {
+      const step = await postDoc(ownerA, {
+        opId: opId(50 + i),
+        kind: "insert",
+        pos: 0,
+        text: ".",
+        base: version,
+      });
+      assert.equal(step.status, 200);
+      version = ((await step.json()) as { version: number }).version;
+    }
+    const tooOld = await postDoc(ownerB, {
+      opId: opId(200),
+      kind: "insert",
+      pos: 0,
+      text: "NO",
+      base: 1,
+    });
+    assert.equal(tooOld.status, 409);
+    const tooOldBody = (await tooOld.json()) as { content: string; error: string };
+    assert.match(tooOldBody.error, /vecchia|conflitto/i);
+    const afterStale = await handleWorkspaceRequest(
+      request("GET", `/api/workspace/${ws}`, undefined, { owner: ownerA }),
+      ws,
+      deps,
+    );
+    const afterStaleDoc = (await afterStale.json()) as {
+      doc: { content: string };
+      audit: { kind: string; detail: string }[];
+      members: { id: string; role: string }[];
+    };
+    assert.doesNotMatch(afterStaleDoc.doc.content, /NO$/);
+    assert.doesNotMatch(JSON.stringify(afterStaleDoc.audit), new RegExp(editorToken));
+    assert.doesNotMatch(JSON.stringify(afterStaleDoc.audit), /Argilla viva|Lotti|Forno|Bearer|xai-/);
+    assert.ok(afterStaleDoc.audit.every((event) => !event.detail.includes(opId(1))));
+    assert.ok(afterStaleDoc.audit.length <= 64);
+    assert.doesNotMatch(JSON.stringify(afterStaleDoc), new RegExp(workspaceUserHash(ownerA)));
+
+    const viewer = afterStaleDoc.members.find((row) => row.role === "viewer");
+    assert.ok(viewer);
+    assert.equal(
+      (
+        await handleWorkspaceRequest(
+          request("POST", `/api/workspace/${ws}`, { op: "revoke", memberId: viewer!.id }, { owner: ownerA }),
+          ws,
+          deps,
+        )
+      ).status,
+      200,
+    );
+    const revoked = await postDoc(ownerC, {
+      opId: opId(201),
+      kind: "insert",
+      pos: 0,
+      text: "X",
+      base: version,
+    });
+    assert.equal(revoked.status, 403);
   });
 });

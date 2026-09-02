@@ -146,6 +146,39 @@ describe("project workspace in the browser", () => {
       assert.ok(focus.width >= 24 && focus.height >= 24);
       assert.match(focus.outline, /rgb|#[0-9a-f]|solid|8b7cff/i);
 
+      await page.goto(`${PREVIEW}/condiviso/${workspaceId}`, {
+        waitUntil: "domcontentloaded",
+        timeout: 20_000,
+      });
+      await page.getByLabel("Appunti condivisi").waitFor({ timeout: 12_000 });
+      await page.setViewportSize({ width: 1440, height: 900 });
+      await page.getByLabel("Appunti condivisi").fill("Argilla viva. ");
+      await page.getByLabel("Appunti condivisi").blur();
+      await page.getByText(/Sincronizzati/).first().waitFor({ timeout: 10_000 });
+      await shot(page, "coedit-D.png");
+      await page.setViewportSize({ width: 768, height: 1024 });
+      await shot(page, "coedit-T.png");
+      await page.setViewportSize({ width: 390, height: 844 });
+      await shot(page, "coedit-M.png");
+      const notesOverflow = await page.evaluate(
+        () => document.documentElement.scrollWidth - window.innerWidth,
+      );
+      assert.ok(notesOverflow <= 1, `notes mobile overflow ${notesOverflow}`);
+      const notesFocus = await page.evaluate(() => {
+        const area = document.getElementById("fenix-shared-notes") as HTMLTextAreaElement | null;
+        if (!area) return { outline: "", width: 0, height: 0 };
+        area.focus();
+        const style = getComputedStyle(area);
+        const box = area.getBoundingClientRect();
+        return {
+          outline: `${style.outline} ${style.boxShadow}`,
+          width: box.width,
+          height: box.height,
+        };
+      });
+      assert.ok(notesFocus.width >= 24 && notesFocus.height >= 24);
+      assert.match(notesFocus.outline, /rgb|#[0-9a-f]|solid|8b7cff/i);
+
       const editorCtx = await browser.newContext({ viewport: { width: 1280, height: 800 } });
       const editorPage = await editorCtx.newPage();
       await editorPage.addInitScript((ownerId) => {
@@ -174,6 +207,77 @@ describe("project workspace in the browser", () => {
       assert.equal(editorWrite.status, 200);
       assert.equal((editorWrite.body as { casVersion: number }).casVersion, 2);
 
+      await editorPage.getByLabel("Appunti condivisi").waitFor({ timeout: 12_000 });
+      const concurrent = await Promise.all([
+        editorPage.evaluate(async (ws) => {
+          const loaded = await fetch(`/api/workspace/${ws}`, {
+            cache: "no-store",
+            headers: { "x-fenix-owner": localStorage.getItem("fenix.owner-id") || "" },
+          });
+          const snap = (await loaded.json()) as { doc: { content: string; version: number } };
+          const res = await fetch(`/api/workspace/${ws}`, {
+            method: "POST",
+            headers: {
+              "content-type": "application/json",
+              "x-fenix-owner": localStorage.getItem("fenix.owner-id") || "",
+            },
+            body: JSON.stringify({
+              op: "doc",
+              opId: `o${"a".repeat(16)}`,
+              kind: "insert",
+              pos: 0,
+              text: "Lotti. ",
+              base: snap.doc.version,
+            }),
+          });
+          return { status: res.status, body: await res.json() };
+        }, workspaceId),
+        page.evaluate(async (ws) => {
+          const loaded = await fetch(`/api/workspace/${ws}`, {
+            cache: "no-store",
+            headers: { "x-fenix-owner": localStorage.getItem("fenix.owner-id") || "" },
+          });
+          const snap = (await loaded.json()) as { doc: { content: string; version: number } };
+          const res = await fetch(`/api/workspace/${ws}`, {
+            method: "POST",
+            headers: {
+              "content-type": "application/json",
+              "x-fenix-owner": localStorage.getItem("fenix.owner-id") || "",
+            },
+            body: JSON.stringify({
+              op: "doc",
+              opId: `o${"b".repeat(16)}`,
+              kind: "insert",
+              pos: snap.doc.content.length,
+              text: "Forno.",
+              base: snap.doc.version,
+            }),
+          });
+          return { status: res.status, body: await res.json() };
+        }, workspaceId),
+      ]);
+      assert.equal(concurrent[0]?.status, 200);
+      assert.equal(concurrent[1]?.status, 200);
+
+      const reopened = await editorPage.evaluate(async (ws) => {
+        const res = await fetch(`/api/workspace/${ws}`, {
+          cache: "no-store",
+          headers: { "x-fenix-owner": localStorage.getItem("fenix.owner-id") || "" },
+        });
+        return res.json();
+      }, workspaceId);
+      const shared = (reopened as { doc: { content: string } }).doc.content;
+      assert.match(shared, /Lotti\. /);
+      assert.match(shared, /Forno\./);
+      const ownerView = await page.evaluate(async (ws) => {
+        const res = await fetch(`/api/workspace/${ws}`, {
+          cache: "no-store",
+          headers: { "x-fenix-owner": localStorage.getItem("fenix.owner-id") || "" },
+        });
+        return res.json();
+      }, workspaceId);
+      assert.equal((ownerView as { doc: { content: string } }).doc.content, shared);
+
       const viewerCtx = await browser.newContext({ viewport: { width: 390, height: 844 } });
       const viewerPage = await viewerCtx.newPage();
       await viewerPage.addInitScript((ownerId) => {
@@ -194,6 +298,27 @@ describe("project workspace in the browser", () => {
         return res.status;
       }, workspaceId);
       assert.equal(viewerWrite, 403);
+
+      const viewerDoc = await viewerPage.evaluate(async (ws) => {
+        const res = await fetch(`/api/workspace/${ws}`, {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            "x-fenix-owner": localStorage.getItem("fenix.owner-id") || "",
+          },
+          body: JSON.stringify({
+            op: "doc",
+            opId: `o${"c".repeat(16)}`,
+            kind: "insert",
+            pos: 0,
+            text: "no",
+            base: 0,
+            role: "editor",
+          }),
+        });
+        return res.status;
+      }, workspaceId);
+      assert.equal(viewerDoc, 403);
 
       const memberId = await page.evaluate(async (ws) => {
         const res = await fetch(`/api/workspace/${ws}`, {
@@ -233,7 +358,14 @@ describe("project workspace in the browser", () => {
       );
       assert.deepEqual(filtered, []);
 
-      const manifest = ["workspace-D.png", "workspace-T.png", "workspace-M.png"].map((name) => {
+      const manifest = [
+        "workspace-D.png",
+        "workspace-T.png",
+        "workspace-M.png",
+        "coedit-D.png",
+        "coedit-T.png",
+        "coedit-M.png",
+      ].map((name) => {
         const file = join(FIXTURE, name);
         const bytes = existsSync(file) ? readFileSync(file) : Buffer.alloc(0);
         return {

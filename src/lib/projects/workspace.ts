@@ -4,9 +4,18 @@ import {
   ingestProjectFiles,
   inspectFile,
   canonicalizePath,
+  fileLooksLikeSecret,
   type ProjectFile,
 } from "./files.ts";
 import { ifMatchSatisfied, ownerFromRequest, parseIfMatch } from "./publish-owner.ts";
+import {
+  auditDocDetail,
+  decideDocOp,
+  emptySharedDoc,
+  parseDocOps,
+  serializeDocOps,
+  type SharedDoc,
+} from "./workspace-doc.ts";
 
 export type WorkspaceRole = "owner" | "viewer" | "editor";
 export type MemberRole = "viewer" | "editor";
@@ -20,7 +29,7 @@ export const PRESENCE_TTL_MS = 45_000;
 export const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1_000;
 export const MAX_AUDIT = 64;
 export const WORKSPACE_NOT_CONFIGURED =
-  "Collaborazione sul progetto non configurata. Serve un database durevole (DATABASE_URL con la migrazione 0006) e un’identità titolare. I ruoli vivono solo sul server.";
+  "Collaborazione sul progetto non configurata. Serve un database durevole (DATABASE_URL con le migrazioni 0006–0007) e un’identità titolare. I ruoli vivono solo sul server.";
 
 const MAX_BODY_BYTES = 1_600_000;
 const MAX_NAME = 80;
@@ -237,6 +246,49 @@ async function readWorkspace(sql: Sql, id: string): Promise<WorkspaceRow | null>
   return rows[0] ?? null;
 }
 
+type DocRow = {
+  content: string;
+  version: number;
+  ops_json: string;
+};
+
+async function ensureDoc(sql: Sql, workspaceId: string, now: number): Promise<SharedDoc> {
+  await sql.query(
+    "insert into fenix_workspace_docs (workspace_id, content, version, ops_json, updated_at) values ($1,'',0,'[]',to_timestamp($2 / 1000.0)) on conflict (workspace_id) do nothing",
+    [workspaceId, now],
+  );
+  const rows = await sql.query<DocRow>(
+    "select content, version::int as version, ops_json from fenix_workspace_docs where workspace_id=$1 limit 1",
+    [workspaceId],
+  );
+  const row = rows[0];
+  if (!row) return emptySharedDoc();
+  return {
+    content: typeof row.content === "string" ? row.content : "",
+    version: Number(row.version) || 0,
+    ops: parseDocOps(row.ops_json),
+  };
+}
+
+function publicDoc(doc: SharedDoc) {
+  return { content: doc.content, version: doc.version };
+}
+
+const docTails = new Map<string, Promise<unknown>>();
+
+function enqueueDoc<T>(workspaceId: string, work: () => Promise<T>): Promise<T> {
+  const prev = docTails.get(workspaceId) ?? Promise.resolve();
+  const next = prev.then(work, work);
+  docTails.set(
+    workspaceId,
+    next.then(
+      () => undefined,
+      () => undefined,
+    ),
+  );
+  return next;
+}
+
 type Access =
   | { state: "none" }
   | { state: "anon" }
@@ -449,7 +501,8 @@ export async function handleWorkspaceCollection(
   );
   if (existing[0]) {
     const files = parseTree(existing[0].tree_json);
-    return json(publicWorkspace(existing[0], "owner", files));
+    const doc = await ensureDoc(sql, existing[0].id, now);
+    return json(publicWorkspace(existing[0], "owner", files, { doc: publicDoc(doc) }));
   }
   const ingested = ingestProjectFiles(Array.isArray(body.files) ? (body.files as ProjectFile[]) : []);
   if (!ingested.files.length) return json({ error: "Albero vuoto o non valido." }, 400);
@@ -462,8 +515,13 @@ export async function handleWorkspaceCollection(
   );
   const created = rows[0];
   if (!created) return json({ error: "Workspace non salvato." }, 500);
+  await sql.query(
+    "insert into fenix_workspace_docs (workspace_id, content, version, ops_json, updated_at) values ($1,'',0,'[]',to_timestamp($2 / 1000.0)) on conflict (workspace_id) do nothing",
+    [created.id, now],
+  );
   await audit(sql, created.id, actorPrefix(userHash), "create", "Studio condiviso creato", now, randomUUID());
-  return json(publicWorkspace(created, "owner", ingested.files), 201);
+  const doc = await ensureDoc(sql, created.id, now);
+  return json(publicWorkspace(created, "owner", ingested.files, { doc: publicDoc(doc) }), 201);
 }
 
 export async function handleWorkspaceRequest(
@@ -486,7 +544,8 @@ export async function handleWorkspaceRequest(
     const files = parseTree(access.workspace.tree_json);
     const members = await listMembers(sql, access.workspace, access.userHash);
     const presence = await listPresence(sql, access.workspace, now);
-    const extra: Record<string, unknown> = { presence, members };
+    const doc = await ensureDoc(sql, access.workspace.id, now);
+    const extra: Record<string, unknown> = { presence, members, doc: publicDoc(doc) };
     if (access.role === "owner") {
       extra.invites = await listInvites(sql, access.workspace.id, now);
       extra.audit = await listAudit(sql, access.workspace.id);
@@ -570,7 +629,8 @@ export async function handleWorkspaceRequest(
       now,
       mintId(),
     );
-    return json(publicWorkspace(row, access.role, ingested.files), 200, {
+    const doc = await ensureDoc(sql, row.id, now);
+    return json(publicWorkspace(row, access.role, ingested.files, { doc: publicDoc(doc) }), 200, {
       ETag: `"${row.cas_version}"`,
     });
   }
@@ -618,7 +678,8 @@ export async function handleWorkspaceRequest(
       mintId(),
     );
     const files = parseTree(workspace.tree_json);
-    return json(publicWorkspace(workspace, invite.role, files, { joined: true }));
+    const doc = await ensureDoc(sql, workspaceId, now);
+    return json(publicWorkspace(workspace, invite.role, files, { joined: true, doc: publicDoc(doc) }));
   }
 
   const access = await resolveAccess(sql, request, workspaceId);
@@ -635,6 +696,71 @@ export async function handleWorkspaceRequest(
     );
     const presence = await listPresence(sql, access.workspace, now);
     return json({ ok: true, presence });
+  }
+
+  if (body.op === "doc") {
+    if (!canWrite(access.role)) return json({ error: "Sola lettura." }, 403);
+    const opId = String(body.opId || "").toLowerCase();
+    const kind = body.kind === "insert" || body.kind === "delete" ? body.kind : null;
+    const text = typeof body.text === "string" ? body.text : "";
+    const pos = Number(body.pos);
+    const base = Number(body.base);
+    if (!kind) return json({ error: "Operazione non valida." }, 400);
+    if (kind === "insert" && fileLooksLikeSecret(text)) {
+      return json({ error: "Testo rifiutato." }, 400);
+    }
+    return enqueueDoc(access.workspace.id, async () => {
+      for (let attempt = 0; attempt < 12; attempt += 1) {
+        const doc = await ensureDoc(sql, access.workspace.id, now);
+        const decision = decideDocOp(doc, { id: opId, kind, pos, text, base });
+        if (decision.status === "duplicate") {
+          return json({ ok: true, duplicate: true, ...publicDoc(doc) });
+        }
+        if (decision.status === "reject") {
+          if (decision.http === 409) {
+            await audit(
+              sql,
+              access.workspace.id,
+              actorPrefix(access.userHash),
+              "conflict",
+              "Appunti in conflitto",
+              now,
+              mintId(),
+            );
+          }
+          return json({ error: decision.error, ...publicDoc(doc) }, decision.http);
+        }
+        const saved = await sql.query<DocRow>(
+          "update fenix_workspace_docs set content=$1, version=$2, ops_json=$3, updated_at=to_timestamp($4 / 1000.0) where workspace_id=$5 and version=$6 returning content, version::int as version, ops_json",
+          [
+            decision.next.content,
+            decision.next.version,
+            serializeDocOps(decision.next.ops),
+            now,
+            access.workspace.id,
+            doc.version,
+          ],
+        );
+        if (!saved[0]) continue;
+        await audit(
+          sql,
+          access.workspace.id,
+          actorPrefix(access.userHash),
+          "doc",
+          auditDocDetail(decision.stored.kind, decision.stored.text.length),
+          now,
+          mintId(),
+        );
+        return json({
+          ok: true,
+          duplicate: false,
+          content: decision.next.content,
+          version: decision.next.version,
+        });
+      }
+      const latest = await ensureDoc(sql, access.workspace.id, now);
+      return json({ error: "Conflitto. Il documento non è cambiato.", ...publicDoc(latest) }, 409);
+    });
   }
 
   if (access.role !== "owner") return json({ error: "Solo il titolare gestisce i ruoli." }, 403);

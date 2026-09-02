@@ -250,9 +250,17 @@ export const FASE3_SCORECARD: ScoreDimension[] = [
         reproduce:
           "npm test -- src/lib/projects/workspace.test.ts src/lib/projects/workspace-browser.test.ts",
       },
+      {
+        id: "workspace-simultaneous-doc",
+        points: 1,
+        claim:
+          "Documento testuale condiviso server-authoritative: insert/delete con op id, base/versione, idempotenza, ordine stabile e convergenza tra due editor su parti indipendenti; stale o non trasformabili falliscono chiusi senza perdita parziale. Viewer e editor revocato 403. Nessun CRDT dichiarato.",
+        reproduce:
+          "npm test -- src/lib/projects/workspace.test.ts src/lib/projects/workspace-browser.test.ts",
+      },
     ],
     remaining:
-      "I ruoli coprono dati pubblicati e co-editing file del progetto con CAS; restano fuori l’editor simultaneo CRDT, i workspace organizzativi SSO e un APM centralizzato.",
+      "I 15 punti coprono ruoli, presenza, registro e un documento testuale con convergenza deterministica sul server. Restano fuori un CRDT su ogni file, i workspace organizzativi SSO e un APM centralizzato.",
   },
   {
     id: "generated-quality",

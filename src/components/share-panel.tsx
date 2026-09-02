@@ -214,7 +214,14 @@ export function SharePanel({
           <div className="mt-5 space-y-4">
             <p className="text-sm text-muted-foreground">
               {snap.members?.length ?? 1} nell’area · presenza {snap.presence?.length ?? 0}
+              {snap.doc ? ` · appunti v${snap.doc.version}` : ""}
             </p>
+            <a
+              href={`/condiviso/${encodeURIComponent(snap.id)}`}
+              className="inline-flex min-h-11 items-center justify-center rounded-full border border-border bg-card px-5 text-sm hover:bg-raised"
+            >
+              Apri appunti
+            </a>
             <div className="grid gap-2 sm:grid-cols-2">
               <Button
                 variant="secondary"

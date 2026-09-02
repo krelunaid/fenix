@@ -1,20 +1,35 @@
 {
-  "generatedAt": "2026-09-02T01:07:51.754Z",
+  "generatedAt": "2026-09-02T02:47:27.073Z",
   "shots": [
     {
       "name": "workspace-D.png",
-      "sha256": "1eee42ecd90cba214c92dc9a958258cf09281cebd0fb5e42beb92d0a98a66d05",
-      "bytes": 88589
+      "sha256": "05f7a5eb358fb92224eb5ed59bf7b22210645921d383adb9fab3146705769fdb",
+      "bytes": 92749
     },
     {
       "name": "workspace-T.png",
-      "sha256": "7826d2c8ae75802091d7baacfb938d245cfe248800e93832a0d672ce7fea1832",
-      "bytes": 81382
+      "sha256": "64b8b9906860aa4fd7a970db30f353a2a56fc20826eb87ba9167aa8f1139b2ac",
+      "bytes": 81917
     },
     {
       "name": "workspace-M.png",
-      "sha256": "dd6defc9b76ae652226cdfa28873dff8e5fd1955ca264f5f7608fe93da8449bb",
-      "bytes": 42393
+      "sha256": "8b30d1dcb2ec818c40a9ff3f4bb1b8bb6037f1ea82e9de914d1e5ba61a8b75c9",
+      "bytes": 42842
+    },
+    {
+      "name": "coedit-D.png",
+      "sha256": "03d369d48cd4e81e5af36a725ff250e60e3896f409d6af5bf618aa3ce18469e9",
+      "bytes": 97315
+    },
+    {
+      "name": "coedit-T.png",
+      "sha256": "0e5a2735b08713d3995fce343397488c6fef7d63eeb6afd3bf56bbdb1021f729",
+      "bytes": 58487
+    },
+    {
+      "name": "coedit-M.png",
+      "sha256": "71c58ea5551c12cac27fe63710d647179674ef725787f7f26cc375f29f5a0cda",
+      "bytes": 42589
     }
   ]
 }

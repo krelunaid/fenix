@@ -34,7 +34,7 @@ Le app generate (Grottaglie, Catenaria, …) si scaricano da **Pubblica** (ZIP /
 
 Le app pubblicate possono usare **Collabora sui dati**: il titolare genera link revocabili in sola lettura o modifica per un archivio cloud condiviso. La capability viene mostrata una volta, conservata nel database soltanto come hash e scambiata con un cookie HttpOnly limitato all'API dati. Non servono account esterni.
 
-Lo **studio condiviso** è un workspace progetto distinto: il titolare invita viewer/editor, il viewer legge l'albero, editor e titolare scrivono file con If-Match CAS e conflitti fail-closed. Inviti one-shot hash-only, revoca immediata, presenza TTL, registro redatto. Serve `DATABASE_URL` con la migrazione `0006_project_workspaces`. Non è un editor simultaneo tipo CRDT e non dichiara parità con Emergent.
+Lo **studio condiviso** è un workspace progetto distinto: il titolare invita viewer/editor, il viewer legge albero e appunti, editor e titolare scrivono file con If-Match CAS e un documento testuale con insert/delete server-authoritative (op id, base/versione, idempotenza). Parti indipendenti convergono; conflitti stale falliscono chiusi. Inviti one-shot hash-only, revoca immediata, presenza TTL, registro redatto. Serve `DATABASE_URL` con le migrazioni `0006_project_workspaces` e `0007_workspace_shared_doc`. Non è un CRDT su ogni file e non dichiara parità con Emergent.
 
 Un brief **full-stack** esplicito esporta un'app avviabile con `npm start`: frontend e API Node+SQLite sulla stessa origine, `GET /health`, `fenix.deploy.json` e migrazioni in `backend/migrations/` (forward-only, idempotenti). Il codice server del modello non entra nel tree. Non è un database distribuito.
 
