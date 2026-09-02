@@ -1,0 +1,60 @@
+{
+  "against": "7812483c7d7066bf62d4a59a3818dd91661237ab",
+  "slice": "semantic asset diversity + material depth",
+  "visualScoreHonest": 92,
+  "externalParity": false,
+  "externalBenchmark": "benchmark esterno non disponibile",
+  "claim100": false,
+  "independentPrior": 91,
+  "axes": {
+    "navIcons": {
+      "before": 92,
+      "after": 92,
+      "note": "Unchanged: 24-box round-join craft nav, bbox/overflow gate D/T/M."
+    },
+    "typeSystems": {
+      "before": 88,
+      "after": 88,
+      "note": "Unchanged: six display faces, device-aware chrome."
+    },
+    "imagery": {
+      "before": 82,
+      "after": 90,
+      "note": "Coat is two panels with a V opening, shoulder shelf, waist suppression, buttons, pockets and cuffs on a dress form — not a capsule. Trousers hang from a hanger with waistband, crease, cuffs and a gap. Dress is a column with bodice; Osso skirt is pleated. Ricciola/gambero/ostrica/tonno are four different platings. Atelier cover is a courtyard well; Olivo is a gnarled trunk with organic canopy; Fienile is a planked barn; contact sheet is 2x2 distinct scenes. Still procedural SVG, not photography."
+    },
+    "semanticDiversity": {
+      "before": 55,
+      "after": 92,
+      "note": "7812483 tickets were off-by-one (Ricciola showed the next dish) and reused one pink-slice composition. Now each look/ticket/plate title matches data-garment/data-dish/data-scene. Canvas hue/luminance fingerprints require pairwise distance so identical compositions fail. Browser gate would fail 7812483."
+    },
+    "emptySpaceHierarchy": {
+      "before": 90,
+      "after": 90,
+      "note": "Lookbook featured garment, magazine cover+stack, crudo hero+tickets kept. Titles readable D/T/M, no card overlap."
+    },
+    "opsDesk": {
+      "before": 90,
+      "after": 90,
+      "note": "Unchanged."
+    },
+    "interaction": {
+      "before": 90,
+      "after": 90,
+      "note": "in prova / data-state=on kept. Hover/pressed/loading/empty/success gates kept D/T/M."
+    }
+  },
+  "nonTautological": [
+    "GEOMETRIC_REGRESSIONS rejects 7812483 oval coat c16-28 48-40, tube trousers v210c0 16-8 24, blob gambero c20-28 70-40, blob ostrica M250 210c-20-36",
+    "fashion slots 0-3 require four distinct data-garment values (coat/dress/trousers/skirt)",
+    "coat requires data-part=shoulder and waist, shoulder getBBox width > 1.08 × waist (fails on a capsule)",
+    "trousers require waistband, crease, two data-part=leg with a gap, cuff, hanger",
+    "crudo tickets: title Ricciola|Gambero|Ostrica|Tonno must equal data-dish, four unique dishes (fails 7812483 off-by-one)",
+    "ticket thumbs D/T: canvas hue/luminance fingerprint pairwise distance >= 48 (fails reused pink slices)",
+    "look sils D/T and atelier plates D/T: fingerprint pairwise distance",
+    "gambero requires antenna+shell; ostrica requires shell; tonno requires fat-line and deep-red fills",
+    "dish fill-set Jaccard < 0.72 across ricciola/gambero/ostrica/tonno",
+    "atelier lastre: title Pozzo|Olivo|Fienile must equal data-scene, unique across plates",
+    "look/ticket/plate h2 height >= 14 and width >= 48; look cards overlap area < 24px",
+    "EXTERNAL_BENCHMARK.available === false"
+  ]
+}

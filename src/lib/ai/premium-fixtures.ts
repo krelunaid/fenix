@@ -441,9 +441,10 @@ function renderHome(){
   var html='<div class="hero">'+hero+'</div>';
   html+='<div class="card span"><p class="kicker">${spec.kicker}</p><h2>${spec.rows.length} in casa</h2><p class="notes">${spec.place}. Tocca una riga, registra, archivia.</p></div>';
   if(${JSON.stringify(spec.family)}==="fashion"){
+    var plates=[hero].concat(arts);
     html+='<div class="lookbook">';
     data.items.forEach(function(e,i){
-      html+='<article class="look" data-id="'+e.id+'"><div class="sil">'+(arts[i%arts.length]||hero)+'</div><h2>'+e.title+'</h2><p>'+e.kicker+' · '+e.note+'</p></article>';
+      html+='<article class="look" data-id="'+e.id+'"><div class="sil">'+(plates[i%plates.length]||hero)+'</div><h2>'+e.title+'</h2><p>'+e.kicker+' · '+e.note+'</p></article>';
     });
     html+="</div>";
     return html;

@@ -24,8 +24,8 @@ export type ImageryProvenance = {
 export const DOMAIN_IMAGERY_PROVENANCE: ImageryProvenance[] = [
   { id: "svg-perfume-0", family: "perfume", variant: 0, license: "CC0", source: "repository-native SVG originale Fenix", year: 2026, subject: "flacone in vetro scuro e tappo oro", notes: "Nessun asset Apple/Emergent. Nessun hotlink." },
   { id: "svg-perfume-1", family: "perfume", variant: 1, license: "CC0", source: "repository-native SVG originale Fenix", year: 2026, subject: "cilindro di vetro ghiaccio e nebbia", notes: "Nessun asset Apple/Emergent. Nessun hotlink." },
-  { id: "svg-fashion-0", family: "fashion", variant: 0, license: "CC0", source: "repository-native SVG originale Fenix", year: 2026, subject: "cappotto sartoriale con bavero, maniche e fodera carminio", notes: "Nessun asset Apple/Emergent. Nessun hotlink. Capi riconoscibili, non sagome." },
-  { id: "svg-fashion-1", family: "fashion", variant: 1, license: "CC0", source: "repository-native SVG originale Fenix", year: 2026, subject: "abito colonna in osso con cuciture, pieghe e manichino", notes: "Nessun asset Apple/Emergent. Nessun hotlink. Capi riconoscibili, non sagome." },
+  { id: "svg-fashion-0", family: "fashion", variant: 0, license: "CC0", source: "repository-native SVG originale Fenix", year: 2026, subject: "cappotto sartoriale su manichino, baveri, pieghe e cuciture", notes: "Nessun asset Apple/Emergent. Nessun hotlink. Capi riconoscibili, non capsule." },
+  { id: "svg-fashion-1", family: "fashion", variant: 1, license: "CC0", source: "repository-native SVG originale Fenix", year: 2026, subject: "abito colonna in osso con pieghe, cuciture e manichino", notes: "Nessun asset Apple/Emergent. Nessun hotlink. Capi riconoscibili, non sagome." },
   { id: "svg-booking-0", family: "booking", variant: 0, license: "CC0", source: "repository-native SVG originale Fenix", year: 2026, subject: "sala con poltrona, finestra e orologio", notes: "Nessun asset Apple/Emergent. Nessun hotlink." },
   { id: "svg-booking-1", family: "booking", variant: 1, license: "CC0", source: "repository-native SVG originale Fenix", year: 2026, subject: "tavolo da taglio, lino e forbici", notes: "Nessun asset Apple/Emergent. Nessun hotlink." },
   { id: "svg-ops-0", family: "ops", variant: 0, license: "CC0", source: "repository-native SVG originale Fenix", year: 2026, subject: "ledger, barre e finestra nord", notes: "Nessun asset Apple/Emergent. Nessun hotlink." },
@@ -35,12 +35,12 @@ export const DOMAIN_IMAGERY_PROVENANCE: ImageryProvenance[] = [
   { id: "svg-hospitality-0", family: "hospitality", variant: 0, license: "CC0", source: "repository-native SVG originale Fenix", year: 2026, subject: "camera in pietra, letto e finestra sul pozzo", notes: "Nessun asset Apple/Emergent. Nessun hotlink." },
   { id: "svg-hospitality-1", family: "hospitality", variant: 1, license: "CC0", source: "repository-native SVG originale Fenix", year: 2026, subject: "suite d'hotel, lampada oro e champagne", notes: "Nessun asset Apple/Emergent. Nessun hotlink." },
   { id: "svg-food-0", family: "food", variant: 0, license: "CC0", source: "repository-native SVG originale Fenix", year: 2026, subject: "piatto al passo, plin e vino", notes: "Nessun asset Apple/Emergent. Nessun hotlink." },
-  { id: "svg-food-1", family: "food", variant: 1, license: "CC0", source: "repository-native SVG originale Fenix", year: 2026, subject: "crudo di ricciola su marmo, agrume in spicchi ed erba di mare", notes: "Nessun asset Apple/Emergent. Nessun hotlink. Impiattamento credibile, non ovali." },
-  { id: "svg-editorial-0", family: "editorial", variant: 0, license: "CC0", source: "repository-native SVG originale Fenix", year: 2026, subject: "lastra del pozzo su carta da rivista, olivo e fienile", notes: "Nessun asset Apple/Emergent. Nessun hotlink. Scene fotografiche, non campiture." },
+  { id: "svg-food-1", family: "food", variant: 1, license: "CC0", source: "repository-native SVG originale Fenix", year: 2026, subject: "crudo di ricciola, gambero, ostrica e tonno, impiattamenti distinti", notes: "Nessun asset Apple/Emergent. Nessun hotlink. Quattro piatti semanticamente diversi." },
+  { id: "svg-editorial-0", family: "editorial", variant: 0, license: "CC0", source: "repository-native SVG originale Fenix", year: 2026, subject: "lastra del pozzo, olivo, fienile e torchio su carta da rivista", notes: "Nessun asset Apple/Emergent. Nessun hotlink. Scene fotografiche distinte, non alberi ripetuti." },
   { id: "svg-editorial-1", family: "editorial", variant: 1, license: "CC0", source: "repository-native SVG originale Fenix", year: 2026, subject: "studio notturno, cornice e segnale rosso", notes: "Nessun asset Apple/Emergent. Nessun hotlink. Scene fotografiche, non campiture." },
 ];
 
-/** Exact 7c3245c geometric leftovers. A realism gate that still matches these is tautological. */
+/** Exact leftovers from 7c3245c and 7812483. A realism gate that still matches these is tautological. */
 export const GEOMETRIC_REGRESSIONS: RegExp[] = [
   /M250 46l54-16 54 16 44 36/,
   /M232 86h176l22 34H210z/,
@@ -50,6 +50,10 @@ export const GEOMETRIC_REGRESSIONS: RegExp[] = [
   /width="340" height="230" fill="#c9b496"/,
   /width="304" height="194" fill="#6a5e52"/,
   /width="234" height="140" fill="#6a5e52"/,
+  /c16-28 48-40 72-28 24-12 56 0 72 28/,
+  /v210c0 16-8 24-20 24s-22-8-22-24V186/,
+  /c20-28 70-40 110-18 16 10 8 28-8 34/,
+  /M250 210c-20-36 8-70 46-74 36-4 70 22/,
 ];
 
 export type MaterialSignature = {
@@ -58,19 +62,25 @@ export type MaterialSignature = {
   marks: number;
   parts: string[];
   garment: string | null;
+  dish: string | null;
   scenes: string[];
+  fills: string[];
 };
 
 export function materialSignature(svg: string): MaterialSignature {
   const parts = [...String(svg).matchAll(/\bdata-part="([^"]+)"/g)].map((m) => m[1]!);
   const garment = String(svg).match(/\bdata-garment="([^"]+)"/)?.[1] || null;
+  const dish = String(svg).match(/\bdata-dish="([^"]+)"/)?.[1] || null;
   const scenes = [...String(svg).matchAll(/\bdata-scene="([^"]+)"/g)].map((m) => m[1]!);
+  const fills = [...new Set([...String(svg).matchAll(/\bstop-color="(#[0-9a-fA-F]{3,8})"/g)].map((m) => m[1]!.toLowerCase()))];
   return {
     paths: (String(svg).match(/<path\b/g) || []).length,
     gradients: (String(svg).match(/<(?:linear|radial)Gradient\b/g) || []).length,
     parts: [...new Set(parts)],
     garment,
+    dish,
     scenes: [...new Set(scenes)],
+    fills,
     marks: (String(svg).match(/<(?:path|ellipse|circle|polygon)\b/g) || []).length,
   };
 }
@@ -88,7 +98,7 @@ function wrap(id: string, alt: string, inner: string, slot = 0, extraDefs = ""):
   const bits = id.split("-");
   const family = bits[1] || "";
   const variant = bits[2] || "0";
-  return `<svg class="domain-art" data-imagery="domain" data-family="${esc(family)}" data-variant="${esc(variant)}" data-provenance="${esc(id)}" data-slot="${slot}" viewBox="0 0 640 420" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${esc(alt)}" preserveAspectRatio="xMidYMid slice"><defs><filter id="${gid}" x="-10%" y="-10%" width="120%" height="120%"><feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="4" seed="${11 + slot * 5}" result="n"/><feColorMatrix in="n" type="saturate" values="0" result="g"/><feComponentTransfer in="g" result="g2"><feFuncA type="table" tableValues="0 0.26"/></feComponentTransfer><feBlend in="SourceGraphic" in2="g2" mode="multiply"/></filter><filter id="${gid}sh"><feDropShadow dx="0" dy="12" stdDeviation="14" flood-opacity=".34"/></filter><radialGradient id="${gid}vg" cx=".48" cy=".42" r=".78"><stop offset=".5" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".32"/></radialGradient>${extraDefs}</defs><g filter="url(#${gid})">${inner}</g><rect width="640" height="420" fill="url(#${gid}vg)" pointer-events="none"/></svg>`;
+  return `<svg class="domain-art" data-imagery="domain" data-family="${esc(family)}" data-variant="${esc(variant)}" data-provenance="${esc(id)}" data-slot="${slot}" viewBox="0 0 640 420" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${esc(alt)}" preserveAspectRatio="xMidYMid slice"><defs><filter id="${gid}" x="-10%" y="-10%" width="120%" height="120%"><feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="4" seed="${11 + slot * 5}" result="n"/><feColorMatrix in="n" type="saturate" values="0" result="g"/><feComponentTransfer in="g" result="g2"><feFuncA type="table" tableValues="0 0.26"/></feComponentTransfer><feBlend in="SourceGraphic" in2="g2" mode="multiply"/></filter><filter id="${gid}sh"><feDropShadow dx="0" dy="12" stdDeviation="14" flood-opacity=".34"/></filter><radialGradient id="${gid}vg" cx=".48" cy=".42" r=".78"><stop offset=".5" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".32"/></radialGradient>${extraDefs}</defs><g filter="url(#${gid})">${inner}</g>${family === "editorial" ? `<rect width="640" height="420" fill="#6a5a48" opacity=".07" pointer-events="none"/><rect width="640" height="420" fill="#f4ead8" opacity=".05" pointer-events="none"/>` : ""}<rect width="640" height="420" fill="url(#${gid}vg)" pointer-events="none"/></svg>`;
 }
 
 function perfumeArt(variant: 0 | 1, slot: number, alt: string): string {
@@ -143,14 +153,19 @@ function atelierSet(ink: boolean, s: number): string {
 
 function dressForm(cx: number, ink: boolean): string {
   const canvas = ink ? "#c9b496" : "#3a3028";
+  const shade = ink ? "#a89070" : "#241c18";
   const metal = ink ? "#e8dcc8" : "#1a1614";
   return `<g data-part="dress-form">
-    <ellipse cx="${cx}" cy="368" rx="46" ry="9" fill="${metal}" opacity=".85"/>
-    <ellipse cx="${cx}" cy="360" rx="28" ry="5" fill="${metal}"/>
-    <rect x="${cx - 5}" y="250" width="10" height="112" rx="2" fill="${metal}"/>
-    <path d="M${cx - 32} 86c10-26 54-26 64 0l5 14c6 62-4 118-12 154-8 10-42 10-50 0-8-36-18-92-12-154z" fill="${canvas}"/>
-    <ellipse cx="${cx}" cy="78" rx="16" ry="9" fill="${canvas}"/>
-    <ellipse cx="${cx}" cy="74" rx="11" ry="5" fill="${metal}"/>
+    <ellipse cx="${cx}" cy="394" rx="56" ry="8" fill="${metal}" opacity=".88"/>
+    <path d="M${cx} 270 L${cx - 44} 394 M${cx} 270 L${cx + 44} 394 M${cx} 270 L${cx} 394" stroke="${metal}" stroke-width="3.2" fill="none" stroke-linecap="round"/>
+    <ellipse cx="${cx}" cy="270" rx="11" ry="4.5" fill="${metal}"/>
+    <rect x="${cx - 4}" y="248" width="8" height="24" fill="${metal}"/>
+    <ellipse cx="${cx}" cy="250" rx="40" ry="9" fill="${canvas}"/>
+    <path d="M${cx - 50} 104 L${cx - 54} 114 C${cx - 52} 142 ${cx - 46} 164 ${cx - 40} 176 C${cx - 32} 198 ${cx - 28} 218 ${cx - 26} 232 C${cx - 30} 242 ${cx - 38} 248 ${cx - 40} 250 L${cx + 40} 250 C${cx + 38} 248 ${cx + 30} 242 ${cx + 26} 232 C${cx + 28} 218 ${cx + 32} 198 ${cx + 40} 176 C${cx + 46} 164 ${cx + 52} 142 ${cx + 54} 114 L${cx + 50} 104 C${cx + 26} 94 ${cx - 26} 94 ${cx - 50} 104Z" fill="${canvas}"/>
+    <path d="M${cx + 8} 114 C${cx + 20} 150 ${cx + 16} 200 ${cx + 12} 246" fill="${shade}" opacity=".35"/>
+    <rect x="${cx - 8}" y="82" width="16" height="24" rx="3" fill="${canvas}"/>
+    <ellipse cx="${cx}" cy="80" rx="15" ry="6.5" fill="${canvas}"/>
+    <ellipse cx="${cx}" cy="78" rx="11" ry="4" fill="${metal}"/>
   </g>`;
 }
 
@@ -158,101 +173,146 @@ function coatOnForm(cx: number, s: number, ink: boolean): string {
   const stitch = ink ? "#1a1614" : "#c9b496";
   const button = ink ? "#1a1614" : "#f6f1ea";
   const hole = ink ? "#c9b496" : "#161412";
+  const fold = ink ? "#000" : "#fff";
   return `${dressForm(cx, ink)}
   <g data-part="garment" data-garment="coat">
     <g data-part="sleeve">
-      <path d="M${cx - 78} 108c-18 14-36 52-42 96-4 28 2 58 16 64l22 4c6-36 14-92 22-132 2-10-2-22-18-32z" fill="url(#slv${s})"/>
-      <path d="M${cx - 108} 262c8 6 28 8 40 2l-4 14c-16 4-36 2-44-6z" fill="url(#fab${s})"/>
-      <path d="M${cx - 96} 168c-6 18-8 40-6 62" fill="none" stroke="${stitch}" stroke-width="1" opacity=".35"/>
-      <path d="M${cx + 78} 108c18 14 36 52 42 96 4 28-2 58-16 64l-22 4c-6-36-14-92-22-132-2-10 2-22 18-32z" fill="url(#slv${s})"/>
-      <path d="M${cx + 108} 262c-8 6-28 8-40 2l4 14c16 4 36 2 44-6z" fill="url(#fab${s})"/>
-      <path d="M${cx + 96} 168c6 18 8 40 6 62" fill="none" stroke="${stitch}" stroke-width="1" opacity=".35"/>
+      <path d="M${cx - 56} 108 L${cx - 92} 128 L${cx - 108} 186 L${cx - 112} 236 L${cx - 98} 258 L${cx - 76} 254 L${cx - 72} 176 L${cx - 58} 122 Z" fill="url(#slv${s})"/>
+      <path data-part="cuff" d="M${cx - 114} 246 L${cx - 76} 254 L${cx - 74} 268 L${cx - 118} 258 Z" fill="url(#fab${s})"/>
+      <path data-part="fold" d="M${cx - 100} 186 L${cx - 86} 192 L${cx - 76} 184" fill="none" stroke="${fold}" stroke-width="1.4" opacity=".25"/>
+      <path d="M${cx - 90} 150 L${cx - 98} 230" fill="none" stroke="${stitch}" stroke-width="1" opacity=".4"/>
+      <path d="M${cx + 56} 108 L${cx + 92} 128 L${cx + 108} 186 L${cx + 112} 236 L${cx + 98} 258 L${cx + 76} 254 L${cx + 72} 176 L${cx + 58} 122 Z" fill="url(#slv${s})"/>
+      <path data-part="cuff" d="M${cx + 114} 246 L${cx + 76} 254 L${cx + 74} 268 L${cx + 118} 258 Z" fill="url(#fab${s})"/>
+      <path data-part="fold" d="M${cx + 100} 186 L${cx + 86} 192 L${cx + 76} 184" fill="none" stroke="${fold}" stroke-width="1.4" opacity=".25"/>
+      <path d="M${cx + 90} 150 L${cx + 98} 230" fill="none" stroke="${stitch}" stroke-width="1" opacity=".4"/>
     </g>
-    <path data-part="body" d="M${cx - 72} 100c16-28 48-40 72-28 24-12 56 0 72 28 10 36 12 110 8 168-10 28-40 48-80 50s-70-22-80-50c-4-58-2-132 8-168z" fill="url(#fab${s})"/>
-    <path data-part="lining" d="M${cx - 70} 300c18 28 48 42 70 44 22-2 52-16 70-44l-8 28c-18 22-48 34-62 34s-44-12-62-34z" fill="url(#lin${s})"/>
+    <path data-part="lining" d="M${cx - 18} 92 L${cx + 18} 92 L${cx + 36} 168 L${cx + 8} 186 L${cx - 8} 186 L${cx - 36} 168 Z" fill="url(#lin${s})"/>
+    <path d="M${cx - 8} 96 L${cx - 6} 176 L${cx + 10} 182 L${cx + 8} 96Z" fill="#000" opacity=".28"/>
+    <path d="M${cx - 62} 336 L${cx - 58} 352 L${cx + 58} 352 L${cx + 62} 336 Z" fill="url(#lin${s})"/>
+    <path data-part="body" d="M${cx - 8} 92 L${cx - 54} 100 L${cx - 82} 112 L${cx - 86} 124 L${cx - 78} 168 L${cx - 64} 226 L${cx - 58} 268 L${cx - 66} 336 L${cx - 66} 344 L${cx + 8} 344 L${cx + 10} 186 L${cx - 8} 168 Z" fill="url(#fab${s})"/>
+    <path d="M${cx + 8} 92 L${cx + 54} 100 L${cx + 82} 112 L${cx + 86} 124 L${cx + 78} 168 L${cx + 64} 226 L${cx + 58} 268 L${cx + 66} 336 L${cx + 66} 344 L${cx - 4} 344 L${cx - 6} 190 L${cx + 12} 176 Z" fill="url(#fab${s})"/>
+    <path data-part="shoulder" d="M${cx - 86} 112 L${cx - 54} 100 L${cx + 54} 100 L${cx + 86} 112 L${cx + 78} 122 L${cx - 78} 122 Z" fill="url(#slv${s})"/>
+    <path data-part="waist" d="M${cx - 64} 226 L${cx + 64} 226" fill="none" stroke="${stitch}" stroke-width="1.3" opacity=".45"/>
     <g data-part="lapel">
-      <path d="M${cx - 2} 84l-18-10-16 18-22 86 28 14 28-78z" fill="url(#fab${s})" stroke="${stitch}" stroke-width="0.8" opacity=".95"/>
-      <path d="M${cx + 2} 84l18-10 16 18 22 86-28 14-28-78z" fill="url(#fab${s})" stroke="${stitch}" stroke-width="0.8"/>
-      <path d="M${cx - 20} 92l14 12 8-16zM${cx + 20} 92l-14 12-8-16z" fill="url(#lin${s})"/>
+      <path d="M${cx - 8} 92 L${cx - 28} 78 L${cx - 44} 118 L${cx - 38} 168 L${cx - 8} 168 Z" fill="url(#fab${s})" stroke="${stitch}" stroke-width="0.9"/>
+      <path d="M${cx + 8} 92 L${cx + 28} 78 L${cx + 44} 118 L${cx + 38} 168 L${cx + 12} 176 Z" fill="url(#fab${s})" stroke="${stitch}" stroke-width="0.9"/>
+      <path d="M${cx - 26} 96 L${cx - 10} 118 L${cx - 18} 84 Z M${cx + 26} 96 L${cx + 12} 118 L${cx + 18} 84 Z" fill="url(#lin${s})"/>
     </g>
-    <path data-part="collar" d="M${cx - 22} 72c14-16 30-16 44 0l-10 14-12-8-12 8z" fill="url(#fab${s})"/>
-    <g data-part="seam" fill="none" stroke="${stitch}" stroke-width="1" opacity=".45">
-      <path d="M${cx - 40} 128c-6 50-4 110 6 168"/>
-      <path d="M${cx + 40} 128c6 50 4 110-6 168"/>
-      <path d="M${cx} 118v200" opacity=".4"/>
+    <path data-part="collar" d="M${cx - 22} 72 L${cx} 62 L${cx + 22} 72 L${cx + 12} 90 L${cx} 80 L${cx - 12} 90 Z" fill="url(#fab${s})"/>
+    <g data-part="seam" fill="none" stroke="${stitch}" stroke-width="1" opacity=".5">
+      <path d="M${cx - 48} 124 L${cx - 58} 226 L${cx - 52} 336"/>
+      <path d="M${cx + 48} 124 L${cx + 58} 226 L${cx + 52} 336"/>
+      <path d="M${cx + 8} 186 L${cx + 8} 344"/>
     </g>
     <g data-part="pocket">
-      <rect x="${cx - 62}" y="228" width="44" height="9" rx="1.5" fill="none" stroke="${stitch}" stroke-width="1.3"/>
-      <rect x="${cx + 18}" y="228" width="44" height="9" rx="1.5" fill="none" stroke="${stitch}" stroke-width="1.3"/>
-      <path d="M${cx - 62} 228h44M${cx + 18} 228h44" stroke="${stitch}" stroke-width="2.2"/>
+      <rect x="${cx - 58}" y="252" width="40" height="7" rx="1" fill="none" stroke="${stitch}" stroke-width="1.3"/>
+      <rect x="${cx + 18}" y="252" width="40" height="7" rx="1" fill="none" stroke="${stitch}" stroke-width="1.3"/>
+      <path d="M${cx - 58} 252h40 M${cx + 18} 252h40" stroke="${stitch}" stroke-width="2"/>
     </g>
     <g data-part="button">
-      ${[168, 204, 240].map((y) => `<circle cx="${cx + 10}" cy="${y}" r="5.2" fill="${button}"/><circle cx="${cx + 8.4}" cy="${y - 1.4}" r="1.1" fill="${hole}"/><circle cx="${cx + 11.6}" cy="${y + 1.2}" r="1.1" fill="${hole}"/>`).join("")}
+      ${[186, 226, 266, 306].map((y) => `<circle cx="${cx + 14}" cy="${y}" r="4.6" fill="${button}"/><circle cx="${cx + 12.8}" cy="${y - 1.2}" r="1" fill="${hole}"/>`).join("")}
     </g>
-    <path d="M${cx - 50} 120c40-30 100-28 118 8" fill="url(#she${s})"/>
+    <path data-part="hem" d="M${cx - 66} 336 L${cx - 66} 344 L${cx + 66} 344 L${cx + 66} 336 Z" fill="url(#lin${s})"/>
+    <path data-part="fold" d="M${cx - 30} 140 L${cx - 26} 226 L${cx - 34} 320" fill="none" stroke="${fold}" stroke-width="6" opacity=".16"/>
+    <path d="M${cx + 22} 150 L${cx + 18} 240 L${cx + 26} 318" fill="none" stroke="${fold}" stroke-width="4" opacity=".1"/>
+    <path d="M${cx - 70} 116 L${cx - 20} 104 L${cx + 48} 110 L${cx + 72} 128" fill="url(#she${s})"/>
+    <ellipse cx="${cx - 70}" cy="130" rx="18" ry="10" fill="#000" opacity=".08"/>
+    <ellipse cx="${cx + 70}" cy="130" rx="18" ry="10" fill="#000" opacity=".08"/>
   </g>
-  <ellipse cx="${cx}" cy="372" rx="92" ry="14" fill="#000" opacity=".2"/>`;
+  <ellipse cx="${cx}" cy="396" rx="90" ry="10" fill="#000" opacity=".18"/>`;
 }
 
 function columnDress(cx: number, s: number, ink: boolean): string {
   const stitch = ink ? "#1a1614" : "#c9b496";
   const strap = ink ? "#f3ece3" : "#161412";
+  const fold = ink ? "#000" : "#fff";
   return `${dressForm(cx, ink)}
   <g data-part="garment" data-garment="dress">
-    <path d="M${cx - 16} 92c-4 8-8 8-18 6l-8 14c8 6 14 8 20 8h44c6 0 12-2 20-8l-8-14c-10 2-14 2-18-6z" fill="url(#fab${s})"/>
-    <path data-part="sleeve" d="M${cx - 42} 110c-16 10-22 36-16 58l18 4c2-16 8-36 14-50zM${cx + 42} 110c16 10 22 36 16 58l-18 4c-2-16-8-36-14-50z" fill="url(#slv${s})"/>
-    <path d="M${cx - 36} 118c8 10 18 14 36 14s28-4 36-14c6 40 10 110 4 196-8 22-24 36-40 38s-32-16-40-38c-6-86-2-156 4-196z" fill="url(#fab${s})"/>
-    <path data-part="seam" d="M${cx} 118v228" fill="none" stroke="${stitch}" stroke-width="1.1"/>
-    <path d="M${cx - 18} 156c12 10 24 10 36 0" fill="none" stroke="${stitch}" stroke-width="1.3"/>
-    <path d="M${cx - 22} 210h44M${cx - 18} 248h36" stroke="${stitch}" stroke-width="0.9" opacity=".5"/>
-    <path data-part="lining" d="M${cx - 34} 330c10 16 24 24 34 24s24-8 34-24l-6 18c-8 14-20 20-28 20s-20-6-28-20z" fill="url(#lin${s})"/>
-    <circle cx="${cx + 8}" cy="178" r="2.6" fill="${strap}"/>
-    <circle cx="${cx + 8}" cy="206" r="2.6" fill="${strap}"/>
-    <circle cx="${cx + 8}" cy="234" r="2.6" fill="${strap}"/>
-    <path d="M${cx - 24} 130c24-18 56-16 70 6" fill="url(#she${s})"/>
+    <path data-part="sleeve" d="M${cx - 46} 108 C${cx - 64} 122 ${cx - 70} 150 ${cx - 58} 168 L${cx - 40} 164 C${cx - 46} 146 ${cx - 44} 124 ${cx - 32} 114Z M${cx + 46} 108 C${cx + 64} 122 ${cx + 70} 150 ${cx + 58} 168 L${cx + 40} 164 C${cx + 46} 146 ${cx + 44} 124 ${cx + 32} 114Z" fill="url(#slv${s})"/>
+    <path data-part="bodice" d="M${cx - 40} 102 C${cx - 48} 118 ${cx - 46} 138 ${cx - 36} 154 C${cx - 28} 168 ${cx - 22} 176 ${cx - 20} 180 L${cx + 20} 180 C${cx + 22} 176 ${cx + 28} 168 ${cx + 36} 154 C${cx + 46} 138 ${cx + 48} 118 ${cx + 40} 102 C${cx + 16} 92 ${cx - 16} 92 ${cx - 40} 102Z" fill="url(#fab${s})"/>
+    <path d="M${cx - 18} 96 C${cx - 22} 88 ${cx - 16} 84 ${cx - 10} 90 L${cx - 14} 104Z M${cx + 18} 96 C${cx + 22} 88 ${cx + 16} 84 ${cx + 10} 90 L${cx + 14} 104Z" fill="${strap}"/>
+    <path data-part="waist" d="M${cx - 22} 178 L${cx + 22} 178 L${cx + 20} 186 L${cx - 20} 186Z" fill="url(#lin${s})"/>
+    <path data-part="column" d="M${cx - 22} 184 C${cx - 28} 230 ${cx - 30} 280 ${cx - 32} 336 L${cx - 28} 348 L${cx - 14} 344 L${cx} 348 L${cx + 14} 344 L${cx + 28} 348 L${cx + 32} 336 C${cx + 30} 280 ${cx + 28} 230 ${cx + 22} 184Z" fill="url(#fab${s})"/>
+    <g data-part="fold" fill="none" stroke="${fold}" stroke-width="1.3" opacity=".22">
+      <path d="M${cx - 16} 190 C${cx - 18} 250 ${cx - 20} 300 ${cx - 22} 340"/>
+      <path d="M${cx} 186 C${cx - 2} 250 ${cx} 300 ${cx} 346"/>
+      <path d="M${cx + 16} 190 C${cx + 18} 250 ${cx + 20} 300 ${cx + 22} 340"/>
+    </g>
+    <path data-part="seam" d="M${cx} 180 v166" fill="none" stroke="${stitch}" stroke-width="1"/>
+    <path d="M${cx - 16} 210 C${cx} 218 ${cx + 16} 210 ${cx + 16} 210" fill="none" stroke="${stitch}" stroke-width="1" opacity=".45"/>
+    <path data-part="hem" d="M${cx - 32} 336 L${cx - 28} 352 C${cx - 10} 358 ${cx + 10} 358 ${cx + 28} 352 L${cx + 32} 336Z" fill="url(#lin${s})"/>
+    <path data-part="lining" d="M${cx - 26} 344 C${cx - 8} 352 ${cx + 8} 352 ${cx + 26} 344" fill="none" stroke="url(#lin${s})" stroke-width="3"/>
+    ${[168, 196, 224].map((y) => `<circle cx="${cx + 10}" cy="${y}" r="2.3" fill="${strap}"/>`).join("")}
+    <path d="M${cx - 28} 120 C${cx} 104 ${cx + 36} 112 ${cx + 44} 136" fill="url(#she${s})"/>
   </g>
-  <ellipse cx="${cx}" cy="372" rx="80" ry="12" fill="#000" opacity=".2"/>`;
+  <ellipse cx="${cx}" cy="396" rx="78" ry="9" fill="#000" opacity=".18"/>`;
 }
 
 function hangTrousers(cx: number, s: number, ink: boolean): string {
   const hook = ink ? "#c9b496" : "#161412";
+  const wood = ink ? "#e8dcc8" : "#3a322c";
   const stitch = ink ? "#1a1614" : "#c9b496";
+  const fold = ink ? "#000" : "#fff";
   return `<g data-part="garment" data-garment="trousers">
-    <path d="M${cx} 48c16-18 28-8 28 8 0 10-8 16-16 16" fill="none" stroke="${hook}" stroke-width="3.2" stroke-linecap="round"/>
-    <path d="M${cx - 70} 74l70-12 70 12-8 14H${cx - 62}z" fill="${hook}"/>
-    <path data-part="seam" d="M${cx - 56} 88h112v16c-16 6-40 8-56 8s-40-2-56-8z" fill="url(#fab${s})"/>
-    ${[ -48, -28, -8, 12, 32, 48 ].map((dx) => `<rect x="${cx + dx}" y="90" width="5" height="10" rx="1" fill="${hook}" opacity=".7"/>`).join("")}
-    <path d="M${cx - 54} 108c2 8 6 12 16 14v210c0 16-8 24-20 24s-22-8-22-24V186c0-28 8-56 26-78z" fill="url(#fab${s})"/>
-    <path d="M${cx + 54} 108c-2 8-6 12-16 14v210c0 16 8 24 20 24s22-8 22-24V186c0-28-8-56-26-78z" fill="url(#fab${s})"/>
-    <path data-part="seam" d="M${cx - 38} 130v200M${cx + 38} 130v200" fill="none" stroke="${stitch}" stroke-width="1.15"/>
-    <path d="M${cx - 8} 108v36c-2 10-8 16-16 18M${cx + 8} 108v36c2 10 8 16 16 18" fill="none" stroke="${stitch}" stroke-width="1"/>
-    <g data-part="pocket">
-      <path d="M${cx - 50} 128h22v28H${cx - 50}z" fill="none" stroke="${stitch}" stroke-width="1"/>
-      <path d="M${cx + 28} 128h22v28H${cx + 28}z" fill="none" stroke="${stitch}" stroke-width="1"/>
+    <g data-part="hanger">
+      <path d="M${cx} 42 C${cx + 18} 28 ${cx + 28} 44 ${cx + 22} 58" fill="none" stroke="${hook}" stroke-width="3.4" stroke-linecap="round"/>
+      <path d="M${cx - 78} 70 L${cx} 58 L${cx + 78} 70 L${cx + 70} 82 H${cx - 70}Z" fill="${wood}"/>
+      <path d="M${cx - 70} 82 H${cx + 70}" stroke="${hook}" stroke-width="1.2" opacity=".4"/>
     </g>
-    <path d="M${cx - 76} 328h28v12h-28zM${cx + 48} 328h28v12h-28z" fill="url(#lin${s})"/>
-    <path d="M${cx - 20} 112c8 14 24 14 40 0" fill="none" stroke="${stitch}" stroke-width="1.2"/>
+    <path data-part="waistband" d="M${cx - 58} 84 H${cx + 58} V102 C${cx + 36} 108 ${cx + 16} 110 ${cx} 110 C${cx - 16} 110 ${cx - 36} 108 ${cx - 58} 102Z" fill="url(#fab${s})"/>
+    ${[-46, -24, -6, 6, 24, 46].map((dx) => `<rect x="${cx + dx - 2}" y="88" width="4" height="12" rx="0.8" fill="${hook}" opacity=".75"/>`).join("")}
+    <path data-part="fly" d="M${cx} 102 V142 C${cx - 4} 148 ${cx - 8} 152 ${cx - 12} 154" fill="none" stroke="${stitch}" stroke-width="1.2"/>
+    <g data-part="leg">
+      <path d="M${cx - 56} 104 C${cx - 54} 112 ${cx - 40} 118 ${cx - 18} 120 L${cx - 16} 168 C${cx - 18} 220 ${cx - 22} 280 ${cx - 20} 336 L${cx - 24} 352 H${cx - 62} L${cx - 58} 336 C${cx - 64} 270 ${cx - 70} 200 ${cx - 62} 148 C${cx - 60} 128 ${cx - 58} 112 ${cx - 56} 104Z" fill="url(#fab${s})"/>
+      <path data-part="crease" d="M${cx - 38} 122 C${cx - 40} 200 ${cx - 42} 280 ${cx - 40} 340" fill="none" stroke="${stitch}" stroke-width="1.15"/>
+      <path data-part="cuff" d="M${cx - 64} 348 H${cx - 18} V360 H${cx - 64}Z" fill="url(#lin${s})"/>
+      <path data-part="fold" d="M${cx - 54} 180 C${cx - 48} 188 ${cx - 42} 186 ${cx - 36} 178" fill="none" stroke="${fold}" stroke-width="1.2" opacity=".2"/>
+    </g>
+    <g data-part="leg">
+      <path d="M${cx + 56} 104 C${cx + 54} 112 ${cx + 40} 118 ${cx + 18} 120 L${cx + 16} 168 C${cx + 18} 220 ${cx + 22} 280 ${cx + 20} 336 L${cx + 24} 352 H${cx + 62} L${cx + 58} 336 C${cx + 64} 270 ${cx + 70} 200 ${cx + 62} 148 C${cx + 60} 128 ${cx + 58} 112 ${cx + 56} 104Z" fill="url(#fab${s})"/>
+      <path data-part="crease" d="M${cx + 38} 122 C${cx + 40} 200 ${cx + 42} 280 ${cx + 40} 340" fill="none" stroke="${stitch}" stroke-width="1.15"/>
+      <path data-part="cuff" d="M${cx + 18} 348 H${cx + 64} V360 H${cx + 18}Z" fill="url(#lin${s})"/>
+      <path data-part="fold" d="M${cx + 54} 180 C${cx + 48} 188 ${cx + 42} 186 ${cx + 36} 178" fill="none" stroke="${fold}" stroke-width="1.2" opacity=".2"/>
+    </g>
+    <g data-part="pocket">
+      <path d="M${cx - 52} 126 h20 v26 h-20z" fill="none" stroke="${stitch}" stroke-width="1"/>
+      <path d="M${cx + 32} 126 h20 v26 h-20z" fill="none" stroke="${stitch}" stroke-width="1"/>
+    </g>
+    <path data-part="seam" d="M${cx - 12} 110 C${cx - 8} 128 ${cx - 16} 148 ${cx - 18} 160 M${cx + 12} 110 C${cx + 8} 128 ${cx + 16} 148 ${cx + 18} 160" fill="none" stroke="${stitch}" stroke-width="1"/>
   </g>
-  <ellipse cx="${cx}" cy="372" rx="100" ry="12" fill="#000" opacity=".16"/>`;
+  <ellipse cx="${cx}" cy="372" rx="108" ry="11" fill="#000" opacity=".14"/>`;
 }
 
 function skirtOnForm(cx: number, s: number, ink: boolean): string {
   const stitch = ink ? "#1a1614" : "#c9b496";
+  const fold = ink ? "#000" : "#fff";
+  const pleats = Array.from({ length: 8 }, (_, i) => {
+    const x0 = cx - 52 + i * 13;
+    const x1 = x0 + 8;
+    const hem0 = cx - 78 + i * 19.5;
+    const hem1 = hem0 + 14;
+    const shade = i % 2 === 0 ? `url(#fab${s})` : `url(#slv${s})`;
+    return `<path d="M${x0} 118 L${x1} 118 L${hem1} 348 L${hem0} 348Z" fill="${shade}"/>`;
+  }).join("");
   return `${dressForm(cx, ink)}
   <g data-part="garment" data-garment="skirt">
-    <path d="M${cx - 40} 96c8-6 72-6 80 0l6 14H${cx - 46}z" fill="url(#fab${s})"/>
-    <path d="M${cx - 46} 112c18 8 36 10 46 10s28-2 46-10c8 36 22 110 28 196-24 18-70 28-74 28s-50-10-74-28c6-86 20-160 28-196z" fill="url(#fab${s})"/>
-    <g data-part="seam" fill="none" stroke="${stitch}" stroke-width="1" opacity=".5">
-      <path d="M${cx - 20} 120c-6 70-10 140-8 196"/>
-      <path d="M${cx} 122v194"/>
-      <path d="M${cx + 20} 120c6 70 10 140 8 196"/>
-      <path d="M${cx - 34} 120c-8 80-16 150-18 196"/>
-      <path d="M${cx + 34} 120c8 80 16 150 18 196"/>
+    <path data-part="waistband" d="M${cx - 44} 102 C${cx - 20} 96 ${cx + 20} 96 ${cx + 44} 102 L${cx + 48} 118 H${cx - 48}Z" fill="url(#fab${s})"/>
+    <g data-part="pleat">${pleats}</g>
+    <g data-part="fold" fill="none" stroke="${fold}" stroke-width="1.1" opacity=".2">
+      <path d="M${cx - 30} 124 L${cx - 52} 340"/>
+      <path d="M${cx - 4} 124 L${cx - 12} 342"/>
+      <path d="M${cx + 20} 124 L${cx + 28} 340"/>
+      <path d="M${cx + 40} 124 L${cx + 64} 342"/>
     </g>
-    <path data-part="lining" d="M${cx - 70} 318c20 16 50 28 70 28s50-12 70-28l-8 20c-18 16-44 24-62 24s-44-8-62-24z" fill="url(#lin${s})"/>
-    <rect x="${cx - 28}" y="188" width="56" height="8" fill="url(#lin${s})"/>
+    <g data-part="seam" fill="none" stroke="${stitch}" stroke-width="0.9" opacity=".45">
+      <path d="M${cx} 118 v226"/>
+      <path d="M${cx - 44} 118 L${cx - 70} 348"/>
+      <path d="M${cx + 44} 118 L${cx + 70} 348"/>
+    </g>
+    <path data-part="hem" d="M${cx - 80} 344 C${cx - 40} 356 ${cx + 40} 356 ${cx + 80} 344 L${cx + 76} 352 C${cx + 36} 362 ${cx - 36} 362 ${cx - 76} 352Z" fill="url(#lin${s})"/>
+    <path data-part="lining" d="M${cx - 70} 348 C${cx - 30} 358 ${cx + 30} 358 ${cx + 70} 348" fill="none" stroke="url(#lin${s})" stroke-width="4"/>
   </g>
-  <ellipse cx="${cx}" cy="372" rx="88" ry="12" fill="#000" opacity=".2"/>`;
+  <ellipse cx="${cx}" cy="396" rx="96" ry="10" fill="#000" opacity=".18"/>`;
 }
 
 function fashionArt(variant: 0 | 1, slot: number, alt: string): string {
@@ -273,7 +333,7 @@ function fashionArt(variant: 0 | 1, slot: number, alt: string): string {
             ? hangTrousers(320, s, ink)
             : skirtOnForm(320, s, ink)
           : coatOnForm(320, s, ink);
-  const framed = `<g transform="translate(320 208) scale(1.3) translate(-320 -208)">${subject}</g>`;
+  const framed = `<g transform="translate(320 205) scale(1.05) translate(-320 -205)">${subject}</g>`;
   return wrap(id, alt, `${set}${framed}`, s, defs);
 }
 
@@ -357,15 +417,15 @@ function ceramicPlate(cx: number, cy: number, s: number): string {
   </g>`;
 }
 
-function crudoSlice(x: number, y: number, rot: number, w: number, h: number, s: number): string {
+function crudoSlice(x: number, y: number, rot: number, w: number, h: number, s: number, tone = ""): string {
   const hw = w / 2;
   const hh = h / 2;
+  const fill = tone || `url(#flesh${s})`;
   return `<g data-part="flesh" transform="translate(${x} ${y}) rotate(${rot})">
-    <ellipse cx="0" cy="5" rx="${hw}" ry="${hh}" fill="#000" opacity=".14"/>
-    <path d="M${-hw} 0 Q0 ${-hh} ${hw} ${-hh * 0.15} Q${hw * 0.4} ${hh} ${-hw * 0.2} ${hh * 0.7} Q${-hw} ${hh * 0.3} ${-hw} 0Z" fill="url(#flesh${s})"/>
-    <path d="M${-hw * 0.7} ${-hh * 0.15} Q0 ${-hh * 0.45} ${hw * 0.55} ${-hh * 0.05}" fill="none" stroke="#fff" stroke-width="1.15" opacity=".5"/>
-    <path d="M${-hw * 0.45} ${hh * 0.05} Q0 ${-hh * 0.1} ${hw * 0.4} ${hh * 0.2}" fill="none" stroke="#fff" stroke-width="0.8" opacity=".35"/>
-    <path d="M${-hw} 0 Q${-hw * 0.6} ${hh * 0.55} 0 ${hh * 0.7}" fill="none" stroke="#9a3a28" stroke-width="1.7" opacity=".45"/>
+    <ellipse cx="0" cy="6" rx="${hw}" ry="${hh}" fill="#000" opacity=".14"/>
+    <path d="M${-hw} 0 Q0 ${-hh} ${hw} ${-hh * 0.12} Q${hw * 0.45} ${hh} ${-hw * 0.18} ${hh * 0.68} Q${-hw} ${hh * 0.28} ${-hw} 0Z" fill="${fill}"/>
+    <path d="M${-hw * 0.68} ${-hh * 0.12} Q0 ${-hh * 0.42} ${hw * 0.5} ${-hh * 0.04}" fill="none" stroke="#fff" stroke-width="1.1" opacity=".45"/>
+    <path d="M${-hw * 0.4} ${hh * 0.08} Q0 ${-hh * 0.08} ${hw * 0.36} ${hh * 0.18}" fill="none" stroke="#fff" stroke-width="0.7" opacity=".3"/>
   </g>`;
 }
 
@@ -411,49 +471,126 @@ function oilAndSalt(cx: number, cy: number): string {
   </g>`;
 }
 
+function limeWedge(cx: number, cy: number): string {
+  return `<g data-part="citrus" transform="translate(${cx} ${cy}) rotate(-18)">
+    <path d="M-22 8 L0 -26 L22 8 Q0 18 -22 8Z" fill="#7dbb3a"/>
+    <path d="M-16 6 L0 -18 L16 6 Q0 12 -16 6Z" fill="#e8f4c4"/>
+    <path d="M0 -18 L0 10 M-16 6 L0 -18 L16 6" fill="none" stroke="#c4d86a" stroke-width="0.8"/>
+    <path d="M-10 -4 Q0 -12 10 -4" fill="none" stroke="#fff" stroke-width="1.2" opacity=".35"/>
+  </g>`;
+}
+
+function prawn(cx: number, cy: number, rot: number, s: number): string {
+  return `<g data-part="flesh" transform="translate(${cx} ${cy}) rotate(${rot})">
+    <ellipse cx="4" cy="10" rx="54" ry="16" fill="#000" opacity=".12"/>
+    <path d="M-48 4 C-36 -18 -8 -22 18 -8 C36 2 48 8 58 4 L62 12 C50 18 34 16 18 10 C-4 2 -28 6 -44 16Z" fill="url(#flesh${s})"/>
+    <g data-part="shell">
+      <path d="M-20 -8 C-6 -16 10 -10 18 -2" fill="none" stroke="#b03a28" stroke-width="2.4" opacity=".45"/>
+      <path d="M-8 -4 C4 -10 16 -4 24 4" fill="none" stroke="#b03a28" stroke-width="2" opacity=".35"/>
+      <path d="M8 0 C18 -4 28 2 34 8" fill="none" stroke="#b03a28" stroke-width="1.6" opacity=".3"/>
+    </g>
+    <g data-part="antenna">
+      <path d="M-48 0 C-70 -28 -86 -22 -96 -8" fill="none" stroke="#c45c3a" stroke-width="1.3"/>
+      <path d="M-46 4 C-66 -10 -84 -4 -92 12" fill="none" stroke="#c45c3a" stroke-width="1.1"/>
+    </g>
+    <path d="M58 4 L78 -8 L74 6 L82 14 L62 12" fill="#d4785c"/>
+    <ellipse cx="-40" cy="2" rx="14" ry="10" fill="#e07a4a"/>
+    <circle cx="-48" cy="-2" r="2.2" fill="#2a1814"/>
+    <path d="M-30 12 C-20 22 -8 20 4 14" fill="none" stroke="#c45c3a" stroke-width="1.2" opacity=".5"/>
+  </g>`;
+}
+
+function oyster(cx: number, cy: number, rot: number, s: number): string {
+  return `<g data-part="shell" transform="translate(${cx} ${cy}) rotate(${rot})">
+    <ellipse cx="4" cy="10" rx="48" ry="28" fill="#000" opacity=".16"/>
+    <path d="M-46 6 C-40 -22 -8 -34 18 -28 C44 -20 56 4 48 22 C38 38 8 42 -18 32 C-40 22 -50 14 -46 6Z" fill="#6a7a70" stroke="#3a4a44" stroke-width="1.4"/>
+    <path d="M-38 4 C-32 -16 -4 -24 20 -18 C40 -12 46 6 38 18 C28 30 4 32 -18 24 C-34 16 -42 10 -38 4Z" fill="#e8efe8"/>
+    <g data-part="flesh">
+      <path d="M-18 2 C-8 -12 16 -10 26 2 C30 12 18 20 4 18 C-12 16 -22 10 -18 2Z" fill="url(#flesh${s})"/>
+      <ellipse cx="2" cy="6" rx="10" ry="6" fill="#e8c4a0" opacity=".7"/>
+      <path d="M-10 0 C0 -6 12 -2 16 6" fill="none" stroke="#fff" stroke-width="1.1" opacity=".4"/>
+    </g>
+    <path d="M-30 -8 C-10 -16 16 -10 28 4" fill="none" stroke="#c5d0c8" stroke-width="1.2" opacity=".5"/>
+  </g>`;
+}
+
+function tunaBlock(x: number, y: number, rot: number, s: number): string {
+  return `<g data-part="flesh" transform="translate(${x} ${y}) rotate(${rot})">
+    <rect x="-28" y="4" width="56" height="22" rx="3" fill="#000" opacity=".16"/>
+    <path d="M-30 -12 L30 -10 L28 16 L-32 14Z" fill="url(#flesh${s})"/>
+    <g data-part="fat-line" fill="none" stroke="#f4e4d0" stroke-width="1.15" opacity=".7">
+      <path d="M-22 -6 L24 -4"/>
+      <path d="M-18 2 L20 4"/>
+      <path d="M-24 8 L16 10"/>
+    </g>
+    <path d="M-28 -10 L-10 -11 L-12 14 L-30 13Z" fill="#4a0810" opacity=".45"/>
+    <path d="M-26 -8 L22 -6" fill="none" stroke="#fff" stroke-width="1.2" opacity=".25"/>
+  </g>`;
+}
+
+function iceBed(): string {
+  return `<g data-part="ice" fill="#e8f2f6">
+    <polygon points="180,250 210,238 236,258 214,276 186,268" opacity=".85"/>
+    <polygon points="400,246 432,236 454,260 428,278 404,266" opacity=".7"/>
+    <polygon points="230,268 258,256 278,274 260,288" opacity=".55"/>
+    <polygon points="360,270 390,258 408,278 386,292" opacity=".5"/>
+    <path d="M200 244 L214 250" stroke="#fff" stroke-width="1.2" opacity=".6"/>
+  </g>`;
+}
+
 function crudoStill(s: number, kind: "ricciola" | "gambero" | "ostrica" | "tonno"): string {
   const plate = ceramicPlate(320, 228, s);
   const napkin = `<g data-part="linen"><path d="M168 300l70-18 36 86-74 22z" fill="#f4f7f8" stroke="#cfdbe0"/><path d="M186 308l48-12" stroke="#cfdbe0" stroke-width="1.2"/><path d="M200 336l40-10" stroke="#cfdbe0" stroke-width="1"/></g>`;
   const knife = `<g data-part="knife"><path d="M470 250l86-18 6 12-84 22z" fill="#e8eef2" stroke="#9aa8b0"/><rect x="548" y="228" width="36" height="14" rx="2" fill="#2f4a3e"/><path d="M478 254l70-16" stroke="#fff" stroke-width="1" opacity=".5"/></g>`;
   const food =
     kind === "gambero"
-      ? `<g data-part="flesh">
-        <path d="M250 200c20-28 70-40 110-18 16 10 8 28-8 34-22 12-54 18-86 8-18-4-24-14-16-24z" fill="url(#flesh${s})"/>
-        <path d="M360 196c18-8 40-4 48 14 4 12-8 20-22 18l-30-6c-8-4-6-18 4-26z" fill="#d4785c"/>
-        <path d="M402 214c16 4 28 16 22 32-18 6-36-4-40-18z" fill="#c45c3a"/>
-        <path d="M250 206c28-8 60-6 86 8" fill="none" stroke="#fff" stroke-width="1.1" opacity=".4"/>
-      </g>
-      ${lemonHalf(400, 168, s)}${seaHerb(196, 150)}${oilAndSalt(300, 248)}${knife}`
+      ? `${iceBed()}
+      ${prawn(300, 200, -18, s)}
+      ${prawn(360, 232, 12, s)}
+      ${prawn(248, 236, -38, s)}
+      ${lemonHalf(430, 168, s)}${seaHerb(176, 148)}${oilAndSalt(318, 268)}`
       : kind === "ostrica"
-        ? `<g data-part="flesh">
-        <path d="M250 210c-20-36 8-70 46-74 36-4 70 22 74 54 4 28-18 52-50 58-36 8-64-6-70-38z" fill="#f4f7f8" stroke="#c5d0d6"/>
-        <path d="M268 206c8-28 36-40 58-28 16 10 18 34 4 46-18 14-46 10-58-6z" fill="url(#flesh${s})"/>
-        <ellipse cx="292" cy="214" rx="16" ry="10" fill="#e28a6a" opacity=".55"/>
-      </g>
-      ${lemonHalf(400, 176, s)}${seaHerb(188, 148)}${oilAndSalt(340, 250)}
-      <ellipse cx="456" cy="230" rx="36" ry="14" fill="#dfe8ee" opacity=".7"/>`
+        ? `${iceBed()}
+      ${oyster(250, 214, -16, s)}
+      ${oyster(340, 198, 10, s)}
+      ${oyster(312, 252, -8, s)}
+      ${limeWedge(430, 168)}${seaHerb(176, 140)}
+      <ellipse cx="470" cy="250" rx="40" ry="16" fill="#dfe8ee" opacity=".55"/>`
         : kind === "tonno"
-          ? `${crudoSlice(268, 210, -18, 92, 36, s)}
-      ${crudoSlice(318, 198, -6, 96, 34, s)}
-      ${crudoSlice(368, 214, 14, 88, 32, s)}
-      ${crudoSlice(300, 236, 8, 80, 28, s)}
-      ${lemonHalf(412, 168, s)}${seaHerb(190, 152)}${oilAndSalt(250, 252)}${knife}`
-          : `${crudoSlice(250, 214, -22, 88, 34, s)}
-    ${crudoSlice(300, 200, -8, 100, 36, s)}
-    ${crudoSlice(352, 208, 10, 92, 34, s)}
-    ${crudoSlice(318, 232, 4, 84, 30, s)}
-    ${crudoSlice(270, 240, -12, 72, 26, s)}
-    ${lemonHalf(408, 164, s)}${seaHerb(186, 146)}${oilAndSalt(236, 250)}${knife}`;
-  return `${marbleVeins()}<g transform="translate(320 220) scale(1.16) translate(-320 -220)">${plate}${napkin}${food}</g>`;
+          ? `<g data-part="plate"><ellipse cx="320" cy="232" rx="176" ry="78" fill="#2a2420"/><ellipse cx="320" cy="224" rx="150" ry="62" fill="#3a322c"/></g>
+      ${tunaBlock(250, 210, -8, s)}
+      ${tunaBlock(312, 198, 4, s)}
+      ${tunaBlock(372, 214, 12, s)}
+      ${tunaBlock(300, 242, -2, s)}
+      <g data-part="wasabi"><ellipse cx="430" cy="176" rx="16" ry="12" fill="#5a8a32"/><ellipse cx="426" cy="172" rx="6" ry="4" fill="#8aba4a" opacity=".7"/></g>
+      <g data-part="soy"><ellipse cx="196" cy="176" rx="22" ry="10" fill="#1a120c"/><ellipse cx="196" cy="174" rx="14" ry="5" fill="#3a2418"/></g>
+      ${oilAndSalt(236, 268)}`
+          : `${plate}${napkin}
+      ${crudoSlice(248, 214, -24, 96, 32, s)}
+      ${crudoSlice(300, 198, -8, 108, 34, s)}
+      ${crudoSlice(354, 210, 12, 98, 32, s)}
+      ${crudoSlice(318, 236, 6, 88, 28, s)}
+      ${crudoSlice(266, 244, -14, 78, 24, s)}
+      ${lemonHalf(424, 160, s)}${seaHerb(176, 140)}${oilAndSalt(228, 258)}${knife}`;
+  const extra = kind === "ricciola" ? "" : kind === "tonno" ? "" : `<g transform="translate(320 220) scale(1.04) translate(-320 -220)">${plate}</g>`;
+  return `<g data-dish="${kind}">${marbleVeins()}${kind === "ricciola" ? `<g transform="translate(320 220) scale(1.12) translate(-320 -220)">${food}</g>` : `${extra}<g transform="translate(320 220) scale(1.08) translate(-320 -220)">${food}</g>`}</g>`;
 }
 
 function foodArt(variant: 0 | 1, slot: number, alt: string): string {
   const id = `svg-food-${variant}`;
   const s = slot % 4;
   if (variant === 1) {
-    const defs = `<radialGradient id="pl${s}" cx=".5" cy=".42" r=".52"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#dfe8ee"/></radialGradient><linearGradient id="mv${s}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#e4eef2"/><stop offset=".45" stop-color="#c5d3dc"/><stop offset="1" stop-color="#dbe6ec"/></linearGradient><linearGradient id="flesh${s}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f7d0bc"/><stop offset=".45" stop-color="#e28a6a"/><stop offset="1" stop-color="#c45c3a"/></linearGradient><linearGradient id="lem${s}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffe27a"/><stop offset="1" stop-color="#e25c2a"/></linearGradient>`;
     const kinds = ["ricciola", "gambero", "ostrica", "tonno"] as const;
     const kind = kinds[s]!;
+    const flesh =
+      kind === "gambero"
+        ? ["#f3c4a4", "#e07a4a", "#b03a28"]
+        : kind === "ostrica"
+          ? ["#f2e6d4", "#d8c4a8", "#c4a078"]
+          : kind === "tonno"
+            ? ["#c42838", "#7a1020", "#4a0810"]
+            : ["#f6ead8", "#e2c4a0", "#c48a62"];
+    const defs = `<radialGradient id="pl${s}" cx=".5" cy=".42" r=".52"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#dfe8ee"/></radialGradient><linearGradient id="mv${s}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#e4eef2"/><stop offset=".45" stop-color="#c5d3dc"/><stop offset="1" stop-color="#dbe6ec"/></linearGradient><linearGradient id="flesh${s}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${flesh[0]}"/><stop offset=".45" stop-color="${flesh[1]}"/><stop offset="1" stop-color="${flesh[2]}"/></linearGradient><linearGradient id="lem${s}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffe27a"/><stop offset="1" stop-color="#e25c2a"/></linearGradient>`;
     const caption = `<path d="M168 48h120M168 68h72" stroke="#12202c" stroke-width="3"/>`;
     return wrap(id, alt, `<rect width="640" height="420" fill="url(#mv${s})"/>${crudoStill(s, kind)}${caption}`, s, defs);
   }
@@ -478,84 +615,119 @@ function sprockets(): string {
 
 function scenePozzo(): string {
   return `<g data-part="scene" data-scene="pozzo">
-    <rect width="640" height="420" fill="#8aa3b4"/>
-    <rect y="0" width="640" height="210" fill="#c5d4de"/>
-    <path d="M0 210c80-36 160-20 260 8 90-30 180-10 280 16 40 8 80 4 100 0V420H0z" fill="#6a7a70"/>
-    <path d="M0 250c120-20 220 10 340-8 90 16 180 4 300 18V420H0z" fill="#5e6a62"/>
-    <rect x="0" y="300" width="640" height="120" fill="#cfc3ae"/>
-    <g fill="none" stroke="#8a7a66" stroke-width="1" opacity=".4"><path d="M0 320h640M0 350h640M0 380h640"/><path d="M80 300v120M180 300v120M300 300v120M460 300v120"/></g>
-    <ellipse cx="320" cy="338" rx="92" ry="18" fill="#000" opacity=".2"/>
-    <ellipse cx="320" cy="318" rx="86" ry="36" fill="#d7cbb8"/>
-    <ellipse cx="320" cy="318" rx="70" ry="26" fill="#3a322c"/>
-    <ellipse cx="320" cy="320" rx="52" ry="16" fill="#1f2a24"/>
-    <ellipse cx="328" cy="316" rx="18" ry="6" fill="#8aa3b4" opacity=".35"/>
-    <path d="M320 292 v-64" stroke="#3a322c" stroke-width="2"/>
-    <path d="M304 228h32v8h-32z" fill="#3a322c"/>
-    <path d="M210 250c10-50 40-80 70-86" fill="none" stroke="#3a322c" stroke-width="6"/>
-    <path d="M248 292c8-16 24-16 32 0" fill="none" stroke="#3a322c" stroke-width="2"/>
-    <path d="M360 300c12-20 36-18 44 4" fill="none" stroke="#8a7a66" stroke-width="1.4"/>
-    <ellipse cx="204" cy="168" rx="36" ry="48" fill="#3d5a1f"/>
-    <ellipse cx="188" cy="150" rx="22" ry="28" fill="#2c4a18"/>
-    <ellipse cx="222" cy="158" rx="18" ry="24" fill="#4a6a28"/>
-    <rect x="198" y="210" width="8" height="40" fill="#3a322c"/>
+    <rect width="640" height="420" fill="#9aaca8"/>
+    <rect y="0" width="640" height="168" fill="#c5d4de"/>
+    <path d="M0 150 L220 168 L420 158 L640 176 L640 0 H0Z" fill="#d8e4ea"/>
+    <path d="M0 176 L180 196 L640 188 V420 H0Z" fill="#cfc3ae"/>
+    <g fill="none" stroke="#8a7a66" stroke-width="1" opacity=".35">
+      <path d="M0 220h640M0 260h640M0 300h640M0 340h640M0 380h640"/>
+      <path d="M90 176v244M200 176v244M320 176v244M460 176v244M580 176v244"/>
+    </g>
+    <path d="M0 168 L70 90 L70 420 H0Z" fill="#b8a890"/>
+    <path d="M570 80 L640 40 V420 H570Z" fill="#a89880"/>
+    <rect x="86" y="110" width="46" height="70" fill="#3a322c"/>
+    <rect x="94" y="118" width="30" height="44" fill="#8aa3b4"/>
+    <ellipse cx="320" cy="318" rx="118" ry="22" fill="#000" opacity=".22"/>
+    <ellipse cx="320" cy="292" rx="108" ry="48" fill="#d7cbb8"/>
+    <ellipse cx="320" cy="292" rx="88" ry="36" fill="#8a7a66"/>
+    <ellipse cx="320" cy="294" rx="64" ry="24" fill="#1f2a24"/>
+    <ellipse cx="328" cy="290" rx="22" ry="8" fill="#8aa3b4" opacity=".4"/>
+    <path d="M320 268 V198" stroke="#3a322c" stroke-width="3"/>
+    <path d="M300 198 h40 v10 h-40z" fill="#3a322c"/>
+    <path d="M280 198 C280 176 360 176 360 198" fill="none" stroke="#3a322c" stroke-width="4"/>
+    <path d="M360 198 C400 210 410 250 400 268" fill="none" stroke="#3a322c" stroke-width="2"/>
+    <ellipse cx="398" cy="274" rx="10" ry="6" fill="#3a322c"/>
+    <path d="M70 90 L570 56 L640 40" fill="none" stroke="#e8dcc8" stroke-width="8" opacity=".25"/>
+    <path d="M0 0 L240 0 L0 180Z" fill="#f4e0b0" opacity=".18"/>
   </g>`;
 }
 
 function sceneOlivo(): string {
   return `<g data-part="scene" data-scene="olivo">
     <rect width="640" height="420" fill="#c9b496"/>
-    <rect y="0" width="640" height="200" fill="#e8d8b8"/>
-    <path d="M0 200c100-40 200-20 320 10 100-30 200-8 320 20V420H0z" fill="#6a7a4a"/>
-    <path d="M0 280c140-16 240 20 400 0 80 10 160 0 240 12V420H0z" fill="#4a5a32"/>
-    <path d="M40 340c80-24 160 8 240-10 90 18 170-6 260 12" fill="none" stroke="#3a322c" stroke-width="2" opacity=".25"/>
-    <rect x="300" y="220" width="18" height="110" fill="#3a322c"/>
-    <path d="M300 250c-16 20-18 50-8 80M318 248c14 18 16 48 6 78" fill="none" stroke="#2a2420" stroke-width="2"/>
-    <ellipse cx="292" cy="170" rx="70" ry="58" fill="#3d5a1f"/>
-    <ellipse cx="340" cy="150" rx="64" ry="54" fill="#2c4a18"/>
-    <ellipse cx="318" cy="128" rx="40" ry="32" fill="#4a6a28"/>
-    <ellipse cx="360" cy="180" rx="36" ry="28" fill="#3d5a1f" opacity=".85"/>
-    <ellipse cx="270" cy="190" rx="28" ry="22" fill="#2c4a18"/>
-    <ellipse cx="308" cy="108" rx="22" ry="16" fill="#3d5a1f"/>
-    <ellipse cx="248" cy="168" rx="18" ry="14" fill="#4a6a28" opacity=".8"/>
-    <path d="M160 300c40-70 120-80 200-30" fill="none" stroke="#3a322c" stroke-width="3" opacity=".25"/>
-    <circle cx="420" cy="90" r="22" fill="#f3efe6" opacity=".45"/>
-    <circle cx="510" cy="70" r="8" fill="#f3efe6" opacity=".25"/>
+    <rect y="0" width="640" height="210" fill="#e4d4b4"/>
+    <circle cx="520" cy="70" r="28" fill="#f3efe6" opacity=".55"/>
+    <path d="M0 250 C80 220 180 240 280 230 C400 216 500 250 640 236 V420 H0Z" fill="#6a7a4a"/>
+    <path d="M0 310 C120 290 240 320 400 300 C500 288 580 310 640 304 V420 H0Z" fill="#4a5a32"/>
+    <g data-part="trunk">
+      <path d="M292 400 C286 340 300 280 308 230 C300 200 288 170 296 140" fill="none" stroke="#3a322c" stroke-width="18" stroke-linecap="round"/>
+      <path d="M308 230 C330 210 350 240 346 270" fill="none" stroke="#2a2420" stroke-width="10" stroke-linecap="round"/>
+      <path d="M296 160 C270 150 250 170 246 196" fill="none" stroke="#3a322c" stroke-width="8" stroke-linecap="round"/>
+      <path d="M300 148 C310 120 340 110 360 128" fill="none" stroke="#2a2420" stroke-width="7" stroke-linecap="round"/>
+    </g>
+    <g data-part="canopy">
+      <path d="M214 176 C198 148 224 108 268 118 C276 86 328 74 364 108 C408 96 428 138 396 164 C432 176 416 214 368 204 C344 228 286 230 248 206 C216 220 196 200 214 176Z" fill="#2c4a18"/>
+      <path d="M236 158 C228 132 258 112 292 122 C310 98 354 102 368 128 C392 124 402 150 382 166 C360 188 300 192 262 176 C244 186 230 176 236 158Z" fill="#3d5a1f"/>
+      <path d="M250 132 C246 112 276 96 308 108 C336 92 368 108 362 132 C348 150 300 154 272 142 C258 150 248 144 250 132Z" fill="#4a6a28"/>
+      <path d="M220 186 C212 170 236 160 258 168 C248 186 228 196 220 186Z" fill="#5a7a32" opacity=".9"/>
+      <path d="M352 186 C344 168 376 160 390 176 C382 194 360 198 352 186Z" fill="#2c4a18" opacity=".85"/>
+    </g>
+    <path d="M40 340 C90 320 140 350 190 338 C240 326 280 350 320 340" fill="none" stroke="#3a322c" stroke-width="2" opacity=".25"/>
+    <path d="M80 360 C70 340 90 330 100 350" fill="none" stroke="#5a6a40" stroke-width="2" opacity=".4"/>
   </g>`;
 }
 
 function sceneFienile(): string {
   return `<g data-part="scene" data-scene="fienile">
-    <rect width="640" height="420" fill="#c9b496"/>
-    <rect y="0" width="640" height="190" fill="#d8c4a0"/>
-    <path d="M0 250h640v170H0z" fill="#8a6a40"/>
-    <path d="M0 250c80-20 200 8 320-6 140 18 220 0 320 10v20H0z" fill="#6a5e52"/>
-    <path d="M180 250 L320 120 L460 250z" fill="#6a5e52"/>
-    <rect x="200" y="168" width="240" height="140" fill="#9a4a28"/>
-    <rect x="288" y="210" width="64" height="98" fill="#1a1814"/>
-    <path d="M288 210h64v98h-64z" fill="none" stroke="#3a2420" stroke-width="2"/>
-    <rect x="228" y="190" width="36" height="28" fill="#c9b496" opacity=".4"/>
-    <rect x="376" y="190" width="36" height="28" fill="#c9b496" opacity=".4"/>
-    <path d="M320 120 L320 168" stroke="#1a1814" stroke-width="3"/>
-    <path d="M240 140c40-60 120-60 170 0" fill="none" stroke="#f3efe6" stroke-width="8" opacity=".15"/>
-    <ellipse cx="250" cy="310" rx="40" ry="14" fill="#c9b496" opacity=".5"/>
-    <ellipse cx="390" cy="318" rx="50" ry="16" fill="#c9b496" opacity=".4"/>
-    <path d="M210 300c20-18 50-16 70 4M370 304c24-16 60-12 80 8" fill="none" stroke="#6a5e52" stroke-width="3" opacity=".4"/>
-    <circle cx="480" cy="80" r="18" fill="#f3efe6" opacity=".35"/>
-    <path d="M228 190h36M228 204h36M376 190h36M376 204h36" stroke="#6a5e52" stroke-width="1" opacity=".5"/>
+    <rect width="640" height="420" fill="#c4a070"/>
+    <rect y="0" width="640" height="200" fill="#e0b070"/>
+    <path d="M0 0 H640 V120 C480 90 300 110 0 70Z" fill="#f0c888" opacity=".7"/>
+    <path d="M0 268 H640 V420 H0Z" fill="#8a6a40"/>
+    <path d="M0 268 C120 250 260 274 400 258 C520 246 600 266 640 260 V280 H0Z" fill="#6a5e52"/>
+    <path d="M168 268 L320 96 L472 268Z" fill="#6a5e52"/>
+    <rect x="196" y="168" width="248" height="148" fill="#9a4a28"/>
+    <g fill="none" stroke="#6a3220" stroke-width="2" opacity=".55">
+      ${Array.from({ length: 9 }, (_, i) => `<path d="M196 ${180 + i * 14} h248"/>`).join("")}
+    </g>
+    <rect x="292" y="214" width="56" height="102" fill="#1a1814"/>
+    <path d="M292 214 h56 v102 h-56z" fill="none" stroke="#3a2420" stroke-width="3"/>
+    <rect x="228" y="188" width="32" height="24" fill="#e0b070" opacity=".35"/>
+    <rect x="380" y="188" width="32" height="24" fill="#e0b070" opacity=".35"/>
+    <path d="M320 96 L320 168" stroke="#1a1814" stroke-width="4"/>
+    <ellipse cx="236" cy="330" rx="46" ry="16" fill="#d8c07a" opacity=".7"/>
+    <ellipse cx="400" cy="338" rx="54" ry="18" fill="#d8c07a" opacity=".55"/>
+    <path d="M210 324 C230 300 270 302 292 322" fill="#c4a050"/>
+    <path d="M168 268 L196 168 L196 316 L168 268" fill="#7a3a20" opacity=".35"/>
+    <path d="M0 300 C80 288 140 310 200 300" fill="none" stroke="#6a5e52" stroke-width="6" opacity=".3"/>
   </g>`;
 }
 
 function sceneRame(): string {
   return `<g data-part="scene" data-scene="rame">
     <rect width="640" height="420" fill="#1a1814"/>
-    <rect x="80" y="70" width="480" height="280" fill="#2a2420"/>
-    <ellipse cx="320" cy="230" rx="150" ry="96" fill="#9a4a28"/>
-    <ellipse cx="320" cy="226" rx="128" ry="80" fill="#c9b496"/>
-    <ellipse cx="320" cy="222" rx="96" ry="58" fill="#6a5e52"/>
-    <circle cx="308" cy="200" r="36" fill="#f3efe6" opacity=".2"/>
-    <path d="M240 190c40-24 80-20 110 8" fill="none" stroke="#f3efe6" stroke-width="2" opacity=".25"/>
-    <rect x="120" y="86" width="8" height="248" fill="#9a4a28"/>
-    <path d="M148 100h200" stroke="#c9b496" stroke-width="3"/>
+    <rect x="48" y="36" width="544" height="348" fill="#241e1a"/>
+    <ellipse cx="320" cy="340" rx="180" ry="22" fill="#000" opacity=".45"/>
+    <ellipse cx="320" cy="250" rx="168" ry="78" fill="#6a3220"/>
+    <ellipse cx="320" cy="246" rx="150" ry="66" fill="#9a4a28"/>
+    <ellipse cx="320" cy="244" rx="128" ry="54" fill="#c47848"/>
+    <ellipse cx="320" cy="248" rx="108" ry="40" fill="#3a2218"/>
+    <ellipse cx="328" cy="236" rx="70" ry="18" fill="#8aa3b4" opacity=".25"/>
+    <path d="M210 250 C240 230 280 228 320 240 C360 228 400 230 430 250" fill="none" stroke="#f3efe6" stroke-width="2" opacity=".25"/>
+    <path d="M196 250 C196 210 444 210 444 250" fill="none" stroke="#c47848" stroke-width="8"/>
+    <rect x="188" y="248" width="20" height="14" rx="3" fill="#9a4a28"/>
+    <rect x="432" y="248" width="20" height="14" rx="3" fill="#9a4a28"/>
+    <rect x="72" y="56" width="10" height="280" fill="#9a4a28"/>
+    <path d="M100 76 h220" stroke="#c9b496" stroke-width="4"/>
+    <circle cx="220" cy="140" r="40" fill="#f3efe6" opacity=".08"/>
+  </g>`;
+}
+
+function sceneTorchio(): string {
+  return `<g data-part="scene" data-scene="torchio">
+    <rect width="640" height="420" fill="#1c1814"/>
+    <rect y="300" width="640" height="120" fill="#2a221c"/>
+    <rect x="120" y="160" width="400" height="180" fill="#3a2e26"/>
+    <rect x="150" y="80" width="340" height="90" fill="#2a2420"/>
+    <rect x="300" y="40" width="40" height="50" fill="#c9b496"/>
+    <circle cx="320" cy="36" r="18" fill="#8a7a66"/>
+    <rect x="170" y="176" width="300" height="16" fill="#c9b496"/>
+    <rect x="190" y="210" width="260" height="90" fill="#f3efe6"/>
+    <path d="M210 230 h220 M210 248 h180 M210 266 h200 M210 284 h140" stroke="#1a1814" stroke-width="3"/>
+    <g fill="#c9b496">
+      ${Array.from({ length: 6 }, (_, i) => Array.from({ length: 4 }, (_, j) => `<rect x="${200 + i * 40}" y="${330 + j * 14}" width="28" height="10" rx="1"/>`).join("")).join("")}
+    </g>
+    <circle cx="520" cy="120" r="36" fill="#f0c888" opacity=".35"/>
+    <rect x="40" y="48" width="8" height="260" fill="#9a4a28"/>
   </g>`;
 }
 
@@ -573,45 +745,46 @@ function typeColumn(): string {
 function editorialArt(variant: 0 | 1, slot: number, alt: string): string {
   const id = `svg-editorial-${variant}`;
   const s = slot % 4;
+  const analog = `<radialGradient id="edsun${s}" cx=".18" cy=".12" r=".8"><stop offset="0" stop-color="#f4e0b0" stop-opacity=".45"/><stop offset="1" stop-color="#1a1814" stop-opacity="0"/></radialGradient><filter id="grain${s}"><feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="4" seed="${20 + s * 7}" result="n"/><feColorMatrix in="n" type="saturate" values="0"/><feComponentTransfer><feFuncA type="table" tableValues="0 0.22"/></feComponentTransfer></filter>`;
   if (variant === 1) {
     const frame = `<rect x="72" y="48" width="8" height="280" fill="#c81d25"/>`;
     if (s === 1) {
       return wrap(id, alt, `<rect width="640" height="420" fill="#0e1014"/><rect x="48" y="36" width="544" height="348" fill="#16181e"/>
-        <g transform="translate(72 58) scale(0.375)">${sceneRame()}</g>
+        <g transform="translate(72 58) scale(0.375)">${sceneTorchio()}</g>
         <rect x="72" y="58" width="240" height="170" fill="none" stroke="#2a2e38"/>
-        <g transform="translate(336 58) scale(0.36)">${sceneOlivo()}</g>
+        <g transform="translate(336 58) scale(0.36)">${sceneRame()}</g>
         <rect x="336" y="58" width="228" height="170" fill="none" stroke="#2a2e38"/>
         <rect x="72" y="248" width="492" height="10" fill="#c81d25"/>
         <g transform="translate(72 268) scale(0.31)">${scenePozzo()}</g>
         <g transform="translate(292 268) scale(0.31)">${sceneFienile()}</g>
-        ${frame}`, s);
+        ${frame}`, s, analog);
     }
     if (s === 2) {
-      return wrap(id, alt, `<rect width="640" height="420" fill="#0e1014"/><rect x="40" y="40" width="560" height="340" fill="#16181e"/><g transform="translate(64 64) scale(0.34)">${sceneRame()}</g><rect x="64" y="64" width="220" height="160" fill="none" stroke="#2a2e38"/><g transform="translate(308 64) scale(0.42)">${scenePozzo()}</g><rect x="308" y="64" width="268" height="268" fill="none" stroke="#2a2e38"/><path d="M332 300h220" stroke="#c81d25" stroke-width="3"/><rect x="560" y="40" width="16" height="340" fill="#c81d25"/>`, s);
+      return wrap(id, alt, `<rect width="640" height="420" fill="#0e1014"/><rect x="40" y="40" width="560" height="340" fill="#16181e"/><g transform="translate(64 64) scale(0.34)">${sceneTorchio()}</g><rect x="64" y="64" width="220" height="160" fill="none" stroke="#2a2e38"/><g transform="translate(308 64) scale(0.42)">${sceneRame()}</g><rect x="308" y="64" width="268" height="268" fill="none" stroke="#2a2e38"/><path d="M332 300h220" stroke="#c81d25" stroke-width="3"/><rect x="560" y="40" width="16" height="340" fill="#c81d25"/>`, s, analog);
     }
     if (s === 3) {
-      return wrap(id, alt, `<rect width="640" height="420" fill="#16181e"/><rect x="100" y="36" width="440" height="320" fill="#0e1014"/><g transform="translate(128 64) scale(0.6)">${sceneOlivo()}</g><rect x="128" y="64" width="384" height="230" fill="none" stroke="#2a2e38"/><rect x="128" y="308" width="90" height="8" fill="#c81d25"/><path d="M36 48h80" stroke="#c81d25" stroke-width="6"/>`, s);
+      return wrap(id, alt, `<rect width="640" height="420" fill="#16181e"/><rect x="100" y="36" width="440" height="320" fill="#0e1014"/><g transform="translate(128 48) scale(0.6)">${sceneTorchio()}</g><rect x="128" y="64" width="384" height="230" fill="none" stroke="#2a2e38"/><rect x="128" y="308" width="90" height="8" fill="#c81d25"/><path d="M36 48h80" stroke="#c81d25" stroke-width="6"/>`, s, analog);
     }
-    return wrap(id, alt, `<rect width="640" height="420" fill="#0e1014"/><g transform="translate(72 60) scale(0.53)">${sceneRame()}</g><rect x="72" y="60" width="342" height="240" fill="none" stroke="#2a2e38"/><rect x="470" y="52" width="16" height="240" fill="#c81d25"/><path d="M96 348h300" stroke="#c81d25" stroke-width="2"/><rect x="72" y="360" width="140" height="8" fill="#e8e6df"/>`, s);
+    return wrap(id, alt, `<rect width="640" height="420" fill="#0e1014"/><g transform="translate(72 60) scale(0.53)">${sceneRame()}</g><rect x="72" y="60" width="342" height="240" fill="none" stroke="#2a2e38"/><rect x="470" y="52" width="16" height="240" fill="#c81d25"/><path d="M96 348h300" stroke="#c81d25" stroke-width="2"/><rect x="72" y="360" width="140" height="8" fill="#e8e6df"/>`, s, analog);
   }
   if (s === 1) {
-    const clips = `<clipPath id="cs0${s}"><rect x="40" y="40" width="270" height="176"/></clipPath><clipPath id="cs1${s}"><rect x="330" y="40" width="270" height="176"/></clipPath><clipPath id="cs2${s}"><rect x="40" y="236" width="270" height="148"/></clipPath><clipPath id="cs3${s}"><rect x="330" y="236" width="270" height="148"/></clipPath>`;
+    const clips = `<clipPath id="edl${s}"><rect x="36" y="28" width="360" height="364"/></clipPath>${analog}`;
+    return wrap(id, alt, `<rect width="640" height="420" fill="#f3efe6"/><g clip-path="url(#edl${s})"><g transform="translate(-40 -20) scale(0.7)">${sceneOlivo()}</g></g><rect x="36" y="28" width="360" height="364" fill="none" stroke="#1a1814"/><rect x="412" y="28" width="196" height="364" fill="#fffdf8"/>${typeColumn()}`, s, clips);
+  }
+  if (s === 2) {
+    const clips = `<clipPath id="edf${s}"><rect x="48" y="36" width="544" height="248"/></clipPath>${analog}`;
+    return wrap(id, alt, `<rect width="640" height="420" fill="#e8e0d2"/><rect x="36" y="24" width="568" height="372" fill="#fffdf8" stroke="#ddd4c6"/><g clip-path="url(#edf${s})"><g transform="translate(48 20) scale(0.85)">${sceneFienile()}</g></g><rect x="48" y="36" width="544" height="248" fill="none" stroke="#6a5e52"/><rect x="64" y="304" width="260" height="14" fill="#1a1814"/><rect x="64" y="332" width="180" height="8" fill="#9a4a28"/><rect x="420" y="304" width="140" height="56" fill="#1a1814"/>`, s, clips);
+  }
+  if (s === 3) {
+    const clips = `${analog}<clipPath id="cs0${s}"><rect x="40" y="40" width="270" height="176"/></clipPath><clipPath id="cs1${s}"><rect x="330" y="40" width="270" height="176"/></clipPath><clipPath id="cs2${s}"><rect x="40" y="236" width="270" height="148"/></clipPath><clipPath id="cs3${s}"><rect x="330" y="236" width="270" height="148"/></clipPath>`;
     return wrap(id, alt, `<rect width="640" height="420" fill="#e8e0d2"/>${sprockets()}
       <g clip-path="url(#cs0${s})"><g transform="translate(40 40) scale(0.42)">${scenePozzo()}</g></g><rect x="40" y="40" width="270" height="176" fill="none" stroke="#ddd4c6"/>
       <g clip-path="url(#cs1${s})"><g transform="translate(330 40) scale(0.42)">${sceneOlivo()}</g></g><rect x="330" y="40" width="270" height="176" fill="none" stroke="#ddd4c6"/>
       <g clip-path="url(#cs2${s})"><g transform="translate(40 236) scale(0.42)">${sceneFienile()}</g></g><rect x="40" y="236" width="270" height="148" fill="none" stroke="#ddd4c6"/>
-      <g clip-path="url(#cs3${s})"><g transform="translate(330 236) scale(0.42)">${sceneRame()}</g></g><rect x="330" y="236" width="270" height="148" fill="none" stroke="#ddd4c6"/>
+      <g clip-path="url(#cs3${s})"><g transform="translate(330 236) scale(0.42)">${sceneTorchio()}</g></g><rect x="330" y="236" width="270" height="148" fill="none" stroke="#ddd4c6"/>
       <path d="M40 400h560" stroke="#9a4a28" stroke-width="5"/>`, s, clips);
   }
-  if (s === 2) {
-    const clips = `<clipPath id="edl${s}"><rect x="32" y="28" width="300" height="364"/></clipPath>`;
-    return wrap(id, alt, `<rect width="640" height="420" fill="#f3efe6"/><g clip-path="url(#edl${s})"><g transform="translate(-20 -40) scale(0.867)">${sceneOlivo()}</g></g><rect x="32" y="28" width="300" height="364" fill="none" stroke="#1a1814"/><rect x="356" y="28" width="252" height="364" fill="#fffdf8"/>${typeColumn()}`, s, clips);
-  }
-  if (s === 3) {
-    const clips = `<clipPath id="edf${s}"><rect x="96" y="64" width="448" height="210"/></clipPath>`;
-    return wrap(id, alt, `<rect width="640" height="420" fill="#e8e0d2"/><rect x="70" y="40" width="500" height="340" fill="#fffdf8" stroke="#ddd4c6"/><g clip-path="url(#edf${s})"><g transform="translate(96 40) scale(0.7)">${sceneFienile()}</g></g><rect x="96" y="64" width="448" height="210" fill="none" stroke="#6a5e52"/><rect x="118" y="292" width="240" height="12" fill="#1a1814"/><rect x="118" y="318" width="160" height="8" fill="#9a4a28"/><rect x="400" y="292" width="120" height="50" fill="#1a1814"/>`, s, clips);
-  }
-  const clips = `<clipPath id="edc${s}"><rect x="36" y="36" width="380" height="288"/></clipPath>`;
+  const clips = `<clipPath id="edc${s}"><rect x="36" y="36" width="380" height="288"/></clipPath>${analog}`;
   return wrap(id, alt, `<rect width="640" height="420" fill="#f3efe6"/>${sprockets()}
     <g clip-path="url(#edc${s})"><g transform="translate(36 36) scale(0.594)">${scenePozzo()}</g></g>
     <rect x="36" y="36" width="380" height="288" fill="none" stroke="#ddd4c6" stroke-width="2"/>

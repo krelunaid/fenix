@@ -40,6 +40,88 @@ async function shot(page: Page, name: string) {
   return dest;
 }
 
+type PaintFingerprint = { hist: number[]; mean: [number, number, number]; paints: number };
+
+function fingerprintDistance(a: PaintFingerprint, b: PaintFingerprint): number {
+  let hist = 0;
+  const n = Math.max(a.hist.length, b.hist.length);
+  for (let i = 0; i < n; i++) hist += Math.abs((a.hist[i] || 0) - (b.hist[i] || 0));
+  const mean =
+    Math.abs(a.mean[0] - b.mean[0]) + Math.abs(a.mean[1] - b.mean[1]) + Math.abs(a.mean[2] - b.mean[2]);
+  return hist + mean * 6;
+}
+
+async function paintFingerprints(page: Page, selector: string): Promise<PaintFingerprint[]> {
+  return page.evaluate(async (sel) => {
+    const roots = [...document.querySelectorAll(sel)];
+    const out: { hist: number[]; mean: [number, number, number]; paints: number }[] = [];
+    for (const root of roots) {
+      const svg = (root.tagName.toLowerCase() === "svg" ? root : root.querySelector("svg")) as SVGSVGElement | null;
+      if (!svg) continue;
+      const paints = new Set<string>();
+      svg.querySelectorAll("*").forEach((n) => {
+        for (const a of ["fill", "stroke"]) {
+          const v = n.getAttribute(a);
+          if (v && v !== "none") paints.add(v.toLowerCase());
+        }
+      });
+      const xml = new XMLSerializer().serializeToString(svg);
+      const url = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(xml)}`;
+      const img = await new Promise<HTMLImageElement | null>((resolve) => {
+        const image = new Image();
+        image.onload = () => resolve(image);
+        image.onerror = () => resolve(null);
+        image.src = url;
+      });
+      const hist = new Array(24).fill(0);
+      let rS = 0;
+      let gS = 0;
+      let bS = 0;
+      let n = 0;
+      if (img) {
+        const canvas = document.createElement("canvas");
+        canvas.width = 48;
+        canvas.height = 36;
+        const ctx = canvas.getContext("2d", { willReadFrequently: true });
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, 48, 36);
+          const data = ctx.getImageData(0, 0, 48, 36).data;
+          for (let i = 0; i < data.length; i += 4) {
+            const r = data[i]!;
+            const g = data[i + 1]!;
+            const b = data[i + 2]!;
+            const a = data[i + 3]!;
+            if (a < 16) continue;
+            rS += r;
+            gS += g;
+            bS += b;
+            n += 1;
+            const max = Math.max(r, g, b);
+            const min = Math.min(r, g, b);
+            const lum = (max + min) / 2;
+            let hue = 0;
+            if (max !== min) {
+              const d = max - min;
+              if (max === r) hue = ((g - b) / d + (g < b ? 6 : 0)) / 6;
+              else if (max === g) hue = ((b - r) / d + 2) / 6;
+              else hue = ((r - g) / d + 4) / 6;
+            }
+            const hi = Math.min(7, Math.floor(hue * 8));
+            const li = lum < 85 ? 0 : lum < 170 ? 1 : 2;
+            hist[hi * 3 + li] += 1;
+          }
+        }
+      }
+      out.push({
+        hist,
+        mean: n ? [rS / n, gS / n, bS / n] : [0, 0, 0],
+        paints: paints.size,
+      });
+    }
+    return out;
+  }, selector);
+}
+
 describe("graphic pipeline visual QA D/T/M", () => {
   it("paints six hard briefs plus dual directions, scores them, and records a blind rubric", async () => {
     const fixtures = loadPipelineFixtures();
@@ -171,7 +253,42 @@ describe("graphic pipeline visual QA D/T/M", () => {
                 } catch {
                   /* not rendered */
                 }
-                const looks = [...document.querySelectorAll(".look")].map((el) => el.getBoundingClientRect().height);
+                const looks = [...document.querySelectorAll(".look")].map((el) => {
+                  const b = el.getBoundingClientRect();
+                  const title = el.querySelector("h2")?.textContent || "";
+                  const garment = el.querySelector("[data-garment]")?.getAttribute("data-garment") || "";
+                  const h2 = el.querySelector("h2")?.getBoundingClientRect();
+                  return { h: b.height, title, garment, titleH: h2?.height || 0, titleW: h2?.width || 0, top: b.top, left: b.left, right: b.right, bottom: b.bottom };
+                });
+                const tickets = [...document.querySelectorAll(".ticket")].map((el) => {
+                  const title = el.querySelector("h2")?.textContent || "";
+                  const dish = el.querySelector("[data-dish]")?.getAttribute("data-dish") || "";
+                  const h2 = el.querySelector("h2")?.getBoundingClientRect();
+                  return { title, dish, titleH: h2?.height || 0, titleW: h2?.width || 0 };
+                });
+                const plates = [...document.querySelectorAll("#lastre .plate")].map((el) => {
+                  const title = el.querySelector("h2")?.textContent || "";
+                  const scene = el.querySelector("[data-scene]")?.getAttribute("data-scene") || "";
+                  const h2 = el.querySelector("h2")?.getBoundingClientRect();
+                  return { title, scene, titleH: h2?.height || 0, titleW: h2?.width || 0 };
+                });
+                let shoulderWaist = { shoulder: 0, waist: 0 };
+                const shoulder = svg.querySelector("[data-part='shoulder']") as SVGGraphicsElement | null;
+                const waist = svg.querySelector("[data-part='waist']") as SVGGraphicsElement | null;
+                try {
+                  if (shoulder) shoulderWaist.shoulder = shoulder.getBBox().width;
+                  if (waist) shoulderWaist.waist = waist.getBBox().width;
+                } catch {
+                  /* not rendered */
+                }
+                const legs = [...svg.querySelectorAll("[data-part='leg']")].map((n) => {
+                  try {
+                    const b = (n as SVGGraphicsElement).getBBox();
+                    return { x: b.x, w: b.width };
+                  } catch {
+                    return { x: 0, w: 0 };
+                  }
+                });
                 const parent = svg.parentElement?.getBoundingClientRect();
                 const box = svg.getBoundingClientRect();
                 const sil = document.querySelector(".look .sil")?.getBoundingClientRect();
@@ -179,20 +296,30 @@ describe("graphic pipeline visual QA D/T/M", () => {
                   const b = el.getBoundingClientRect();
                   return { w: b.width, h: b.height };
                 });
+                const nav = document.querySelector("nav")?.getBoundingClientRect();
+                const firstTitle = document.querySelector(".look h2, .ticket h2, #copertina h2, .plate h2")?.getBoundingClientRect();
                 return {
                   ok: true as const,
                   parts,
                   garment,
+                  dish: svg.querySelector("[data-dish]")?.getAttribute("data-dish") || "",
                   scenes,
                   paths,
                   paints: paints.size,
                   sleeveWider,
                   looks,
+                  tickets,
+                  plates,
+                  shoulderWaist,
+                  legs,
                   fillW: parent && parent.width ? box.width / parent.width : 0,
                   fillH: parent && parent.height ? box.height / parent.height : 0,
                   silH: sil?.height || 0,
                   viewH: window.innerHeight,
                   thumbs,
+                  navTop: nav?.top || 0,
+                  firstTitleBottom: firstTitle?.bottom || 0,
+                  firstTitleH: firstTitle?.height || 0,
                 };
               });
               assert.equal(material.ok, true, `${fix.id}/${vp} material svg`);
@@ -211,6 +338,59 @@ describe("graphic pipeline visual QA D/T/M", () => {
                 );
                 if (material.garment === "coat") {
                   assert.equal(material.sleeveWider, true, `${fix.id}/${vp} sleeves must add width beyond the body tube`);
+                  assert.ok(
+                    (material.shoulderWaist?.shoulder || 0) > (material.shoulderWaist?.waist || 0) * 1.08,
+                    `${fix.id}/${vp} coat shoulder ${material.shoulderWaist?.shoulder} vs waist ${material.shoulderWaist?.waist}`,
+                  );
+                }
+                if (material.garment === "trousers" && (material.legs || []).length >= 2) {
+                  const [a, b] = material.legs;
+                  const left = a!.x <= b!.x ? a! : b!;
+                  const right = a!.x <= b!.x ? b! : a!;
+                  assert.ok(
+                    right.x > left.x + left.w * 0.18,
+                    `${fix.id}/${vp} trousers legs must leave a gap ${JSON.stringify(material.legs)}`,
+                  );
+                }
+                const looks = material.looks || [];
+                for (const look of looks) {
+                  assert.ok(look.titleH >= 14 && look.titleW >= 48, `${fix.id}/${vp} look title unreadable ${look.title} ${look.titleW}x${look.titleH}`);
+                  const expected =
+                    /cappotto/i.test(look.title) ? "coat"
+                    : /abito|colonna/i.test(look.title) ? "dress"
+                    : /pantalone/i.test(look.title) ? "trousers"
+                    : /gonna/i.test(look.title) ? "skirt"
+                    : "";
+                  if (expected) {
+                    assert.equal(look.garment, expected, `${fix.id}/${vp} ${look.title} -> ${look.garment}`);
+                  }
+                }
+                assert.ok(new Set(looks.map((l) => l.garment).filter(Boolean)).size >= Math.min(3, looks.length), `${fix.id}/${vp} garment diversity`);
+                if (vp !== "M" && looks.length >= 2) {
+                  const fps = await paintFingerprints(page, ".look .sil svg");
+                  if (fps.length >= 2) {
+                    for (let i = 0; i < fps.length; i++) {
+                      for (let j = i + 1; j < fps.length; j++) {
+                        const d = fingerprintDistance(fps[i]!, fps[j]!);
+                        assert.ok(
+                          d >= 28,
+                          `${fix.id}/${vp} look ${i}/${j} look the same (dist ${d.toFixed(1)})`,
+                        );
+                      }
+                    }
+                  }
+                }
+                for (let i = 0; i < looks.length; i++) {
+                  for (let j = i + 1; j < looks.length; j++) {
+                    const a = looks[i]!;
+                    const b = looks[j]!;
+                    const overlap = !(a.right <= b.left + 1 || b.right <= a.left + 1 || a.bottom <= b.top + 1 || b.bottom <= a.top + 1);
+                    if (overlap) {
+                      const w = Math.min(a.right, b.right) - Math.max(a.left, b.left);
+                      const h = Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top);
+                      assert.ok(w * h < 24, `${fix.id}/${vp} look overlap ${w * h}`);
+                    }
+                  }
                 }
                 if (vp === "M") {
                   assert.ok(
@@ -219,11 +399,10 @@ describe("graphic pipeline visual QA D/T/M", () => {
                   );
                 }
                 if (vp !== "M") {
-                  const looks = material.looks || [];
                   if (looks.length >= 2) {
                     assert.ok(
-                      looks[0]! > looks[1]! * 1.35,
-                      `${fix.id}/${vp} featured look ${looks[0]} vs ${looks[1]}`,
+                      looks[0]!.h > looks[1]!.h * 1.35,
+                      `${fix.id}/${vp} featured look ${looks[0]!.h} vs ${looks[1]!.h}`,
                     );
                   }
                 }
@@ -238,9 +417,68 @@ describe("graphic pipeline visual QA D/T/M", () => {
                     `${fix.id}/${vp} ticket thumb ${thumb.w}x${thumb.h}`,
                   );
                 }
+                const tickets = material.tickets || [];
+                assert.ok(tickets.length >= 4, `${fix.id}/${vp} tickets ${tickets.length}`);
+                for (const t of tickets) {
+                  assert.ok(t.titleH >= 14 && t.titleW >= 48, `${fix.id}/${vp} ticket title unreadable ${t.title}`);
+                  const expected =
+                    /ricciola/i.test(t.title) ? "ricciola"
+                    : /gambero/i.test(t.title) ? "gambero"
+                    : /ostrica/i.test(t.title) ? "ostrica"
+                    : /tonno/i.test(t.title) ? "tonno"
+                    : "";
+                  if (expected) assert.equal(t.dish, expected, `${fix.id}/${vp} ${t.title} -> ${t.dish}`);
+                }
+                assert.equal(new Set(tickets.map((t) => t.dish)).size, tickets.length, `${fix.id}/${vp} dish diversity ${tickets.map((t) => t.dish)}`);
+                if (vp !== "M") {
+                  const fps = await paintFingerprints(page, ".ticket .thumb svg");
+                  assert.ok(fps.length >= 4, `${fix.id}/${vp} ticket fingerprints ${fps.length}`);
+                  for (let i = 0; i < fps.length; i++) {
+                    for (let j = i + 1; j < fps.length; j++) {
+                      const d = fingerprintDistance(fps[i]!, fps[j]!);
+                      assert.ok(
+                        d >= 48,
+                        `${fix.id}/${vp} ticket ${i}/${j} look the same (dist ${d.toFixed(1)})`,
+                      );
+                    }
+                  }
+                }
               }
               if (fix.id === "atelier-carta") {
                 assert.ok((material.scenes || []).length >= 1, `${fix.id}/${vp} scene`);
+                const plates = material.plates || [];
+                for (const p of plates) {
+                  assert.ok(p.titleH >= 14 && p.titleW >= 40, `${fix.id}/${vp} plate title unreadable ${p.title} ${p.titleW}x${p.titleH}`);
+                  const expected =
+                    /pozzo/i.test(p.title) ? "pozzo"
+                    : /olivo/i.test(p.title) ? "olivo"
+                    : /fienile/i.test(p.title) ? "fienile"
+                    : "";
+                  if (expected) assert.equal(p.scene, expected, `${fix.id}/${vp} ${p.title} -> ${p.scene}`);
+                }
+                if (plates.length >= 3) {
+                  assert.equal(new Set(plates.map((p) => p.scene)).size, plates.length, `${fix.id}/${vp} scene diversity`);
+                }
+                if (vp !== "M") {
+                  const fps = await paintFingerprints(page, "#lastre .plate svg");
+                  if (fps.length >= 2) {
+                    for (let i = 0; i < fps.length; i++) {
+                      for (let j = i + 1; j < fps.length; j++) {
+                        const d = fingerprintDistance(fps[i]!, fps[j]!);
+                        assert.ok(
+                          d >= 36,
+                          `${fix.id}/${vp} plate ${i}/${j} look the same (dist ${d.toFixed(1)})`,
+                        );
+                      }
+                    }
+                  }
+                }
+              }
+              if (material.firstTitleH && material.navTop) {
+                assert.ok(
+                  material.firstTitleBottom <= material.navTop + 8 || material.firstTitleH >= 14,
+                  `${fix.id}/${vp} title under nav`,
+                );
               }
             }
             const tabs = page.locator("button[data-view]");

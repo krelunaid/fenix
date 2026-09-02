@@ -670,20 +670,22 @@ function renderLookbook(){
   return html+"</div>";
 }
 function renderRooms(){
+  var plates=[hero].concat(arts);
   var html='<div class="hero">'+hero+'<div class="caption"><p class="kicker">'+kicker+"</p><h2>"+data.items.length+" "+census+"</h2></div></div>";
   if(!data.items.length) return html+emptyBox();
   html+='<div class="rooms">';
   data.items.forEach(function(e,i){
-    html+='<article class="room" data-id="'+e.id+'" data-state="'+(i===0?"on":"idle")+'"><div class="thumb">'+(arts[i%arts.length]||hero)+'</div><div><p>'+chip(e.kicker)+'</p><h2>'+e.title+'</h2><p class="notes">'+e.note+" · "+e.meta+'</p><button class="btn sm ghost" data-act="advance" data-id="'+e.id+'">Avanza soggiorno</button></div></article>';
+    html+='<article class="room" data-id="'+e.id+'" data-state="'+(i===0?"on":"idle")+'"><div class="thumb">'+(plates[i%plates.length]||hero)+'</div><div><p>'+chip(e.kicker)+'</p><h2>'+e.title+'</h2><p class="notes">'+e.note+" · "+e.meta+'</p><button class="btn sm ghost" data-act="advance" data-id="'+e.id+'">Avanza soggiorno</button></div></article>';
   });
   return html+"</div>";
 }
 function renderTickets(){
+  var plates=[hero].concat(arts);
   var html='<div class="hero plate">'+hero+'<div class="caption"><p class="kicker">'+kicker+"</p><h2>"+data.items.length+" "+census+"</h2></div></div>";
   if(!data.items.length) return html+emptyBox();
   html+='<div class="tickets">';
   data.items.forEach(function(e,i){
-    html+='<article class="ticket" data-id="'+e.id+'" data-act="advance" data-state="'+(i===0?"on":"idle")+'"><div class="thumb">'+(arts[i%arts.length]||hero)+'</div><div><h2>'+e.title+'</h2><p class="notes">'+e.note+" · "+e.meta+"</p></div>"+chip(e.kicker)+"</article>";
+    html+='<article class="ticket" data-id="'+e.id+'" data-act="advance" data-state="'+(i===0?"on":"idle")+'"><div class="thumb">'+(plates[i%plates.length]||hero)+'</div><div><h2>'+e.title+'</h2><p class="notes">'+e.note+" · "+e.meta+"</p></div>"+chip(e.kicker)+"</article>";
   });
   return html+"</div>";
 }
@@ -716,10 +718,11 @@ function renderDesk(){
   return html;
 }
 function renderMagazine(){
+  var plates=[hero].concat(arts);
   var html='<section id="copertina"><div class="hero">'+hero+'</div><div class="card span"><p class="kicker">'+kicker+"</p><h2>"+specName()+" in lastre</h2><p class=\\"notes\\">Rivista di lastre fotografiche. Niente stock, niente telefono boxed.</p></div></section>";
   html+='<section id="lastre" class="lastre">';
   data.items.forEach(function(e,i){
-    html+='<article class="plate card" data-id="'+e.id+'" data-act="wear" data-state="'+(i===0?"on":"idle")+'">'+(arts[i%arts.length]||hero)+"<h2>"+e.title+'</h2><p class="notes">'+e.note+" · "+e.meta+"</p></article>";
+    html+='<article class="plate card" data-id="'+e.id+'" data-act="wear" data-state="'+(i===0?"on":"idle")+'">'+(plates[i%plates.length]||hero)+"<h2>"+e.title+'</h2><p class="notes">'+e.note+" · "+e.meta+"</p></article>";
   });
   html+="</section>";
   html+='<section id="studio" class="card span"><p class="kicker">Studio</p><h2>'+data.items.length+" lastre in fascicolo</h2><p class=\\"notes\\">"+place+"</p></section>";

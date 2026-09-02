@@ -51,48 +51,48 @@
     },
     {
       "name": "vesti-inchiostro-D.png",
-      "sha256": "b8dc5232686a7eec41fd1d2b055ff0edb0f97551715cad4abe09c382bd003b1d",
-      "bytes": 670935,
+      "sha256": "403d634c1797122897dcdaed605c61d2e12ac47e37719854affc4f24944ffc82",
+      "bytes": 717716,
       "score": 96,
       "ok": true,
       "grammar": "lookbook"
     },
     {
       "name": "vesti-inchiostro-T.png",
-      "sha256": "9ccbfa691ac1ac0b4648b670923646aad9c887df28f6eea46440d39e8e4a2cfe",
-      "bytes": 488011,
+      "sha256": "37af7ff83d320189fa8160ad54ab113dbaa1be595ae25f4d8356c864c7d06849",
+      "bytes": 555849,
       "score": 96,
       "ok": true,
       "grammar": "lookbook"
     },
     {
       "name": "vesti-inchiostro-M.png",
-      "sha256": "a1f5e116507c0bddcda28ff977772c950b6b44241f33e36fd02f96e261037c0c",
-      "bytes": 232329,
+      "sha256": "097d57d30b859de15b0ee0ce3db0fad41cc8bb35f32e6d8075acbe1caae32391",
+      "bytes": 255754,
       "score": 96,
       "ok": true,
       "grammar": "lookbook"
     },
     {
       "name": "vesti-osso-D.png",
-      "sha256": "5e91da82c3a976db8627a64cd0b34994a1af4b7825916710ef6994c18bb7fe81",
-      "bytes": 421412,
+      "sha256": "d93ca02795a388b984b03fe459a60679307ba79663b697d8ad819e34512d8906",
+      "bytes": 328310,
       "score": 96,
       "ok": true,
       "grammar": "lookbook"
     },
     {
       "name": "vesti-osso-T.png",
-      "sha256": "dffaf3f32bec33766d642cafaf0423662cc27ed0b5d556cf60fbd2462dc5769e",
-      "bytes": 477903,
+      "sha256": "bbf3f5343e377110a872c01f581c8cca47f155312e330245190ec237165b0ed8",
+      "bytes": 384390,
       "score": 96,
       "ok": true,
       "grammar": "lookbook"
     },
     {
       "name": "vesti-osso-M.png",
-      "sha256": "52673a6af6cf0f877401eab2c29f0b2d7ee56ae1fee9ac209bb8bb004f03361f",
-      "bytes": 194490,
+      "sha256": "2d2bffac0350fb0725e69c46a093bb45e826b96f4c6d26e87a02c0edf76f2546",
+      "bytes": 138725,
       "score": 96,
       "ok": true,
       "grammar": "lookbook"
@@ -171,24 +171,24 @@
     },
     {
       "name": "crudo-mare-D.png",
-      "sha256": "76bba375f996280589f5f06d9fbc36427e5af341d8ac27a07ad547e1d7badc13",
-      "bytes": 536842,
+      "sha256": "f018a1755c01afc09c43462a2a197ce7a7d5299a4488a3b38909c9e4ee28d512",
+      "bytes": 532670,
       "score": 100,
       "ok": true,
       "grammar": "service-board"
     },
     {
       "name": "crudo-mare-T.png",
-      "sha256": "8d451f5f5b8762bfda892562663ec26d0a3a047bed49609c653fe88c603962b8",
-      "bytes": 439557,
+      "sha256": "9012b92de4010b9f6f08d8e5394c12f7486b30920ad3900afe33de9774d1837f",
+      "bytes": 436691,
       "score": 100,
       "ok": true,
       "grammar": "service-board"
     },
     {
       "name": "crudo-mare-M.png",
-      "sha256": "eacf22e3345ea7ac2888712fd4164d2d4ae747f4115c69f1c04866247aba3090",
-      "bytes": 212438,
+      "sha256": "6d7d1130d42ff36de963fef891f5b93cb894c34a93ffa860344540006de5e1e3",
+      "bytes": 211463,
       "score": 100,
       "ok": true,
       "grammar": "service-board"
@@ -219,24 +219,24 @@
     },
     {
       "name": "atelier-carta-D.png",
-      "sha256": "30268d59d8f32b53440bbe2b9d7db37f77576842b5a76fff21ddb4dd13ba8fc1",
-      "bytes": 671320,
+      "sha256": "e404bcc1c8dbc5fef8a912b41d34522612e5463961300da7a916222c218ef555",
+      "bytes": 669085,
       "score": 100,
       "ok": true,
       "grammar": "magazine"
     },
     {
       "name": "atelier-carta-T.png",
-      "sha256": "53ca5a6f997c1ea10dd19e80bffeeceb0a770efc38c2cbd9c5415694d24c5a68",
-      "bytes": 503153,
+      "sha256": "48bd0f6c2d42560b1cfdec16b19155168fefe9a61a911fa84a654a8c24f8f0f3",
+      "bytes": 498697,
       "score": 100,
       "ok": true,
       "grammar": "magazine"
     },
     {
       "name": "atelier-carta-M.png",
-      "sha256": "8e64ac8d02cf2d32ffc61ebf101330a8801d47aa64a805e3dbb339323e615f3d",
-      "bytes": 200661,
+      "sha256": "2d9d0b6aa6406bf23d8315c14b4ac3132ce5e41becb1f854ac15ed43da61e6a0",
+      "bytes": 200306,
       "score": 100,
       "ok": true,
       "grammar": "magazine"

@@ -112,7 +112,9 @@ describe("graphic pipeline prompt→plan→generate→visual→QA", () => {
     }
     assert.match(vesti.html, /data-garment="coat"/);
     assert.match(vesti.html, /data-part="lapel"/);
+    assert.match(vesti.html, /data-part="shoulder"/);
     assert.match(vesti.html, /data-garment=\\"trousers\\"/);
+    assert.match(vesti.html, /data-part=\\"crease\\"/);
     assert.match(vesti.html, /var plates=\[hero\]/);
     assert.match(vesti.html, /grid-row:1 \/ span 2/);
     assert.match(vesti.html, /min\(54vh,460px\)/);
@@ -121,11 +123,19 @@ describe("graphic pipeline prompt→plan→generate→visual→QA", () => {
     assert.match(crudo.html, /data-part="flesh"/);
     assert.match(crudo.html, /data-part="citrus"/);
     assert.match(crudo.html, /data-part="herb"/);
+    assert.match(crudo.html, /data-dish="ricciola"/);
+    assert.match(crudo.html, /data-dish=\\"gambero\\"/);
+    assert.match(crudo.html, /data-dish=\\"ostrica\\"/);
+    assert.match(crudo.html, /data-dish=\\"tonno\\"/);
     assert.match(crudo.html, /ticket \.thumb/);
     assert.match(crudo.html, /width:96px;height:80px/);
+    assert.match(crudo.html, /var plates=\[hero\]/);
     assert.match(atelier.html, /data-scene="pozzo"/);
+    assert.match(atelier.html, /data-scene=\\"olivo\\"/);
+    assert.match(atelier.html, /data-scene=\\"fienile\\"/);
     assert.match(atelier.html, /data-part="type"/);
     assert.match(atelier.html, /#copertina\{grid-column:1/);
+    assert.match(atelier.html, /var plates=\[hero\]/);
     const osso = composeProduct(
       `${formatPrefix("app")}Vesti Osso: moda e vendite, lookbook in avorio, capi in osso e cassa.`,
     );
