@@ -94,6 +94,60 @@ describe("graphic pipeline visual QA D/T/M", () => {
             );
             assert.ok(overflow <= 8, `${fix.id}/${vp} overflow ${overflow}`);
             assert.equal(errors.length, 0, `${fix.id}/${vp} console ${errors.join(" | ")}`);
+            const iconMetrics = await page.evaluate(() => {
+              const svgs = [...document.querySelectorAll("nav svg")];
+              return svgs.map((node) => {
+                const el = node as SVGSVGElement;
+                const r = el.getBoundingClientRect();
+                const parent = el.parentElement?.getBoundingClientRect();
+                let bbox = { x: 0, y: 0, width: 0, height: 0 };
+                try {
+                  const b = el.getBBox();
+                  bbox = { x: b.x, y: b.y, width: b.width, height: b.height };
+                } catch {
+                  /* not rendered */
+                }
+                const cs = getComputedStyle(el);
+                return {
+                  w: r.width,
+                  h: r.height,
+                  display: cs.display,
+                  overflowRight: parent ? r.right - parent.right : 0,
+                  overflowBottom: parent ? r.bottom - parent.bottom : 0,
+                  overflowLeft: parent ? parent.left - r.left : 0,
+                  overflowTop: parent ? parent.top - r.top : 0,
+                  bbox,
+                  viewBox: el.getAttribute("viewBox"),
+                  join: el.getAttribute("stroke-linejoin"),
+                };
+              });
+            });
+            assert.doesNotMatch(fix.html, /M5 19l7-14 7 14/);
+            const visibleIcons = iconMetrics.filter((m) => m.display !== "none" && m.w > 0 && m.h > 0);
+            if (visibleIcons.length > 0) {
+              const sizes = visibleIcons.map((m) => Math.max(m.w, m.h));
+              const max = Math.max(...sizes);
+              const min = Math.min(...sizes);
+              assert.ok(
+                max / min <= 1.35,
+                `${fix.id}/${vp} nav icon size ratio ${max.toFixed(1)}/${min.toFixed(1)}`,
+              );
+              for (const m of visibleIcons) {
+                assert.ok(m.w <= 26 && m.h <= 26, `${fix.id}/${vp} nav icon oversized ${m.w.toFixed(1)}x${m.h.toFixed(1)}`);
+                assert.ok(m.w >= 16 && m.h >= 16, `${fix.id}/${vp} nav icon tiny ${m.w.toFixed(1)}x${m.h.toFixed(1)}`);
+                assert.ok(m.overflowRight <= 1.5, `${fix.id}/${vp} icon overflow right ${m.overflowRight}`);
+                assert.ok(m.overflowBottom <= 1.5, `${fix.id}/${vp} icon overflow bottom ${m.overflowBottom}`);
+                assert.ok(m.overflowLeft <= 1.5, `${fix.id}/${vp} icon overflow left ${m.overflowLeft}`);
+                assert.ok(m.overflowTop <= 1.5, `${fix.id}/${vp} icon overflow top ${m.overflowTop}`);
+                assert.equal(m.viewBox, "0 0 24 24", `${fix.id}/${vp} viewBox`);
+                assert.equal(m.join, "round", `${fix.id}/${vp} linejoin`);
+                assert.ok(m.bbox.x >= -1.2 && m.bbox.y >= -1.2, `${fix.id}/${vp} bbox origin ${m.bbox.x},${m.bbox.y}`);
+                assert.ok(
+                  m.bbox.x + m.bbox.width <= 25.2 && m.bbox.y + m.bbox.height <= 25.2,
+                  `${fix.id}/${vp} bbox ${m.bbox.width}x${m.bbox.height} at ${m.bbox.x},${m.bbox.y}`,
+                );
+              }
+            }
             const tabs = page.locator("button[data-view]");
             if ((await tabs.count()) > 1) {
               await tabs.nth(1).click();

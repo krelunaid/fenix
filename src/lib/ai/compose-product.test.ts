@@ -13,6 +13,7 @@ import {
 import { APP_SHELL_HTML } from "./app-shell.ts";
 import { hueBucket } from "../projects/design-tokens.ts";
 import { domainIllustration } from "./domain-imagery.ts";
+import { isLetterAIcon } from "../projects/craft-icons.ts";
 
 const HARD = [
   `${formatPrefix("app")}Essenza: gestione profumi premium, flaconi, note olfattive e guardaroba.`,
@@ -54,6 +55,22 @@ describe("graphic pipeline prompt→plan→generate→visual→QA", () => {
       assert.match(run.generated.html, /data-slot="/);
       assert.match(run.generated.html, /data-fenix-flash/);
       assert.match(run.generated.html, /data-state/);
+      assert.match(run.generated.html, /data-craft-nav="1"/);
+      assert.match(run.generated.html, /stroke-linejoin="round"/);
+      assert.match(run.generated.html, /viewBox="0 0 24 24"/);
+      assert.doesNotMatch(run.generated.html, /M5 19l7-14 7 14/);
+      assert.doesNotMatch(run.generated.html, /M16 8\s*L24 22\s*H8/i);
+      const navIcons = [...run.generated.html.matchAll(/<svg[^>]*data-craft-nav="1"[^>]*>[\s\S]*?<\/svg>/g)].map(
+        (m) => m[0],
+      );
+      assert.ok(navIcons.length >= 4, run.generated.spec?.id);
+      assert.equal(new Set(navIcons).size, 4, `${run.generated.spec?.id} unique nav icons`);
+      for (const svg of navIcons) {
+        assert.equal(isLetterAIcon(svg), false, svg.slice(0, 80));
+        assert.match(svg, /width="24"/);
+        assert.match(svg, /height="24"/);
+        assert.match(svg, /overflow="hidden"/);
+      }
       assert.doesNotMatch(run.generated.html, /Ciao/);
       assert.doesNotMatch(run.generated.html, /localStorage/);
       assert.doesNotMatch(run.generated.html, /#f5f5f7/);

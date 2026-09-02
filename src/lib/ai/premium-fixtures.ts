@@ -6,6 +6,7 @@
 import { formatPrefix } from "../projects/infer.ts";
 import { tokensFromBrief, type TokenFamily } from "../projects/design-tokens.ts";
 import { domainIllustration, altForBrief } from "./domain-imagery.ts";
+import { craftNavIcon } from "../projects/craft-icons.ts";
 import type { ProjectKind } from "../projects/types.ts";
 
 export type PremiumFixtureId =
@@ -346,14 +347,8 @@ th{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--mute
 }`;
 }
 
-function tabSvg(i: number): string {
-  const paths = [
-    '<path d="M6 4h12v16H6z"/><path d="M9 8h6"/>',
-    '<circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/>',
-    '<path d="M4 20V8l8-4 8 4v12"/><path d="M10 20v-6h4v6"/>',
-    '<rect x="5" y="4" width="14" height="16" rx="2"/><path d="M9 8h6M9 12h6"/>',
-  ];
-  return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">${paths[i % 4]}</svg>`;
+function tabSvg(tab: { id: string; label: string }, i: number): string {
+  return craftNavIcon(tab, i);
 }
 
 function jsRows(spec: Spec): string {
@@ -405,7 +400,7 @@ input,select,textarea{width:100%;font:inherit;padding:12px 14px;border-radius:12
 .tabs{flex-shrink:0;height:calc(64px + env(safe-area-inset-bottom));display:grid;grid-template-columns:repeat(4,1fr);padding:6px 6px calc(6px + env(safe-area-inset-bottom));border-top:1px solid var(--line);background:color-mix(in srgb,var(--surface) 92%,transparent)}
 .tabs button{border:0;background:none;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:3px;font:600 10px/1.1 "${t.fonts.body}",sans-serif;padding:4px}
 .tabs button.on{color:var(--accent)}
-.tabs svg{width:22px;height:22px}
+.tabs svg{width:22px;height:22px;flex:0 0 22px;overflow:hidden;display:block}
 button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .empty{padding:28px 8px;color:var(--muted);text-align:center}
 .day{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:8px;margin-bottom:12px}
@@ -435,7 +430,7 @@ let view=${JSON.stringify(homeView)};
 const arts=${JSON.stringify(cards)};
 const hero=${JSON.stringify(hero)};
 const tabDefs=${JSON.stringify(spec.tabs)};
-const glyphs=${JSON.stringify(spec.tabs.map((_, i) => tabSvg(i)))};
+const glyphs=${JSON.stringify(spec.tabs.map((t, i) => tabSvg(t, i)))};
 function save(){ if(window.Fenix) void window.Fenix.save("state", data); }
 function renderTabs(){
   document.getElementById("tabs").innerHTML=tabDefs.map(function(t,i){

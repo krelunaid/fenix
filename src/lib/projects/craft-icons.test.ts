@@ -3,7 +3,10 @@ import { describe, it } from "node:test";
 import { APP_SHELL_HTML } from "../ai/app-shell.ts";
 import {
   countAppleTabIcons,
+  craftNavIcon,
   ensureMainElementId,
+  isAppleChromeSvg,
+  isLetterAIcon,
   looksLikeAppleTabIcons,
   looksLikeIosWidgetHome,
   looksLikeSitePhoneChrome,
@@ -196,5 +199,31 @@ document.getElementById('main').innerHTML = 'x';
     assert.match(next, /<main id="main"/);
     assert.equal(ensureMainElementId(phone).includes('<main id="main"'), true);
     assert.equal(canPublishHtml(next, "site", "bottega-phone"), true, validateProductHtml(next, { kind: "site" }).errors.join(" · "));
+  });
+
+  it("draws craft nav icons with a 24 box, round joins, and no letter-A compass", () => {
+    const piramide = craftNavIcon({ id: "piramide", label: "Piramide" }, 1);
+    assert.equal(isLetterAIcon(piramide), false);
+    assert.doesNotMatch(piramide, /M5 19l7-14 7 14/);
+    assert.match(piramide, /viewBox="0 0 24 24"/);
+    assert.match(piramide, /width="24"/);
+    assert.match(piramide, /stroke-linejoin="round"/);
+    assert.match(piramide, /data-craft-nav="1"/);
+    const tabs = [
+      { id: "collezione", label: "Collezione" },
+      { id: "piramide", label: "Piramide" },
+      { id: "atelier", label: "Atelier" },
+      { id: "pelle", label: "Pelle" },
+      { id: "pipeline", label: "Pipeline" },
+      { id: "nuovo", label: "Nuova riga" },
+      { id: "reception", label: "Lobby" },
+      { id: "prenota", label: "Check-in" },
+    ];
+    const drawn = tabs.map((t, i) => craftNavIcon(t, i));
+    assert.equal(new Set(drawn).size, drawn.length);
+    for (const svg of drawn) {
+      assert.equal(isLetterAIcon(svg), false);
+      assert.equal(isAppleChromeSvg(svg), false);
+    }
   });
 });

@@ -1,7 +1,7 @@
 /** Pittogrammi da bottega. Mai casetta / plus-in-cerchio / omino iPhone. */
 
 const ATTR =
-  'viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"';
+  'viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" overflow="hidden"';
 
 export type CraftTabIcon = { id: string; label: string; svg: string };
 
@@ -34,6 +34,127 @@ export const CRAFT_TAB_ICONS: CraftTabIcon[] = [
 ];
 
 export const CRAFT_APP_ICON = `<svg ${ATTR}><path d="M6 3.5h11.5v17H6z"/><path d="M9 3.5v17"/><path d="M12 8h4.2M12 12h4.2"/></svg>`;
+
+/** Nav icons: viewBox 24, content in ~5–19, round joins, no miter spike, no letter-A. */
+const NAV_ATTR =
+  'viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" overflow="hidden" aria-hidden="true" data-craft-nav="1"';
+
+function navIcon(paths: string): string {
+  return `<svg ${NAV_ATTR}>${paths}</svg>`;
+}
+
+const NAV_ICONS = {
+  bottle: navIcon(
+    '<path d="M10 4.8h4v2.2l1.1 1.5V9H8.9V8.5L10 7z"/><rect x="8.6" y="9" width="6.8" height="10.4" rx="1.3"/><path d="M10.3 12.2h3.4"/>',
+  ),
+  pyramid: navIcon(
+    '<path d="M8.2 6.6h7.6l-1.1 3.1H9.3z"/><path d="M7.4 11.1h9.2l-1.2 3.2H8.6z"/><path d="M6.6 15.7h10.8l-1.3 3.1H7.9z"/>',
+  ),
+  atelier: navIcon(
+    '<rect x="6.5" y="8.2" width="11" height="10.2" rx="1"/><path d="M9.2 18.4V11.4h2v7M13 18.4V11.4h2v7"/><path d="M6.5 8.4 12 5.6l5.5 2.8"/>',
+  ),
+  book: navIcon(
+    '<rect x="7.2" y="5.4" width="9.6" height="13.2" rx="1.1"/><path d="M9.6 8.6h4.8M9.6 12h4.8M9.6 15.4h3.2"/>',
+  ),
+  hanger: navIcon(
+    '<circle cx="12" cy="6.2" r="1.3"/><path d="M12 7.5 19.2 13H4.8L12 7.5z"/><path d="M7.2 13v5.6h9.6V13"/>',
+  ),
+  till: navIcon(
+    '<rect x="5.8" y="8.4" width="12.4" height="9.4" rx="1.1"/><path d="M8.2 8.4V6.8h7.6V8.4M8.4 12.2h7.2M8.4 15h4.6"/>',
+  ),
+  people: navIcon(
+    '<circle cx="9.2" cy="8.6" r="2.1"/><circle cx="15.2" cy="9.2" r="1.7"/><path d="M5.8 18c.5-3.2 6.2-3.2 6.7 0M12.8 18c.4-2.2 4.8-2.2 5.2 0"/>',
+  ),
+  shears: navIcon(
+    '<circle cx="8.2" cy="16" r="2"/><circle cx="15.8" cy="16" r="2"/><path d="M9.7 14.6 17.6 6.4M14.3 14.6 6.4 6.4"/>',
+  ),
+  bed: navIcon(
+    '<path d="M5.2 16.6V11.6a2.6 2.6 0 0 1 2.6-2.6h10.8v7.6"/><path d="M5.2 16.6h13.8"/><path d="M5.2 11.8h3.2M8.2 9V6.8"/>',
+  ),
+  key: navIcon(
+    '<circle cx="8.6" cy="12" r="2.8"/><path d="M11.4 12h7.4M16.4 12v2.8M18.8 12v2"/>',
+  ),
+  bell: navIcon(
+    '<path d="M7.4 10.2a4.6 4.6 0 0 1 9.2 0v3.8l1.3 1.8H6.1l1.3-1.8z"/><path d="M10.6 17.4a1.4 1.4 0 0 0 2.8 0"/>',
+  ),
+  lamp: navIcon(
+    '<path d="M12 5v2.8"/><path d="M8.2 9.2h7.6l-1.3 4.6H9.5z"/><path d="M12 13.8v5"/><path d="M9.6 18.8h4.8"/>',
+  ),
+  plate: navIcon(
+    '<ellipse cx="12" cy="13" rx="7.2" ry="4.8"/><ellipse cx="12" cy="13" rx="4" ry="2.4"/>',
+  ),
+  ticket: navIcon(
+    '<rect x="5.8" y="7.2" width="12.4" height="9.6" rx="1.1"/><path d="M14.6 7.2v9.6M8.2 10.2h4M8.2 13.2h3"/>',
+  ),
+  glass: navIcon(
+    '<path d="M8.2 5.6h7.6l-1.1 7.8a2.8 2.8 0 0 1-5.4 0z"/><path d="M12 13.8v4.6M9.4 18.4h5.2"/>',
+  ),
+  table: navIcon(
+    '<path d="M5.4 10.4h13.2"/><path d="M7.2 10.4v7.4M16.8 10.4v7.4M12 10.4v7.4"/>',
+  ),
+  kanban: navIcon(
+    '<rect x="5.4" y="5.8" width="3.8" height="12.4" rx=".7"/><rect x="10.1" y="5.8" width="3.8" height="7.6" rx=".7"/><rect x="14.8" y="5.8" width="3.8" height="10.2" rx=".7"/>',
+  ),
+  pencil: navIcon(
+    '<path d="M13.6 6.2 18.2 10.8 10.4 18.6H6.4v-4z"/><path d="M12.8 7.2l4.2 4.2"/>',
+  ),
+  bars: navIcon('<path d="M7.4 17.2V11M12 17.2V7.6M16.6 17.2v-4"/>'),
+  flag: navIcon('<path d="M7.2 5.2v13.6"/><path d="M7.2 6.2h9.2l-2 3.2 2 3.2H7.2"/>'),
+  masthead: navIcon(
+    '<path d="M5.6 7.2h12.8M8.2 7.2v10.4M15.8 7.2v10.4M8.2 17.6h7.6"/><path d="M10.4 11.4h3.2"/>',
+  ),
+  platePhoto: navIcon(
+    '<rect x="5.8" y="6.4" width="12.4" height="11.2" rx="1"/><circle cx="12" cy="11.6" r="2.8"/><path d="M5.8 15.8 8.8 13l2 1.4 3-3.2 4.4 4.6"/>',
+  ),
+  envelope: navIcon(
+    '<rect x="5.4" y="7.6" width="13.2" height="9.2" rx="1"/><path d="M5.8 8.6 12 13.2l6.2-4.6"/>',
+  ),
+  wrist: navIcon(
+    '<rect x="8.4" y="5" width="7.2" height="14" rx="2"/><path d="M8.4 9.2h7.2M8.4 14.8h7.2"/><circle cx="12" cy="12" r="1.3"/>',
+  ),
+} as const;
+
+const NAV_FALLBACKS = [NAV_ICONS.book, NAV_ICONS.pencil, NAV_ICONS.atelier, NAV_ICONS.kanban] as const;
+
+export function isLetterAIcon(svg: string): boolean {
+  const s = String(svg || "");
+  return (
+    /M5 19l7-14 7 14/i.test(s) ||
+    /M16 8\s*L24 22\s*H8/i.test(s) ||
+    /l7-14 7 14/.test(s) ||
+    /M12 5l7 14H5z/i.test(s)
+  );
+}
+
+export function craftNavIcon(tab: { id: string; label: string }, index = 0): string {
+  const key = `${tab.id} ${tab.label}`.toLowerCase();
+  let svg = NAV_FALLBACKS[index % NAV_FALLBACKS.length];
+  if (/piramide|accordi/.test(key)) svg = NAV_ICONS.pyramid;
+  else if (/collezione|vetrina|essenz|profum/.test(key)) svg = NAV_ICONS.bottle;
+  else if (/pelle|polso/.test(key)) svg = NAV_ICONS.wrist;
+  else if (/lookbook|look|tela/.test(key)) svg = NAV_ICONS.hanger;
+  else if (/cassa|libro/.test(key)) svg = NAV_ICONS.till;
+  else if (/clienti|signore/.test(key)) svg = NAV_ICONS.people;
+  else if (/taglio|cucito/.test(key)) svg = NAV_ICONS.shears;
+  else if (/reception|lobby/.test(key)) svg = NAV_ICONS.bell;
+  else if (/prenota|check-in|checkin/.test(key)) svg = NAV_ICONS.key;
+  else if (/camere|suite/.test(key)) svg = NAV_ICONS.bed;
+  else if (/soggiorno|notte/.test(key)) svg = NAV_ICONS.lamp;
+  else if (/passo|marmo/.test(key)) svg = NAV_ICONS.plate;
+  else if (/comanda|ordine/.test(key)) svg = NAV_ICONS.ticket;
+  else if (/menu|crudi/.test(key)) svg = NAV_ICONS.glass;
+  else if (/sala|banchina/.test(key)) svg = NAV_ICONS.table;
+  else if (/pipeline/.test(key)) svg = NAV_ICONS.kanban;
+  else if (/nuovo|nuova|riga/.test(key)) svg = NAV_ICONS.pencil;
+  else if (/numeri|kpi/.test(key)) svg = NAV_ICONS.bars;
+  else if (/rischi/.test(key)) svg = NAV_ICONS.flag;
+  else if (/copertina/.test(key)) svg = NAV_ICONS.masthead;
+  else if (/lastre/.test(key)) svg = NAV_ICONS.platePhoto;
+  else if (/visita/.test(key)) svg = NAV_ICONS.envelope;
+  else if (/atelier|laboratorio|studio/.test(key)) svg = NAV_ICONS.atelier;
+  if (isLetterAIcon(svg)) svg = NAV_ICONS.book;
+  return svg;
+}
 
 const APPLE_TAB_RES = [
   /M4 10\.5[\s,]12 4l8 6\.5V20H4/,

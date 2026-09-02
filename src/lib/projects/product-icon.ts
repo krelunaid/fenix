@@ -11,13 +11,15 @@ const MOTIFS: { test: RegExp; d: string }[] = [
   { test: /ristor|trattor|menu|food|cucina|chef/i, d: "M11 8v16M9 8h4M21 8c0 4-2 5-2 8v8M19 8h4" },
   { test: /moda|fashion|abito|cloth/i, d: "M10 8l6-2 6 2-2 6v12H12V14L10 8z" },
   { test: /viagg|travel|hotel|flight/i, d: "M6 18l10-6 10 6-4 2-6-3-6 3zM16 6v6" },
+  { test: /profum|parfum|essenz|fragrance/i, d: "M14 6h4v3l2 2v13H12V11l2-2V6zm1-3h2v3h-2z" },
+  { test: /ledger|pipeline|vendit|desk|kpi/i, d: "M10 6h12v18H10zM14 6v18M17 11h4M17 15h3" },
 ];
 
 function motifPath(seed: string) {
   for (const m of MOTIFS) {
     if (m.test.test(seed)) return m.d;
   }
-  return "M16 8 L24 22 H8 Z";
+  return "M10 7h12v16H10zM13 7v16M16 11h5M16 15h4";
 }
 
 export function productIconSvg(input: {

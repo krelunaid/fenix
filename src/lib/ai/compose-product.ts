@@ -20,6 +20,7 @@ import { planContract, type BuildContract } from "./build-contract.ts";
 import { auditGraphicQuality, type GraphicReport } from "../projects/graphic-quality.ts";
 import { domainIllustration, altForBrief } from "./domain-imagery.ts";
 import { DASHBOARD_POLISH_INSTRUCTION, SITE_POLISH_INSTRUCTION } from "./app-shell.ts";
+import { craftNavIcon } from "../projects/craft-icons.ts";
 import type { Palette, ProjectKind } from "../projects/types.ts";
 
 export type PipelineRow = {
@@ -340,14 +341,8 @@ function synthesizeSpec(brief: string): PipelineSpec {
   };
 }
 
-function tabSvg(i: number): string {
-  const paths = [
-    '<path d="M8 4h8v16H8z"/><path d="M10 7h4M11 2.5h2v2h-2z"/>',
-    '<path d="M5 19l7-14 7 14"/><path d="M8 13h8"/>',
-    '<path d="M4 18V9l8-4 8 4v9"/><path d="M9 18v-5h6v5"/>',
-    '<rect x="6" y="5" width="12" height="14" rx="2"/><path d="M9 9h6M9 13h6"/>',
-  ];
-  return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true">${paths[i % 4]}</svg>`;
+function tabSvg(tab: { id: string; label: string }, i: number): string {
+  return craftNavIcon(tab, i);
 }
 
 function kickerCss(t: DesignTokens): string {
@@ -377,7 +372,7 @@ header{grid-area:head;padding:14px 16px 10px}
 nav.tabs{grid-area:nav;display:grid;grid-template-columns:repeat(4,1fr);height:calc(64px + env(safe-area-inset-bottom));padding:6px 6px calc(6px + env(safe-area-inset-bottom));border-top:1px solid var(--line);background:color-mix(in srgb,var(--surface) 94%,transparent);position:sticky;bottom:0;z-index:8}
 nav.tabs button{border:0;background:none;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:3px;font:600 10px/1.1 var(--body),sans-serif;padding:4px;min-height:44px;min-width:44px}
 nav.tabs button.on{color:var(--accent)}
-nav.tabs svg{width:22px;height:22px}
+nav.tabs svg{width:22px;height:22px;flex:0 0 22px;overflow:hidden;display:block}
 main{grid-area:main;min-height:0;overflow:auto;padding:8px 16px 20px}
 @media(min-width:768px){
   .app{grid-template-rows:auto 1fr;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"head nav" "main main"}
@@ -419,8 +414,9 @@ function deskCss(id: GrammarId): string {
     return `.app{display:grid;grid-template-rows:auto auto 1fr auto;grid-template-areas:"head" "nav" "main" "foot";min-height:100dvh}
 header.mast{grid-area:head;display:flex;justify-content:space-between;align-items:end;gap:24px;padding:22px 20px 14px;border-bottom:1px solid var(--line)}
 nav.rail{grid-area:nav;display:flex;gap:8px;flex-wrap:wrap;padding:10px 20px 14px}
-nav.rail button{border:1px solid var(--line);background:var(--surface);color:var(--fg);min-height:44px;padding:10px 16px;border-radius:0;font:650 13px/1 var(--body),sans-serif}
+nav.rail button{border:1px solid var(--line);background:var(--surface);color:var(--fg);min-height:44px;padding:10px 16px;border-radius:0;font:650 13px/1 var(--body),sans-serif;display:inline-flex;align-items:center;gap:8px}
 nav.rail button.on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+nav.rail svg{width:18px;height:18px;flex:0 0 18px;overflow:hidden;display:block}
 main{grid-area:main;padding:16px 20px}
 .lastre{display:grid;grid-template-columns:1fr;gap:16px}
 .plate{min-height:220px;overflow:hidden}
@@ -432,8 +428,9 @@ footer{grid-area:foot;padding:20px;border-top:1px solid var(--line);color:var(--
   return `.app[data-fenix-craft-desk]{display:grid;grid-template-rows:auto auto 1fr;grid-template-areas:"head" "nav" "main";min-height:100dvh;height:auto;width:100%}
 header{grid-area:head;padding:14px 16px;border-bottom:1px solid var(--line);align-items:center}
 nav.rail{grid-area:nav;display:flex;gap:6px;overflow:auto;padding:8px 16px;border-bottom:1px solid var(--line)}
-nav.rail button{border:0;background:none;color:var(--muted);min-height:44px;padding:8px 12px;font:650 13px/1 var(--body),sans-serif;white-space:nowrap}
+nav.rail button{border:0;background:none;color:var(--muted);min-height:44px;padding:8px 12px;font:650 13px/1 var(--body),sans-serif;white-space:nowrap;display:inline-flex;align-items:center;gap:8px}
 nav.rail button.on{color:var(--accent);box-shadow:inset 0 -2px 0 var(--accent)}
+nav.rail svg{width:18px;height:18px;flex:0 0 18px;overflow:hidden;display:block}
 main{grid-area:main;padding:16px;min-width:0}
 .kpis{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:0 0 14px}
 .kpi{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;min-height:84px;min-width:0}
@@ -473,6 +470,8 @@ function visualKitCss(t: DesignTokens, grammar: LayoutGrammar): string {
 .btn.sm{padding:8px 12px;min-height:40px;font-size:13px}
 .btn:hover,.deal:hover,.look:hover,.ticket:hover,.room:hover,.fragrance:hover,.plate:hover{filter:brightness(1.06);box-shadow:0 10px 28px color-mix(in srgb,var(--fg) 16%,transparent);border-color:var(--accent)}
 .btn:active,.deal:active,.look:active,.ticket:active,.room:active,.fragrance:active{transform:translateY(1px) scale(.98);filter:brightness(.94)}
+.look[data-state=on],.fragrance[data-state=on],.room[data-state=on],.deal[data-state=on],.ticket[data-state=on],.plate[data-state=on]{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent),0 14px 32px color-mix(in srgb,var(--fg) 14%,transparent)}
+.look[data-state=on] h2:after,.fragrance[data-state=on] h2:after{content:" · in prova";color:var(--accent);font-size:.62em;letter-spacing:.04em}
 label{display:block;font-size:11px;letter-spacing:.08em;color:var(--muted);margin:12px 0 6px}
 input,select,textarea{width:100%;font:inherit;padding:12px 14px;border-radius:calc(var(--r) * .55);border:1px solid var(--line);background:var(--elevated);color:var(--fg);min-height:44px}
 button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
@@ -523,7 +522,7 @@ function productHtml(spec: PipelineSpec, tokens: DesignTokens, grammar: LayoutGr
   const navButtons = spec.tabs
     .map(
       (tab, i) =>
-        `  <button type="button" data-view="${tab.id}"${i === 0 ? ' class="on"' : ""}>${tabSvg(i)}<span>${tab.label}</span></button>`,
+        `  <button type="button" data-view="${tab.id}"${i === 0 ? ' class="on"' : ""}>${tabSvg(tab, i)}<span>${tab.label}</span></button>`,
     )
     .join("\n");
   return `<!DOCTYPE html>
@@ -583,7 +582,7 @@ let view=${JSON.stringify(homeView)};
 const arts=${JSON.stringify(cards)};
 const hero=${JSON.stringify(hero)};
 const tabDefs=${JSON.stringify(spec.tabs)};
-const glyphs=${JSON.stringify(spec.tabs.map((_, i) => tabSvg(i)))};
+const glyphs=${JSON.stringify(spec.tabs.map((t, i) => tabSvg(t, i)))};
 const grammarId=${JSON.stringify(grammar.id)};
 const emptyVoice=${JSON.stringify(grammar.voice.empty)};
 const census=${JSON.stringify(grammar.voice.census)};
@@ -611,7 +610,7 @@ function renderPerfume(){
   var html='<div class="hero">'+hero+'<div class="caption"><p class="kicker">'+kicker+"</p><h2>"+data.items.length+" "+census+"</h2></div></div>";
   if(!data.items.length) return html+emptyBox();
   data.items.forEach(function(e,i){
-    html+='<article class="card fragrance" data-id="'+e.id+'"><div class="thumb">'+(arts[i%arts.length]||hero)+'</div><div><p class="kicker">'+e.kicker+"</p><h2>"+e.title+'</h2><p class="notes">'+e.note+'</p><div class="row" style="display:flex;justify-content:space-between;gap:8px;margin-top:8px"><span>'+e.meta+'</span><button class="btn sm ghost" data-act="wear" data-id="'+e.id+'">Tieni a portata</button></div></div></article>';
+    html+='<article class="card fragrance" data-id="'+e.id+'" data-state="'+(i===0?"on":"idle")+'"><div class="thumb">'+(arts[i%arts.length]||hero)+'</div><div><p class="kicker">'+e.kicker+"</p><h2>"+e.title+'</h2><p class="notes">'+e.note+'</p><div class="row" style="display:flex;justify-content:space-between;gap:8px;margin-top:8px"><span>'+e.meta+'</span><button class="btn sm ghost" data-act="wear" data-id="'+e.id+'">Tieni a portata</button></div></div></article>';
   });
   return html;
 }
@@ -619,7 +618,7 @@ function renderLookbook(){
   if(!data.items.length) return emptyBox();
   var html='<div class="lookbook">';
   data.items.forEach(function(e,i){
-    html+='<article class="look" data-id="'+e.id+'" data-act="wear"><div class="sil">'+(arts[i%arts.length]||hero)+"</div><h2>"+e.title+"</h2><p>"+e.kicker+" · "+e.note+" · "+e.meta+"</p></article>";
+    html+='<article class="look" data-id="'+e.id+'" data-act="wear" data-state="'+(i===0?"on":"idle")+'"><div class="sil">'+(arts[i%arts.length]||hero)+"</div><h2>"+e.title+"</h2><p>"+e.kicker+" · "+e.note+" · "+e.meta+"</p></article>";
   });
   return html+"</div>";
 }
@@ -628,7 +627,7 @@ function renderRooms(){
   if(!data.items.length) return html+emptyBox();
   html+='<div class="rooms">';
   data.items.forEach(function(e,i){
-    html+='<article class="room" data-id="'+e.id+'"><div class="thumb">'+(arts[i%arts.length]||hero)+'</div><div><p>'+chip(e.kicker)+'</p><h2>'+e.title+'</h2><p class="notes">'+e.note+" · "+e.meta+'</p><button class="btn sm ghost" data-act="advance" data-id="'+e.id+'">Avanza soggiorno</button></div></article>';
+    html+='<article class="room" data-id="'+e.id+'" data-state="'+(i===0?"on":"idle")+'"><div class="thumb">'+(arts[i%arts.length]||hero)+'</div><div><p>'+chip(e.kicker)+'</p><h2>'+e.title+'</h2><p class="notes">'+e.note+" · "+e.meta+'</p><button class="btn sm ghost" data-act="advance" data-id="'+e.id+'">Avanza soggiorno</button></div></article>';
   });
   return html+"</div>";
 }
@@ -636,8 +635,8 @@ function renderTickets(){
   var html='<div class="hero plate">'+hero+'<div class="caption"><p class="kicker">'+kicker+"</p><h2>"+data.items.length+" "+census+"</h2></div></div>";
   if(!data.items.length) return html+emptyBox();
   html+='<div class="tickets">';
-  data.items.forEach(function(e){
-    html+='<article class="ticket" data-id="'+e.id+'" data-act="advance"><time>'+e.meta+"</time><div><h2>"+e.title+'</h2><p class="notes">'+e.note+"</p></div>"+chip(e.kicker)+"</article>";
+  data.items.forEach(function(e,i){
+    html+='<article class="ticket" data-id="'+e.id+'" data-act="advance" data-state="'+(i===0?"on":"idle")+'"><time>'+e.meta+"</time><div><h2>"+e.title+'</h2><p class="notes">'+e.note+"</p></div>"+chip(e.kicker)+"</article>";
   });
   return html+"</div>";
 }
@@ -656,8 +655,8 @@ function renderDesk(){
   lanes.forEach(function(lane){
     var rows=data.items.filter(function(x){return x.kicker===lane;});
     html+='<div class="lane"><p class="kicker">'+lane+" <span>"+rows.length+'</span></p>';
-    rows.forEach(function(e){
-      html+='<article class="deal" data-id="'+e.id+'" data-act="advance"><h2>'+e.title+'</h2><p class="notes">'+e.note+" · "+e.meta+"</p></article>";
+    rows.forEach(function(e,i){
+      html+='<article class="deal" data-id="'+e.id+'" data-act="advance" data-state="'+(i===0?"on":"idle")+'"><h2>'+e.title+'</h2><p class="notes">'+e.note+" · "+e.meta+"</p></article>";
     });
     html+="</div>";
   });
@@ -673,7 +672,7 @@ function renderMagazine(){
   var html='<section id="copertina"><div class="hero">'+hero+'</div><div class="card span"><p class="kicker">'+kicker+"</p><h2>"+specName()+" in lastre</h2><p class=\\"notes\\">Rivista di lastre fotografiche. Niente stock, niente telefono boxed.</p></div></section>";
   html+='<section id="lastre" class="lastre">';
   data.items.forEach(function(e,i){
-    html+='<article class="plate card" data-id="'+e.id+'" data-act="wear">'+(arts[i%arts.length]||hero)+"<h2>"+e.title+'</h2><p class="notes">'+e.note+" · "+e.meta+"</p></article>";
+    html+='<article class="plate card" data-id="'+e.id+'" data-act="wear" data-state="'+(i===0?"on":"idle")+'">'+(arts[i%arts.length]||hero)+"<h2>"+e.title+'</h2><p class="notes">'+e.note+" · "+e.meta+"</p></article>";
   });
   html+="</section>";
   html+='<section id="studio" class="card span"><p class="kicker">Studio</p><h2>'+data.items.length+" lastre in fascicolo</h2><p class=\\"notes\\">"+place+"</p></section>";
