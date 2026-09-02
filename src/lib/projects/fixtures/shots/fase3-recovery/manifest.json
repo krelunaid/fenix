@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-02T02:08:08.270Z",
+  "generatedAt": "2026-09-02T06:43:55.007Z",
   "shots": [
     {
       "name": "recovery-D.png",
@@ -13,8 +13,8 @@
     },
     {
       "name": "recovery-M.png",
-      "sha256": "2727b480810298b63f38fcdf55bd76db50ade094c273d6dc9a932576cd9fd7d7",
-      "bytes": 26782
+      "sha256": "f93201b36a96ae7deaa0dcd276e09ba4dac3f8e6049803e277e9a6f65ef2a7b3",
+      "bytes": 30234
     }
   ]
 }

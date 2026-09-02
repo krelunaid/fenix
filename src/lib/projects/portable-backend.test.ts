@@ -147,15 +147,18 @@ function passwordRecord(password: string) {
   return `${salt}:${scryptSync(password, salt, 32).toString("hex")}`;
 }
 
-function readOutbox(dbPath: string) {
+function readOutbox<T extends { user_id: string } = { user_id: string; token: string }>(
+  dbPath: string,
+  kind = "password_reset",
+) {
   const db = new DatabaseSync(dbPath);
   try {
     db.exec("PRAGMA busy_timeout=5000");
     return (
       db.prepare("SELECT payload FROM _fenix_outbox WHERE kind=? ORDER BY created_at").all(
-        "password_reset",
+        kind,
       ) as Array<{ payload: string }>
-    ).map((row) => JSON.parse(row.payload) as { user_id: string; token: string });
+    ).map((row) => JSON.parse(row.payload) as T);
   } finally {
     db.close();
   }
@@ -194,6 +197,7 @@ describe("portable generated backend", () => {
     assert.ok(backend.some((file) => file.path === "backend/migrations/0001_init.sql"));
     assert.ok(backend.some((file) => file.path === "backend/migrations/0002_meta.sql"));
     assert.ok(backend.some((file) => file.path === "backend/migrations/0003_password_reset.sql"));
+    assert.ok(backend.some((file) => file.path === "backend/migrations/0004_passwordless.sql"));
     const again = materializePortableBackend(SPEC);
     assert.equal(
       createHash("sha256").update(backend.find((file) => file.path === "backend/server.mjs")!.content).digest("hex"),
@@ -554,7 +558,228 @@ describe("portable generated backend", () => {
       assert.doesNotMatch(logs, /correct horse|nuova chiave|another secure|altra password/);
       assert.doesNotMatch(logs, /password_hash|token_hash|xai-|PRIVATE KEY/i);
       for (const row of readOutbox(dbPath)) {
-        assert.doesNotMatch(logs, new RegExp(escapeRe(row.token)));
+        assert.doesNotMatch(logs, new RegExp(escapeRe(row.token!)));
+        assert.equal("email" in row, false);
+      }
+    } finally {
+      await runtime.close();
+    }
+  });
+
+  it("signs in with enumeration-safe magic-link and OTP, isolating two users", async () => {
+    const runtime = await startBackend();
+    const dbPath = join(runtime.root, "data.sqlite");
+    const origin = { origin: "https://app.example", "content-type": "application/json" };
+    const passOne = "correct horse battery staple";
+    const passTwo = "another secure password";
+    try {
+      const signupOne = await fetch(`${runtime.base}/auth/signup`, {
+        method: "POST",
+        headers: origin,
+        body: JSON.stringify({ email: "one@example.test", password: passOne }),
+      });
+      assert.equal(signupOne.status, 201);
+      const cookieOne = cookieFrom(signupOne);
+      const signupOneBody = (await signupOne.json()) as { id: string; email: string };
+      const signupTwo = await fetch(`${runtime.base}/auth/signup`, {
+        method: "POST",
+        headers: origin,
+        body: JSON.stringify({ email: "two@example.test", password: passTwo }),
+      });
+      assert.equal(signupTwo.status, 201);
+      const cookieTwo = cookieFrom(signupTwo);
+      const signupTwoBody = (await signupTwo.json()) as { id: string };
+      assert.equal(
+        (
+          await fetch(`${runtime.base}/api/tasks`, {
+            method: "POST",
+            headers: sessionHeaders(cookieOne),
+            body: JSON.stringify({ title: "Crudo uno", done: false, priority: 1 }),
+          })
+        ).status,
+        201,
+      );
+      assert.equal(
+        (
+          await fetch(`${runtime.base}/api/tasks`, {
+            method: "POST",
+            headers: sessionHeaders(cookieTwo),
+            body: JSON.stringify({ title: "Crudo due", done: true, priority: 2 }),
+          })
+        ).status,
+        201,
+      );
+
+      const requestLink = (email: string, method: "magic" | "otp") =>
+        fetch(`${runtime.base}/auth/passwordless`, {
+          method: "POST",
+          headers: origin,
+          body: JSON.stringify({ email, method }),
+        });
+      const verifyMagic = (token: string) =>
+        fetch(`${runtime.base}/auth/passwordless/verify`, {
+          method: "POST",
+          headers: origin,
+          body: JSON.stringify({ token }),
+        });
+      const verifyOtp = (email: string, otp: string) =>
+        fetch(`${runtime.base}/auth/passwordless/verify`, {
+          method: "POST",
+          headers: origin,
+          body: JSON.stringify({ email, otp }),
+        });
+
+      const unknownMagic = await requestLink("missing@example.test", "magic");
+      const unknownOtp = await requestLink("missing@example.test", "otp");
+      assert.equal(unknownMagic.status, 200);
+      assert.equal(unknownOtp.status, 200);
+      assert.deepEqual(await unknownMagic.json(), { ok: true });
+      assert.deepEqual(await unknownOtp.json(), { ok: true });
+      assert.equal(unknownMagic.headers.get("set-cookie"), null);
+      assert.equal(readOutbox(dbPath, "passwordless_magic").length, 0);
+      assert.equal(readOutbox(dbPath, "passwordless_otp").length, 0);
+
+      const badMethod = await requestLink("one@example.test", "sms" as "magic");
+      assert.equal(badMethod.status, 400);
+
+      const firstMagic = await requestLink("one@example.test", "magic");
+      assert.equal(firstMagic.status, 200);
+      assert.deepEqual(await firstMagic.json(), { ok: true });
+      assert.equal(firstMagic.headers.get("set-cookie"), null);
+      assert.equal((await fetch(`${runtime.base}/auth/outbox`)).status, 404);
+      assert.equal((await fetch(`${runtime.base}/api/_fenix_outbox`)).status, 401);
+      assert.equal(
+        (
+          await fetch(`${runtime.base}/api/_fenix_outbox`, { headers: sessionHeaders(cookieOne) })
+        ).status,
+        404,
+      );
+
+      let magics = readOutbox<{ user_id: string; token: string }>(dbPath, "passwordless_magic");
+      assert.equal(magics.length, 1);
+      assert.equal(magics[0]?.user_id, signupOneBody.id);
+      const staleMagic = magics[0]!.token;
+      assert.match(staleMagic, /^[A-Za-z0-9_-]{32,}$/);
+      assert.equal("email" in magics[0]!, false);
+
+      const secondMagic = await requestLink("one@example.test", "magic");
+      assert.equal(secondMagic.status, 200);
+      const twoOtpReq = await requestLink("two@example.test", "otp");
+      assert.equal(twoOtpReq.status, 200);
+      magics = readOutbox<{ user_id: string; token: string }>(dbPath, "passwordless_magic");
+      const otps = readOutbox<{ user_id: string; otp: string }>(dbPath, "passwordless_otp");
+      assert.equal(magics.length, 2);
+      assert.equal(otps.length, 1);
+      const tokenOne = magics.filter((row) => row.user_id === signupOneBody.id).at(-1)!.token;
+      const otpTwo = otps.find((row) => row.user_id === signupTwoBody.id)!.otp;
+      assert.notEqual(tokenOne, staleMagic);
+      assert.match(otpTwo, /^\d{8}$/);
+
+      const stale = await verifyMagic(staleMagic);
+      assert.equal(stale.status, 400);
+      assert.deepEqual(await stale.json(), { error: "Codice non valido" });
+      const wrongMagic = await verifyMagic("totally-invalid-token-value");
+      assert.equal(wrongMagic.status, 400);
+      const wrongOtp = await verifyOtp("two@example.test", "00000000");
+      assert.equal(wrongOtp.status, 400);
+      const crossed = await verifyOtp("one@example.test", otpTwo);
+      assert.equal(crossed.status, 400);
+
+      const burst = await Promise.all(Array.from({ length: 8 }, () => verifyMagic(tokenOne)));
+      const statuses = burst.map((response) => response.status);
+      assert.equal(statuses.filter((status) => status === 200).length, 1);
+      assert.equal(statuses.filter((status) => status === 400).length, 7);
+      const winner = burst.find((response) => response.status === 200)!;
+      const winnerBody = (await winner.json()) as { id: string; email: string };
+      assert.equal(winnerBody.email, "one@example.test");
+      assert.equal(winnerBody.id, signupOneBody.id);
+      const cookieMagic = cookieFrom(winner);
+      const meMagic = (await (
+        await fetch(`${runtime.base}/auth/me`, { headers: sessionHeaders(cookieMagic) })
+      ).json()) as { email: string };
+      assert.equal(meMagic.email, "one@example.test");
+      const listOne = (await (
+        await fetch(`${runtime.base}/api/tasks`, { headers: sessionHeaders(cookieMagic) })
+      ).json()) as { items: Array<{ title: string }> };
+      assert.deepEqual(
+        listOne.items.map((item) => item.title),
+        ["Crudo uno"],
+      );
+      const replay = await verifyMagic(tokenOne);
+      assert.equal(replay.status, 400);
+
+      const otpOk = await verifyOtp("two@example.test", otpTwo);
+      assert.equal(otpOk.status, 200);
+      const cookieOtp = cookieFrom(otpOk);
+      const meTwo = (await (
+        await fetch(`${runtime.base}/auth/me`, { headers: sessionHeaders(cookieOtp) })
+      ).json()) as { email: string };
+      assert.equal(meTwo.email, "two@example.test");
+      const listTwo = (await (
+        await fetch(`${runtime.base}/api/tasks`, { headers: sessionHeaders(cookieOtp) })
+      ).json()) as { items: Array<{ title: string }> };
+      assert.deepEqual(
+        listTwo.items.map((item) => item.title),
+        ["Crudo due"],
+      );
+      assert.equal((await verifyOtp("two@example.test", otpTwo)).status, 400);
+
+      const expiredRaw = randomBytes(32).toString("base64url");
+      const probe = new DatabaseSync(dbPath);
+      probe
+        .prepare(
+          "INSERT INTO _fenix_passwordless (id,token_hash,user_id,kind,salt,expires_at,used_at,attempts,created_at) VALUES (?,?,?,?,?,?,NULL,0,?)",
+        )
+        .run(
+          "expired-challenge",
+          createHash("sha256").update(expiredRaw).digest("hex"),
+          signupTwoBody.id,
+          "magic",
+          "",
+          new Date(Date.now() - 60_000).toISOString(),
+          new Date().toISOString(),
+        );
+      probe.close();
+      const expired = await verifyMagic(expiredRaw);
+      assert.equal(expired.status, 400);
+      assert.equal(
+        (await fetch(`${runtime.base}/auth/me`, { headers: sessionHeaders(cookieTwo) })).status,
+        200,
+      );
+      assert.equal(
+        (
+          await fetch(`${runtime.base}/auth/login`, {
+            method: "POST",
+            headers: origin,
+            body: JSON.stringify({ email: "two@example.test", password: passTwo }),
+          })
+        ).status,
+        200,
+      );
+
+      const thirdOne = await requestLink("one@example.test", "otp");
+      assert.equal(thirdOne.status, 200);
+      const fourth = await requestLink("one@example.test", "magic");
+      assert.equal(fourth.status, 429);
+      assert.deepEqual(await fourth.json(), { error: "Troppi tentativi" });
+
+      const huge = await fetch(`${runtime.base}/auth/passwordless`, {
+        method: "POST",
+        headers: origin,
+        body: JSON.stringify({ email: `${"a".repeat(300_000)}@x.test`, method: "magic" }),
+      });
+      assert.equal(huge.status, 413);
+
+      const logs = runtime.logs();
+      assert.doesNotMatch(logs, /one@example.test|two@example.test|missing@example.test/);
+      assert.doesNotMatch(logs, /correct horse|another secure/);
+      assert.doesNotMatch(logs, /password_hash|token_hash|xai-|PRIVATE KEY/i);
+      for (const row of [
+        ...readOutbox<{ user_id: string; token: string }>(dbPath, "passwordless_magic"),
+        ...readOutbox<{ user_id: string; otp: string }>(dbPath, "passwordless_otp"),
+      ]) {
+        if ("token" in row && row.token) assert.doesNotMatch(logs, new RegExp(escapeRe(row.token)));
+        if ("otp" in row && row.otp) assert.doesNotMatch(logs, new RegExp(escapeRe(row.otp)));
         assert.equal("email" in row, false);
       }
     } finally {
@@ -716,7 +941,7 @@ describe("portable generated backend", () => {
     }
   });
 
-  it("upgrades a v1 fixture to v3 without losing rows, then fail-closes a bad migration", async () => {
+  it("upgrades a v1 fixture to v4 without losing rows, then fail-closes a bad migration", async () => {
     const files = materializePortableBackend(SPEC);
     const v1 = portableBackendMigrations(SPEC)[0]!;
     const root = mkdtempSync(join(tmpdir(), "fenix-migrate-"));
@@ -764,7 +989,7 @@ describe("portable generated backend", () => {
       const created = await fetch(`${runtime.base}/api/tasks`, {
         method: "POST",
         headers: sessionHeaders(cookie),
-        body: JSON.stringify({ title: "Dopo v3", done: true, priority: 1 }),
+        body: JSON.stringify({ title: "Dopo v4", done: true, priority: 1 }),
       });
       assert.equal(created.status, 201);
       const recover = await fetch(`${runtime.base}/auth/recover`, {
@@ -791,12 +1016,12 @@ describe("portable generated backend", () => {
     const applied = upgraded.prepare("SELECT id FROM _fenix_migrations ORDER BY id").all() as Array<{ id: string }>;
     assert.deepEqual(
       applied.map((row) => row.id),
-      ["0001_init", "0002_meta", "0003_password_reset"],
+      ["0001_init", "0002_meta", "0003_password_reset", "0004_passwordless"],
     );
     upgraded.close();
 
-    writeFileSync(join(root, "backend/migrations/0004_bad.sql"), "ALTER TABLE _fenix_missing ADD COLUMN x TEXT;\n");
-    const failed = await startTree(files.concat([{ path: "backend/migrations/0004_bad.sql", content: "ALTER TABLE _fenix_missing ADD COLUMN x TEXT;\n" }]), { FENIX_DB_PATH: dbPath }, { expectFail: true });
+    writeFileSync(join(root, "backend/migrations/0005_bad.sql"), "ALTER TABLE _fenix_missing ADD COLUMN x TEXT;\n");
+    const failed = await startTree(files.concat([{ path: "backend/migrations/0005_bad.sql", content: "ALTER TABLE _fenix_missing ADD COLUMN x TEXT;\n" }]), { FENIX_DB_PATH: dbPath }, { expectFail: true });
     try {
       assert.notEqual(failed.code, 0);
       assert.match(failed.logs(), /Migrazione fallita/);
@@ -808,7 +1033,7 @@ describe("portable generated backend", () => {
       const ids = after.prepare("SELECT id FROM _fenix_migrations ORDER BY id").all() as Array<{ id: string }>;
       assert.deepEqual(
         ids.map((row) => row.id),
-        ["0001_init", "0002_meta", "0003_password_reset"],
+        ["0001_init", "0002_meta", "0003_password_reset", "0004_passwordless"],
       );
       after.close();
     } finally {

@@ -132,6 +132,7 @@ button:focus{outline:3px solid #f2c6a6;outline-offset:2px}
 table{width:100%;border-collapse:collapse}
 th,td{text-align:left;padding:10px 6px;border-bottom:1px solid #3a342c}
 .status{color:var(--muted);min-height:1.4em}
+[hidden]{display:none!important}
 </style>
 </head>
 <body>
@@ -150,6 +151,7 @@ th,td{text-align:left;padding:10px 6px;border-bottom:1px solid #3a342c}
       <button type="submit">Entra</button>
       <button type="button" id="signup" class="ghost">Crea account</button>
       <button type="button" id="forgot" class="ghost">Recupera accesso</button>
+      <button type="button" id="passwordless-open" class="ghost">Accedi senza password</button>
     </p>
     <p id="auth-msg" class="status" role="status"></p>
   </form>
@@ -173,6 +175,27 @@ th,td{text-align:left;padding:10px 6px;border-bottom:1px solid #3a342c}
     </p>
     <p id="reset-msg" class="status" role="status"></p>
   </form>
+  <form id="passwordless" class="card" hidden aria-label="Accesso senza password">
+    <label for="pwless-email">Indirizzo senza password</label>
+    <input id="pwless-email" name="pwless-email" type="email" autocomplete="username" required/>
+    <p>
+      <button type="submit" id="pwless-otp-btn">Invia codice</button>
+      <button type="button" id="pwless-magic-btn" class="ghost">Invia link magico</button>
+      <button type="button" id="pwless-back" class="ghost">Torna all'accesso</button>
+    </p>
+    <p id="pwless-msg" class="status" role="status"></p>
+  </form>
+  <form id="passwordless-verify" class="card" hidden aria-label="Conferma accesso senza password">
+    <label for="pwless-otp">Codice a 8 cifre</label>
+    <input id="pwless-otp" name="pwless-otp" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="8" pattern="[0-9]{8}"/>
+    <label for="pwless-token">Link magico</label>
+    <input id="pwless-token" name="pwless-token" type="text" autocomplete="off" minlength="16"/>
+    <p>
+      <button type="submit">Completa accesso</button>
+      <button type="button" id="pwless-verify-back" class="ghost">Torna all'accesso</button>
+    </p>
+    <p id="pwless-verify-msg" class="status" role="status"></p>
+  </form>
   <section id="app" class="card" hidden>
     <form id="create" aria-label="Nuova riga">
       ${collection.fields.map(fieldControl).join("")}
@@ -193,10 +216,14 @@ th,td{text-align:left;padding:10px 6px;border-bottom:1px solid #3a342c}
   var auth = document.getElementById("auth");
   var recover = document.getElementById("recover");
   var reset = document.getElementById("reset");
+  var pwless = document.getElementById("passwordless");
+  var pwlessVerify = document.getElementById("passwordless-verify");
   var app = document.getElementById("app");
   var authMsg = document.getElementById("auth-msg");
   var recoverMsg = document.getElementById("recover-msg");
   var resetMsg = document.getElementById("reset-msg");
+  var pwlessMsg = document.getElementById("pwless-msg");
+  var pwlessVerifyMsg = document.getElementById("pwless-verify-msg");
   var appMsg = document.getElementById("app-msg");
   var rows = document.getElementById("rows");
   function msg(el, text){ el.textContent = text || ""; }
@@ -238,18 +265,22 @@ th,td{text-align:left;padding:10px 6px;border-bottom:1px solid #3a342c}
       rows.appendChild(tr);
     });
   }
-  function showApp(email){
+  function hideGates(){
     auth.hidden = true;
     recover.hidden = true;
     reset.hidden = true;
+    pwless.hidden = true;
+    pwlessVerify.hidden = true;
+  }
+  function showApp(email){
+    hideGates();
     app.hidden = false;
     who.textContent = email ? ("Sei " + email) : "Sessione attiva";
     return api("/api/" + COL).then(function(body){ render(body.items || []); });
   }
   function showAuth(){
     app.hidden = true;
-    recover.hidden = true;
-    reset.hidden = true;
+    hideGates();
     auth.hidden = false;
     who.textContent = "Accedi per continuare.";
   }
@@ -262,14 +293,62 @@ th,td{text-align:left;padding:10px 6px;border-bottom:1px solid #3a342c}
   auth.addEventListener("submit", function(ev){ ev.preventDefault(); enter("/auth/login"); });
   document.getElementById("signup").addEventListener("click", function(){ enter("/auth/signup"); });
   document.getElementById("forgot").addEventListener("click", function(){
-    auth.hidden = true;
-    reset.hidden = true;
+    hideGates();
     recover.hidden = false;
     msg(recoverMsg, "");
     who.textContent = "Recupera l'accesso.";
   });
+  document.getElementById("passwordless-open").addEventListener("click", function(){
+    hideGates();
+    pwless.hidden = false;
+    document.getElementById("pwless-email").value = document.getElementById("email").value;
+    msg(pwlessMsg, "");
+    who.textContent = "Accedi senza password.";
+  });
   document.getElementById("recover-back").addEventListener("click", function(){ showAuth(); });
   document.getElementById("reset-back").addEventListener("click", function(){ showAuth(); });
+  document.getElementById("pwless-back").addEventListener("click", function(){ showAuth(); });
+  document.getElementById("pwless-verify-back").addEventListener("click", function(){ showAuth(); });
+  function requestPasswordless(method){
+    msg(pwlessMsg, "");
+    var emailEl = document.getElementById("pwless-email");
+    api("/auth/passwordless", { method: "POST", body: { email: emailEl.value, method: method } })
+      .then(function(){
+        hideGates();
+        pwlessVerify.hidden = false;
+        document.getElementById("pwless-otp").value = "";
+        document.getElementById("pwless-token").value = "";
+        msg(pwlessVerifyMsg, method === "otp"
+          ? "Se l'account esiste, il codice a 8 cifre è stato inviato."
+          : "Se l'account esiste, il link magico è stato inviato.");
+        who.textContent = "Inserisci il codice ricevuto.";
+      })
+      .catch(function(err){ msg(pwlessMsg, err.message || "Invio non riuscito"); });
+  }
+  pwless.addEventListener("submit", function(ev){
+    ev.preventDefault();
+    requestPasswordless("otp");
+  });
+  document.getElementById("pwless-magic-btn").addEventListener("click", function(){
+    requestPasswordless("magic");
+  });
+  pwlessVerify.addEventListener("submit", function(ev){
+    ev.preventDefault();
+    msg(pwlessVerifyMsg, "");
+    var otpEl = document.getElementById("pwless-otp");
+    var tokenEl = document.getElementById("pwless-token");
+    var emailEl = document.getElementById("pwless-email");
+    var otp = (otpEl.value || "").trim();
+    var token = (tokenEl.value || "").trim();
+    var body = otp ? { email: emailEl.value, otp: otp } : { token: token };
+    api("/auth/passwordless/verify", { method: "POST", body: body })
+      .then(function(res){
+        otpEl.value = "";
+        tokenEl.value = "";
+        return showApp(res.email);
+      })
+      .catch(function(err){ msg(pwlessVerifyMsg, err.message || "Codice non valido"); });
+  });
   recover.addEventListener("submit", function(ev){
     ev.preventDefault();
     msg(recoverMsg, "");

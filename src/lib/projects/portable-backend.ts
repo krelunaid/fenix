@@ -25,8 +25,8 @@ export type PortableMigration = {
 
 export const PORTABLE_BACKEND_MANIFEST = "backend/fenix.backend.json";
 export const PORTABLE_DEPLOY_MANIFEST = "fenix.deploy.json";
-export const PORTABLE_BACKEND_VERSION = 4;
-export const PORTABLE_SCHEMA_VERSION = 3;
+export const PORTABLE_BACKEND_VERSION = 5;
+export const PORTABLE_SCHEMA_VERSION = 4;
 
 const GENERATED_BACKEND_PATHS = new Set([
   PORTABLE_BACKEND_MANIFEST,
@@ -159,6 +159,24 @@ CREATE TABLE IF NOT EXISTS _fenix_auth_limits (
   count INTEGER NOT NULL,
   window_start TEXT NOT NULL
 );
+`,
+    },
+    {
+      id: "0004_passwordless",
+      filename: "0004_passwordless.sql",
+      sql: `CREATE TABLE IF NOT EXISTS _fenix_passwordless (
+  id TEXT PRIMARY KEY,
+  token_hash TEXT NOT NULL UNIQUE,
+  user_id TEXT NOT NULL REFERENCES _fenix_users(id) ON DELETE CASCADE,
+  kind TEXT NOT NULL,
+  salt TEXT NOT NULL,
+  expires_at TEXT NOT NULL,
+  used_at TEXT,
+  attempts INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS _fenix_passwordless_user ON _fenix_passwordless(user_id);
 `,
     },
   ];
@@ -319,7 +337,10 @@ function createSession(userId) {
 }
 
 const dummyPassword = passwordRecord("fenix-timing-pad");
+const dummyOtpSalt = randomBytes(16).toString("hex");
+const dummyOtpDigest = scryptSync("00000000", Buffer.from(dummyOtpSalt, "hex"), 32).toString("hex");
 const recoverWindowMs = 15 * 60 * 1000;
+const passwordlessWindowMs = 10 * 60 * 1000;
 
 function clientIp(req) {
   const forwarded = String(req.headers["x-forwarded-for"] || "").split(",")[0].trim();
@@ -364,6 +385,26 @@ function limited(key, max, windowMs) {
 
 function deliverMail(kind, payload) {
   db.prepare("INSERT INTO _fenix_outbox (id,kind,created_at,payload) VALUES (?,?,?,?)").run(randomUUID(), kind, new Date().toISOString(), JSON.stringify(payload));
+}
+
+function mintOtp() {
+  let out = "";
+  while (out.length < 8) {
+    const n = randomBytes(1)[0];
+    if (n > 249) continue;
+    out += String(n % 10);
+  }
+  return out;
+}
+
+function otpDigest(otp, salt) {
+  return scryptSync(String(otp || ""), Buffer.from(salt || dummyOtpSalt, "hex"), 32).toString("hex");
+}
+
+function otpMatches(otp, salt, expected) {
+  const actual = Buffer.from(otpDigest(otp, salt), "hex");
+  const want = Buffer.from(String(expected || dummyOtpDigest), "hex");
+  return actual.length === want.length && actual.length > 0 && timingSafeEqual(actual, want);
 }
 
 function protoHost(req) {
@@ -567,6 +608,129 @@ const server = createServer(async (req, res) => {
       }
       return json(res, 200, { ok: true });
     }
+    if (url.pathname === "/auth/passwordless" && req.method === "POST") {
+      const input = await body(req);
+      const email = typeof input.email === "string" ? input.email.trim().toLowerCase() : "";
+      const method = typeof input.method === "string" ? input.method.trim() : "";
+      const ip = clientIp(req);
+      if (method !== "magic" && method !== "otp") {
+        return json(res, 400, { error: "Metodo non valido" });
+      }
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254) {
+        return json(res, 400, { error: "Email non valida" });
+      }
+      if (limited("pwless:ip:" + sha256(ip), 12, recoverWindowMs) || limited("pwless:mail:" + sha256(email), 3, recoverWindowMs)) {
+        return json(res, 429, { error: "Troppi tentativi" });
+      }
+      const user = db.prepare("SELECT id FROM _fenix_users WHERE email=?").get(email);
+      if (!user || user.id === serviceId) {
+        if (method === "otp") otpMatches("00000000", dummyOtpSalt, dummyOtpDigest);
+        else passwordMatches("fenix-timing-pad", dummyPassword);
+        return json(res, 200, { ok: true });
+      }
+      const now = new Date();
+      const stamp = now.toISOString();
+      const expires = new Date(now.getTime() + passwordlessWindowMs).toISOString();
+      db.exec("BEGIN IMMEDIATE");
+      try {
+        db.prepare("UPDATE _fenix_passwordless SET used_at=? WHERE user_id=? AND used_at IS NULL").run(stamp, user.id);
+        if (method === "magic") {
+          const raw = randomBytes(32).toString("base64url");
+          db.prepare("INSERT INTO _fenix_passwordless (id,token_hash,user_id,kind,salt,expires_at,used_at,attempts,created_at) VALUES (?,?,?,?,?,?,NULL,0,?)").run(randomUUID(), sha256(raw), user.id, "magic", "", expires, stamp);
+          deliverMail("passwordless_magic", { user_id: user.id, token: raw });
+        } else {
+          const otp = mintOtp();
+          const salt = randomBytes(16).toString("hex");
+          db.prepare("INSERT INTO _fenix_passwordless (id,token_hash,user_id,kind,salt,expires_at,used_at,attempts,created_at) VALUES (?,?,?,?,?,?,NULL,0,?)").run(randomUUID(), otpDigest(otp, salt), user.id, "otp", salt, expires, stamp);
+          deliverMail("passwordless_otp", { user_id: user.id, otp: otp });
+        }
+        db.exec("COMMIT");
+      } catch (error) {
+        try { db.exec("ROLLBACK"); } catch {}
+        throw error;
+      }
+      return json(res, 200, { ok: true });
+    }
+    if (url.pathname === "/auth/passwordless/verify" && req.method === "POST") {
+      const input = await body(req);
+      const ip = clientIp(req);
+      if (limited("pwlessv:ip:" + sha256(ip), 20, recoverWindowMs)) {
+        return json(res, 429, { error: "Troppi tentativi" });
+      }
+      const rawToken = typeof input.token === "string" ? input.token.trim() : "";
+      const otp = typeof input.otp === "string" ? input.otp.trim() : "";
+      const email = typeof input.email === "string" ? input.email.trim().toLowerCase() : "";
+      const now = new Date().toISOString();
+      if (rawToken) {
+        if (rawToken.length < 16 || rawToken.length > 128) {
+          passwordMatches("fenix-timing-pad", dummyPassword);
+          return json(res, 400, { error: "Codice non valido" });
+        }
+        db.exec("BEGIN IMMEDIATE");
+        try {
+          const row = db.prepare("SELECT p.id,p.user_id,u.email FROM _fenix_passwordless p JOIN _fenix_users u ON u.id=p.user_id WHERE p.token_hash=? AND p.kind='magic' AND p.used_at IS NULL AND p.expires_at>?").get(sha256(rawToken), now);
+          if (!row) {
+            passwordMatches("fenix-timing-pad", dummyPassword);
+            db.exec("ROLLBACK");
+            return json(res, 400, { error: "Codice non valido" });
+          }
+          const marked = db.prepare("UPDATE _fenix_passwordless SET used_at=? WHERE id=? AND used_at IS NULL").run(now, row.id);
+          if (!marked.changes) {
+            db.exec("ROLLBACK");
+            return json(res, 400, { error: "Codice non valido" });
+          }
+          db.prepare("UPDATE _fenix_passwordless SET used_at=? WHERE user_id=? AND used_at IS NULL").run(now, row.user_id);
+          if (hasLastLogin) db.prepare("UPDATE _fenix_users SET last_login_at=? WHERE id=?").run(now, row.user_id);
+          const raw = createSession(row.user_id);
+          db.exec("COMMIT");
+          return json(res, 200, { id: row.user_id, email: row.email }, { "set-cookie": sessionCookie(raw) });
+        } catch (error) {
+          try { db.exec("ROLLBACK"); } catch {}
+          throw error;
+        }
+      }
+      if (!/^\d{8}$/.test(otp) || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254) {
+        otpMatches("00000000", dummyOtpSalt, dummyOtpDigest);
+        return json(res, 400, { error: "Codice non valido" });
+      }
+      db.exec("BEGIN IMMEDIATE");
+      try {
+        const user = db.prepare("SELECT id,email FROM _fenix_users WHERE email=?").get(email);
+        const row = user
+          ? db.prepare("SELECT id,user_id,salt,token_hash,attempts FROM _fenix_passwordless WHERE user_id=? AND kind='otp' AND used_at IS NULL AND expires_at>? ORDER BY created_at DESC LIMIT 1").get(user.id, now)
+          : null;
+        if (!user || user.id === serviceId || !row) {
+          otpMatches(otp, dummyOtpSalt, dummyOtpDigest);
+          db.exec("ROLLBACK");
+          return json(res, 400, { error: "Codice non valido" });
+        }
+        if (row.attempts >= 5) {
+          db.prepare("UPDATE _fenix_passwordless SET used_at=? WHERE id=?").run(now, row.id);
+          db.exec("COMMIT");
+          return json(res, 400, { error: "Codice non valido" });
+        }
+        if (!otpMatches(otp, row.salt, row.token_hash)) {
+          const next = row.attempts + 1;
+          if (next >= 5) db.prepare("UPDATE _fenix_passwordless SET attempts=?, used_at=? WHERE id=?").run(next, now, row.id);
+          else db.prepare("UPDATE _fenix_passwordless SET attempts=? WHERE id=?").run(next, row.id);
+          db.exec("COMMIT");
+          return json(res, 400, { error: "Codice non valido" });
+        }
+        const marked = db.prepare("UPDATE _fenix_passwordless SET used_at=? WHERE id=? AND used_at IS NULL").run(now, row.id);
+        if (!marked.changes) {
+          db.exec("ROLLBACK");
+          return json(res, 400, { error: "Codice non valido" });
+        }
+        db.prepare("UPDATE _fenix_passwordless SET used_at=? WHERE user_id=? AND used_at IS NULL").run(now, row.user_id);
+        if (hasLastLogin) db.prepare("UPDATE _fenix_users SET last_login_at=? WHERE id=?").run(now, row.user_id);
+        const raw = createSession(row.user_id);
+        db.exec("COMMIT");
+        return json(res, 200, { id: row.user_id, email: user.email }, { "set-cookie": sessionCookie(raw) });
+      } catch (error) {
+        try { db.exec("ROLLBACK"); } catch {}
+        throw error;
+      }
+    }
     if (url.pathname.startsWith("/api/")) {
       const actor = principal(req);
       if (!actor) return json(res, 401, { error: "Non autorizzato" }, { "www-authenticate": "Bearer" });
@@ -695,7 +859,7 @@ export function materializePortableBackend(spec: PortableBackendSpec): ProjectFi
     {
       path: "backend/README.md",
       content:
-        "# Backend Fenix portabile\n\nNode 22.5+, SQLite durevole, frontend e API sulla stessa origine. `npm start` dalla radice del progetto serve `index.html` e `/api` insieme. Migrazioni in `backend/migrations/` (forward-only, idempotenti, transazione unica). Include registrazione/login email-password, sessioni opache archiviate solo come hash in cookie HttpOnly, isolamento dei record per utente e recupero password enumeration-safe (token one-shot solo hash, TTL 15 minuti, outbox SQLite, nessuna SMTP). `FENIX_API_TOKEN` abilita inoltre l'accesso server-to-server; opzionali `FENIX_ALLOW_SIGNUP=false`, `FENIX_DB_PATH`, `FENIX_ALLOWED_ORIGIN`, `FENIX_PUBLIC_ROOT`, `FENIX_HOST` e `PORT`. Imposta `FENIX_ALLOWED_ORIGIN` solo se serve un'origine extra. Nessun segreto è incluso nell'archivio. Non è un database distribuito.\n",
+        "# Backend Fenix portabile\n\nNode 22.5+, SQLite durevole, frontend e API sulla stessa origine. `npm start` dalla radice del progetto serve `index.html` e `/api` insieme. Migrazioni in `backend/migrations/` (forward-only, idempotenti, transazione unica). Include registrazione/login email-password, sessioni opache archiviate solo come hash in cookie HttpOnly, isolamento dei record per utente, recupero password enumeration-safe (token one-shot solo hash, TTL 15 minuti, outbox SQLite, nessuna SMTP) e accesso passwordless con magic-link e OTP email (hash-only, one-shot, TTL 10 minuti, outbox server-side). `FENIX_API_TOKEN` abilita inoltre l'accesso server-to-server; opzionali `FENIX_ALLOW_SIGNUP=false`, `FENIX_DB_PATH`, `FENIX_ALLOWED_ORIGIN`, `FENIX_PUBLIC_ROOT`, `FENIX_HOST` e `PORT`. Imposta `FENIX_ALLOWED_ORIGIN` solo se serve un'origine extra. Nessun segreto è incluso nell'archivio. Non è un database distribuito.\n",
     },
     ...migrations.map((migration) => ({
       path: `backend/migrations/${migration.filename}`,

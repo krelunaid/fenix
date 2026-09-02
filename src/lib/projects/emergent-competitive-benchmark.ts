@@ -83,8 +83,8 @@ export const EMERGENT_COMPETITIVE_AXES: CompetitiveAxis[] = [
     emergentClaimed:
       "Auth, database e API inclusi; Google, GitHub, Auth0, email/OTP e più database dichiarati.",
     fenixEvidence:
-      "CRUD, CAS, Postgres cloud-private, sessioni HttpOnly, scrypt e recovery one-shot provati da cloud-data.test.ts e portable-backend.test.ts.",
-    remainingGap: "OAuth/OIDC, OTP, pagamenti e connettori applicativi non sono ancora coperti.",
+      "CRUD, CAS, Postgres cloud-private, sessioni HttpOnly, scrypt, recovery one-shot e passwordless magic-link/OTP con outbox server-side, provati da cloud-data.test.ts e portable-backend.test.ts.",
+    remainingGap: "OAuth/OIDC social, pagamenti e connettori applicativi non sono ancora coperti.",
     sourceIds: ["emergent-features", "emergent-web-builder"],
     headToHeadRun: false,
   },

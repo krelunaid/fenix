@@ -36,7 +36,7 @@ Le app pubblicate possono usare **Collabora sui dati**: il titolare genera link 
 
 Lo **studio condiviso** è un workspace progetto distinto: il titolare invita viewer/editor, il viewer legge albero e appunti, editor e titolare scrivono file con If-Match CAS e un documento testuale con insert/delete server-authoritative (op id, base/versione, idempotenza). Parti indipendenti convergono; conflitti stale falliscono chiusi. Inviti one-shot hash-only, revoca immediata, presenza TTL, registro redatto. Serve `DATABASE_URL` con le migrazioni `0006_project_workspaces` e `0007_workspace_shared_doc`. Non è un CRDT su ogni file e non dichiara parità con Emergent.
 
-Un brief **full-stack** esplicito esporta un'app avviabile con `npm start`: frontend e API Node+SQLite sulla stessa origine, `GET /health`, `fenix.deploy.json` e migrazioni in `backend/migrations/` (forward-only, idempotenti). Il codice server del modello non entra nel tree. Non è un database distribuito.
+Un brief **full-stack** esplicito esporta un'app avviabile con `npm start`: frontend e API Node+SQLite sulla stessa origine, `GET /health`, `fenix.deploy.json` e migrazioni in `backend/migrations/` (forward-only, idempotenti). Include signup/login, recupero password e accesso passwordless magic-link/OTP con outbox SQLite, senza SMTP. Il codice server del modello non entra nel tree. Non è un database distribuito.
 
 
 
