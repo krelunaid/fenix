@@ -29,6 +29,8 @@ describe("layout grammar from brief", () => {
     assert.equal(new Set(ids).size, 6);
     assert.equal(grammarFromBrief(BRIEFS.nord).chrome, "desk");
     assert.equal(grammarFromBrief(BRIEFS.carta).chrome, "masthead");
+    assert.match(grammarFromBrief(BRIEFS.essenza).desktop, /niente tabbar/i);
+    assert.match(grammarFromBrief(BRIEFS.essenza).mobile, /tabbar solo/i);
     assert.equal(familyFromBrief(BRIEFS.essenza), "perfume");
     assert.equal(variantFromBrief(BRIEFS.essenza), 0);
     assert.equal(variantFromBrief(BRIEFS.essenzaIce), 1);

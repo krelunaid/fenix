@@ -140,7 +140,7 @@ export function collectRenderedGraphic(): RenderedGraphicMetrics {
   let covered = 0;
   const colors = new Set<string>();
   for (const el of main.querySelectorAll<HTMLElement>(
-    "h1,h2,h3,p,li,article,button,a,img,svg,figure,label,td,th,dt,dd,span,b,strong,time,table,.hero,.sil,.look,.card,.kpi,.day,.measure,.fragrance",
+    "h1,h2,h3,p,li,article,button,a,img,svg,figure,label,td,th,dt,dd,span,b,strong,time,table,.hero,.sil,.look,.card,.kpi,.day,.measure,.fragrance,.ticket,.room,.deal,.lane,.plate,.board,.lookbook,.rooms,.tickets",
   )) {
     const b = el.getBoundingClientRect();
     if (b.width < 8 || b.height < 8) continue;

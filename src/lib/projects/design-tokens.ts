@@ -116,7 +116,7 @@ const FAMILIES: Record<TokenFamily, FamilySrc> = {
       href: "https://fonts.googleapis.com/css2?family=Figtree:wght@400;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,700&display=swap",
     },
     radius: "12px",
-    type: { h1: "clamp(1.7rem, 5vw, 2.4rem)", body: "16px", label: "11px uppercase tracking" },
+    type: { h1: "clamp(1.7rem, 5vw, 2.4rem)", body: "16px", label: "13px sentence, no tracking shout" },
     palette: {
       bg: "#e7e0d2",
       surface: "#f4efe4",
@@ -134,12 +134,12 @@ const FAMILIES: Record<TokenFamily, FamilySrc> = {
   food: {
     mood: "carbone di cucina, vino, zafferano di passa",
     fonts: {
-      display: "Fraunces",
+      display: "Zilla Slab",
       body: "Source Sans 3",
-      href: "https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Source+Sans+3:wght@400;600;700&display=swap",
+      href: "https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600;700&family=Zilla+Slab:wght@500;700&display=swap",
     },
     radius: "8px",
-    type: { h1: "clamp(1.6rem, 5vw, 2.3rem)", body: "16px", label: "11px uppercase tracking" },
+    type: { h1: "clamp(1.6rem, 5vw, 2.3rem)", body: "16px", label: "13px slab, no uppercase" },
     palette: {
       bg: "#1a1210",
       surface: "#241816",
@@ -249,12 +249,12 @@ const FAMILIES: Record<TokenFamily, FamilySrc> = {
   ops: {
     mood: "inchiostro nordico, ottone, carta di ledger",
     fonts: {
-      display: "Source Serif 4",
+      display: "IBM Plex Sans",
       body: "Atkinson Hyperlegible",
-      href: "https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Source+Serif+4:opsz,wght@8..60,500;8..60,700&display=swap",
+      href: "https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap",
     },
-    radius: "8px",
-    type: { h1: "clamp(1.45rem, 4vw, 2rem)", body: "15px", label: "11px uppercase tracking" },
+    radius: "6px",
+    type: { h1: "clamp(1.35rem, 3.4vw, 1.85rem)", body: "14px", label: "10px tabular, short tracking" },
     palette: {
       bg: "#10151c",
       surface: "#171e28",
@@ -367,12 +367,12 @@ const VARIANTS: Partial<Record<TokenFamily, FamilySrc>> = {
   hospitality: {
     mood: "inchiostro di hotel, champagne, ottone freddo",
     fonts: {
-      display: "Cormorant Garamond",
+      display: "Cinzel",
       body: "Karla",
-      href: "https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Karla:wght@400;600&display=swap",
+      href: "https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Karla:wght@400;600&display=swap",
     },
     radius: "4px",
-    type: { h1: "clamp(1.7rem, 5vw, 2.5rem)", body: "16px", label: "11px uppercase tracking" },
+    type: { h1: "clamp(1.7rem, 5vw, 2.5rem)", body: "16px", label: "12px letter, no shout" },
     palette: {
       bg: "#12151c",
       surface: "#1a1f28",

@@ -254,6 +254,23 @@ img[src=""],img:not([src]){display:none!important}
 main,.fk-main,main p,main li,main b,.fk-tile,.fk-tile b,.fk-hello,.fk-lbl{color:var(--fg,#1c1712)!important;opacity:1!important}
 .fk-role,.fk-date,main .muted,.fk-stat span{color:var(--muted,#5c5348)!important;opacity:1!important}
 .fk-btn{color:var(--btn-ink,#fff)!important}
+@media (min-width:768px){
+  html,body{height:auto!important;max-height:none!important;overflow:auto!important}
+  body{padding-bottom:0!important;max-height:none!important}
+  body>:is(.app,.fk-app,#app,#root):has(.fk-tab,.tabbar,nav[aria-label]){display:grid!important;grid-template-rows:auto auto 1fr!important;height:auto!important;min-height:100dvh!important;overflow:visible!important}
+  .fk-tab,.tabbar,nav[aria-label]{
+    position:static!important;display:flex!important;flex-direction:row!important;flex-wrap:wrap!important;
+    grid-template-columns:none!important;height:auto!important;min-height:48px!important;max-height:none!important;
+    left:auto!important;right:auto!important;bottom:auto!important;top:auto!important;
+    border-top:0!important;border-bottom:1px solid var(--line,#c4b49a)!important;
+    box-shadow:none!important;padding:8px 16px!important;justify-content:flex-end;align-items:center;
+  }
+  .fk-tab button,.tabbar button,nav[aria-label] button{
+    flex-direction:row!important;font:650 13px/1.2 inherit!important;padding:8px 12px!important;max-height:none;min-height:44px;gap:8px;
+  }
+  .fk-tab svg,.tabbar svg,nav[aria-label] svg,.fk-tab button svg{width:18px!important;height:18px!important;flex:0 0 18px!important}
+  .fk-main,body>main,main{overflow:visible!important;flex:none!important}
+}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
 </style>`;
 

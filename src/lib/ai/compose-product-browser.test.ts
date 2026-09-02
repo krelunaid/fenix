@@ -99,6 +99,51 @@ describe("graphic pipeline visual QA D/T/M", () => {
               await tabs.nth(1).click();
               await tabs.nth(0).click();
             }
+            const interactable = page.locator(".btn, .deal, .look, .ticket, .room, .fragrance, .plate").first();
+            if ((await interactable.count()) > 0) {
+              await interactable.hover();
+              const hovered = await interactable.evaluate((el) => el.matches(":hover"));
+              assert.equal(hovered, true, `${fix.id}/${vp} hover`);
+              const box = await interactable.boundingBox();
+              if (box) {
+                await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+                await page.mouse.down();
+                const pressed = await interactable.evaluate(
+                  (el) => el.matches(":active") || Boolean(el.querySelector(":active")),
+                );
+                await page.mouse.up();
+                assert.equal(pressed, true, `${fix.id}/${vp} pressed`);
+              }
+            }
+            assert.equal(await page.locator("#load").count(), 1);
+            await page.evaluate(() => {
+              const n = document.getElementById("load");
+              if (n) n.hidden = false;
+            });
+            assert.equal(await page.locator("#load").isVisible(), true, `${fix.id}/${vp} loading`);
+            await page.evaluate(() => {
+              const n = document.getElementById("load");
+              if (n) n.hidden = true;
+            });
+            const primary = page.locator("[data-act='advance'], [data-act='wear']").first();
+            if ((await primary.count()) > 0) {
+              await primary.click();
+              await page.waitForFunction(
+                () => document.documentElement.getAttribute("data-fenix-flash") === "ok",
+                null,
+                { timeout: 4000 },
+              );
+            }
+            if (fix.id === "essenza-or" && vp === "D") {
+              await page.locator("button[data-view]").nth(2).click();
+              for (let i = 0; i < 8; i++) {
+                const del = page.locator("[data-act=del]").first();
+                if ((await del.count()) === 0) break;
+                await del.click();
+              }
+              await page.locator(".state-empty").waitFor({ timeout: 4000 });
+            }
+            assert.equal(errors.length, 0, `${fix.id}/${vp} console after interact ${errors.join(" | ")}`);
             assert.equal(
               report.ok,
               true,
@@ -117,6 +162,25 @@ describe("graphic pipeline visual QA D/T/M", () => {
                 return app ? Math.round(app.getBoundingClientRect().width) : 0;
               });
               assert.ok(appWidth >= 1000, `${fix.id} desktop app width ${appWidth}`);
+              const nav = await page.evaluate(() => {
+                const el = document.querySelector("nav");
+                if (!el) return { pos: "none", bottom: 0 };
+                const s = getComputedStyle(el);
+                return { pos: s.position, bottom: Math.round(el.getBoundingClientRect().bottom) };
+              });
+              assert.notEqual(nav.pos, "fixed", `${fix.id}/D nav should not be a phone tabbar (${nav.pos})`);
+            }
+            if (vp === "M" && fix.grammar !== "ops-desk" && fix.grammar !== "magazine") {
+              const nav = await page.evaluate(() => {
+                const el = document.querySelector("nav");
+                if (!el) return { pos: "none", bottom: 0, vh: 0 };
+                const r = el.getBoundingClientRect();
+                return { pos: getComputedStyle(el).position, bottom: Math.round(r.bottom), vh: window.innerHeight };
+              });
+              assert.ok(
+                nav.pos === "sticky" || nav.pos === "fixed" || nav.bottom >= nav.vh - 80,
+                `${fix.id}/M tabbar should sit at the bottom (${nav.pos} bottom=${nav.bottom} vh=${nav.vh})`,
+              );
             }
           } finally {
             await page.close();
