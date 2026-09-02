@@ -224,8 +224,10 @@ export const QUALITY_LEDGER: LedgerRow[] = [
   },
   {
     id: "emergent",
-    claim: "Emergent resta solo un banco di prova. Nessun claim di completezza sul prodotto.",
-    evidence: "src/lib/projects/fase3-gap.ts quality.slice=now; revisions.test.ts now list",
+    claim:
+      "Emergent resta un benchmark esterno: fonti ufficiali e dieci assi sono datati, ma nessuna graduatoria competitiva è provata senza la stessa esecuzione testa-a-testa.",
+    evidence:
+      "src/lib/projects/emergent-competitive-benchmark.ts + emergent-competitive-benchmark.test.ts + emergent-competitive-benchmark.md",
     ok: true,
   },
 ];

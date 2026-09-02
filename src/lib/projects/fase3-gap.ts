@@ -1,7 +1,7 @@
 /**
  * Fase 3 gap matrix vs Emergent (2026 product, not brochure parity).
- * Evidence: help.emergent.sh GitHub (Standard+), tested full-stack + Stripe + auth,
- * user reports of Rollback/Fork. Fenix measured from src on main.
+ * Current first-party claims and the explicit no-parity verdict are tracked in
+ * emergent-competitive-benchmark.ts. Fenix is measured from repository tests.
  */
 export type GapImpact = "high" | "medium" | "low";
 export type GapCost = "high" | "medium" | "low";
