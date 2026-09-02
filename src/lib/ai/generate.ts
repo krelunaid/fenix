@@ -4,6 +4,7 @@ import { FENIX_MODEL, getXaiApiKey, XAI_CHAT_COMPLETIONS_URL, XAI_MISSING_KEY_ER
 import { SYSTEM_PROMPT } from "./prompt";
 import { kindFromPrompt } from "@/lib/projects/infer";
 import { contractInstruction, planContract } from "./build-contract";
+import { composeProduct } from "./compose-product";
 
 export type GenerateInput = {
   prompt: string;
@@ -38,10 +39,12 @@ export const generateBuild = createServerFn({ method: "POST" })
       return { ok: false, error: XAI_MISSING_KEY_ERROR };
     }
 
+    const composed = composeProduct(data.prompt);
     const userParts = [
       `BRIEF:\n${data.prompt}`,
       contractInstruction(planContract(data.prompt)),
-      `VINCOLO UNICITÀ: prodotto visivamente unico, nato dal brief. Token cromatici del contratto. Vietato clone #f5f5f7 + Manrope + hero centrato. Vietato beige/terracotta se il brief non è ceramica.`,
+      composed.polish,
+      `VINCOLO UNICITÀ: prodotto visivamente unico, nato dal brief. Token cromatici del contratto. Vietato clone #f5f5f7 + Manrope + hero centrato. Vietato beige/terracotta se il brief non è ceramica. Grammatica ${composed.grammar.id}, non la stessa phone-shell.`,
     ];
     if (data.html) {
       userParts.push(`HTML ATTUALE:\n${data.html}`);

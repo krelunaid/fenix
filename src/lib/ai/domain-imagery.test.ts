@@ -20,7 +20,7 @@ const here = dirname(fileURLToPath(import.meta.url));
 
 describe("domain imagery", () => {
   it("registers original provenance for every product family and forbids hotlink brands", () => {
-    assert.equal(DOMAIN_IMAGERY_PROVENANCE.length, 10);
+    assert.equal(DOMAIN_IMAGERY_PROVENANCE.length, 16);
     for (const row of DOMAIN_IMAGERY_PROVENANCE) {
       assert.equal(row.license, "CC0");
       assert.match(row.source, /repository-native SVG/i);

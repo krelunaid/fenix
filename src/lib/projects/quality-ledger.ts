@@ -247,6 +247,14 @@ export const QUALITY_LEDGER: LedgerRow[] = [
     ok: true,
   },
   {
+    id: "graphic-pipeline",
+    claim:
+      "La pipeline prompt→plan→generate→visual→QA produce sistemi visivi distinti per sei brief difficili (Essenza, Vesti, ospitalità, ristorazione, dashboard, portfolio) con tre coppie di direzioni diverse, grammatica D/T/M, palette dal brief, imagery di dominio originale e stati empty/loading/success/error. Seed deterministico 0 crediti; il path LLM parte da quel seed. Benchmark esterno non disponibile.",
+    evidence:
+      "compose-product.test.ts + compose-product-browser.test.ts + layout-grammar.test.ts + fixtures/graphic/pipeline",
+    ok: true,
+  },
+  {
     id: "emergent",
     claim:
       "Emergent resta un benchmark esterno: fonti ufficiali e dieci assi sono datati, ma nessuna graduatoria competitiva è provata senza la stessa esecuzione testa-a-testa.",

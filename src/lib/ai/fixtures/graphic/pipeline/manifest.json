@@ -1,0 +1,246 @@
+{
+  "threshold": 72,
+  "files": [
+    {
+      "name": "essenza-or-D.png",
+      "sha256": "6630c5e7134a875db1b6b0c1e8483e0b5f2c668e5b9d788c78faa85e9ee9cfd8",
+      "bytes": 177640,
+      "score": 96,
+      "ok": true,
+      "grammar": "split-stage"
+    },
+    {
+      "name": "essenza-or-T.png",
+      "sha256": "a1ae4ecd71f4f0f5572a769fdfb3a4e6095e1d11c5743315de2bf94a35c8ab23",
+      "bytes": 160235,
+      "score": 96,
+      "ok": true,
+      "grammar": "split-stage"
+    },
+    {
+      "name": "essenza-or-M.png",
+      "sha256": "4e53cadcbe41fd7adaf94fe0279eb4269795362a5c7807d8bac7ddd2d5cb84a4",
+      "bytes": 92429,
+      "score": 96,
+      "ok": true,
+      "grammar": "split-stage"
+    },
+    {
+      "name": "essenza-ice-D.png",
+      "sha256": "8385d8c718b13d1ed05cce45288a68fba65c0165410fd667c2273011bf587515",
+      "bytes": 339444,
+      "score": 96,
+      "ok": true,
+      "grammar": "split-stage"
+    },
+    {
+      "name": "essenza-ice-T.png",
+      "sha256": "06ddb9173b32ec08cf7f86dbc157be80e238bfb4be1307f0aee1a90c0d47ac51",
+      "bytes": 296932,
+      "score": 96,
+      "ok": true,
+      "grammar": "split-stage"
+    },
+    {
+      "name": "essenza-ice-M.png",
+      "sha256": "cff0d3a9f6af53c6125c3f394596b29c8f9eb4f8cacb7158b9e151d11143eaf9",
+      "bytes": 155644,
+      "score": 96,
+      "ok": true,
+      "grammar": "split-stage"
+    },
+    {
+      "name": "vesti-inchiostro-D.png",
+      "sha256": "5a9678aab7f24587092900b1d3a74d29e3cc9be0c3d46352bb17ce9a23a1d4a8",
+      "bytes": 341518,
+      "score": 96,
+      "ok": true,
+      "grammar": "lookbook"
+    },
+    {
+      "name": "vesti-inchiostro-T.png",
+      "sha256": "e65145f1c79e2dd1d9fefc04d94a57689ab75e2ac79736aac26dc9afce07d4f5",
+      "bytes": 351815,
+      "score": 96,
+      "ok": true,
+      "grammar": "lookbook"
+    },
+    {
+      "name": "vesti-inchiostro-M.png",
+      "sha256": "a680476f1ad3857c117e578d69003427a6efb0bddd73faa13717ec9c60812427",
+      "bytes": 144594,
+      "score": 96,
+      "ok": true,
+      "grammar": "lookbook"
+    },
+    {
+      "name": "vesti-osso-D.png",
+      "sha256": "0124cf19aef2de3dc5830139030ee862c7e7c129418543f339633c9222cce56a",
+      "bytes": 288026,
+      "score": 96,
+      "ok": true,
+      "grammar": "lookbook"
+    },
+    {
+      "name": "vesti-osso-T.png",
+      "sha256": "8f5af7ba30bd4133856690fc3dda8f1aec84890ae4ae4f8edd558a9a0f833645",
+      "bytes": 260797,
+      "score": 96,
+      "ok": true,
+      "grammar": "lookbook"
+    },
+    {
+      "name": "vesti-osso-M.png",
+      "sha256": "b5cbc0cb99beed1b38e12943f20ddae0aff83b3fcb9b2f00c0698f88443f083b",
+      "bytes": 133084,
+      "score": 96,
+      "ok": true,
+      "grammar": "lookbook"
+    },
+    {
+      "name": "locanda-pietra-D.png",
+      "sha256": "46274c11f411a645381d29d2094a34ffb0889d2a6119edd348acabc456735d4b",
+      "bytes": 332135,
+      "score": 100,
+      "ok": true,
+      "grammar": "hospitality"
+    },
+    {
+      "name": "locanda-pietra-T.png",
+      "sha256": "95a4fb3ce471ba8275346d280898f364d0b7f7edd74dba166c2663333c714bda",
+      "bytes": 276863,
+      "score": 100,
+      "ok": true,
+      "grammar": "hospitality"
+    },
+    {
+      "name": "locanda-pietra-M.png",
+      "sha256": "375298b46c64a14fb483f71332a35aacd179a42bc8e4ef5b85dddbfecd90e025",
+      "bytes": 121056,
+      "score": 100,
+      "ok": true,
+      "grammar": "hospitality"
+    },
+    {
+      "name": "hotel-notte-D.png",
+      "sha256": "52b842d6e8d9c618d71da39f8146404c112552b3d9de4046d9559e8f40027a1d",
+      "bytes": 187519,
+      "score": 100,
+      "ok": true,
+      "grammar": "hospitality"
+    },
+    {
+      "name": "hotel-notte-T.png",
+      "sha256": "2aaa86c9e11baffdb2c222c0b20353d161aaa948ffcc85f516a08bf39401f783",
+      "bytes": 167218,
+      "score": 100,
+      "ok": true,
+      "grammar": "hospitality"
+    },
+    {
+      "name": "hotel-notte-M.png",
+      "sha256": "e4630426ed6a85b98524e33d0679f2b0ae6ccb1500018959e408ae6177e8514f",
+      "bytes": 79254,
+      "score": 100,
+      "ok": true,
+      "grammar": "hospitality"
+    },
+    {
+      "name": "osteria-passo-D.png",
+      "sha256": "127269ed0057d4bcd7d9d8b3ee213b2e91f6fbfae953e9c2f6c4e96241460fe3",
+      "bytes": 315075,
+      "score": 100,
+      "ok": true,
+      "grammar": "service-board"
+    },
+    {
+      "name": "osteria-passo-T.png",
+      "sha256": "6fc175621ed3740ea63ed3bf6870a78bfd8d81d7ea1ebd910a938fd30975a0e0",
+      "bytes": 267795,
+      "score": 100,
+      "ok": true,
+      "grammar": "service-board"
+    },
+    {
+      "name": "osteria-passo-M.png",
+      "sha256": "1a4f8e6fef26408e36b5df1aac89b596b7e44bf8aed94418da712f87df99c1fc",
+      "bytes": 110783,
+      "score": 100,
+      "ok": true,
+      "grammar": "service-board"
+    },
+    {
+      "name": "crudo-mare-D.png",
+      "sha256": "fd2c15fc89da9d35a3868b0426505f26bc736afd4c2096e54f6145bc042155d2",
+      "bytes": 327051,
+      "score": 100,
+      "ok": true,
+      "grammar": "service-board"
+    },
+    {
+      "name": "crudo-mare-T.png",
+      "sha256": "03dd5ddc1890bd7c5f2d430bf938c8a54878a67e2f2b8bceefc3ed206c866168",
+      "bytes": 281276,
+      "score": 100,
+      "ok": true,
+      "grammar": "service-board"
+    },
+    {
+      "name": "crudo-mare-M.png",
+      "sha256": "3bf7a1ea75a3147113d07d6b14eb5e5e8b939d9318622f8a1b865763d088a8f6",
+      "bytes": 114668,
+      "score": 100,
+      "ok": true,
+      "grammar": "service-board"
+    },
+    {
+      "name": "nord-desk-D.png",
+      "sha256": "c7195e806e9ee5680a325d54b804bac06e246457c4b7eee78caefa0f5d22d6d9",
+      "bytes": 100011,
+      "score": 100,
+      "ok": true,
+      "grammar": "ops-desk"
+    },
+    {
+      "name": "nord-desk-T.png",
+      "sha256": "825b6a4d3a27f12e14d99b9593e6d04b20ed085a16345175bb381b21d25b5e6a",
+      "bytes": 95927,
+      "score": 100,
+      "ok": true,
+      "grammar": "ops-desk"
+    },
+    {
+      "name": "nord-desk-M.png",
+      "sha256": "310dc184b9880985508364176d69610cb0528547eaec3d2853eddc8fead9e267",
+      "bytes": 39901,
+      "score": 100,
+      "ok": true,
+      "grammar": "ops-desk"
+    },
+    {
+      "name": "atelier-carta-D.png",
+      "sha256": "7f29ac62acb812a8aee47c6bf8248fb70bb4af445ac355808747659aedf2c019",
+      "bytes": 421767,
+      "score": 100,
+      "ok": true,
+      "grammar": "magazine"
+    },
+    {
+      "name": "atelier-carta-T.png",
+      "sha256": "b58af10d90d85b1dbf35c2de1d45382abadd36d1525a7e97f96d17af456b9980",
+      "bytes": 349741,
+      "score": 100,
+      "ok": true,
+      "grammar": "magazine"
+    },
+    {
+      "name": "atelier-carta-M.png",
+      "sha256": "8d52722f0f72da858d6ae85cc523360092e447bc770af2c6f86888c73652603a",
+      "bytes": 142315,
+      "score": 100,
+      "ok": true,
+      "grammar": "magazine"
+    }
+  ],
+  "external": "benchmark esterno non disponibile"
+}

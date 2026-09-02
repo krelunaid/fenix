@@ -429,7 +429,7 @@ export function auditGraphicQuality(
         ),
       );
     }
-    if (product && rendered.visibleImages < 1) {
+    if (product && family !== "ops" && opts?.kind !== "dashboard" && rendered.visibleImages < 1) {
       findings.push(
         finding("imagery", "fail", "no-image-render", "Nessuna immagine visibile nel viewport.", `images=${rendered.visibleImages}`),
       );

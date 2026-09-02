@@ -1,0 +1,159 @@
+{
+  "trial": {
+    "briefId": "essenza",
+    "brief": "FORMATO: app telefono 390×844. kind=app. Tab in basso, 5 schermate. NON un sito.\n\nEssenza: gestione profumi premium, flaconi, note olfattive e guardaroba.",
+    "seed": 3174128190,
+    "order": [
+      "A",
+      "B"
+    ],
+    "mapping": {
+      "A": "essenza-fail",
+      "B": "essenza-or"
+    },
+    "labels": {
+      "A": "Candidate A",
+      "B": "Candidate B"
+    },
+    "scores": {
+      "A": {
+        "slot": "A",
+        "criteria": [
+          {
+            "id": "hierarchy",
+            "label": "Gerarchia",
+            "score": 3,
+            "motivation": "Home scheletrica (4 riquadri + Ultimo/Stato)."
+          },
+          {
+            "id": "composition",
+            "label": "Composizione",
+            "score": 8,
+            "motivation": "Nessun rilievo sul criterio."
+          },
+          {
+            "id": "density",
+            "label": "Densità utile",
+            "score": 8,
+            "motivation": "Nessun rilievo sul criterio."
+          },
+          {
+            "id": "imagery",
+            "label": "Imagery di dominio",
+            "score": 3,
+            "motivation": "Prodotto senza immagine, texture o flacone/abito/sala."
+          },
+          {
+            "id": "originality",
+            "label": "Originalità",
+            "score": 8,
+            "motivation": "Rilievo visivo sul criterio, senza attributo di produttore."
+          },
+          {
+            "id": "typography",
+            "label": "Tipografia",
+            "score": 8,
+            "motivation": "Rilievo visivo sul criterio, senza attributo di produttore."
+          },
+          {
+            "id": "color",
+            "label": "Colore",
+            "score": 3,
+            "motivation": "Palette beige/terracotta su un brief che non è ceramica."
+          },
+          {
+            "id": "controls",
+            "label": "Controllo/micro-interazione",
+            "score": 8,
+            "motivation": "Nessun rilievo sul criterio."
+          },
+          {
+            "id": "responsive",
+            "label": "Responsive",
+            "score": 8,
+            "motivation": "Nessun rilievo sul criterio."
+          },
+          {
+            "id": "a11y",
+            "label": "Accessibilità",
+            "score": 8,
+            "motivation": "Focus visibile dichiarato."
+          }
+        ],
+        "total": 65
+      },
+      "B": {
+        "slot": "B",
+        "criteria": [
+          {
+            "id": "hierarchy",
+            "label": "Gerarchia",
+            "score": 8,
+            "motivation": "Nessun rilievo sul criterio."
+          },
+          {
+            "id": "composition",
+            "label": "Composizione",
+            "score": 8,
+            "motivation": "Nessun rilievo sul criterio."
+          },
+          {
+            "id": "density",
+            "label": "Densità utile",
+            "score": 8,
+            "motivation": "Nessun rilievo sul criterio."
+          },
+          {
+            "id": "imagery",
+            "label": "Imagery di dominio",
+            "score": 8,
+            "motivation": "Nessun rilievo sul criterio."
+          },
+          {
+            "id": "originality",
+            "label": "Originalità",
+            "score": 8,
+            "motivation": "Rilievo visivo sul criterio, senza attributo di produttore."
+          },
+          {
+            "id": "typography",
+            "label": "Tipografia",
+            "score": 8,
+            "motivation": "Rilievo visivo sul criterio, senza attributo di produttore."
+          },
+          {
+            "id": "color",
+            "label": "Colore",
+            "score": 8,
+            "motivation": "Famiglia perfume distinta."
+          },
+          {
+            "id": "controls",
+            "label": "Controllo/micro-interazione",
+            "score": 8,
+            "motivation": "Nessun rilievo sul criterio."
+          },
+          {
+            "id": "responsive",
+            "label": "Responsive",
+            "score": 8,
+            "motivation": "Nessun rilievo sul criterio."
+          },
+          {
+            "id": "a11y",
+            "label": "Accessibilità",
+            "score": 8,
+            "motivation": "Focus visibile dichiarato."
+          }
+        ],
+        "total": 80
+      }
+    }
+  },
+  "external": {
+    "available": false,
+    "declaration": "benchmark esterno non disponibile",
+    "referenceSet": "none",
+    "note": "Nessun output Emergent equivalente è depositato nel repository e non si acquistano piani o workspace per ottenerlo. Il protocollo cieco gira su artifact interni (legacy geometrico vs riferimento premium originale). Non conclude parità né superiorità."
+  }
+}

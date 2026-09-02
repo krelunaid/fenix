@@ -32,6 +32,12 @@ export const DOMAIN_IMAGERY_PROVENANCE: ImageryProvenance[] = [
   { id: "svg-ops-1", family: "ops", variant: 1, license: "CC0", source: "repository-native SVG originale Fenix", year: 2026, subject: "cassette di raccolto e andamento", notes: "Nessun asset Apple/Emergent. Nessun hotlink." },
   { id: "svg-utility-0", family: "utility", variant: 0, license: "CC0", source: "repository-native SVG originale Fenix", year: 2026, subject: "forbici e crocini di taglio", notes: "Nessun asset Apple/Emergent. Nessun hotlink." },
   { id: "svg-utility-1", family: "utility", variant: 1, license: "CC0", source: "repository-native SVG originale Fenix", year: 2026, subject: "nastro millimetrato in tasca", notes: "Nessun asset Apple/Emergent. Nessun hotlink." },
+  { id: "svg-hospitality-0", family: "hospitality", variant: 0, license: "CC0", source: "repository-native SVG originale Fenix", year: 2026, subject: "camera in pietra, letto e finestra sul pozzo", notes: "Nessun asset Apple/Emergent. Nessun hotlink." },
+  { id: "svg-hospitality-1", family: "hospitality", variant: 1, license: "CC0", source: "repository-native SVG originale Fenix", year: 2026, subject: "suite d'hotel, lampada oro e champagne", notes: "Nessun asset Apple/Emergent. Nessun hotlink." },
+  { id: "svg-food-0", family: "food", variant: 0, license: "CC0", source: "repository-native SVG originale Fenix", year: 2026, subject: "piatto al passo, plin e vino", notes: "Nessun asset Apple/Emergent. Nessun hotlink." },
+  { id: "svg-food-1", family: "food", variant: 1, license: "CC0", source: "repository-native SVG originale Fenix", year: 2026, subject: "crudo su marmo, agrume e erba di mare", notes: "Nessun asset Apple/Emergent. Nessun hotlink." },
+  { id: "svg-editorial-0", family: "editorial", variant: 0, license: "CC0", source: "repository-native SVG originale Fenix", year: 2026, subject: "lastra fotografica su carta da rivista", notes: "Nessun asset Apple/Emergent. Nessun hotlink." },
+  { id: "svg-editorial-1", family: "editorial", variant: 1, license: "CC0", source: "repository-native SVG originale Fenix", year: 2026, subject: "studio notturno, cornice e segnale rosso", notes: "Nessun asset Apple/Emergent. Nessun hotlink." },
 ];
 
 function esc(value: string): string {
@@ -42,8 +48,9 @@ function esc(value: string): string {
     .replace(/>/g, "&" + "gt;");
 }
 
-function wrap(id: string, alt: string, inner: string): string {
-  return `<svg class="domain-art" data-imagery="domain" data-provenance="${esc(id)}" viewBox="0 0 640 420" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${esc(alt)}" preserveAspectRatio="xMidYMid slice">${inner}</svg>`;
+function wrap(id: string, alt: string, inner: string, slot = 0): string {
+  const gid = `${id.replace(/[^a-z0-9]/gi, "")}s${slot}n${inner.length}`;
+  return `<svg class="domain-art" data-imagery="domain" data-provenance="${esc(id)}" viewBox="0 0 640 420" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${esc(alt)}" preserveAspectRatio="xMidYMid slice"><defs><filter id="${gid}" x="-6%" y="-6%" width="112%" height="112%"><feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="2" seed="${4 + slot}" result="n"/><feColorMatrix in="n" type="saturate" values="0" result="g"/><feComponentTransfer in="g" result="g2"><feFuncA type="table" tableValues="0 0.18"/></feComponentTransfer><feBlend in="SourceGraphic" in2="g2" mode="multiply"/></filter></defs><g filter="url(#${gid})">${inner}</g></svg>`;
 }
 
 function perfumeArt(variant: 0 | 1, slot: number, alt: string): string {
@@ -215,6 +222,105 @@ function utilityArt(variant: 0 | 1, slot: number, alt: string): string {
   );
 }
 
+
+function hospitalityArt(variant: 0 | 1, slot: number, alt: string): string {
+  const id = `svg-hospitality-${variant}`;
+  if (variant === 1) {
+    const x = 40 + slot * 8;
+    return wrap(
+      id,
+      alt,
+      `<rect width="640" height="420" fill="#12151c"/>
+      <rect x="${x}" y="36" width="560" height="348" fill="#1a1f28"/>
+      <rect x="${x + 36}" y="64" width="220" height="280" fill="#0c0f14"/>
+      <rect x="${x + 56}" y="88" width="180" height="160" fill="#d4c4a0" opacity=".18"/>
+      <rect x="${x + 72}" y="104" width="148" height="120" fill="#242a36"/>
+      <circle cx="${x + 420}" cy="210" r="54" fill="#d4c4a0" opacity=".55"/>
+      <rect x="${x + 404}" y="210" width="32" height="90" fill="#d4c4a0"/>
+      <rect x="${x + 300}" y="250" width="220" height="70" rx="6" fill="#242a36"/>
+      <path d="M${x + 280} 70h200" stroke="#d4c4a0" stroke-width="1.4"/>`,
+      slot,
+    );
+  }
+  return wrap(
+    id,
+    alt,
+    `<rect width="640" height="420" fill="#e7e0d2"/>
+    <rect x="36" y="40" width="568" height="340" fill="#cfc3ae"/>
+    <rect x="70" y="70" width="240" height="180" fill="#8aa0b0"/>
+    <rect x="90" y="90" width="200" height="140" fill="#dfe8ee"/>
+    <path d="M110 200c30-40 90-40 120 0" fill="#5e6a62" opacity=".35"/>
+    <rect x="360" y="210" width="210" height="90" rx="8" fill="#f4efe4"/>
+    <rect x="380" y="226" width="170" height="14" fill="#1f4a3e" opacity=".45"/>
+    <rect x="70" y="270" width="240" height="80" fill="#1f4a3e"/>
+    <circle cx="${160 + slot * 18}" cy="160" r="16" fill="#fffaf1" opacity=".5"/>`,
+    slot,
+  );
+}
+
+function foodArt(variant: 0 | 1, slot: number, alt: string): string {
+  const id = `svg-food-${variant}`;
+  if (variant === 1) {
+    return wrap(
+      id,
+      alt,
+      `<rect width="640" height="420" fill="#eef3f6"/>
+      <ellipse cx="320" cy="250" rx="210" ry="110" fill="#dfe8ee"/>
+      <ellipse cx="320" cy="236" rx="170" ry="86" fill="#ffffff"/>
+      <path d="M210 220c40-30 90-20 120 10 40-36 90-20 130 16-30 40-90 60-140 54-50 4-90-20-110-80z" fill="#8fb7a0"/>
+      <circle cx="${250 + slot * 12}" cy="210" r="18" fill="#e25c2a"/>
+      <circle cx="360" cy="200" r="10" fill="#2f6b4a"/>
+      <path d="M180 90h80M180 110h48" stroke="#12202c" stroke-width="3"/>
+      <rect x="470" y="70" width="90" height="90" fill="#2f6b4a" opacity=".15"/>`,
+      slot,
+    );
+  }
+  return wrap(
+    id,
+    alt,
+    `<rect width="640" height="420" fill="#1a1210"/>
+    <ellipse cx="330" cy="268" rx="200" ry="96" fill="#000" opacity=".45"/>
+    <ellipse cx="328" cy="250" rx="168" ry="78" fill="#3a2420"/>
+    <ellipse cx="328" cy="236" rx="128" ry="56" fill="#c43c2c" opacity=".85"/>
+    <path d="M260 220c30-18 70-18 100 8-16 28-64 40-100 22z" fill="#f6ead8"/>
+    <circle cx="${300 + slot * 10}" cy="214" r="8" fill="#7d9a6a"/>
+    <rect x="72" y="64" width="8" height="220" fill="#c43c2c"/>
+    <path d="M100 80h160M100 108h90" stroke="#f6ead8" stroke-width="3"/>`,
+    slot,
+  );
+}
+
+function editorialArt(variant: 0 | 1, slot: number, alt: string): string {
+  const id = `svg-editorial-${variant}`;
+  if (variant === 1) {
+    return wrap(
+      id,
+      alt,
+      `<rect width="640" height="420" fill="#0e1014"/>
+      <rect x="80" y="48" width="360" height="280" fill="#16181e"/>
+      <rect x="104" y="72" width="312" height="220" fill="#1e2128"/>
+      <rect x="470" y="64" width="14" height="220" fill="#c81d25"/>
+      <circle cx="${200 + slot * 20}" cy="180" r="46" fill="#e8e6df" opacity=".12"/>
+      <path d="M120 330h280" stroke="#c81d25" stroke-width="2"/>
+      <rect x="80" y="340" width="120" height="8" fill="#e8e6df"/>`,
+      slot,
+    );
+  }
+  return wrap(
+    id,
+    alt,
+    `<rect width="640" height="420" fill="#f3efe6"/>
+    <rect x="48" y="40" width="360" height="300" fill="#fffdf8" stroke="#ddd4c6"/>
+    <rect x="72" y="64" width="312" height="210" fill="#c9b496"/>
+    <rect x="88" y="80" width="280" height="178" fill="#6a5e52"/>
+    <circle cx="${200 + slot * 16}" cy="160" r="40" fill="#f3efe6" opacity=".35"/>
+    <rect x="430" y="64" width="160" height="220" fill="#9a4a28" opacity=".12"/>
+    <path d="M72 300h312" stroke="#9a4a28" stroke-width="6"/>
+    <rect x="72" y="328" width="180" height="10" fill="#1a1814"/>`,
+    slot,
+  );
+}
+
 export function altForBrief(brief: string): string {
   const family = familyFromBrief(brief);
   const variant = variantFromBrief(brief);
@@ -232,6 +338,9 @@ export function domainIllustration(
   if (family === "perfume") return perfumeArt(variant, slot, label);
   if (family === "fashion") return fashionArt(variant, slot, label);
   if (family === "booking") return bookingArt(variant, slot, label);
+  if (family === "hospitality") return hospitalityArt(variant, slot, label);
+  if (family === "food") return foodArt(variant, slot, label);
+  if (family === "editorial") return editorialArt(variant, slot, label);
   if (family === "ops") return opsArt(variant, slot, label);
   if (family === "utility") return utilityArt(variant, slot, label);
   return perfumeArt(0, slot, label);
@@ -247,6 +356,12 @@ export function heroPromptForBrief(brief: string): string {
         ? "tailored garment on a dress form in an atelier, fabric drape"
         : family === "booking"
           ? "treatment studio interior, chair, linen, daylight window"
+          : family === "hospitality"
+            ? "hotel room interior, bed, window light, no people, no UI"
+            : family === "food"
+              ? "plated dish, linen, steam, no people, no menu screenshot"
+              : family === "editorial"
+                ? "photographic plate on paper, copper edge, studio light"
           : family === "ops"
             ? "paper ledger, brass ruler, north window, no screenshots"
             : family === "utility"

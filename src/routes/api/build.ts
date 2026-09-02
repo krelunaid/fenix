@@ -130,7 +130,7 @@ export const Route = createFileRoute("/api/build")({
           userParts.push("COMPLETO: sito con sezioni, nav in alto, footer. NON un'app telefono. NON un gestionale: niente .orders, niente inventario magazzino, niente form Nuovo pezzo. Stato mai null.");
         } else {
           userParts.push(
-            "COMPLETO: 5 schermate che si usano (home, nuovo, lista, numeri, altro). Form che salvano. Niente hero da homepage.",
+            "COMPLETO: schermate di mestiere secondo la grammatica del contratto. Home con imagery di dominio originale, gerarchia vera, form che salvano, lista reale. Vietato Ciao/Operatore, tab Home/Nuovo/Elenco, hero geometrico, telefono boxed al centro del desktop.",
           );
         }
         if (html && instruction) userParts.push(`APP ATTUALE (HTML):\n${html}`);

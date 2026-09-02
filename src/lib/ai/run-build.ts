@@ -8,7 +8,8 @@ import {
 } from "@/lib/projects/store";
 import { parseBuildOutput, type BuildResult } from "./parse";
 import { isWeakPreview, lookInstruction, resetAudit, waitPreviewAudit, waitPreviewShot, waitPreviewBoot, getPreviewBootError, getPreviewBootOk, rememberBootError } from "./look";
-import { APP_SHELL_HTML, APP_SHELL_INSTRUCTION, DASHBOARD_POLISH_INSTRUCTION, SITE_POLISH_INSTRUCTION } from "./app-shell";
+import { APP_SHELL_HTML, DASHBOARD_POLISH_INSTRUCTION, SITE_POLISH_INSTRUCTION } from "./app-shell";
+import { composeProduct } from "./compose-product";
 import { CREATE_COST, ITERATE_COST } from "@/lib/projects/credits";
 import { isPhoneKind, resolveProjectKind } from "@/lib/projects/infer";
 import { formatHtmlErrors, validateProductHtml } from "@/lib/projects/validate-html";
@@ -745,19 +746,18 @@ export async function runBuild(projectId: string, instruction?: string) {
     });
     const phone = isPhoneKind(kind);
     const desk = kind === "site" || kind === "landing" || kind === "dashboard";
+    const composed = composeProduct(project.prompt);
     const payload = {
       prompt: project.prompt,
-      html: instruction ? project.html : phone ? APP_SHELL_HTML : project.html || "",
+      html: instruction
+        ? project.html
+        : composed.spec
+          ? composed.html
+          : phone
+            ? APP_SHELL_HTML
+            : project.html || "",
       kind,
-      instruction:
-        instruction ||
-        (kind === "dashboard"
-          ? DASHBOARD_POLISH_INSTRUCTION
-          : kind === "site" || kind === "landing"
-            ? SITE_POLISH_INSTRUCTION
-            : phone
-              ? APP_SHELL_INSTRUCTION
-              : undefined),
+      instruction: instruction || composed.polish,
     };
     try {
       streamed = isIOS() || desk

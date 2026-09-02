@@ -10,6 +10,9 @@ export type TokenFamily =
   | "perfume"
   | "fashion"
   | "booking"
+  | "hospitality"
+  | "food"
+  | "editorial"
   | "ceramic"
   | "night"
   | "paper"
@@ -104,6 +107,75 @@ const FAMILIES: Record<TokenFamily, FamilySrc> = {
       warning: "#b45309",
     },
     dont: ["carminio moda", "oro profumo", "terracotta da forno"],
+  },
+  hospitality: {
+    mood: "pietra di locanda, bosco, ottone di reception",
+    fonts: {
+      display: "Fraunces",
+      body: "Figtree",
+      href: "https://fonts.googleapis.com/css2?family=Figtree:wght@400;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,700&display=swap",
+    },
+    radius: "12px",
+    type: { h1: "clamp(1.7rem, 5vw, 2.4rem)", body: "16px", label: "11px uppercase tracking" },
+    palette: {
+      bg: "#e7e0d2",
+      surface: "#f4efe4",
+      elevated: "#fffaf1",
+      fg: "#1f2a24",
+      muted: "#5e6a62",
+      accent: "#1f4a3e",
+      line: "#d2c6b4",
+      accentInk: "#f4efe4",
+      success: "#1f4a3e",
+      warning: "#b45309",
+    },
+    dont: ["salvia da parrucchiere", "tab Home/Nuovo", "beige da forno"],
+  },
+  food: {
+    mood: "carbone di cucina, vino, zafferano di passa",
+    fonts: {
+      display: "Fraunces",
+      body: "Source Sans 3",
+      href: "https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Source+Sans+3:wght@400;600;700&display=swap",
+    },
+    radius: "8px",
+    type: { h1: "clamp(1.6rem, 5vw, 2.3rem)", body: "16px", label: "11px uppercase tracking" },
+    palette: {
+      bg: "#1a1210",
+      surface: "#241816",
+      elevated: "#321f1b",
+      fg: "#f6ead8",
+      muted: "#c4a890",
+      accent: "#c43c2c",
+      line: "#4a3028",
+      accentInk: "#f6ead8",
+      success: "#7d9a6a",
+      warning: "#d4a017",
+    },
+    dont: ["beige da forno", "hero da boutique", "tab iPhone"],
+  },
+  editorial: {
+    mood: "carta da rivista, inchiostro, rame da lastre",
+    fonts: {
+      display: "Literata",
+      body: "Figtree",
+      href: "https://fonts.googleapis.com/css2?family=Figtree:wght@400;600&family=Literata:opsz,wght@7..72,500;7..72,700&display=swap",
+    },
+    radius: "0px",
+    type: { h1: "clamp(2rem, 7vw, 3.4rem)", body: "17px", label: "11px uppercase tracking" },
+    palette: {
+      bg: "#f3efe6",
+      surface: "#fffdf8",
+      elevated: "#ffffff",
+      fg: "#1a1814",
+      muted: "#6a5e52",
+      accent: "#9a4a28",
+      line: "#ddd4c6",
+      accentInk: "#fffdf8",
+      success: "#2c4a3e",
+      warning: "#b45309",
+    },
+    dont: ["tab Home/Nuovo", "griglia iPhone", "terracotta da forno"],
   },
   ceramic: {
     mood: "calce, cotto, polvere di bottega",
@@ -292,6 +364,75 @@ const VARIANTS: Partial<Record<TokenFamily, FamilySrc>> = {
     },
     dont: ["salvia da sala", "carminio moda", "admin da forno"],
   },
+  hospitality: {
+    mood: "inchiostro di hotel, champagne, ottone freddo",
+    fonts: {
+      display: "Cormorant Garamond",
+      body: "Karla",
+      href: "https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Karla:wght@400;600&display=swap",
+    },
+    radius: "4px",
+    type: { h1: "clamp(1.7rem, 5vw, 2.5rem)", body: "16px", label: "11px uppercase tracking" },
+    palette: {
+      bg: "#12151c",
+      surface: "#1a1f28",
+      elevated: "#242a36",
+      fg: "#f0e6d4",
+      muted: "#a8a094",
+      accent: "#d4c4a0",
+      line: "#2c3340",
+      accentInk: "#12151c",
+      success: "#2a6f73",
+      warning: "#d08a4a",
+    },
+    dont: ["pietra da locanda", "tab iPhone", "beige da forno"],
+  },
+  food: {
+    mood: "marmo di crudo, agrume, erba di mare",
+    fonts: {
+      display: "Newsreader",
+      body: "Outfit",
+      href: "https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,500;6..72,700&family=Outfit:wght@400;600&display=swap",
+    },
+    radius: "16px",
+    type: { h1: "clamp(1.6rem, 5vw, 2.3rem)", body: "16px", label: "11px uppercase tracking" },
+    palette: {
+      bg: "#eef3f6",
+      surface: "#ffffff",
+      elevated: "#e4eef2",
+      fg: "#12202c",
+      muted: "#5c6d7a",
+      accent: "#2f6b4a",
+      line: "#cfdbe0",
+      accentInk: "#eef3f6",
+      success: "#2f6b4a",
+      warning: "#e25c2a",
+    },
+    dont: ["carbone da trattoria", "vino rosso", "beige da forno"],
+  },
+  editorial: {
+    mood: "studio di notte, argento, segnale rosso",
+    fonts: {
+      display: "Syne",
+      body: "Figtree",
+      href: "https://fonts.googleapis.com/css2?family=Figtree:wght@400;600&family=Syne:wght@600;700&display=swap",
+    },
+    radius: "0px",
+    type: { h1: "clamp(2rem, 7vw, 3.2rem)", body: "16px", label: "11px uppercase tracking" },
+    palette: {
+      bg: "#0e1014",
+      surface: "#16181e",
+      elevated: "#1e2128",
+      fg: "#e8e6df",
+      muted: "#9aa0b0",
+      accent: "#c81d25",
+      line: "#2a2e38",
+      accentInk: "#0e1014",
+      success: "#5aa87a",
+      warning: "#d08a4a",
+    },
+    dont: ["carta da rivista", "rame da lastre", "tab iPhone"],
+  },
   ops: {
     mood: "orto, carta verde, inchiostro di raccolto",
     fonts: {
@@ -343,6 +484,9 @@ const VARIANTS: Partial<Record<TokenFamily, FamilySrc>> = {
 const PRODUCT: { family: TokenFamily; re: RegExp }[] = [
   { family: "perfume", re: /profum|fragran|essenze|parfum|olfatt|flacone|eau de/i },
   { family: "fashion", re: /moda|sfilata|abiti|lookbook|boutique|atelier di moda|vendite di/i },
+  { family: "hospitality", re: /ospital|locanda|albergo|\bhotel\b|reception|camera doppia|soggiorno in|check-?in/i },
+  { family: "food", re: /ristor|trattoria|osteria|brasserie|chef|cucina di|menu degust|sala da pranzo|\bfood\b|passo cucina/i },
+  { family: "editorial", re: /editoriale|rivista di|magazine di|studio fotograf|lastre fotografic| rassegna |portfolio di lastre/i },
   { family: "booking", re: /prenot|appuntament|trattament|booking/i },
   { family: "ceramic", re: /ceram|fornace|argilla|terracotta|kiln|colata|grottaglie|forno/i },
   { family: "ops", re: /nord ledger|orto flusso|kpi di vendita|pipeline vendite|flusso ordini|cruscotto vendite|ledger commerciale/i },
@@ -379,6 +523,9 @@ export function variantFromBrief(brief: string): 0 | 1 {
   if (family === "perfume") return /nebbia|vetro|ghiaccio|frost/.test(p) ? 1 : 0;
   if (family === "fashion") return /osso|avorio|latte|bone/.test(p) ? 1 : 0;
   if (family === "booking") return /lino|tessile|tessuto|studio lino/.test(p) ? 1 : 0;
+  if (family === "hospitality") return /notte|champagne|inchiostro di hotel|suite/.test(p) ? 1 : 0;
+  if (family === "food") return /crudo|marmo|agrume|erba di mare/.test(p) ? 1 : 0;
+  if (family === "editorial") return /notte|argento|segnale|studio di notte/.test(p) ? 1 : 0;
   if (family === "ops") return /orto|harvest|flusso ordini|orto flusso/.test(p) ? 1 : 0;
   if (family === "utility") return /metro tasca|metro in tasca|nastro millimetr/.test(p) ? 1 : 0;
   return 0;
@@ -389,6 +536,9 @@ export function isProductFamily(family: TokenFamily | "unknown"): boolean {
     family === "perfume" ||
     family === "fashion" ||
     family === "booking" ||
+    family === "hospitality" ||
+    family === "food" ||
+    family === "editorial" ||
     family === "ops" ||
     family === "utility"
   );
@@ -400,9 +550,17 @@ export function tokensFromBrief(brief: string): DesignTokens {
   const src = variant === 1 && VARIANTS[family] ? VARIANTS[family]! : FAMILIES[family];
   const palette = { ...src.palette };
   if (contrastRatio(palette.fg, palette.bg) < 4.5) {
-    palette.fg = family === "perfume" || family === "night" || family === "ops" || (family === "utility" && variant === 1) || (family === "fashion" && variant === 1)
-      ? "#f7f1e4"
-      : "#161412";
+    palette.fg =
+      family === "perfume" ||
+      family === "night" ||
+      family === "ops" ||
+      (family === "food" && variant === 0) ||
+      (family === "editorial" && variant === 1) ||
+      (family === "hospitality" && variant === 1) ||
+      (family === "utility" && variant === 1) ||
+      (family === "fashion" && variant === 1)
+        ? "#f7f1e4"
+        : "#161412";
   }
   const dna = `${family}${variant ? `/v${variant}` : ""} · ${src.fonts.display}/${src.fonts.body} · anti-clone`;
   return {
@@ -429,7 +587,7 @@ export function tokensInstruction(tokens: DesignTokens): string {
     "Copia questi hex in :root. Non sostituirli con beige/terracotta se la famiglia non è ceramic.",
     `Vietato per questo brief: ${tokens.dont.join("; ")}.`,
     "Qualità nativa da tasca consentita (tipo, ritmo 8px, profondità, materiali, motion ridotto). Vietato clonare schermate, marchi, SF Symbols o la coppia #f5f5f7+#0071e3.",
-    "Desktop/tablet: griglia editoriale a tutta larghezza, niente canvas boxed 1080px, niente dead zone, sidebar non sproporzionata. Imagery di dominio originale (data-imagery=domain), alt/aria-label, niente placeholder geometrici o hotlink.",
+    "Desktop/tablet: grammatica editoriale a tutta larghezza (split-stage, lookbook, agenda, passo cucina, magazine, ops-desk). Niente canvas boxed 1080px, niente dead zone, niente telefono al centro. Imagery di dominio originale (data-imagery=domain), alt/aria-label, niente placeholder geometrici o hotlink.",
   ].join("\n");
 }
 

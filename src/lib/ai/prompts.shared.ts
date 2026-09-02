@@ -30,6 +30,7 @@ documento unico già montato (stesse 5 schermate)
 <<<END>>>
 
 DIREZIONE VISIVA: se c'è, è legge. Copia i valori hex in :root, i font nel <link>, il raggio, l'icona, le tab e la foto. Non ispirarti: esegui.
+Se c'è GRAMMATICA DI LAYOUT, è legge: split-stage, lookbook, agenda, hospitality, service-board, magazine, ops-desk. Non riciclare la stessa phone-shell su brief diversi.
 
 COLORE — già al primo HTML, DAL BRIEF:
 - Token cromatici del mestiere: --bg --surface --elevated --fg --muted --accent --line --accent-ink. Mai la stessa beige/terracotta su ogni progetto.
@@ -45,9 +46,9 @@ CSS: :root con --bg --surface --fg --muted --accent --line. body 100dvh. App a c
 
 App — chrome da prodotto in tasca (non admin, non landing):
 - TELEFONO 390×844. html/body colonna 100dvh. Vietato desktop-only, 3 colonne, min-width 1100, bande.
-- USA queste classi (il CSS .fk-* è già iniettato, non copiarlo): header.fk-top (h1.fk-hello + p.fk-role), p.fk-date, main.fk-main, nav.fk-tab.
-- Home: oggetto del mestiere + registro a righe o vetrina + CTA. VIETATO home fatta solo di 4 riquadri .fk-stat + «Ultimo» + «Stato». VIETATO main vuoto, dead zone, pagina bianca.
-- Un'app profumi deve sembrare un prodotto profumi, non un registro generico. Stesso per moda e prenotazioni.
+- Se il contratto dà una grammatica (split-stage, lookbook, agenda, hospitality, service-board, magazine, ops-desk) esegui QUELLA: non riciclare header.fk-top + nav.fk-tab + 4 stat. Altrimenti (app generica) usa header.fk-top, main.fk-main, nav.fk-tab.
+- Home: oggetto del mestiere + registro a righe o vetrina + CTA. VIETATO home fatta solo di 4 riquadri .fk-stat + «Ultimo» + «Stato». VIETATO main vuoto, dead zone, pagina bianca, Ciao/Operatore.
+- Un'app profumi deve sembrare un prodotto profumi, non un registro generico. Stesso per moda, prenotazioni, ristorazione, ospitalità.
 - Tab: 4–5 button in .fk-tab, SVG 24 + span dal mestiere (niente Home/Nuovo/Elenco su un brief di prodotto), data-view, .on sull'attivo.
 - Tutte le viste conservano la stessa geometria della .fk-tab; nessun contenuto può spingerla verso l'alto o lasciarle vuoto sotto.
 - Schermate OBLIGATORIE in file separati. Ogni file è una vista vera, non un titolo.
