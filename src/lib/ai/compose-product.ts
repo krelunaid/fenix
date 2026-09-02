@@ -157,8 +157,8 @@ export const PIPELINE_SPECS: PipelineSpec[] = [
       { id: "taglio", label: "Cucito" },
     ],
     rows: [
-      { id: "c1", title: "Colonna avorio", kicker: "38", note: "prova", meta: "€720" },
-      { id: "c2", title: "Cappotto latte", kicker: "40", note: "in sfilata", meta: "€980" },
+      { id: "c1", title: "Cappotto latte", kicker: "40", note: "in sfilata", meta: "€980" },
+      { id: "c2", title: "Colonna avorio", kicker: "38", note: "prova", meta: "€720" },
       { id: "c3", title: "Gonna osso", kicker: "36", note: "consegnata", meta: "€410" },
     ],
     formTitle: "Nuova tela",
@@ -360,11 +360,17 @@ function phoneCss(id: GrammarId): string {
     id === "split-stage"
       ? `.hero{min-height:38vh}.hero svg{height:38vh;min-height:220px}.fragrance{display:grid;grid-template-columns:88px 1fr;gap:14px}.thumb{width:88px;height:112px;border-radius:calc(var(--r) * .5);overflow:hidden}.thumb svg{width:88px;height:112px}`
       : id === "lookbook"
-        ? `.lookbook{display:grid;gap:14px}.look{overflow:hidden;padding:0}.sil svg{height:210px}`
+        ? `.lookbook{display:grid;gap:12px}.look{overflow:hidden;padding:0;display:flex;flex-direction:column;margin:0}
+  .look .sil{position:relative;height:min(54vh,460px);min-height:280px;margin:0}
+  .look .sil svg{position:absolute;inset:0;width:100%;height:100%;display:block}
+  .look h2,.look p{flex:0 0 auto}`
         : id === "hospitality"
           ? `.rooms{display:grid;gap:14px}.room{display:grid;grid-template-columns:120px 1fr;gap:14px}.room .thumb{width:120px;height:96px}.room .thumb svg{width:120px;height:96px}.hero{min-height:24vh;max-height:28vh}.hero svg{height:24vh;min-height:140px}`
           : id === "service-board"
-            ? `.tickets{display:grid;gap:10px}.ticket{display:grid;grid-template-columns:76px 1fr auto;gap:12px;align-items:center}`
+            ? `.hero,.hero.plate{min-height:42vh}.hero svg,.plate.hero svg{height:42vh;min-height:260px;width:100%}
+  .tickets{display:grid;gap:10px}.ticket{display:grid;grid-template-columns:96px 1fr auto;gap:12px;align-items:center;min-height:88px}
+  .ticket .thumb{width:96px;height:80px;overflow:hidden;position:relative;border-radius:calc(var(--r) * .4)}
+  .ticket .thumb svg{width:96px;height:80px;display:block}`
             : "";
   return `${stage}
 .app{display:grid;grid-template-rows:auto 1fr auto;grid-template-areas:"head" "main" "nav";width:100%;min-height:100dvh}
@@ -381,9 +387,24 @@ main{grid-area:main;min-height:0;overflow:auto;padding:8px 16px 20px}
   nav.tabs button{flex-direction:row;font:650 13px/1 var(--body),sans-serif;min-height:44px;padding:8px 12px;gap:8px}
   nav.tabs svg{display:none}
   main{padding:20px 22px 28px}
-  .lookbook{grid-template-columns:repeat(2,1fr)}
+  .lookbook{grid-template-columns:minmax(0,1.32fr) minmax(0,1fr);grid-template-rows:1fr 1fr;gap:14px;align-items:stretch;min-height:calc(100vh - 124px)}
+  .look{margin:0;min-height:0}
+  .look .sil{flex:1;height:auto;min-height:0}
+  .look .sil svg{position:absolute;inset:0;width:100%;height:100%}
+  .look:first-child{grid-column:1;grid-row:1 / span 2}
   .hero{min-height:32vh}
+  .ticket{grid-template-columns:128px 1fr auto;min-height:104px}
+  .ticket .thumb{width:128px;height:100px}
+  .ticket .thumb svg{width:128px;height:100px}
   .rooms{grid-template-columns:1fr 1fr}.room{grid-template-columns:1fr;gap:10px}.room .thumb{width:100%;height:140px}.room .thumb svg{width:100%;height:140px}
+  ${
+    id === "service-board"
+      ? `main{display:grid;grid-template-columns:minmax(240px,.9fr) minmax(280px,1.1fr);gap:16px;align-content:start}
+  .hero,.hero.plate,.plate{grid-column:1;grid-row:1 / span 8;min-height:0;height:calc(100vh - 140px);max-height:calc(100vh - 140px);margin:0}
+  .hero svg,.plate svg,.hero.plate svg,.plate.hero svg{height:100%;min-height:0;max-height:100%}
+  .tickets,.span,.card{grid-column:2}`
+      : ""
+  }
 }
 @media(min-width:1024px){
   header,nav.tabs{padding-left:40px;padding-right:40px}
@@ -395,15 +416,23 @@ main{grid-area:main;min-height:0;overflow:auto;padding:8px 16px 20px}
   .hero svg{height:100%;min-height:0;max-height:100%}
   .span,.card,.fragrance{grid-column:2}`
       : id === "lookbook"
-        ? `.lookbook{grid-template-columns:repeat(3,1fr);gap:18px}.sil svg{height:min(48vh,380px)}.hero.banner{display:none}`
+        ? `.lookbook{grid-template-columns:minmax(0,1.28fr) minmax(0,1fr);grid-template-rows:1fr 1fr;gap:16px;align-items:stretch;min-height:calc(100vh - 132px)}
+  .look{margin:0;min-height:0}
+  .look .sil{flex:1;min-height:0;height:auto}
+  .look .sil svg{position:absolute;inset:0;width:100%;height:100%}
+  .look:first-child{grid-column:1;grid-row:1 / span 2}
+  .hero.banner{display:none}`
         : id === "hospitality"
           ? `.hero{min-height:120px;max-height:18vh;margin:0 0 18px}.hero svg{height:18vh;min-height:120px;max-height:18vh}
   .rooms{grid-template-columns:1fr 1fr;gap:18px}.room{grid-template-columns:1fr;gap:10px}.room .thumb{width:100%;height:200px}.room .thumb svg{width:100%;height:200px}`
           : id === "service-board"
             ? `main{display:grid;grid-template-columns:minmax(280px,.85fr) minmax(340px,1.15fr);gap:24px;align-content:start}
-  .hero,.plate{grid-column:1;grid-row:1 / span 8;min-height:0;height:calc(100vh - 128px);max-height:calc(100vh - 128px);margin:0;position:sticky;top:16px}
-  .hero svg,.plate svg{height:100%;min-height:0;max-height:100%}
-  .span,.tickets,.card{grid-column:2}`
+  .hero,.plate,.hero.plate{grid-column:1;grid-row:1 / span 8;min-height:0;height:calc(100vh - 128px);max-height:calc(100vh - 128px);margin:0;position:sticky;top:16px}
+  .hero svg,.plate svg,.hero.plate svg,.plate.hero svg{height:100%;min-height:0;max-height:100%}
+  .span,.tickets,.card{grid-column:2}
+  .ticket{grid-template-columns:148px 1fr auto;min-height:118px;gap:14px}
+  .ticket .thumb{width:148px;height:112px}
+  .ticket .thumb svg{width:148px;height:112px}`
             : ""
   }
 }`;
@@ -419,11 +448,28 @@ nav.rail button.on{background:var(--accent);color:var(--accent-ink);border-color
 nav.rail svg{width:18px;height:18px;flex:0 0 18px;overflow:hidden;display:block}
 main{grid-area:main;padding:16px 20px}
 .lastre{display:grid;grid-template-columns:1fr;gap:16px}
-.plate{min-height:220px;overflow:hidden}
-.plate svg{height:220px}
+.plate{min-height:200px;overflow:hidden;display:flex;flex-direction:column}
+.plate svg{height:200px;width:100%;flex:0 0 auto}
+#copertina .hero{min-height:min(48vh,360px);margin:0}
+#copertina .hero svg{height:min(48vh,360px);width:100%;display:block}
 footer{grid-area:foot;padding:20px;border-top:1px solid var(--line);color:var(--muted);font-size:13px}
-@media(min-width:768px){header.mast,nav.rail,main,footer{padding-left:32px;padding-right:32px}.lastre{grid-template-columns:1.4fr 1fr}.plate svg{height:280px}}
-@media(min-width:1024px){header.mast,nav.rail,main,footer{padding-left:40px;padding-right:40px}.lastre{gap:28px}.hero svg,.plate svg{min-height:320px;height:42vh}}`;
+@media(min-width:768px){
+  header.mast,nav.rail,main,footer{padding-left:32px;padding-right:32px}
+  main{display:grid;grid-template-columns:minmax(0,1.18fr) minmax(240px,.82fr);gap:16px;align-items:stretch}
+  #copertina{grid-column:1;grid-row:1;display:flex;flex-direction:column;min-height:calc(100vh - 196px);gap:12px}
+  #copertina .hero{flex:1;margin:0;min-height:0}
+  #copertina .hero svg{height:100%;min-height:0}
+  #lastre{grid-column:2;grid-row:1;display:flex;flex-direction:column;gap:12px;min-height:calc(100vh - 196px)}
+  #lastre .plate{flex:1;margin:0;min-height:0;padding:0}
+  #lastre .plate svg{flex:1;height:auto;min-height:88px}
+  #lastre .plate h2,#lastre .plate p{padding:8px 12px}
+  #studio,[data-fenix-crud]{grid-column:1 / -1}
+}
+@media(min-width:1024px){
+  header.mast,nav.rail,main,footer{padding-left:40px;padding-right:40px}
+  main{gap:20px}
+  #copertina,#lastre{min-height:calc(100vh - 188px)}
+}`;
   }
   return `.app[data-fenix-craft-desk]{display:grid;grid-template-rows:auto auto 1fr;grid-template-areas:"head" "nav" "main";min-height:100dvh;height:auto;width:100%}
 header{grid-area:head;padding:14px 16px;border-bottom:1px solid var(--line);align-items:center}
@@ -616,9 +662,10 @@ function renderPerfume(){
 }
 function renderLookbook(){
   if(!data.items.length) return emptyBox();
+  var plates=[hero].concat(arts);
   var html='<div class="lookbook">';
   data.items.forEach(function(e,i){
-    html+='<article class="look" data-id="'+e.id+'" data-act="wear" data-state="'+(i===0?"on":"idle")+'"><div class="sil">'+(arts[i%arts.length]||hero)+"</div><h2>"+e.title+"</h2><p>"+e.kicker+" · "+e.note+" · "+e.meta+"</p></article>";
+    html+='<article class="look" data-id="'+e.id+'" data-act="wear" data-state="'+(i===0?"on":"idle")+'"><div class="sil">'+(plates[i%plates.length]||hero)+"</div><h2>"+e.title+"</h2><p>"+e.kicker+" · "+e.note+" · "+e.meta+"</p></article>";
   });
   return html+"</div>";
 }
@@ -636,7 +683,7 @@ function renderTickets(){
   if(!data.items.length) return html+emptyBox();
   html+='<div class="tickets">';
   data.items.forEach(function(e,i){
-    html+='<article class="ticket" data-id="'+e.id+'" data-act="advance" data-state="'+(i===0?"on":"idle")+'"><time>'+e.meta+"</time><div><h2>"+e.title+'</h2><p class="notes">'+e.note+"</p></div>"+chip(e.kicker)+"</article>";
+    html+='<article class="ticket" data-id="'+e.id+'" data-act="advance" data-state="'+(i===0?"on":"idle")+'"><div class="thumb">'+(arts[i%arts.length]||hero)+'</div><div><h2>'+e.title+'</h2><p class="notes">'+e.note+" · "+e.meta+"</p></div>"+chip(e.kicker)+"</article>";
   });
   return html+"</div>";
 }

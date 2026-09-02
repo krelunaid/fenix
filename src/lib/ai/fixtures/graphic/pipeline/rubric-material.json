@@ -1,0 +1,54 @@
+{
+  "against": "7c3245c4bca9fdddb6ee9b89df7698524e3561a5",
+  "slice": "material realism + premium composition",
+  "visualScoreHonest": 91,
+  "externalParity": false,
+  "externalBenchmark": "benchmark esterno non disponibile",
+  "claim100": false,
+  "independentPrior": 86,
+  "axes": {
+    "navIcons": {
+      "before": 92,
+      "after": 92,
+      "note": "Unchanged: 24-box round-join craft nav, bbox/overflow gate D/T/M."
+    },
+    "typeSystems": {
+      "before": 88,
+      "after": 88,
+      "note": "Unchanged: six display faces, device-aware chrome."
+    },
+    "imagery": {
+      "before": 86,
+      "after": 92,
+      "note": "Vesti coat scaled into the plate with sleeves, notched lapels, collar, welt pockets, buttons, dress-form. Osso slot 2 is a skirt, not a leftover trouser. Crudo plates crop into fanned slices, lemon, salicornia. Atelier cover is a pozzo courtyard, not nested brown rectangles. Still procedural SVG, not photography."
+    },
+    "emptySpaceHierarchy": {
+      "before": 84,
+      "after": 90,
+      "note": "Lookbook D/T is a featured garment spanning two rows. Lookbook M sil is 54vh so the coat is cropped, not letterboxed. Magazine D/T is a cover+stack spread. Crudo tickets carry 96–148px plate thumbs instead of 64×52 ovals."
+    },
+    "opsDesk": {
+      "before": 90,
+      "after": 90,
+      "note": "Unchanged."
+    },
+    "interaction": {
+      "before": 90,
+      "after": 90,
+      "note": "in prova / data-state=on kept. Hover/pressed/loading/empty/success gates kept D/T/M."
+    }
+  },
+  "nonTautological": [
+    "GEOMETRIC_REGRESSIONS rejects M250 46l54-16 trapezoid coat, M220 222c44-28 fish blob, nested #c9b496/#6a5e52 photo rects",
+    "fashion slot 0 requires data-garment=coat plus lapel, sleeve, seam, pocket, button, collar, lining, dress-form",
+    "coat sleeve getBBox width >= 0.92 of body (fails on a tube/trapezoid with no sleeves)",
+    "lookbook D/T featured look height > 1.35 × second look (fails on 7c3245c 3-equal-column)",
+    "lookbook M sil height >= 40% of viewport (fails on 7c3245c 210px tile)",
+    "primary svg fills >= 92% of parent width and 88% of parent height",
+    "crudo ticket thumbs min dimension >= 72px (fails on 56px ovals)",
+    "painted fill/stroke uniqueness >= 8 on Vesti/Crudo/Atelier",
+    "crudo hero requires plate + flesh + citrus + herb parts",
+    "atelier cover requires data-scene=pozzo",
+    "EXTERNAL_BENCHMARK.available === false"
+  ]
+}

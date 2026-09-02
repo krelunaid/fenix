@@ -129,43 +129,43 @@
     },
     {
       "name": "sfilata-inchiostro-D.png",
-      "sha256": "67be64f192b83aa5bdeb4b56323ef65b19a18d1cb882c577b6853dea244b5034",
-      "bytes": 545912,
+      "sha256": "11f283924116193b43cbd4eb771b99e303836d870f5159cde42493494a62efd6",
+      "bytes": 504549,
       "score": 100,
       "ok": true
     },
     {
       "name": "sfilata-inchiostro-T.png",
-      "sha256": "1cf5c506837eccca23abcc4f0191013bc000147108db9ccfd195b38ebcccf881",
-      "bytes": 289160,
+      "sha256": "a021c59b2fbe1aabe73046c820a1cf88a51f0735f428c67021b5a6fc3634a776",
+      "bytes": 278576,
       "score": 100,
       "ok": true
     },
     {
       "name": "sfilata-inchiostro-M.png",
-      "sha256": "9ed0e178ce7094ddfec9ed0b405bb84b99d677fab6195c14b5267b3365940e65",
-      "bytes": 193915,
+      "sha256": "943683efc4c0322516fc02494e9d13b577766b7d7bba5c24aeb5d8777bea6df3",
+      "bytes": 181388,
       "score": 100,
       "ok": true
     },
     {
       "name": "atelier-osso-D.png",
-      "sha256": "4011ec5d4ef227451d793fb31990ba5829032aa20c1a218b73415fb4c5f63e3e",
-      "bytes": 340729,
+      "sha256": "00dc84291c8d53063fc8142576dbfe200839847cfd951d8eb943da2c776cbe56",
+      "bytes": 340966,
       "score": 100,
       "ok": true
     },
     {
       "name": "atelier-osso-T.png",
-      "sha256": "ca8fc2e4074d43630b8a6f15ce64255a38805b84e2f551b274d384257faeece5",
-      "bytes": 212948,
+      "sha256": "f6cf301052167cf0a10bcea4b759262a03d947c6f344d6a09eb3c8e71f1ec2fb",
+      "bytes": 218862,
       "score": 100,
       "ok": true
     },
     {
       "name": "atelier-osso-M.png",
-      "sha256": "341643bb168fe336c762a05d979f79094060fe8fa08f1d24104e4e85697b8ae2",
-      "bytes": 133346,
+      "sha256": "1c2d6600034590c2673090071efc657dacd7d2f5111b4394713355ac9cc63d96",
+      "bytes": 117985,
       "score": 100,
       "ok": true
     },

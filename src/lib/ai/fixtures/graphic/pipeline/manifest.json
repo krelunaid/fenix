@@ -3,7 +3,7 @@
   "files": [
     {
       "name": "essenza-or-D.png",
-      "sha256": "8b553a245f643392af2bfc58d2717416f494d721ceed398a6f6dfd5bfac49a5b",
+      "sha256": "73abe2c2b250ad9aa42c2953ed2f6d57009e3d7191ecd00c6e3580054289cf59",
       "bytes": 210564,
       "score": 100,
       "ok": true,
@@ -11,7 +11,7 @@
     },
     {
       "name": "essenza-or-T.png",
-      "sha256": "bf5b6e7d00ac1be15ce0e896ee975e13cce503e0918620a671cb6b29f625beb8",
+      "sha256": "94a0e4880db1f5dad1a5ddfe1c9dd0ec6408f91abbb2717ee50c365b0b47f952",
       "bytes": 152625,
       "score": 100,
       "ok": true,
@@ -19,7 +19,7 @@
     },
     {
       "name": "essenza-or-M.png",
-      "sha256": "a599d02ccbf09ae8c2d6504b1c6790a9d69cff80fbee6d92187419d638066a51",
+      "sha256": "80b68d754528b878e7c9d26fe67d93b58fad33d663febcde107761e493d3595c",
       "bytes": 97795,
       "score": 100,
       "ok": true,
@@ -27,7 +27,7 @@
     },
     {
       "name": "essenza-ice-D.png",
-      "sha256": "433470611cd2081c81ad22714412bc019e11211b4665e2bdbaf835dc86d6e949",
+      "sha256": "edd6cf902cc876be1fd357087d1c1c7bb05663c114b60dc0c390d66d17139653",
       "bytes": 460009,
       "score": 100,
       "ok": true,
@@ -35,7 +35,7 @@
     },
     {
       "name": "essenza-ice-T.png",
-      "sha256": "474bbaa4eabe8f01e8dca1baf0810fb5c549c6e0cfd61a427f2222bd503613cb",
+      "sha256": "59e74d7a5ae460f9152e3bdb8c671039ce9d8a67ffa8e2936fa565fa7bed4e53",
       "bytes": 365319,
       "score": 100,
       "ok": true,
@@ -43,7 +43,7 @@
     },
     {
       "name": "essenza-ice-M.png",
-      "sha256": "b4ff28b6dc2518a0e6c800231d46630e6a31a3b8b4932b5407e29fc7dbbdd1e4",
+      "sha256": "120ad8a1bc4ddcbe1e63c3cd9f0b8d8be33ec1e83667ac7a202626bad1be0bad",
       "bytes": 186786,
       "score": 100,
       "ok": true,
@@ -51,55 +51,55 @@
     },
     {
       "name": "vesti-inchiostro-D.png",
-      "sha256": "389fd99bff12a688154de7467639175908983ab08388e339a872554b3b6f9f27",
-      "bytes": 444341,
+      "sha256": "b8dc5232686a7eec41fd1d2b055ff0edb0f97551715cad4abe09c382bd003b1d",
+      "bytes": 670935,
       "score": 96,
       "ok": true,
       "grammar": "lookbook"
     },
     {
       "name": "vesti-inchiostro-T.png",
-      "sha256": "775bd55c3a54ee73d25eefbea0908e5cc05e09088b02aef1e47c898ae9fe0ce1",
-      "bytes": 257163,
+      "sha256": "9ccbfa691ac1ac0b4648b670923646aad9c887df28f6eea46440d39e8e4a2cfe",
+      "bytes": 488011,
       "score": 96,
       "ok": true,
       "grammar": "lookbook"
     },
     {
       "name": "vesti-inchiostro-M.png",
-      "sha256": "1a8b14f850f2384a6f13461451d1ede7418fa0d4f9464776a03ba6d5d03f1f82",
-      "bytes": 210405,
+      "sha256": "a1f5e116507c0bddcda28ff977772c950b6b44241f33e36fd02f96e261037c0c",
+      "bytes": 232329,
       "score": 96,
       "ok": true,
       "grammar": "lookbook"
     },
     {
       "name": "vesti-osso-D.png",
-      "sha256": "192f8934518b5c7d2eadf80d6352c320cc344a9c7b70ea566c58bd4bdc5e519a",
-      "bytes": 302019,
+      "sha256": "5e91da82c3a976db8627a64cd0b34994a1af4b7825916710ef6994c18bb7fe81",
+      "bytes": 421412,
       "score": 96,
       "ok": true,
       "grammar": "lookbook"
     },
     {
       "name": "vesti-osso-T.png",
-      "sha256": "60df06424a2206415c453b5c3a45d52e8f8ad8e3a81ebcbd8bc19d8c6012109b",
-      "bytes": 172331,
+      "sha256": "dffaf3f32bec33766d642cafaf0423662cc27ed0b5d556cf60fbd2462dc5769e",
+      "bytes": 477903,
       "score": 96,
       "ok": true,
       "grammar": "lookbook"
     },
     {
       "name": "vesti-osso-M.png",
-      "sha256": "4aaea1ed994084e4410ee723fd2eb6098b11a55753b056e270917b590b4af9e1",
-      "bytes": 128581,
+      "sha256": "52673a6af6cf0f877401eab2c29f0b2d7ee56ae1fee9ac209bb8bb004f03361f",
+      "bytes": 194490,
       "score": 96,
       "ok": true,
       "grammar": "lookbook"
     },
     {
       "name": "locanda-pietra-D.png",
-      "sha256": "adf45e624deb49bb06631c024a6034c23e46d60f3227e344b7537a316f46bf3f",
+      "sha256": "65fa4f42e87a1de68f389ab302aa49146e36d927e44b9e9c6a46d28d24ebfbf3",
       "bytes": 579953,
       "score": 100,
       "ok": true,
@@ -107,7 +107,7 @@
     },
     {
       "name": "locanda-pietra-T.png",
-      "sha256": "c8caba8bba22cf0a3546a59d532ee20888ea47c89adb981f7368da6a2c5d0f7e",
+      "sha256": "592c90c79d9dc4bc1c35b6fc2af4b18c18421caa8ee665f361f01e94e68d005d",
       "bytes": 450998,
       "score": 100,
       "ok": true,
@@ -115,7 +115,7 @@
     },
     {
       "name": "locanda-pietra-M.png",
-      "sha256": "aac7a0348acc15af2ab427818e6588ef41d921624f2a958ffb185f68bdde8448",
+      "sha256": "3899c7ebb41e4ddd6a93c256c2e21d26f73ec56d32b573c4e03970f655a7bc33",
       "bytes": 162293,
       "score": 100,
       "ok": true,
@@ -123,7 +123,7 @@
     },
     {
       "name": "hotel-notte-D.png",
-      "sha256": "2add86796bdb18125dbe0de1edac0a382133f55c78d1fbfa4fd2980db56b563e",
+      "sha256": "d40389d73d0016cb99c757363aed475afde4408f8062b514ffb8323361a7a0d4",
       "bytes": 293206,
       "score": 100,
       "ok": true,
@@ -131,7 +131,7 @@
     },
     {
       "name": "hotel-notte-T.png",
-      "sha256": "ed40b66cb6628094a7bfed8bbc4a823befd69b1c31091c0460200b7c7b937ded",
+      "sha256": "b37a11d03fc38b5c36c5a95f1bdaca0d49ce286eddf687d183e749e377b77502",
       "bytes": 266051,
       "score": 100,
       "ok": true,
@@ -147,48 +147,48 @@
     },
     {
       "name": "osteria-passo-D.png",
-      "sha256": "693a5af808abc4887b71968f99749ce0303b76815fee6b980d1394ca42a69ea2",
-      "bytes": 260254,
+      "sha256": "f14547b8a346f67328e2bb776605435c9757518f065485beb47ae8315c9a26be",
+      "bytes": 310804,
       "score": 100,
       "ok": true,
       "grammar": "service-board"
     },
     {
       "name": "osteria-passo-T.png",
-      "sha256": "d770598b06fe24703a3588018577eb1b070d1ff7c910f3aad210d29c47e8bca8",
-      "bytes": 165639,
+      "sha256": "e734d584b73ca6d6225d1858d19b8fd0c46976b86b0135e69467d9e99b24af4f",
+      "bytes": 265549,
       "score": 100,
       "ok": true,
       "grammar": "service-board"
     },
     {
       "name": "osteria-passo-M.png",
-      "sha256": "0cf98a176c05a65800a4ada422052070a54ec6a1fafd5f321380ad39acb47876",
-      "bytes": 92749,
+      "sha256": "046fa277369345718ca1667eabfb6f9b3175c34bc4ec7dc1740f6c47cbe2f0ae",
+      "bytes": 132949,
       "score": 100,
       "ok": true,
       "grammar": "service-board"
     },
     {
       "name": "crudo-mare-D.png",
-      "sha256": "cb46732ee2bfabd5bf22dbe884f2fc3f2c561eb35359318473327d3785d426ea",
-      "bytes": 399129,
+      "sha256": "76bba375f996280589f5f06d9fbc36427e5af341d8ac27a07ad547e1d7badc13",
+      "bytes": 536842,
       "score": 100,
       "ok": true,
       "grammar": "service-board"
     },
     {
       "name": "crudo-mare-T.png",
-      "sha256": "6a331d6ddc5024659343461bb5d026a53bbb0f3bc20a2abcb2aa32f5026facc9",
-      "bytes": 223569,
+      "sha256": "8d451f5f5b8762bfda892562663ec26d0a3a047bed49609c653fe88c603962b8",
+      "bytes": 439557,
       "score": 100,
       "ok": true,
       "grammar": "service-board"
     },
     {
       "name": "crudo-mare-M.png",
-      "sha256": "59ff8ace79b4c38e9e93d6d807feb7e539b119a0e25fb72b06b243d7b62eb4df",
-      "bytes": 118235,
+      "sha256": "eacf22e3345ea7ac2888712fd4164d2d4ae747f4115c69f1c04866247aba3090",
+      "bytes": 212438,
       "score": 100,
       "ok": true,
       "grammar": "service-board"
@@ -219,24 +219,24 @@
     },
     {
       "name": "atelier-carta-D.png",
-      "sha256": "7e811b1bbdd1f722dfd278379cdc3baec4d5f46fc3eec74ecad3f3d34c042220",
-      "bytes": 537918,
+      "sha256": "30268d59d8f32b53440bbe2b9d7db37f77576842b5a76fff21ddb4dd13ba8fc1",
+      "bytes": 671320,
       "score": 100,
       "ok": true,
       "grammar": "magazine"
     },
     {
       "name": "atelier-carta-T.png",
-      "sha256": "dffe84c90b80b2fe240ad12e840336f4f6d1a7009c3fd29db0440733a158d7b6",
-      "bytes": 401052,
+      "sha256": "53ca5a6f997c1ea10dd19e80bffeeceb0a770efc38c2cbd9c5415694d24c5a68",
+      "bytes": 503153,
       "score": 100,
       "ok": true,
       "grammar": "magazine"
     },
     {
       "name": "atelier-carta-M.png",
-      "sha256": "646271a57b3b0eafad97dc7acc079ea5171b168e674a273bbeb427f3ee670370",
-      "bytes": 186812,
+      "sha256": "8e64ac8d02cf2d32ffc61ebf101330a8801d47aa64a805e3dbb339323e615f3d",
+      "bytes": 200661,
       "score": 100,
       "ok": true,
       "grammar": "magazine"

@@ -7,11 +7,13 @@ import { formatPrefix } from "../projects/infer.ts";
 import { familyFromBrief, variantFromBrief } from "../projects/design-tokens.ts";
 import {
   DOMAIN_IMAGERY_PROVENANCE,
+  GEOMETRIC_REGRESSIONS,
   HERO_IMAGE_CREDIT,
   altForBrief,
   domainIllustration,
   ensureDomainImagery,
   heroPromptForBrief,
+  materialSignature,
   upgradeProductChrome,
 } from "./domain-imagery.ts";
 import { auditGraphicQuality } from "../projects/graphic-quality.ts";
@@ -63,5 +65,54 @@ describe("domain imagery", () => {
     assert.equal(familyFromBrief("Kiln cruscotto forno"), "ceramic");
     assert.equal(variantFromBrief(brief), 0);
     assert.equal(variantFromBrief(`${formatPrefix("app")}Vetro di Nebbia profumi flaconi`), 1);
+  });
+
+  it("rejects 7c3245c geometric leftovers and requires material parts on fashion/food/editorial", () => {
+    const oldCoat = `<path d="M250 46l54-16 54 16 44 36-26 42v228l-72 40-72-40V140l-26-42z"/>`;
+    const oldYoke = `<path d="M232 86h176l22 34H210z"/>`;
+    const oldFish = `<path d="M220 222c44-28 96-16 124 16 36-32 92-18 128 20"/>`;
+    const oldPlate = `<rect x="56" y="56" width="340" height="230" fill="#c9b496"/><rect x="74" y="74" width="304" height="194" fill="#6a5e52"/>`;
+    assert.ok(GEOMETRIC_REGRESSIONS.some((r) => r.test(oldCoat)), "coat trapezoid must stay a failing fixture");
+    assert.ok(GEOMETRIC_REGRESSIONS.some((r) => r.test(oldYoke)));
+    assert.ok(GEOMETRIC_REGRESSIONS.some((r) => r.test(oldFish)));
+    assert.ok(GEOMETRIC_REGRESSIONS.some((r) => r.test(oldPlate)));
+    for (const family of ["fashion", "food", "editorial"] as const) {
+      for (const variant of [0, 1] as const) {
+        for (const slot of [0, 1, 2, 3]) {
+          const svg = domainIllustration(family, variant, family, slot);
+          for (const re of GEOMETRIC_REGRESSIONS) {
+            assert.equal(re.test(svg), false, `${family}/${variant}/${slot} ${re}`);
+          }
+          const sig = materialSignature(svg);
+          if (family === "food" && variant === 0) continue;
+          if (family === "editorial" && variant === 1) continue;
+          const minMarks = family === "editorial" ? 10 : 16;
+          assert.ok(sig.marks >= minMarks, `${family}/${variant}/${slot} marks ${sig.marks}`);
+          assert.ok(sig.gradients >= 1, `${family}/${variant}/${slot} gradients`);
+        }
+      }
+    }
+    const coat = materialSignature(domainIllustration("fashion", 0, "cappotto", 0));
+    assert.equal(coat.garment, "coat");
+    for (const part of ["lapel", "sleeve", "seam", "pocket", "button", "collar", "lining", "dress-form"]) {
+      assert.ok(coat.parts.includes(part), `coat missing ${part} (${coat.parts.join(",")})`);
+    }
+    assert.ok(coat.paths >= 22, `coat paths ${coat.paths}`);
+    const dress = materialSignature(domainIllustration("fashion", 0, "abito", 1));
+    assert.equal(dress.garment, "dress");
+    const trousers = materialSignature(domainIllustration("fashion", 0, "pantalone", 2));
+    assert.equal(trousers.garment, "trousers");
+    const ossoSkirt = materialSignature(domainIllustration("fashion", 1, "gonna", 2));
+    assert.equal(ossoSkirt.garment, "skirt");
+    const crudo = materialSignature(domainIllustration("food", 1, "crudo", 0));
+    for (const part of ["plate", "flesh", "citrus", "herb", "marble"]) {
+      assert.ok(crudo.parts.includes(part), `crudo missing ${part}`);
+    }
+    assert.ok(crudo.paths >= 20, `crudo paths ${crudo.paths}`);
+    const cover = materialSignature(domainIllustration("editorial", 0, "lastra", 0));
+    assert.ok(cover.scenes.includes("pozzo"), `cover scenes ${cover.scenes.join(",")}`);
+    assert.ok(cover.parts.includes("type"));
+    const sheet = materialSignature(domainIllustration("editorial", 0, "lastre", 1));
+    assert.ok(sheet.scenes.includes("pozzo") && sheet.scenes.includes("olivo") && sheet.scenes.includes("fienile"));
   });
 });

@@ -148,6 +148,101 @@ describe("graphic pipeline visual QA D/T/M", () => {
                 );
               }
             }
+            if (["vesti-inchiostro", "vesti-osso", "crudo-mare", "atelier-carta"].includes(fix.id)) {
+              const material = await page.evaluate(() => {
+                const svg = document.querySelector(".sil svg, .hero svg, .plate svg") as SVGSVGElement | null;
+                if (!svg) return { ok: false as const };
+                const parts = [...svg.querySelectorAll("[data-part]")].map((n) => n.getAttribute("data-part") || "");
+                const garment = svg.querySelector("[data-garment]")?.getAttribute("data-garment") || "";
+                const scenes = [...svg.querySelectorAll("[data-scene]")].map((n) => n.getAttribute("data-scene") || "");
+                const paths = svg.querySelectorAll("path").length;
+                const paints = new Set<string>();
+                svg.querySelectorAll("*").forEach((n) => {
+                  for (const a of ["fill", "stroke"]) {
+                    const v = n.getAttribute(a);
+                    if (v && v !== "none") paints.add(v);
+                  }
+                });
+                let sleeveWider = false;
+                const sleeve = svg.querySelector("[data-part='sleeve']") as SVGGraphicsElement | null;
+                const body = svg.querySelector("[data-part='body']") as SVGGraphicsElement | null;
+                try {
+                  if (sleeve && body) sleeveWider = sleeve.getBBox().width >= body.getBBox().width * 0.92;
+                } catch {
+                  /* not rendered */
+                }
+                const looks = [...document.querySelectorAll(".look")].map((el) => el.getBoundingClientRect().height);
+                const parent = svg.parentElement?.getBoundingClientRect();
+                const box = svg.getBoundingClientRect();
+                const sil = document.querySelector(".look .sil")?.getBoundingClientRect();
+                const thumbs = [...document.querySelectorAll(".ticket .thumb")].map((el) => {
+                  const b = el.getBoundingClientRect();
+                  return { w: b.width, h: b.height };
+                });
+                return {
+                  ok: true as const,
+                  parts,
+                  garment,
+                  scenes,
+                  paths,
+                  paints: paints.size,
+                  sleeveWider,
+                  looks,
+                  fillW: parent && parent.width ? box.width / parent.width : 0,
+                  fillH: parent && parent.height ? box.height / parent.height : 0,
+                  silH: sil?.height || 0,
+                  viewH: window.innerHeight,
+                  thumbs,
+                };
+              });
+              assert.equal(material.ok, true, `${fix.id}/${vp} material svg`);
+              assert.ok((material.paths || 0) >= 12, `${fix.id}/${vp} paths ${material.paths}`);
+              assert.ok((material.paints || 0) >= 8, `${fix.id}/${vp} paints ${material.paints}`);
+              assert.ok((material.fillW || 0) >= 0.92, `${fix.id}/${vp} svg fillW ${material.fillW}`);
+              assert.ok((material.fillH || 0) >= 0.88, `${fix.id}/${vp} svg fillH ${material.fillH}`);
+              if (fix.id.startsWith("vesti")) {
+                assert.ok(
+                  ["coat", "dress", "trousers", "skirt"].includes(material.garment || ""),
+                  `${fix.id}/${vp} garment ${material.garment}`,
+                );
+                assert.ok(
+                  (material.parts || []).includes("lapel") || (material.parts || []).includes("seam"),
+                  `${fix.id}/${vp} parts`,
+                );
+                if (material.garment === "coat") {
+                  assert.equal(material.sleeveWider, true, `${fix.id}/${vp} sleeves must add width beyond the body tube`);
+                }
+                if (vp === "M") {
+                  assert.ok(
+                    (material.silH || 0) >= (material.viewH || 0) * 0.4,
+                    `${fix.id}/M sil height ${material.silH} vs view ${material.viewH}`,
+                  );
+                }
+                if (vp !== "M") {
+                  const looks = material.looks || [];
+                  if (looks.length >= 2) {
+                    assert.ok(
+                      looks[0]! > looks[1]! * 1.35,
+                      `${fix.id}/${vp} featured look ${looks[0]} vs ${looks[1]}`,
+                    );
+                  }
+                }
+              }
+              if (fix.id === "crudo-mare") {
+                for (const part of ["plate", "flesh", "citrus", "herb"]) {
+                  assert.ok((material.parts || []).includes(part), `${fix.id}/${vp} missing ${part}`);
+                }
+                for (const thumb of material.thumbs || []) {
+                  assert.ok(
+                    Math.min(thumb.w, thumb.h) >= 72,
+                    `${fix.id}/${vp} ticket thumb ${thumb.w}x${thumb.h}`,
+                  );
+                }
+              }
+              if (fix.id === "atelier-carta") {
+                assert.ok((material.scenes || []).length >= 1, `${fix.id}/${vp} scene`);
+              }
+            }
             const tabs = page.locator("button[data-view]");
             if ((await tabs.count()) > 1) {
               await tabs.nth(1).click();

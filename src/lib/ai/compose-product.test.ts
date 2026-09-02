@@ -12,7 +12,7 @@ import {
 } from "./compose-product.ts";
 import { APP_SHELL_HTML } from "./app-shell.ts";
 import { hueBucket } from "../projects/design-tokens.ts";
-import { domainIllustration } from "./domain-imagery.ts";
+import { domainIllustration, GEOMETRIC_REGRESSIONS, materialSignature } from "./domain-imagery.ts";
 import { isLetterAIcon } from "../projects/craft-icons.ts";
 
 const HARD = [
@@ -97,6 +97,40 @@ describe("graphic pipeline prompt→plan→generate→visual→QA", () => {
       const failed = evaluation.checks.filter((c) => c.blocking && !c.ok);
       assert.equal(evaluation.ok, true, `${run.generated.spec?.id}: ${failed.map((c) => `${c.id}:${c.detail}`).join(" · ")}`);
     }
+  });
+
+  it("paints material garments, crudo plating and editorial scenes instead of 7c3245c silhouettes", () => {
+    const vesti = composeProduct(HARD[1]!);
+    const crudo = composeProduct(
+      `${formatPrefix("app")}Crudo Mare: ristorazione di crudo, marmo, agrume ed erba di mare.`,
+    );
+    const atelier = composeProduct(HARD[5]!);
+    for (const re of GEOMETRIC_REGRESSIONS) {
+      assert.equal(re.test(vesti.html), false, String(re));
+      assert.equal(re.test(crudo.html), false, String(re));
+      assert.equal(re.test(atelier.html), false, String(re));
+    }
+    assert.match(vesti.html, /data-garment="coat"/);
+    assert.match(vesti.html, /data-part="lapel"/);
+    assert.match(vesti.html, /data-garment=\\"trousers\\"/);
+    assert.match(vesti.html, /var plates=\[hero\]/);
+    assert.match(vesti.html, /grid-row:1 \/ span 2/);
+    assert.match(vesti.html, /min\(54vh,460px\)/);
+    const coat = materialSignature(domainIllustration("fashion", 0, "c", 0));
+    assert.ok(coat.paths >= 22);
+    assert.match(crudo.html, /data-part="flesh"/);
+    assert.match(crudo.html, /data-part="citrus"/);
+    assert.match(crudo.html, /data-part="herb"/);
+    assert.match(crudo.html, /ticket \.thumb/);
+    assert.match(crudo.html, /width:96px;height:80px/);
+    assert.match(atelier.html, /data-scene="pozzo"/);
+    assert.match(atelier.html, /data-part="type"/);
+    assert.match(atelier.html, /#copertina\{grid-column:1/);
+    const osso = composeProduct(
+      `${formatPrefix("app")}Vesti Osso: moda e vendite, lookbook in avorio, capi in osso e cassa.`,
+    );
+    assert.match(osso.html, /Cappotto latte/);
+    assert.match(osso.html, /data-garment=\\"skirt\\"/);
   });
 
   it("produces two really different directions for perfume, fashion and hospitality", () => {
