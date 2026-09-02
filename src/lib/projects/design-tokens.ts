@@ -527,7 +527,7 @@ const VARIANTS: Partial<Record<TokenFamily, FamilySrc>> = {
 };
 
 const PRODUCT: { family: TokenFamily; re: RegExp }[] = [
-  { family: "repo", re: /repo|github|commit|branch|\bgit\b|repository|voci del repo|repovoci|pull request|\bdiff\b|sync del repo/i },
+  { family: "repo", re: /repovoci|voci del repo|\brepository\b|\brepo\b|commit|branch|\bgit\b|pull request|\bdiff\b|sync del repo/i },
   { family: "perfume", re: /profum|fragran|essenze|parfum|olfatt|flacone|eau de/i },
   { family: "fashion", re: /moda|sfilata|abiti|lookbook|boutique|atelier di moda|vendite di/i },
   { family: "hospitality", re: /ospital|locanda|albergo|\bhotel\b|reception|camera doppia|soggiorno in|check-?in/i },

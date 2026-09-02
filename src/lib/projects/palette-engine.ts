@@ -416,7 +416,7 @@ export function extractUserColors(brief: string): { bg?: string; accent?: string
 
 export function extractBriefAxes(brief: string): BriefAxes {
   const p = String(brief || "").toLowerCase();
-  const domain = /repo|github|commit|branch|\bgit\b|diff|pull request|sync/.test(p)
+  const domain = /repovoci|voci del repo|\brepository\b|\brepo\b|commit|branch|\bgit\b|diff|pull request|\bsync\b/.test(p)
     ? "repository"
     : /clinic|ospedal|pazient|medic|dentist|terap/.test(p)
       ? "clinical"
@@ -439,7 +439,7 @@ export function extractBriefAxes(brief: string): BriefAxes {
                       : /ledger|kpi|pipeline|vendit/.test(p)
                         ? "ops"
                         : "craft";
-  const audience = /developer|dev\b|ingegn|repo/.test(p)
+  const audience = /developer|dev\b|ingegn|\brepo\b/.test(p)
     ? "engineer"
     : /ospit|guest|cliente/.test(p)
       ? "guest"
@@ -450,7 +450,7 @@ export function extractBriefAxes(brief: string): BriefAxes {
           : "maker";
   const tone: BriefAxes["tone"] = /clinic|ospedal|fredd|ice|ghiaccio/.test(p)
     ? "clinical"
-    : /tecn|repo|git|terminal|ops/.test(p)
+    : /tecn|\brepo\b|\bgit\b|terminal|ops/.test(p)
       ? "technical"
       : /luxe|premium|oro|champagne/.test(p)
         ? "luxe"
@@ -477,7 +477,7 @@ export function extractBriefAxes(brief: string): BriefAxes {
             : /argilla|cotto/.test(p)
               ? "clay"
               : "ink";
-  const context: BriefAxes["context"] = /terminal|repo|git/.test(p)
+  const context: BriefAxes["context"] = /terminal|\brepo\b|\bgit\b/.test(p)
     ? "terminal"
     : /cucina|crudo/.test(p)
       ? "kitchen"
@@ -503,7 +503,7 @@ export function selectPaletteFamily(brief: string, seed = hashBrief(brief)): Pal
   const p = String(brief || "").toLowerCase();
   if (earthMotivated(p)) return "earth-kiln";
   if (/ristor|osteria|trattoria|brasserie|chef|cucina di|menu degust|crudo/.test(p)) return "wine-ink";
-  if (/repo|github|commit|branch|\bgit\b|diff|pull request|voci del repo|repovoci/.test(p)) {
+  if (/repovoci|voci del repo|\brepository\b|\brepo\b|commit|branch|\bgit\b|diff|pull request/.test(p)) {
     return /luce|luminos|daylight|carta chiara|paper/.test(p) ? "luminous-paper" : "ink-terminal";
   }
   if (/clinic|ospedal|pazient|medic|dentist|terap/.test(p)) return "glacier";

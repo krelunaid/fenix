@@ -1,12 +1,19 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { familyFromBrief, hueBucket, tokensFromBrief, variantFromBrief } from "./design-tokens.ts";
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { familyFromBrief, hueBucket, isProductFamily, tokensFromBrief, variantFromBrief } from "./design-tokens.ts";
 import { auditGraphicQuality, GRAPHIC_SCORE_THRESHOLD } from "./graphic-quality.ts";
 import { loadGraphicFixtures, loadLegacyGraphicFixtures } from "../ai/graphic-fixtures.ts";
 import { loadPremiumFixtures } from "../ai/premium-fixtures.ts";
 import { evaluateContract, planContract, blocksPublish, criticBudget } from "../ai/build-contract.ts";
 import { loadContractFixtures } from "../ai/contract-fixtures.ts";
 import { APP_SHELL_HTML } from "../ai/app-shell.ts";
+import { formatPrefix } from "./infer.ts";
+
+const here = dirname(fileURLToPath(import.meta.url));
+const VALID_APP = readFileSync(join(here, "fixtures/valid-app.html"), "utf8");
 
 describe("design tokens from brief", () => {
   it("builds three product identities that do not share paper, accent or display font", () => {
@@ -152,5 +159,15 @@ describe("graphic quality gate", () => {
     const report = auditGraphicQuality(APP_SHELL_HTML, { brief, kind: "app" });
     assert.equal(report.ok, false);
     assert.equal(blocksPublish(APP_SHELL_HTML, "app", undefined, brief).length > 0, true);
+  });
+
+  it("does not block a GitHub import of a valid app as a repo product without imagery", () => {
+    const brief = `${formatPrefix("app")}Importato da GitHub Fenix verificato.`;
+    assert.notEqual(familyFromBrief(brief), "repo");
+    assert.equal(isProductFamily(familyFromBrief(brief)), false);
+    const report = auditGraphicQuality(VALID_APP, { brief, kind: "app" });
+    const codes = report.findings.filter((f) => f.severity === "fail").map((f) => f.code);
+    assert.equal(codes.includes("no-product-image"), false, codes.join(","));
+    assert.equal(blocksPublish(VALID_APP, "app", [{ path: "index.html", content: VALID_APP }], brief), "");
   });
 });

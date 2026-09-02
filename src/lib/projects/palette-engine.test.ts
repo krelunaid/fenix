@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { contrastRatio } from "./visual-quality.ts";
-import { familyFromBrief, fallbackPaletteFromBrief, tokensFromBrief } from "./design-tokens.ts";
+import { familyFromBrief, fallbackPaletteFromBrief, isProductFamily, tokensFromBrief } from "./design-tokens.ts";
+import { formatPrefix } from "./infer.ts";
 import {
   CLOSE_DELTA_E,
   ENGINE_FAMILIES,
@@ -16,6 +17,7 @@ import {
   resolveAdaptivePalette,
   sanitizePaletteHistory,
   selectPaletteFamily,
+  extractBriefAxes,
   type PaletteFamily,
   type PaletteRecord,
 } from "./palette-engine.ts";
@@ -135,5 +137,16 @@ describe("adaptive palette engine", () => {
     const junk = sanitizePaletteHistory([{ bg: "red", secret: "sk-live" }, { bg: "#112233", surface: "#223344", accent: "#334455" }]);
     assert.equal(junk.length, 1);
     assert.equal("secret" in (junk[0] as object), false);
+  });
+
+  it("does not treat GitHub or ZIP import prompts as a repository product", () => {
+    const github = `${formatPrefix("app")}Importato da GitHub Fenix verificato.`;
+    const zip = `${formatPrefix("app")}Importato da archivio Fenix verificato.`;
+    assert.notEqual(familyFromBrief(github), "repo", github);
+    assert.notEqual(familyFromBrief(zip), "repo", zip);
+    assert.equal(isProductFamily(familyFromBrief(github)), false);
+    assert.equal(isProductFamily(familyFromBrief(zip)), false);
+    assert.notEqual(selectPaletteFamily(github), "ink-terminal");
+    assert.notEqual(extractBriefAxes(github).domain, "repository");
   });
 });
