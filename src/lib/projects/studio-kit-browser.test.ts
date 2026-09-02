@@ -3,7 +3,8 @@ import { mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, it } from "node:test";
-import { chromium, type Page } from "playwright";
+import { type Page } from "playwright";
+import { holdVisualWork, isolatedPage, launchChromium } from "./playwright-harness.ts";
 import { ensureFenixAdapter } from "./fenix-adapter.ts";
 import { requirePreview } from "./ensure-preview.ts";
 import { readFileSync } from "node:fs";
@@ -44,14 +45,10 @@ async function shot(page: Page, name: string) {
 describe("studio kit overlay and Pubblica gate", () => {
   it("building overlay exposes mute, then Pubblica stays closed", async () => {
     await requirePreview();
-    const browser = await chromium.launch({ headless: true, args: ["--no-sandbox"] });
+    const browser = await launchChromium();
     try {
-      const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
-      await page.route(/\/(api\/build|api\/polish|api\/jobs\/|__worker\/)/, async () => {
-        await new Promise(() => {
-          /* hang so the compact overlay stays without extra credits */
-        });
-      });
+      const page = await isolatedPage(browser, { viewport: { width: 1280, height: 800 } });
+      await holdVisualWork(page, "job-kit");
       const now = Date.now();
       await seed(page, {
         id: "p-kit-build",
@@ -97,9 +94,9 @@ describe("studio kit overlay and Pubblica gate", () => {
 
   it("boot-error / Bloccato keeps Pubblica closed", async () => {
     await requirePreview();
-    const browser = await chromium.launch({ headless: true, args: ["--no-sandbox"] });
+    const browser = await launchChromium();
     try {
-      const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+      const page = await isolatedPage(browser, { viewport: { width: 1280, height: 800 } });
       await page.route(/\/api\/build/, (route) => route.fulfill({ status: 204, body: "" }));
       const now = Date.now();
       await seed(page, {
@@ -130,9 +127,9 @@ describe("studio kit overlay and Pubblica gate", () => {
 
   it("ready valid site opens Pubblica; desktop/tablet/mobile chrome", async () => {
     await requirePreview();
-    const browser = await chromium.launch({ headless: true, args: ["--no-sandbox"] });
+    const browser = await launchChromium();
     try {
-      const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+      const page = await isolatedPage(browser, { viewport: { width: 1280, height: 800 } });
       await page.route(/\/api\/build/, (route) => route.fulfill({ status: 204, body: "" }));
       const now = Date.now();
       await seed(page, {

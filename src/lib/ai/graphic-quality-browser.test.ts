@@ -4,7 +4,8 @@ import { mkdirSync, writeFileSync, statSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, it } from "node:test";
-import { chromium, type Page } from "playwright";
+import { type Page } from "playwright";
+import { isolatedPage, isBlockedPublicNetworkError, launchChromium } from "../projects/playwright-harness.ts";
 import { prepareSrcDoc } from "../projects/color-scheme.ts";
 import { waitForFenixReady } from "../../../scripts/fenix-ready.mjs";
 import {
@@ -27,10 +28,7 @@ const VIEWPORTS = [
 ] as const;
 
 function launch() {
-  return chromium.launch({
-    headless: true,
-    args: ["--no-sandbox", "--disable-dev-shm-usage"],
-  });
+  return launchChromium();
 }
 
 async function shot(page: Page, name: string) {
@@ -59,12 +57,15 @@ describe("graphic quality visual QA D/T/M", () => {
         const kind = fix.kind || "app";
         const contract = planContract(fix.brief);
         for (const [vp, viewport] of VIEWPORTS) {
-          const page = await browser.newPage({ viewport });
+          const page = await isolatedPage(browser, { viewport });
           const errors: string[] = [];
-          page.on("pageerror", (err) => errors.push(String(err)));
-          page.on("console", (msg) => {
-            if (msg.type() === "error") errors.push(msg.text());
+          page.on("pageerror", (err) => {
+            if (!isBlockedPublicNetworkError(String(err))) errors.push(String(err));
           });
+          page.on("console", (msg) => {
+            if (msg.type() === "error" && !isBlockedPublicNetworkError(msg.text())) errors.push(msg.text());
+          });
+          try {
           const src = prepareSrcDoc(fix.html, fix.palette, fix.id, kind);
           await page.setContent(src, { waitUntil: "domcontentloaded", timeout: 15000 });
           await waitForFenixReady(page, 8000);
@@ -123,7 +124,9 @@ describe("graphic quality visual QA D/T/M", () => {
             assert.equal(evaluation.checks.find((c) => c.id === "graphic")?.ok, false);
             assert.match(blocksPublish(fix.html, kind, undefined, fix.brief), /graphic|empty|skeletal|generic|abstract|clone|boxed/i);
           }
-          await page.close();
+          } finally {
+            await page.close();
+          }
         }
       }
     } finally {

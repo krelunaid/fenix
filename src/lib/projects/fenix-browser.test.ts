@@ -3,12 +3,13 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, it } from "node:test";
-import { chromium } from "playwright";
+import { type Browser } from "playwright";
 import { DEMOS } from "./demos.ts";
 import { prepareSrcDoc } from "./color-scheme.ts";
 import { RESUME_ERROR } from "./recover.ts";
 import { APP_SHELL_HTML } from "../ai/app-shell.ts";
 import { requirePreview } from "./ensure-preview.ts";
+import { holdVisualWork, isolatedPage, isBlockedPublicNetworkError, launchChromium } from "./playwright-harness.ts";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const VALID = readFileSync(join(here, "fixtures/valid-app.html"), "utf8");
@@ -18,7 +19,11 @@ const LEAKED_CSS = readFileSync(join(here, "fixtures/leaked-phone-css.html"), "u
 const PREVIEW = process.env.PREVIEW_URL || "http://127.0.0.1:8081";
 
 async function launch() {
-  return chromium.launch({ headless: true });
+  return launchChromium();
+}
+
+async function newPage(browser: Browser, options?: Parameters<Browser["newPage"]>[0]) {
+  return isolatedPage(browser, options);
 }
 
 describe("Fenix bridge in browser", () => {
@@ -28,7 +33,7 @@ describe("Fenix bridge in browser", () => {
     const src = prepareSrcDoc(html, DEMOS.split.palette, "split-demo", DEMOS.split.kind);
     const browser = await launch();
     try {
-      const page = await browser.newPage();
+      const page = await newPage(browser);
       await page.setContent(`<!DOCTYPE html><html><body>
 <iframe id="f" style="width:420px;height:720px;border:0"></iframe>
 <script>
@@ -137,7 +142,7 @@ init();
     assert.match(src, /var desk = true/);
     const browser = await launch();
     try {
-      const page = await browser.newPage();
+      const page = await newPage(browser);
       await page.setContent(`<!DOCTYPE html><html><body>
 <iframe id="f" style="width:1100px;height:800px;border:0"></iframe>
 <script>
@@ -221,10 +226,12 @@ boot();
     const src = prepareSrcDoc(html, { bg: "#f4ede2", fg: "#211d18" }, "data-api-demo", "dashboard");
     const browser = await launch();
     try {
-      const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+      const page = await newPage(browser, { viewport: { width: 1280, height: 800 } });
       const consoleErrors: string[] = [];
       page.on("console", (message) => {
-        if (message.type() === "error") consoleErrors.push(message.text());
+        if (message.type() === "error" && !isBlockedPublicNetworkError(message.text())) {
+          consoleErrors.push(message.text());
+        }
       });
       await page.setContent(`<!DOCTYPE html><html><body>
 <iframe id="f" style="width:1100px;height:700px;border:0"></iframe>
@@ -290,7 +297,7 @@ describe("leaked phone-kit CSS in the preview", () => {
     const rawBrowser = await launch();
     let raw = "";
     try {
-      const page = await rawBrowser.newPage({ viewport: { width: 390, height: 844 } });
+      const page = await newPage(rawBrowser, { viewport: { width: 390, height: 844 } });
       await page.setContent(LEAKED_CSS, { waitUntil: "domcontentloaded" });
       raw = await page.evaluate(() => document.body.innerText);
     } finally {
@@ -304,7 +311,7 @@ describe("leaked phone-kit CSS in the preview", () => {
     assert.match(src, /data-fenix-rescued/);
     const browser = await launch();
     try {
-      const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+      const page = await newPage(browser, { viewport: { width: 390, height: 844 } });
       await page.setContent(src, { waitUntil: "domcontentloaded", timeout: 15000 });
       const visible = await page.evaluate(() => document.body.innerText);
       assert.doesNotMatch(visible, /\.fk-hello\s*\{/);
@@ -331,7 +338,7 @@ describe("leaked phone-kit CSS in the preview", () => {
     assert.match(src, /data-fenix-css-guard/);
     const browser = await launch();
     try {
-      const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+      const page = await newPage(browser, { viewport: { width: 390, height: 844 } });
       await page.setContent(src, { waitUntil: "domcontentloaded", timeout: 15000 });
       const visible = await page.evaluate(() => document.body.innerText);
       assert.doesNotMatch(visible, /\.fk-appicon\s*\{/);
@@ -350,12 +357,8 @@ describe("studio overlay and resume in browser", () => {
     let browser;
     browser = await launch();
     try {
-      const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
-      await page.route(/\/(api\/build|api\/polish|api\/jobs\/|__worker\/)/, async () => {
-        await new Promise(() => {
-          /* hang so overlay stays compact without extra credits */
-        });
-      });
+      const page = await newPage(browser, { viewport: { width: 1280, height: 800 } });
+      await holdVisualWork(page, "job-overlay-hold");
       await page.addInitScript(
         ({ html, resumeError }: { html: string; resumeError: string }) => {
           if (window !== window.parent) return;
@@ -435,7 +438,7 @@ describe("studio overlay and resume in browser", () => {
     let allowComplete = false;
     browser = await launch();
     try {
-      const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+      const page = await newPage(browser, { viewport: { width: 1280, height: 800 } });
       await page.route(/\/api\/build/, async (route) => {
         await route.fulfill({
           status: 204,
@@ -625,7 +628,7 @@ describe("studio overlay and resume in browser", () => {
     let allowComplete = false;
     const browser = await launch();
     try {
-      const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+      const page = await newPage(browser, { viewport: { width: 1280, height: 800 } });
       await page.route(/\/api\/build/, async (route) => {
         await route.fulfill({ status: 204, body: "" });
       });
@@ -832,7 +835,7 @@ describe("studio overlay and resume in browser", () => {
     let polishPosts = 0;
     const browser = await launch();
     try {
-      const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+      const page = await newPage(browser, { viewport: { width: 1280, height: 800 } });
       await page.route(/\/api\/build/, async (route) => {
         const result = {
           name: "Bottega Terra",
@@ -948,7 +951,7 @@ describe("studio overlay and resume in browser", () => {
     let polishPosts = 0;
     const browser = await launch();
     try {
-      const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+      const page = await newPage(browser, { viewport: { width: 1280, height: 800 } });
       await page.route(/\/api\/build/, async (route) => {
         await route.fulfill({ status: 204, body: "" });
       });
@@ -1097,7 +1100,7 @@ describe("studio overlay and resume in browser", () => {
     let polishPosts = 0;
     const browser = await launch();
     try {
-      const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+      const page = await newPage(browser, { viewport: { width: 1280, height: 800 } });
       await page.route(/\/api\/build/, async (route) => {
         await route.fulfill({ status: 204, body: "" });
       });
@@ -1246,7 +1249,7 @@ describe("studio overlay and resume in browser", () => {
     let polishPosts = 0;
     const browser = await launch();
     try {
-      const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+      const page = await newPage(browser, { viewport: { width: 1280, height: 800 } });
       await page.route(/\/api\/build/, async (route) => {
         await route.fulfill({ status: 204, body: "" });
       });
@@ -1372,7 +1375,7 @@ describe("studio overlay and resume in browser", () => {
     let polishPosts = 0;
     const browser = await launch();
     try {
-      const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+      const page = await newPage(browser, { viewport: { width: 1280, height: 800 } });
       await page.route(/\/api\/build/, async (route) => {
         await route.fulfill({ status: 204, body: "" });
       });
@@ -1497,7 +1500,7 @@ describe("studio overlay and resume in browser", () => {
     let polishPosts = 0;
     const browser = await launch();
     try {
-      const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+      const page = await newPage(browser, { viewport: { width: 1280, height: 800 } });
       await page.route(/\/api\/build/, async (route) => {
         await route.fulfill({ status: 204, body: "" });
       });

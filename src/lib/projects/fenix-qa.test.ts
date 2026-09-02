@@ -308,6 +308,13 @@ describe("focus-visible and worker model", () => {
     assert.match(resume, /SITE_POLISH_INSTRUCTION/);
     assert.doesNotMatch(runBuild, /JOB_STILL_RUNNING \|\| \/Riprendi rifinitura/);
     assert.match(runBuild, /if \(workerError === JOB_STILL_RUNNING\)/);
+    const fenixBrowser = readFileSync(join(root, "src/lib/projects/fenix-browser.test.ts"), "utf8");
+    const studioKit = readFileSync(join(root, "src/lib/projects/studio-kit-browser.test.ts"), "utf8");
+    assert.doesNotMatch(fenixBrowser, /new Promise\(\(\) => \{/);
+    assert.doesNotMatch(studioKit, /new Promise\(\(\) => \{/);
+    assert.match(fenixBrowser, /holdVisualWork/);
+    assert.match(fenixBrowser, /isolatedPage/);
+    assert.match(studioKit, /holdVisualWork/);
     const releaseClient = readFileSync(join(root, "src/lib/release/client.ts"), "utf8");
     const releasePanel = readFileSync(join(root, "src/components/publish-panel.tsx"), "utf8");
     const releaseSecrets = readFileSync(join(root, "src/lib/release/secrets.server.ts"), "utf8");
