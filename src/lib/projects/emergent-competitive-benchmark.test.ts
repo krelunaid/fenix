@@ -26,7 +26,7 @@ describe("Emergent competitive benchmark is evidence-led", () => {
 
   it("does not convert internal 100/100 into parity or superiority", () => {
     const verdict = competitiveBenchmarkVerdict();
-    assert.deepEqual(verdict.counts, { demonstrated: 2, partial: 7, gap: 1 });
+    assert.deepEqual(verdict.counts, { demonstrated: 2, partial: 8, gap: 0 });
     assert.equal(verdict.headToHead, "not-run");
     assert.equal(verdict.parity, "unproven");
     assert.equal(verdict.superiority, "unproven");

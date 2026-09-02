@@ -12,6 +12,7 @@ import {
   type CallToolResult,
   type ToolArgs,
 } from "./types.ts";
+import { connectorCatalogEntry } from "./catalog.ts";
 
 assertAppDataServerOnly("app-data/client.server");
 
@@ -189,7 +190,82 @@ function crossSiteBlockedResult(): CallToolResult | null {
 }
 
 const FAILURE_MEMO_TTL_MS = 5_000;
+export const CONNECTOR_ARGS_MAX_BYTES = 64 * 1024;
+export const CONNECTOR_ARGS_MAX_DEPTH = 8;
+export const CONNECTOR_ARGS_MAX_NODES = 512;
+const TOOL_NAME_RE = /^[a-z][a-z0-9_.:-]{0,159}$/;
+const CATALOG_ID_RE = /^[A-Za-z0-9][A-Za-z0-9._:/-]{0,255}$/;
+const BLOCKED_KEYS = new Set(["__proto__", "constructor", "prototype"]);
 const failureMemo = new Map<string, { at: number; result: CallToolResult }>();
+
+function validateConnectorValue(
+  value: unknown,
+  seen: WeakSet<object>,
+  state: { nodes: number },
+  depth = 0,
+): string | null {
+  state.nodes += 1;
+  if (state.nodes > CONNECTOR_ARGS_MAX_NODES) return "connector args have too many nodes";
+  if (depth > CONNECTOR_ARGS_MAX_DEPTH) return "connector args are too deeply nested";
+  if (value === null || typeof value === "string" || typeof value === "boolean") return null;
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? null : "connector args contain a non-finite number";
+  }
+  if (typeof value !== "object") return "connector args must contain JSON values only";
+  if (seen.has(value)) return "connector args are circular";
+  seen.add(value);
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const error = validateConnectorValue(item, seen, state, depth + 1);
+      if (error) return error;
+    }
+    seen.delete(value);
+    return null;
+  }
+  const prototype = Object.getPrototypeOf(value);
+  if (prototype !== Object.prototype && prototype !== null) {
+    return "connector args must be plain JSON objects";
+  }
+  for (const [key, item] of Object.entries(value)) {
+    if (BLOCKED_KEYS.has(key)) return `connector args contain blocked key: ${key}`;
+    const error = validateConnectorValue(item, seen, state, depth + 1);
+    if (error) return error;
+  }
+  seen.delete(value);
+  return null;
+}
+
+export function validateConnectorCall(
+  toolName: string,
+  args: ToolArgs,
+  options: CallToolOptions,
+): string | null {
+  if (!TOOL_NAME_RE.test(toolName)) {
+    return "toolName must be 1-160 allowlisted identifier characters";
+  }
+  const entry = connectorCatalogEntry(options.connectorType);
+  if (!entry) return "connectorType is not in the Fenix connector catalog";
+  const catalogId = options.connectorCatalogId;
+  if (entry.catalogIdRequired) {
+    if (!catalogId || !CATALOG_ID_RE.test(catalogId)) {
+      return "connectorCatalogId is required and must be a safe identifier for Mcp";
+    }
+  } else if (catalogId !== undefined) {
+    return "connectorCatalogId is accepted only for Mcp";
+  }
+  const valueError = validateConnectorValue(args, new WeakSet(), { nodes: 0 });
+  if (valueError) return valueError;
+  let serialized: string;
+  try {
+    serialized = JSON.stringify(args);
+  } catch {
+    return "connector args are not serializable";
+  }
+  if (Buffer.byteLength(serialized, "utf8") > CONNECTOR_ARGS_MAX_BYTES) {
+    return `connector args exceed ${CONNECTOR_ARGS_MAX_BYTES} bytes`;
+  }
+  return null;
+}
 
 function tokenIdentityKey(token: string): string {
   const payload = token.split(".")[1];
@@ -272,6 +348,9 @@ export async function callTool(
   const blocked = crossSiteBlockedResult() ?? nonPostBlockedResult();
   if (blocked) return blocked;
 
+  const contractError = validateConnectorCall(toolName, args, options);
+  if (contractError) return { ok: false, data: null, errorMessage: contractError };
+
   const ctx = inboundContext();
   const token = options.token ?? ctx.token;
   if (!token) {
@@ -302,14 +381,6 @@ export async function callTool(
   }
   const fail = (errorMessage: string): CallToolResult =>
     memoizeFailure(memoKey, { ok: false, data: null, errorMessage });
-  if (connectorType === ConnectorType.Mcp && !options?.connectorCatalogId) {
-    return {
-      ok: false,
-      data: null,
-      errorMessage: "connectorCatalogId is required when connectorType is Mcp",
-    };
-  }
-
   try {
     const { status, json } = await gatePost(
       ctx,
@@ -360,6 +431,10 @@ export {
   GoogleDriveTools,
   CONNECTOR_TOKEN_HEADER,
 } from "./types.ts";
+export {
+  FENIX_CONNECTOR_CATALOG,
+  connectorCatalogEntry,
+} from "./catalog.ts";
 export type {
   CallToolResult,
   CallToolOptions,

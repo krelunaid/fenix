@@ -11,8 +11,8 @@ Le fonti correnti e i dieci assi sono codificati in `emergent-competitive-benchm
 ## Esito corrente
 
 - Fenix dimostra autonomamente 2 assi completi.
-- 7 assi sono parziali: esiste una base reale, ma resta almeno un gap competitivo esplicito.
-- 1 asse è un gap netto: integrazioni e connettori general-purpose.
+- 8 assi sono parziali: esiste una base reale, ma resta almeno un gap competitivo esplicito.
+- 0 assi sono privi di fondamenta: la slice connettori prova sette famiglie server-only, incluso MCP, senza fingere account collegati.
 - Parità: non provata.
 - Superiorità: non provata.
 

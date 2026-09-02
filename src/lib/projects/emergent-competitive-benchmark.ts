@@ -124,10 +124,12 @@ export const EMERGENT_COMPETITIVE_AXES: CompetitiveAxis[] = [
   {
     id: "integrations-connectors",
     label: "Integrazioni e connettori",
-    status: "gap",
+    status: "partial",
     emergentClaimed: "100+ integrazioni/MCP, pagamenti e API esterne dichiarate.",
-    fenixEvidence: "GitHub è integrato; nessun marketplace generale viene simulato.",
-    remainingGap: "Stripe/Razorpay, MCP e un catalogo di connettori con secret server-only.",
+    fenixEvidence:
+      "GitHub App più gate server-only bounded per Drive, Gmail, Calendar, Outlook, Teams e cataloghi MCP, provati da app-data.test.ts.",
+    remainingGap:
+      "Stripe/Razorpay, marketplace amministrabile, account reali e confronto catalogo-per-catalogo restano assenti.",
     sourceIds: ["emergent-enterprise", "emergent-web-builder"],
     headToHeadRun: false,
   },

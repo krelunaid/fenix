@@ -1,6 +1,12 @@
 import { describe, it, mock } from "node:test";
 import assert from "node:assert/strict";
-import { callTool, failureMemoSize } from "./client.server.ts";
+import {
+  callTool,
+  CONNECTOR_ARGS_MAX_BYTES,
+  failureMemoSize,
+  validateConnectorCall,
+} from "./client.server.ts";
+import { FENIX_CONNECTOR_CATALOG } from "./catalog.ts";
 import { ConnectorType } from "./types.ts";
 import type { ToolArgs } from "./types.ts";
 import { isLoginRequired, redirectToLoginIfRequired } from "./login.ts";
@@ -48,6 +54,106 @@ async function withStubbedGate(
     delete process.env.GROK_CONNECTORS_URL;
   }
 }
+
+describe("Fenix connector catalog contract", () => {
+  it("declares seven unique gate families without exposing credentials", () => {
+    assert.equal(FENIX_CONNECTOR_CATALOG.length, 7);
+    assert.equal(
+      new Set(FENIX_CONNECTOR_CATALOG.map((entry) => entry.type)).size,
+      FENIX_CONNECTOR_CATALOG.length,
+    );
+    for (const entry of FENIX_CONNECTOR_CATALOG) {
+      assert.equal(entry.authentication, "edge-gate");
+      assert.equal(entry.credentialExposure, "server-only");
+      assert.equal(entry.toolAuthorization, "grant-allowlist");
+      assert.equal(entry.catalogIdRequired, entry.type === ConnectorType.Mcp);
+    }
+  });
+
+  it("bounds names, MCP ids, shape, depth, nodes and serialized bytes", () => {
+    const drive = { connectorType: ConnectorType.GoogleDrive };
+    assert.equal(validateConnectorCall("google_drive_search", { q: "argilla" }, drive), null);
+    assert.match(validateConnectorCall("../escape", {}, drive) ?? "", /toolName/);
+    assert.match(
+      validateConnectorCall("google_drive_search", {}, {
+        ...drive,
+        connectorCatalogId: "confused-deputy",
+      }) ?? "",
+      /only for Mcp/,
+    );
+    assert.match(
+      validateConnectorCall("mcp_search", {}, { connectorType: ConnectorType.Mcp }) ?? "",
+      /connectorCatalogId/,
+    );
+    assert.equal(
+      validateConnectorCall("mcp_search", {}, {
+        connectorType: ConnectorType.Mcp,
+        connectorCatalogId: "catalog:argilla-v1",
+      }),
+      null,
+    );
+
+    const circular: Record<string, unknown> = {};
+    circular.self = circular;
+    assert.match(validateConnectorCall("fixture", circular, drive) ?? "", /circular/);
+    assert.match(
+      validateConnectorCall(
+        "fixture",
+        JSON.parse('{"__proto__":{"polluted":true}}') as ToolArgs,
+        drive,
+      ) ?? "",
+      /blocked key/,
+    );
+    let deep: Record<string, unknown> = {};
+    const root = deep;
+    for (let index = 0; index < 10; index += 1) {
+      deep.next = {};
+      deep = deep.next as Record<string, unknown>;
+    }
+    assert.match(validateConnectorCall("fixture", root, drive) ?? "", /deeply nested/);
+    assert.match(
+      validateConnectorCall("fixture", { body: "x".repeat(CONNECTOR_ARGS_MAX_BYTES) }, drive) ??
+        "",
+      /exceed/,
+    );
+    assert.match(validateConnectorCall("fixture", { n: Number.NaN }, drive) ?? "", /non-finite/);
+  });
+
+  it("forwards every family through the server gate and keeps the bearer out of the body", async () => {
+    process.env.GROK_CONNECTORS_URL = "https://connectors.invalid.example";
+    const realFetch = globalThis.fetch;
+    const requests: Array<{ authorization: string | null; body: Record<string, unknown> }> = [];
+    globalThis.fetch = (async (_url, init) => {
+      requests.push({
+        authorization: new Headers(init?.headers).get("authorization"),
+        body: JSON.parse(String(init?.body)) as Record<string, unknown>,
+      });
+      return new Response(JSON.stringify({ ok: true, data: { accepted: true } }), { status: 200 });
+    }) as typeof fetch;
+    try {
+      for (const [index, entry] of FENIX_CONNECTOR_CATALOG.entries()) {
+        const token = fakeJwt({ sub: `catalog-user-${index}`, team_id: "argilla" });
+        const result = await callTool(
+          `fixture_${entry.type.toLowerCase()}`,
+          { cursor: index },
+          {
+            connectorType: entry.type,
+            token,
+            ...(entry.catalogIdRequired ? { connectorCatalogId: "catalog:fixture-v1" } : {}),
+          },
+        );
+        assert.equal(result.ok, true);
+        assert.equal(requests[index]?.authorization, `Bearer ${token}`);
+        assert.equal(JSON.stringify(requests[index]?.body).includes(token), false);
+        assert.equal(requests[index]?.body.connector_type, entry.type);
+      }
+      assert.equal(requests.length, FENIX_CONNECTOR_CATALOG.length);
+    } finally {
+      globalThis.fetch = realFetch;
+      delete process.env.GROK_CONNECTORS_URL;
+    }
+  });
+});
 
 describe("callTool failure memo", () => {
   it("replays an identical failure within the memo window without refetching", async () => {

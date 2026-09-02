@@ -72,10 +72,11 @@ export const FASE3_GAPS: Fase3Gap[] = [
     id: "integrations",
     area: "Integrazioni",
     emergent: "Stripe, GitHub, MCP, pagamenti da un prompt.",
-    fenix: "Nessun marketplace. Non si comprano né si inventano chiavi.",
+    fenix:
+      "GitHub App più catalogo server-only di sette famiglie: Drive, Gmail, Calendar, Outlook, Outlook Calendar, Teams e MCP. Il gate limita ogni tool al grant; bearer fuori da browser/body/artifact; nomi, JSON, profondità, nodi, byte e catalog id sono bounded e fail-closed. Testa tutte le famiglie con gate mock. Mancano pagamenti e marketplace amministrabile; non si comprano né si inventano chiavi.",
     impact: "medium",
     cost: "high",
-    slice: "later",
+    slice: "now",
   },
   {
     id: "observability",

@@ -223,6 +223,14 @@ export const QUALITY_LEDGER: LedgerRow[] = [
     ok: true,
   },
   {
+    id: "connectors-server-only",
+    claim:
+      "Sette famiglie di connettori passano da un gate server-only con grant, payload bounded e routing MCP esplicito.",
+    evidence:
+      "src/lib/app-data/catalog.ts + app-data.test.ts + connector-foundation.md",
+    ok: true,
+  },
+  {
     id: "emergent",
     claim:
       "Emergent resta un benchmark esterno: fonti ufficiali e dieci assi sono datati, ma nessuna graduatoria competitiva è provata senza la stessa esecuzione testa-a-testa.",

@@ -66,7 +66,7 @@ describe("fase3 gap matrix is evidence, not parity", () => {
     const now = fase3NowGaps();
     assert.deepEqual(
       now.map((g) => g.id),
-      ["revisions", "project-tree", "github-export", "collab", "quality"],
+      ["revisions", "project-tree", "github-export", "collab", "integrations", "quality"],
     );
     assert.equal(now[0]?.impact, "high");
     assert.notEqual(now[0]?.cost, "high");
@@ -79,6 +79,9 @@ describe("fase3 gap matrix is evidence, not parity", () => {
     assert.equal(github?.slice, "now");
     assert.match(github?.fenix || "", /GitHub App|non configurato|ZIP/i);
     assert.doesNotMatch(github?.fenix || "", /parit[aà]|feature-complete/i);
+    const integrations = FASE3_GAPS.find((g) => g.id === "integrations");
+    assert.equal(integrations?.slice, "now");
+    assert.match(integrations?.fenix || "", /server-only|MCP|bounded|gate/i);
     const observability = FASE3_GAPS.find((g) => g.id === "observability");
     assert.equal(observability?.slice, "next");
     assert.match(observability?.fenix || "", /registro|redatt|attivit/i);
