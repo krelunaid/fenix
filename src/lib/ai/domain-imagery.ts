@@ -38,6 +38,8 @@ export const DOMAIN_IMAGERY_PROVENANCE: ImageryProvenance[] = [
   { id: "svg-food-1", family: "food", variant: 1, license: "CC0", source: "repository-native SVG originale Fenix", year: 2026, subject: "crudo di ricciola, gambero, ostrica e tonno, impiattamenti distinti", notes: "Nessun asset Apple/Emergent. Nessun hotlink. Quattro piatti semanticamente diversi." },
   { id: "svg-editorial-0", family: "editorial", variant: 0, license: "CC0", source: "repository-native SVG originale Fenix", year: 2026, subject: "lastra del pozzo, olivo, fienile e torchio su carta da rivista", notes: "Nessun asset Apple/Emergent. Nessun hotlink. Scene fotografiche distinte, non alberi ripetuti." },
   { id: "svg-editorial-1", family: "editorial", variant: 1, license: "CC0", source: "repository-native SVG originale Fenix", year: 2026, subject: "studio notturno, cornice e segnale rosso", notes: "Nessun asset Apple/Emergent. Nessun hotlink. Scene fotografiche, non campiture." },
+  { id: "svg-repo-0", family: "repo", variant: 0, license: "CC0", source: "repository-native SVG originale Fenix", year: 2026, subject: "nastro di commit, rami e scarto su carta di terminale", notes: "Nessun asset Apple/Emergent. Nessun hotlink. Non è un clone GitHub." },
+  { id: "svg-repo-1", family: "repo", variant: 1, license: "CC0", source: "repository-native SVG originale Fenix", year: 2026, subject: "colonna di diff e rami in luce diurna", notes: "Nessun asset Apple/Emergent. Nessun hotlink. Non è un clone GitHub." },
 ];
 
 /** Exact leftovers from 7c3245c and 7812483. A realism gate that still matches these is tautological. */
@@ -98,7 +100,7 @@ function wrap(id: string, alt: string, inner: string, slot = 0, extraDefs = ""):
   const bits = id.split("-");
   const family = bits[1] || "";
   const variant = bits[2] || "0";
-  return `<svg class="domain-art" data-imagery="domain" data-family="${esc(family)}" data-variant="${esc(variant)}" data-provenance="${esc(id)}" data-slot="${slot}" viewBox="0 0 640 420" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${esc(alt)}" preserveAspectRatio="xMidYMid slice"><defs><filter id="${gid}" x="-10%" y="-10%" width="120%" height="120%"><feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="4" seed="${11 + slot * 5}" result="n"/><feColorMatrix in="n" type="saturate" values="0" result="g"/><feComponentTransfer in="g" result="g2"><feFuncA type="table" tableValues="0 0.26"/></feComponentTransfer><feBlend in="SourceGraphic" in2="g2" mode="multiply"/></filter><filter id="${gid}sh"><feDropShadow dx="0" dy="12" stdDeviation="14" flood-opacity=".34"/></filter><radialGradient id="${gid}vg" cx=".48" cy=".42" r=".78"><stop offset=".5" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".32"/></radialGradient>${extraDefs}</defs><g filter="url(#${gid})">${inner}</g>${family === "editorial" ? `<rect width="640" height="420" fill="#6a5a48" opacity=".07" pointer-events="none"/><rect width="640" height="420" fill="#f4ead8" opacity=".05" pointer-events="none"/>` : ""}<rect width="640" height="420" fill="url(#${gid}vg)" pointer-events="none"/></svg>`;
+  return `<svg class="domain-art" data-imagery="domain" data-family="${esc(family)}" data-variant="${esc(variant)}" data-provenance="${esc(id)}" data-slot="${slot}" viewBox="0 0 640 420" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${esc(alt)}" preserveAspectRatio="xMidYMid slice"><defs><filter id="${gid}" x="-10%" y="-10%" width="120%" height="120%"><feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="4" seed="${11 + slot * 5}" result="n"/><feColorMatrix in="n" type="saturate" values="0" result="g"/><feComponentTransfer in="g" result="g2"><feFuncA type="table" tableValues="0 0.26"/></feComponentTransfer><feBlend in="SourceGraphic" in2="g2" mode="multiply"/></filter><filter id="${gid}sh"><feDropShadow dx="0" dy="12" stdDeviation="14" flood-opacity=".34"/></filter><radialGradient id="${gid}vg" cx=".48" cy=".42" r=".78"><stop offset=".5" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".32"/></radialGradient>${extraDefs}</defs><g filter="url(#${gid})">${inner}</g>${family === "editorial" ? `<rect width="640" height="420" fill="#6a5a48" opacity=".07" pointer-events="none"/><rect width="640" height="420" fill="#f4ead8" opacity=".05" pointer-events="none"/>` : family === "repo" ? `<g pointer-events="none" opacity=".12">${Array.from({ length: 14 }, (_, i) => `<path d="M0 ${28 * i}h640" stroke="#9ec8d4" stroke-width="1"/>`).join("")}</g>` : ""}<rect width="640" height="420" fill="url(#${gid}vg)" pointer-events="none"/></svg>`;
 }
 
 function perfumeArt(variant: 0 | 1, slot: number, alt: string): string {
@@ -816,7 +818,190 @@ export function domainIllustration(
   if (family === "editorial") return editorialArt(variant, slot, label);
   if (family === "ops") return opsArt(variant, slot, label);
   if (family === "utility") return utilityArt(variant, slot, label);
+  if (family === "repo") return repoArt(variant, slot, label);
+  if (family === "night") return nightArt(variant, slot, label);
+  if (family === "paper") return paperArt(variant, slot, label);
   return perfumeArt(0, slot, label);
+}
+
+function repoArt(variant: 0 | 1, slot: number, alt: string): string {
+  const id = `svg-repo-${variant}`;
+  const s = slot % 4;
+  const paper = variant === 1 ? "#e8eef6" : "#0b1220";
+  const ink = variant === 1 ? "#142033" : "#9ec8d4";
+  const accent = variant === 1 ? "#1d4ed8" : "#2ec8c0";
+  const mute = variant === 1 ? "#c5d0de" : "#1d2b44";
+  const add = variant === 1 ? "#0f766e" : "#3dba84";
+  const del = variant === 1 ? "#b45309" : "#d8a03a";
+  if (s === 1) {
+    return wrap(
+      id,
+      alt,
+      `<rect width="640" height="420" fill="${paper}"/>
+      <path d="M72 40v340" stroke="${mute}" stroke-width="2"/>
+      <circle cx="72" cy="72" r="8" fill="${accent}" data-part="node"/>
+      <circle cx="72" cy="168" r="8" fill="${ink}" data-part="node"/>
+      <circle cx="72" cy="264" r="8" fill="${accent}" data-part="node"/>
+      <circle cx="72" cy="348" r="8" fill="${ink}" data-part="node"/>
+      <path d="M72 72c80 0 110 48 188 48" fill="none" stroke="${accent}" stroke-width="2" data-part="branch"/>
+      <rect x="280" y="100" width="280" height="14" fill="${ink}" opacity=".55"/>
+      <rect x="280" y="124" width="190" height="10" fill="${mute}"/>
+      <rect x="280" y="196" width="240" height="14" fill="${ink}" opacity=".7"/>
+      <rect x="280" y="292" width="260" height="14" fill="${ink}" opacity=".45"/>
+      <rect x="112" y="56" width="72" height="16" rx="2" fill="${accent}" data-part="sha"/>`,
+      s,
+    );
+  }
+  if (s === 2) {
+    return wrap(
+      id,
+      alt,
+      `<rect width="640" height="420" fill="${paper}"/>
+      <rect x="36" y="36" width="260" height="348" fill="${mute}" data-part="gutter"/>
+      <rect x="48" y="56" width="120" height="10" fill="${accent}"/>
+      <rect x="48" y="84" width="200" height="8" fill="${ink}" opacity=".5"/>
+      <rect x="48" y="108" width="168" height="8" fill="${ink}" opacity=".35"/>
+      <rect x="48" y="148" width="120" height="10" fill="${accent}"/>
+      <rect x="48" y="176" width="188" height="8" fill="${ink}" opacity=".5"/>
+      <rect x="320" y="48" width="280" height="320" fill="${variant === 1 ? "#ffffff" : "#152033"}" data-part="diff"/>
+      <path d="M336 80h200" stroke="${add}" stroke-width="8" data-part="add"/>
+      <path d="M336 112h160" stroke="${add}" stroke-width="8" data-part="add"/>
+      <path d="M336 152h180" stroke="${del}" stroke-width="8" data-part="del"/>
+      <path d="M336 192h140" stroke="${add}" stroke-width="8" data-part="add"/>
+      <path d="M336 232h210" stroke="${ink}" stroke-width="6" opacity=".35"/>
+      <path d="M336 268h120" stroke="${del}" stroke-width="8" data-part="del"/>`,
+      s,
+    );
+  }
+  if (s === 3) {
+    return wrap(
+      id,
+      alt,
+      `<rect width="640" height="420" fill="${paper}"/>
+      <circle cx="180" cy="210" r="78" fill="none" stroke="${mute}" stroke-width="18" data-part="ring"/>
+      <circle cx="180" cy="210" r="78" fill="none" stroke="${accent}" stroke-width="18" stroke-dasharray="160 330" data-part="sync"/>
+      <rect x="300" y="120" width="280" height="18" fill="${ink}" opacity=".6"/>
+      <rect x="300" y="160" width="220" height="12" fill="${mute}"/>
+      <rect x="300" y="200" width="250" height="12" fill="${mute}"/>
+      <rect x="300" y="248" width="90" height="28" rx="4" fill="${accent}" data-part="sha"/>
+      <rect x="400" y="248" width="110" height="28" rx="4" fill="${mute}"/>`,
+      s,
+    );
+  }
+  return wrap(
+    id,
+    alt,
+    `<rect width="640" height="420" fill="${paper}"/>
+    <path d="M80 36v348" stroke="${mute}" stroke-width="3" data-part="spine"/>
+    <g data-part="commit">
+      <circle cx="80" cy="70" r="9" fill="${accent}"/>
+      <rect x="110" y="60" width="420" height="18" fill="${ink}" opacity=".75"/>
+      <text x="110" y="108" fill="${accent}" font-size="13" font-family="ui-monospace,monospace">a3f1c2 · main</text>
+    </g>
+    <g data-part="commit">
+      <circle cx="80" cy="160" r="9" fill="${ink}"/>
+      <path d="M80 160c90 0 120-40 210-40" fill="none" stroke="${accent}" stroke-width="2" data-part="branch"/>
+      <rect x="110" y="150" width="380" height="18" fill="${ink}" opacity=".55"/>
+      <text x="300" y="148" fill="${accent}" font-size="12" font-family="ui-monospace,monospace">feat/sync</text>
+    </g>
+    <g data-part="commit">
+      <circle cx="80" cy="250" r="9" fill="${accent}"/>
+      <rect x="110" y="240" width="400" height="18" fill="${ink}" opacity=".7"/>
+      <text x="110" y="286" fill="${mute}" font-size="12" font-family="ui-monospace,monospace">9b2e18 · in volo</text>
+    </g>
+    <g data-part="commit">
+      <circle cx="80" cy="340" r="9" fill="${ink}"/>
+      <rect x="110" y="330" width="340" height="18" fill="${ink}" opacity=".45"/>
+    </g>
+    <rect x="500" y="54" width="70" height="16" rx="2" fill="${accent}" data-part="sha"/>`,
+    s,
+  );
+}
+
+function nightArt(variant: 0 | 1, slot: number, alt: string): string {
+  const id = `svg-night-${variant}`;
+  const s = slot % 4;
+  const paper = variant === 1 ? "#1a0824" : "#14081c";
+  const ink = "#f4e8ff";
+  const accent = "#ff3d7f";
+  const mute = "#4a2860";
+  if (s === 1) {
+    return wrap(
+      id,
+      alt,
+      `<rect width="640" height="420" fill="${paper}"/>
+      <circle cx="320" cy="210" r="120" fill="none" stroke="${mute}" stroke-width="18"/>
+      <circle cx="320" cy="210" r="120" fill="none" stroke="${accent}" stroke-width="18" stroke-dasharray="90 660" transform="rotate(-20 320 210)"/>
+      <path d="M80 300 160 220 240 260 320 140 400 200 480 90 560 160" fill="none" stroke="${ink}" stroke-width="4"/>
+      <circle cx="320" cy="210" r="8" fill="${accent}"/>`,
+      s,
+    );
+  }
+  if (s === 2) {
+    return wrap(
+      id,
+      alt,
+      `<rect width="640" height="420" fill="${paper}"/>
+      ${[0, 1, 2, 3, 4, 5, 6, 7].map((i) => `<rect x="${70 + i * 64}" y="${80 + (i % 3) * 40}" width="36" height="${220 - (i % 4) * 36}" rx="4" fill="${i % 2 ? accent : ink}" opacity="${0.35 + (i % 3) * 0.2}"/>`).join("")}`,
+      s,
+    );
+  }
+  return wrap(
+    id,
+    alt,
+    `<rect width="640" height="420" fill="${paper}"/>
+    <path d="M40 260 90 200 140 240 190 120 250 180 310 80 370 150 430 70 490 130 550 90 620 160" fill="none" stroke="${accent}" stroke-width="5" data-part="wave"/>
+    <path d="M40 300 110 250 180 280 250 190 320 240 400 140 480 200 560 120 620 170" fill="none" stroke="${ink}" stroke-width="3" opacity=".55"/>
+    <circle cx="310" cy="80" r="10" fill="${accent}"/>
+    <rect x="40" y="340" width="560" height="8" rx="4" fill="${mute}"/>`,
+    s,
+  );
+}
+
+function paperArt(variant: 0 | 1, slot: number, alt: string): string {
+  const id = `svg-paper-${variant}`;
+  const s = slot % 4;
+  const paper = variant === 1 ? "#f4eef6" : "#f3f6fb";
+  const ink = "#142033";
+  const accent = variant === 1 ? "#a86c9a" : "#1d4ed8";
+  const mute = "#cfd8e6";
+  if (s === 1) {
+    return wrap(
+      id,
+      alt,
+      `<rect width="640" height="420" fill="${paper}"/>
+      <rect x="70" y="40" width="220" height="300" fill="#fff" stroke="${mute}"/>
+      <rect x="310" y="70" width="240" height="270" fill="#fff" stroke="${mute}"/>
+      <path d="M90 80h180M90 110h140M90 140h160" stroke="${ink}" stroke-width="6"/>
+      <path d="M330 110h180M330 140h120" stroke="${ink}" stroke-width="5"/>
+      <rect x="90" y="180" width="70" height="18" fill="${accent}"/>`,
+      s,
+    );
+  }
+  if (s === 2) {
+    return wrap(
+      id,
+      alt,
+      `<rect width="640" height="420" fill="${paper}"/>
+      <circle cx="160" cy="210" r="70" fill="none" stroke="${mute}" stroke-width="16"/>
+      <circle cx="160" cy="210" r="70" fill="none" stroke="${accent}" stroke-width="16" stroke-dasharray="80 360"/>
+      <rect x="280" y="90" width="280" height="18" fill="${ink}" opacity=".7"/>
+      <rect x="280" y="130" width="220" height="12" fill="${mute}"/>
+      <rect x="280" y="170" width="250" height="12" fill="${mute}"/>
+      <rect x="280" y="230" width="120" height="28" rx="4" fill="${accent}"/>`,
+      s,
+    );
+  }
+  return wrap(
+    id,
+    alt,
+    `<rect width="640" height="420" fill="${paper}"/>
+    <rect x="80" y="50" width="480" height="320" fill="#fff" stroke="${mute}" data-part="sheet"/>
+    <path d="M110 90h400M110 130h320M110 170h360M110 210h280" stroke="${ink}" stroke-width="5"/>
+    <rect x="110" y="260" width="90" height="22" fill="${accent}"/>
+    <rect x="220" y="260" width="70" height="22" fill="${mute}"/>`,
+    s,
+  );
 }
 
 export function heroPromptForBrief(brief: string): string {
@@ -839,6 +1024,8 @@ export function heroPromptForBrief(brief: string): string {
             ? "paper ledger, brass ruler, north window, no screenshots"
             : family === "utility"
               ? "brass measuring tools and crop marks on paper"
+              : family === "repo"
+                ? "commit timeline on paper, branch lines, diff gutter, no logos, no UI chrome"
               : "clay, kiln, tools, hands, vessels";
   return `Photorealistic close-up of the craft itself (${craft}). No text, no logo, no watermark, no website, no UI, no screenshot, no browser chrome, no navbar, no form, no page collage. Subject: ${subject}. Brief: ${String(brief || "").slice(0, 220)}`;
 }

@@ -22,12 +22,15 @@ import {
   FENIX_MODEL,
 } from "@/lib/ai/model";
 import { formatPrefix, kindFromPrompt } from "@/lib/projects/infer";
+import { composeProduct } from "@/lib/ai/compose-product";
+import { sanitizePaletteHistory, type PaletteRecord } from "@/lib/projects/palette-engine";
 
 type Body = {
   prompt?: string;
   html?: string;
   instruction?: string;
   shot?: string;
+  recentPalettes?: PaletteRecord[];
 };
 
 type GrokChunk = {
@@ -117,10 +120,13 @@ export const Route = createFileRoute("/api/build")({
         const seed = Array.from(prompt).reduce((h, c) => ((h << 5) - h + c.charCodeAt(0)) | 0, 0);
         const lockKind = kindFromPrompt(prompt) ?? "app";
         const contract = planContract(prompt);
+        const recent = sanitizePaletteHistory(body.recentPalettes);
+        const composed = composeProduct(prompt, { recent });
         const userParts = [
           `BRIEF:\n${prompt}`,
           formatPrefix(lockKind).trim(),
           contractInstruction(contract),
+          composed.polish,
         ];
         if (lockKind === "dashboard") {
           userParts.push(
@@ -201,6 +207,7 @@ export const Route = createFileRoute("/api/build")({
                     apiKey,
                     prompt,
                     signal: visCtl.signal,
+                    recentPalettes: recent,
                   });
                   if (spec) {
                     visualSpec = spec;
@@ -316,7 +323,7 @@ export const Route = createFileRoute("/api/build")({
 
               if (emitted) return;
 
-              const parsed = parseBuildOutput(acc, lockKind);
+              const parsed = parseBuildOutput(acc, lockKind, prompt);
               if (!parsed) {
                 finish({
                   t: "err",
@@ -418,7 +425,7 @@ export const Route = createFileRoute("/api/build")({
               }
             } catch (err) {
               const aborted = err instanceof Error && err.name === "AbortError";
-              const salvage = parseBuildOutput(acc, lockKind);
+              const salvage = parseBuildOutput(acc, lockKind, prompt);
               if (salvage) {
                 const gated = await gateBuildResult({
                   apiKey,
@@ -450,7 +457,7 @@ export const Route = createFileRoute("/api/build")({
               clearInterval(heartbeat);
               clearTimeout(timer);
               if (!emitted) {
-                const salvage = parseBuildOutput(acc, lockKind);
+                const salvage = parseBuildOutput(acc, lockKind, prompt);
                 if (salvage) {
                   const gated = await gateBuildResult({
                     apiKey,

@@ -41,4 +41,28 @@ describe("layout grammar from brief", () => {
     assert.notEqual(a.palette.bg, b.palette.bg);
     assert.notEqual(a.fonts.display, b.fonts.display);
   });
+
+  it("gives a repository brief the source-timeline grammar, not a phone seed", () => {
+    const brief = `${formatPrefix("app")}RepoVoci: registro delle voci di un repository, commit, rami, stato di sync e timeline/diff.`;
+    const g = grammarFromBrief(brief);
+    assert.equal(familyFromBrief(brief), "repo");
+    assert.equal(g.id, "source-timeline");
+    assert.equal(g.chrome, "desk");
+    assert.match(g.desktop, /niente hero/i);
+  });
+
+  it("assigns distant non-product domains distinct grammars, not one phone seed", () => {
+    const clinica = grammarFromBrief(`${formatPrefix("app")}Clinica Aurora: agenda di uno studio medico, pazienti, slot e terapie.`);
+    const pulse = grammarFromBrief(`${formatPrefix("app")}Pulse Radio: palinsesto live, playlist e impulsi di una radio notturna ad alta croma.`);
+    const docs = grammarFromBrief(`${formatPrefix("site")}Carta Luce: manuale di knowledge, documenti e wiki di studio in luce diurna.`);
+    const pastel = grammarFromBrief(`${formatPrefix("app")}Studio Pastello: didattica e wellness, lezioni in pastello.`);
+    const signal = grammarFromBrief(`${formatPrefix("tool")}Segnale Mono: strumento a contrasto alto, segnale unico, niente colore di mestiere.`);
+    const ids = [clinica.id, pulse.id, docs.id, pastel.id, signal.id];
+    assert.equal(new Set(ids).size, 5, ids.join(","));
+    assert.equal(clinica.id, "agenda");
+    assert.equal(pulse.id, "split-stage");
+    assert.equal(docs.id, "magazine");
+    assert.equal(pastel.id, "service-board");
+    assert.equal(signal.id, "pocket-tool");
+  });
 });

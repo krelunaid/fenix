@@ -27,6 +27,12 @@ import {
   type ProjectKind,
 } from "./types";
 import {
+  rememberPaletteList,
+  sanitizePaletteHistory,
+  type PaletteRecord,
+} from "./palette-engine";
+import { familyFromBrief, fallbackPaletteFromBrief } from "./design-tokens";
+import {
   branchProjectRevision,
   commitIfChanged,
   mergeProjectBranch,
@@ -80,6 +86,7 @@ type ProjectStore = {
   projects: Project[];
   creditsRemaining: number;
   appDb: Record<string, Record<string, unknown>>;
+  recentPalettes: PaletteRecord[];
   setHydrated: () => void;
   createFromBrief: (input: NewProjectInput) => Project;
   importArchive: (input: ImportArchiveInput) => Project;
@@ -94,6 +101,7 @@ type ProjectStore = {
   getProject: (id: string) => Project | undefined;
   spendCredit: (n?: number) => boolean;
   refundCredit: (n?: number) => void;
+  rememberPalette: (rec: PaletteRecord) => void;
   loadAppData: (projectId: string, collection: string) => unknown;
   saveAppData: (
     projectId: string,
@@ -205,7 +213,7 @@ function blankProject(prompt: string, kind: ProjectKind = "app"): Project {
       kind,
       requestedKind: kind,
       summary: "",
-      palette: DEFAULT_PALETTE,
+      palette: fallbackPaletteFromBrief(prompt),
       html: "",
       messages: [
         {
@@ -337,6 +345,7 @@ export const useProjectStore = create<ProjectStore>()(
       projects: [],
       creditsRemaining: CREDITS_GRANT,
       appDb: {},
+      recentPalettes: [],
       setHydrated: () => set({ hydrated: true }),
       getProject: (id) => get().projects.find((p) => p.id === id),
       spendCredit: (n = CREDIT_COST) => {
@@ -351,6 +360,9 @@ export const useProjectStore = create<ProjectStore>()(
         set((s) => ({
           creditsRemaining: Math.min(CREDITS_GRANT, s.creditsRemaining + cost),
         }));
+      },
+      rememberPalette: (rec) => {
+        set((s) => ({ recentPalettes: rememberPaletteList(s.recentPalettes, rec) }));
       },
       loadAppData: (projectId, collection) => {
         return loadCollection(projectId, collection, get().appDb, get().projects);
@@ -642,20 +654,22 @@ export const useProjectStore = create<ProjectStore>()(
       migrate: (persistedState, version) => {
         const state = persistedState as Pick<
           ProjectStore,
-          "projects" | "creditsRemaining" | "appDb"
+          "projects" | "creditsRemaining" | "appDb" | "recentPalettes"
         >;
+        const recentPalettes = sanitizePaletteHistory(state.recentPalettes);
 
         // One-time upgrade to the 100-credit testing grant.
         // The persist version prevents the refill from repeating after the credits are used.
         if (version < 3) {
-          return { ...state, creditsRemaining: CREDITS_GRANT };
+          return { ...state, creditsRemaining: CREDITS_GRANT, recentPalettes };
         }
 
-        return state;
+        return { ...state, recentPalettes };
       },
       partialize: (s) => ({
         projects: s.projects,
         creditsRemaining: s.creditsRemaining,
+        recentPalettes: sanitizePaletteHistory(s.recentPalettes),
       }),
       merge: (persisted, current) => {
         const incoming = (persisted ?? {}) as Partial<ProjectStore>;
@@ -670,6 +684,7 @@ export const useProjectStore = create<ProjectStore>()(
             typeof incoming.creditsRemaining === "number"
               ? incoming.creditsRemaining
               : current.creditsRemaining,
+          recentPalettes: sanitizePaletteHistory(incoming.recentPalettes ?? current.recentPalettes),
         };
       },
       onRehydrateStorage: () => (state) => {
@@ -881,6 +896,15 @@ export function applyBuildResult(
     status: nextStatus,
     error: undefined,
   });
+  if (result.palette?.bg && result.palette?.accent) {
+    useProjectStore.getState().rememberPalette({
+      bg: result.palette.bg,
+      surface: result.palette.surface || result.palette.bg,
+      accent: result.palette.accent,
+      family: familyFromBrief(existing?.prompt || ""),
+      at: Date.now(),
+    });
+  }
   return { ...report, ok: nextStatus === "ready" && report.ok };
 }
 

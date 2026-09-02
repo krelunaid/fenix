@@ -112,6 +112,18 @@ const NAV_ICONS = {
   wrist: navIcon(
     '<rect x="8.4" y="5" width="7.2" height="14" rx="2"/><path d="M8.4 9.2h7.2M8.4 14.8h7.2"/><circle cx="12" cy="12" r="1.3"/>',
   ),
+  commit: navIcon(
+    '<circle cx="8" cy="7.2" r="1.8"/><circle cx="8" cy="12" r="1.8"/><circle cx="8" cy="16.8" r="1.8"/><path d="M8 9v1.2M8 13.8v1.2M10.2 12h6.6"/>',
+  ),
+  branch: navIcon(
+    '<circle cx="8" cy="6.8" r="1.7"/><circle cx="8" cy="17" r="1.7"/><circle cx="16.2" cy="12" r="1.7"/><path d="M8 8.6v6.6M8 12c0 0 3.2 0 6.4 0"/>',
+  ),
+  sync: navIcon(
+    '<path d="M7.2 9.2A5 5 0 0 1 16.6 10"/><path d="M16.8 7.4v3.2h-3"/><path d="M16.8 14.8A5 5 0 0 1 7.4 14"/><path d="M7.2 16.6v-3.2h3"/>',
+  ),
+  diff: navIcon(
+    '<path d="M6.4 8h11.2M6.4 12h8M6.4 16h11.2"/><path d="M17.6 10.2v3.6M15.8 12h3.6"/>',
+  ),
 } as const;
 
 const NAV_FALLBACKS = [NAV_ICONS.book, NAV_ICONS.pencil, NAV_ICONS.atelier, NAV_ICONS.kanban] as const;
@@ -151,6 +163,10 @@ export function craftNavIcon(tab: { id: string; label: string }, index = 0): str
   else if (/copertina/.test(key)) svg = NAV_ICONS.masthead;
   else if (/lastre/.test(key)) svg = NAV_ICONS.platePhoto;
   else if (/visita/.test(key)) svg = NAV_ICONS.envelope;
+  else if (/attivit|commit/.test(key)) svg = NAV_ICONS.commit;
+  else if (/rami|branch/.test(key)) svg = NAV_ICONS.branch;
+  else if (/sync/.test(key)) svg = NAV_ICONS.sync;
+  else if (/scarto|diff/.test(key)) svg = NAV_ICONS.diff;
   else if (/atelier|laboratorio|studio/.test(key)) svg = NAV_ICONS.atelier;
   if (isLetterAIcon(svg)) svg = NAV_ICONS.book;
   return svg;

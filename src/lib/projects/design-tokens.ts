@@ -2,9 +2,24 @@
  * Design tokens from the brief. Deterministic, 0 tokens, no LLM.
  * Families are distinct on hue, paper, accent and type — never one beige.
  * Product families also have two keyword-driven variants.
+ * Unknown briefs go through the adaptive palette engine, never #101114.
  */
 import { contrastRatio } from "./visual-quality.ts";
 import type { Palette } from "./types.ts";
+import {
+  applyUserColors,
+  avoidRecent,
+  classifyPalette,
+  ENGINE_FAMILIES,
+  ensureAccessible,
+  extractBriefAxes,
+  hashedFallbackPalette,
+  resolveAdaptivePalette,
+  selectPaletteFamily,
+  type EnginePalette,
+  type PaletteFamily,
+  type PaletteRecord,
+} from "./palette-engine.ts";
 
 export type TokenFamily =
   | "perfume"
@@ -17,7 +32,8 @@ export type TokenFamily =
   | "night"
   | "paper"
   | "ops"
-  | "utility";
+  | "utility"
+  | "repo";
 
 export type DesignTokens = {
   family: TokenFamily;
@@ -34,9 +50,14 @@ export type DesignTokens = {
   };
   dna: string;
   dont: string[];
+  chroma: PaletteFamily;
 };
 
-type FamilySrc = Omit<DesignTokens, "family" | "dna" | "variant">;
+export type TokenOptions = {
+  recent?: PaletteRecord[];
+};
+
+type FamilySrc = Omit<DesignTokens, "family" | "dna" | "variant" | "chroma">;
 
 const FAMILIES: Record<TokenFamily, FamilySrc> = {
   perfume: {
@@ -292,6 +313,18 @@ const FAMILIES: Record<TokenFamily, FamilySrc> = {
     },
     dont: ["sfilata carminio", "flacone oro", "admin da magazzino"],
   },
+  repo: {
+    mood: "terminale, ciano freddo, carta di commit",
+    fonts: {
+      display: "IBM Plex Sans",
+      body: "IBM Plex Sans",
+      href: "https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap",
+    },
+    radius: "6px",
+    type: { h1: "clamp(1.3rem, 3vw, 1.75rem)", body: "14px", label: "11px tabular" },
+    palette: ENGINE_FAMILIES["ink-terminal"].palette,
+    dont: ["hero grigio + 2 KPI", "serif da rivista", "terracotta", "clone GitHub"],
+  },
 };
 
 const VARIANTS: Partial<Record<TokenFamily, FamilySrc>> = {
@@ -479,9 +512,22 @@ const VARIANTS: Partial<Record<TokenFamily, FamilySrc>> = {
     },
     dont: ["coral da taglio", "sfilata", "beige da forno"],
   },
+  repo: {
+    mood: "carta diurna, inchiostro elettrico, voci in luce",
+    fonts: {
+      display: "Source Serif 4",
+      body: "Source Sans 3",
+      href: "https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600;700&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&display=swap",
+    },
+    radius: "4px",
+    type: { h1: "clamp(1.4rem, 3.4vw, 2rem)", body: "15px", label: "11px tabular" },
+    palette: ENGINE_FAMILIES["luminous-paper"].palette,
+    dont: ["nero/terracotta", "hero KPI", "clone GitHub"],
+  },
 };
 
 const PRODUCT: { family: TokenFamily; re: RegExp }[] = [
+  { family: "repo", re: /repo|github|commit|branch|\bgit\b|repository|voci del repo|repovoci|pull request|\bdiff\b|sync del repo/i },
   { family: "perfume", re: /profum|fragran|essenze|parfum|olfatt|flacone|eau de/i },
   { family: "fashion", re: /moda|sfilata|abiti|lookbook|boutique|atelier di moda|vendite di/i },
   { family: "hospitality", re: /ospital|locanda|albergo|\bhotel\b|reception|camera doppia|soggiorno in|check-?in/i },
@@ -513,7 +559,18 @@ export function familyFromBrief(brief: string): TokenFamily {
   for (const row of PRODUCT) {
     if (row.re.test(p)) return row.family;
   }
-  const keys: TokenFamily[] = ["paper", "night", "ceramic"];
+  const chroma = selectPaletteFamily(p);
+  if (chroma === "earth-kiln") return "ceramic";
+  if (chroma === "ink-terminal" || chroma === "chroma-pulse" || chroma === "wine-ink") return "night";
+  if (
+    chroma === "luminous-paper" ||
+    chroma === "glacier" ||
+    chroma === "pastel-studio" ||
+    chroma === "mono-signal"
+  ) {
+    return "paper";
+  }
+  const keys: TokenFamily[] = ["paper", "night"];
   return keys[hashBrief(p) % keys.length]!;
 }
 
@@ -528,6 +585,7 @@ export function variantFromBrief(brief: string): 0 | 1 {
   if (family === "editorial") return /notte|argento|segnale|studio di notte/.test(p) ? 1 : 0;
   if (family === "ops") return /orto|harvest|flusso ordini|orto flusso/.test(p) ? 1 : 0;
   if (family === "utility") return /metro tasca|metro in tasca|nastro millimetr/.test(p) ? 1 : 0;
+  if (family === "repo") return /luce|luminos|daylight|carta chiara|paper/.test(p) ? 1 : 0;
   return 0;
 }
 
@@ -540,19 +598,62 @@ export function isProductFamily(family: TokenFamily | "unknown"): boolean {
     family === "food" ||
     family === "editorial" ||
     family === "ops" ||
-    family === "utility"
+    family === "utility" ||
+    family === "repo"
   );
 }
 
-export function tokensFromBrief(brief: string): DesignTokens {
+function asEngine(p: FamilySrc["palette"]): EnginePalette {
+  return {
+    bg: p.bg,
+    surface: p.surface,
+    fg: p.fg,
+    muted: p.muted,
+    accent: p.accent,
+    line: p.line || "#3d3428",
+    elevated: p.elevated,
+    accentInk: p.accentInk,
+    success: p.success,
+    warning: p.warning,
+  };
+}
+
+export function tokensFromBrief(brief: string, opts?: TokenOptions): DesignTokens {
   const family = familyFromBrief(brief);
   const variant = variantFromBrief(brief);
+  const product = isProductFamily(family) && family !== "repo";
+  if (!product && family !== "ceramic") {
+    const adaptive = resolveAdaptivePalette(brief, { recent: opts?.recent });
+    const recipe = ENGINE_FAMILIES[adaptive.family];
+    const srcFamily: TokenFamily =
+      family === "repo" ? "repo" : family;
+    const repoSrc = family === "repo" ? (variant === 1 && VARIANTS.repo ? VARIANTS.repo : FAMILIES.repo) : null;
+    const fonts = family === "repo" && repoSrc ? repoSrc.fonts : recipe.fonts;
+    const mood = family === "repo" && repoSrc ? repoSrc.mood : recipe.mood;
+    const radius = family === "repo" && repoSrc ? repoSrc.radius : recipe.radius;
+    const type = family === "repo" && repoSrc ? repoSrc.type : recipe.type;
+    const dont = family === "repo" && repoSrc ? repoSrc.dont : recipe.dont;
+    const dna = `${srcFamily}${variant ? `/v${variant}` : ""} · ${adaptive.family} · ${fonts.display}/${fonts.body} · anti-clone`;
+    return {
+      family: srcFamily,
+      variant,
+      mood,
+      fonts: { ...fonts },
+      radius,
+      type: { ...type },
+      palette: adaptive.palette,
+      dna: dna.slice(0, 80),
+      dont: [...dont],
+      chroma: adaptive.family,
+    };
+  }
   const src = variant === 1 && VARIANTS[family] ? VARIANTS[family]! : FAMILIES[family];
-  const palette = { ...src.palette };
+  const applied = applyUserColors(asEngine(src.palette), brief);
+  let palette = avoidRecent(applied.palette, opts?.recent, hashBrief(brief), applied.lock);
+  palette = ensureAccessible(palette, applied.lock);
   if (contrastRatio(palette.fg, palette.bg) < 4.5) {
     palette.fg =
       family === "perfume" ||
-      family === "night" ||
       family === "ops" ||
       (family === "food" && variant === 0) ||
       (family === "editorial" && variant === 1) ||
@@ -562,6 +663,7 @@ export function tokensFromBrief(brief: string): DesignTokens {
         ? "#f7f1e4"
         : "#161412";
   }
+  const chroma = classifyPalette(palette);
   const dna = `${family}${variant ? `/v${variant}` : ""} · ${src.fonts.display}/${src.fonts.body} · anti-clone`;
   return {
     family,
@@ -573,21 +675,31 @@ export function tokensFromBrief(brief: string): DesignTokens {
     palette,
     dna: dna.slice(0, 80),
     dont: [...src.dont],
+    chroma,
   };
+}
+
+export function fallbackPaletteFromBrief(brief: string): Palette {
+  const p = hashedFallbackPalette(brief);
+  return { bg: p.bg, surface: p.surface, fg: p.fg, muted: p.muted, accent: p.accent, line: p.line };
 }
 
 export function tokensInstruction(tokens: DesignTokens): string {
   const p = tokens.palette;
+  const axes = extractBriefAxes(tokens.dna);
   return [
-    `DIREZIONE PREMIUM (legge, dal brief, famiglia ${tokens.family}${tokens.variant ? ` variante ${tokens.variant}` : ""}):`,
+    `DIREZIONE PREMIUM (legge, dal brief, famiglia ${tokens.family}${tokens.variant ? ` variante ${tokens.variant}` : ""} · chroma ${tokens.chroma}):`,
     `mood: ${tokens.mood}`,
     `font: ${tokens.fonts.display} + ${tokens.fonts.body}`,
     `raggio: ${tokens.radius}`,
     `token: --bg ${p.bg} --surface ${p.surface} --elevated ${p.elevated} --fg ${p.fg} --muted ${p.muted} --accent ${p.accent} --line ${p.line} --accent-ink ${p.accentInk}`,
-    "Copia questi hex in :root. Non sostituirli con beige/terracotta se la famiglia non è ceramic.",
+    "Copia questi hex in :root. Non sostituirli con beige/terracotta se la famiglia non è ceramic. Vietato cadere su #101114/#191b20/#e1693f.",
     `Vietato per questo brief: ${tokens.dont.join("; ")}.`,
     "Qualità nativa da tasca consentita (tipo, ritmo 8px, profondità, materiali, motion ridotto). Vietato clonare schermate, marchi, SF Symbols o la coppia #f5f5f7+#0071e3.",
-    "Desktop/tablet: grammatica editoriale a tutta larghezza (split-stage, lookbook, agenda, passo cucina, magazine, ops-desk). Niente canvas boxed 1080px, niente dead zone, niente telefono al centro. Imagery di dominio originale (data-imagery=domain), alt/aria-label, niente placeholder geometrici o hotlink.",
+    tokens.family === "repo"
+      ? "Dominio repository: attività commit, rami, stato sync, timeline/diff. Vietato home universale con hero grigio + due KPI + CTA + empty card. Non copiare GitHub."
+      : `Asse dominio=${axes.domain}.`,
+    "Desktop/tablet: grammatica editoriale a tutta larghezza (split-stage, lookbook, agenda, passo cucina, magazine, ops-desk, source-timeline). Niente canvas boxed 1080px, niente dead zone, niente telefono al centro. Imagery di dominio originale (data-imagery=domain), alt/aria-label, niente placeholder geometrici o hotlink.",
   ].join("\n");
 }
 

@@ -67,5 +67,5 @@ export async function reviewBuild(input: {
     choices?: { message?: { content?: string } }[];
   };
   const text = payload.choices?.[0]?.message?.content ?? "";
-  return parseBuildOutput(text, kindFromPrompt(input.prompt));
+  return parseBuildOutput(text, kindFromPrompt(input.prompt), input.prompt);
 }

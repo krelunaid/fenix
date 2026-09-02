@@ -13,6 +13,9 @@ import {
   roleReceipt,
 } from "../../src/lib/ai/build-contract.ts";
 import { gateIncompleteHtml } from "../../src/lib/projects/fenix-adapter.ts";
+import { fallbackPaletteFromBrief, tokensFromBrief, tokensInstruction } from "../../src/lib/projects/design-tokens.ts";
+import { grammarFromBrief, grammarInstruction } from "../../src/lib/projects/layout-grammar.ts";
+import { sanitizePaletteHistory, type PaletteRecord } from "../../src/lib/projects/palette-engine.ts";
 
 const MODEL = "grok-build-0.1";
 const XAI_URL = "https://api.x.ai/v1/chat/completions";
@@ -32,13 +35,7 @@ type GrokChunk = {
   }[];
 };
 
-const DEFAULT_PALETTE = {
-  bg: "#101114",
-  surface: "#191b20",
-  fg: "#f5f2ea",
-  muted: "#a7a39a",
-  accent: "#e1693f",
-};
+type PaletteHex = { bg: string; surface: string; fg: string; muted: string; accent: string };
 
 function sse(event: StreamEvent) {
   return `data: ${JSON.stringify(event)}\n\n`;
@@ -87,7 +84,7 @@ function hex(value: unknown, fallback: string) {
     : fallback;
 }
 
-function parseResult(output: string, lockKind?: string) {
+function parseResult(output: string, lockKind?: string, brief?: string) {
   const htmlMatch = output.match(/<!DOCTYPE html[\s\S]*?<\/html>/i) ?? output.match(/<html[\s\S]*?<\/html>/i);
   if (!htmlMatch) return null;
   const html = htmlMatch[0].startsWith("<!DOCTYPE") ? htmlMatch[0] : `<!DOCTYPE html>\n${htmlMatch[0]}`;
@@ -103,6 +100,7 @@ function parseResult(output: string, lockKind?: string) {
   const paletteIn = meta.palette && typeof meta.palette === "object"
     ? (meta.palette as Record<string, unknown>)
     : {};
+  const hashed = brief ? fallbackPaletteFromBrief(brief) : fallbackPaletteFromBrief("studio");
   const title = html.match(/<title>([^<]+)<\/title>/i)?.[1]?.trim() || "Studio";
   const kinds = ["landing", "app", "dashboard", "tool", "game", "site"];
   const parsed =
@@ -119,11 +117,11 @@ function parseResult(output: string, lockKind?: string) {
     summary: cleanText(meta.summary, "", 280),
     direction: cleanText(meta.direction, "", 80),
     palette: {
-      bg: hex(paletteIn.bg, DEFAULT_PALETTE.bg),
-      surface: hex(paletteIn.surface, DEFAULT_PALETTE.surface),
-      fg: hex(paletteIn.fg, DEFAULT_PALETTE.fg),
-      muted: hex(paletteIn.muted, DEFAULT_PALETTE.muted),
-      accent: hex(paletteIn.accent, DEFAULT_PALETTE.accent),
+      bg: hex(paletteIn.bg, hashed.bg),
+      surface: hex(paletteIn.surface, hashed.surface),
+      fg: hex(paletteIn.fg, hashed.fg),
+      muted: hex(paletteIn.muted, hashed.muted),
+      accent: hex(paletteIn.accent, hashed.accent),
     },
     html,
     files,
@@ -137,7 +135,7 @@ function stage(output: string) {
   return output.trim().length > 8 ? "Compongo colori, icone, interfaccia" : null;
 }
 
-async function designDirection(apiKey: string, prompt: string) {
+async function designDirection(apiKey: string, prompt: string, recent?: PaletteRecord[]) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 22_000);
   try {
@@ -157,7 +155,7 @@ async function designDirection(apiKey: string, prompt: string) {
           { role: "system", content: VISUAL_PROMPT },
           {
             role: "user",
-            content: `BRIEF:\n${prompt}\n\nRestituisci un unico JSON di direzione visiva, senza markdown.`,
+            content: `BRIEF:\n${prompt}\n\n${tokensInstruction(tokensFromBrief(prompt, { recent }))}\n\n${grammarInstruction(grammarFromBrief(prompt))}\n\nRestituisci un unico JSON di direzione visiva, senza markdown. Vietato cadere su #101114/#191b20/#e1693f.`,
           },
         ],
       }),
@@ -250,7 +248,7 @@ async function repairPass(apiKey: string, prompt: string, html: string, error: s
 async function gateResult(
   apiKey: string,
   prompt: string,
-  result: { html: string; kind?: string; files?: { path: string; content: string }[]; name?: string; tagline?: string; summary?: string; direction?: string; palette?: typeof DEFAULT_PALETTE } | null,
+  result: { html: string; kind?: string; files?: { path: string; content: string }[]; name?: string; tagline?: string; summary?: string; direction?: string; palette?: PaletteHex } | null,
   send: (event: StreamEvent) => void,
   contract = planContract(prompt),
 ) {
@@ -264,7 +262,7 @@ async function gateResult(
       kind: (result.kind as "app") || "app",
       summary: result.summary || "",
       direction: result.direction || "",
-      palette: result.palette || DEFAULT_PALETTE,
+      palette: result.palette || fallbackPaletteFromBrief(prompt),
       html: result.html,
       files: result.files || [{ path: "index.html", content: result.html }],
     },
@@ -273,7 +271,7 @@ async function gateResult(
     onStage: (s) => send({ t: "s", s }),
     repair: async ({ html, error }) => {
       const fixed = await repairPass(apiKey, prompt, html, error);
-      return parseResult(fixed, kindFromPrompt(prompt));
+      return parseResult(fixed, kindFromPrompt(prompt), prompt);
     },
   });
   if ("error" in gated) return { error: gated.error, result: gated.result };
@@ -305,11 +303,16 @@ export default async function build(request: Request) {
       : "";
   const lockKind = kindFromPrompt(prompt);
   const contract = planContract(prompt);
+  const recent = sanitizePaletteHistory((body as { recentPalettes?: PaletteRecord[] }).recentPalettes);
+  const tokens = tokensFromBrief(prompt, { recent });
+  const grammar = grammarFromBrief(prompt);
   const userParts = [
     `BRIEF:\n${prompt}`,
     formatPrefix(lockKind ?? "app").trim(),
     contractInstruction(contract),
-    "Crea un prodotto completo, specifico e immediatamente utilizzabile.",
+    tokensInstruction(tokens),
+    grammarInstruction(grammar),
+    "Crea un prodotto completo, specifico e immediatamente utilizzabile. Vietato cadere su #101114/#191b20/#e1693f.",
     instruction && currentHtml ? `APP ATTUALE:\n${currentHtml}` : "",
     instruction ? `MODIFICA:\n${instruction}\nRestituisci il documento completo.` : "",
     shot ? "SCREENSHOT allegato: VEDI l'anteprima e correggi chrome, tab, icone, contrasto. Tieni il JS." : "",
@@ -361,7 +364,7 @@ export default async function build(request: Request) {
         });
         if (!instruction) {
           send({ t: "s", s: "Direzione visiva" });
-          spec = await designDirection(apiKey, prompt);
+          spec = await designDirection(apiKey, prompt, recent);
           if (spec) {
             userParts.splice(
               1,
@@ -451,7 +454,7 @@ export default async function build(request: Request) {
           if (trimmed.startsWith("data:")) ingest(trimmed.slice(5).trim());
         }
         if (!terminal) {
-          let result = parseResult(output, lockKind);
+          let result = parseResult(output, lockKind, prompt);
           const desk = lockKind === "site" || lockKind === "landing" || lockKind === "dashboard";
           const evaluation = result
             ? evaluateContract({
@@ -471,7 +474,7 @@ export default async function build(request: Request) {
           if (result && !desk && budget.call) {
             send({ t: "s", s: "QA" });
             const reviewed = await reviewPass(apiKey, prompt, result.html, spec);
-            result = parseResult(reviewed, lockKind) ?? result;
+            result = parseResult(reviewed, lockKind, prompt) ?? result;
           } else if (result) {
             send({
               t: "s",
@@ -491,7 +494,7 @@ export default async function build(request: Request) {
           else finish({ t: "ok", result: gated.result });
         }
       } catch (error) {
-        const salvage = parseResult(output, lockKind);
+        const salvage = parseResult(output, lockKind, prompt);
         if (salvage) {
           const gated = await gateResult(apiKey, prompt, salvage, send, contract);
           if ("error" in gated) {

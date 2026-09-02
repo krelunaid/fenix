@@ -12,6 +12,7 @@ import {
 } from "./compose-product.ts";
 import { APP_SHELL_HTML } from "./app-shell.ts";
 import { hueBucket } from "../projects/design-tokens.ts";
+import { PALETTE_CORPUS } from "../projects/palette-engine.ts";
 import { domainIllustration, GEOMETRIC_REGRESSIONS, materialSignature } from "./domain-imagery.ts";
 import { isLetterAIcon } from "../projects/craft-icons.ts";
 
@@ -190,5 +191,45 @@ describe("graphic pipeline prompt→plan→generate→visual→QA", () => {
         `${fix.id}: ${report.findings.filter((f) => f.severity === "fail").map((f) => f.code).join(" · ")}`,
       );
     }
+  });
+
+  it("composes RepoVoci as a source timeline, not a gray hero + two KPI + empty card", () => {
+    const brief = `${formatPrefix("app")}RepoVoci: registro delle voci di un repository, commit, rami, stato di sync e timeline/diff.`;
+    const luce = `${formatPrefix("app")}RepoVoci luce: registro di repository in carta chiara, commit, rami e diff diurni.`;
+    const a = composeProduct(brief);
+    const b = composeProduct(luce);
+    assert.equal(a.grammar.id, "source-timeline");
+    assert.equal(b.grammar.id, "source-timeline");
+    assert.equal(a.tokens.family, "repo");
+    assert.notEqual(a.tokens.palette.bg.toLowerCase(), b.tokens.palette.bg.toLowerCase());
+    assert.notEqual(a.tokens.chroma, b.tokens.chroma);
+    assert.match(a.html, /data-repo-stage="activity"/);
+    assert.match(a.html, /data-hash=/);
+    assert.match(a.html, /class="sha"/);
+    assert.match(a.html, /data-repo-stage="branches"/);
+    assert.match(a.html, /Attività/);
+    assert.match(a.html, /Rami/);
+    assert.doesNotMatch(a.html, /#2ea043|#238636|Octocat|Pull request/i);
+    assert.doesNotMatch(a.html.slice(0, 4000), /#101114|#e1693f/);
+    assert.match(b.html, /data-repo-stage="diff"/);
+    const qa = auditGraphicQuality(a.html, { brief, kind: a.grammar.kind });
+    assert.equal(qa.ok, true, qa.findings.filter((f) => f.severity === "fail").map((f) => f.code).join(" · "));
+    assert.equal(qa.findings.some((f) => f.code === "template-home"), false);
+    const fake = `<!DOCTYPE html><html><style>:root{--bg:#101114;--surface:#191b20;--fg:#f5f2ea;--muted:#a7a39a;--accent:#e1693f}</style><div class="kpi">42</div><div class="kpi">7</div><section class="hero"></section></html>`;
+    const bad = auditGraphicQuality(fake, { brief, kind: "app" });
+    assert.ok(bad.findings.some((f) => f.code === "template-home" || f.code === "static-fallback"), bad.findings.map((f) => f.code).join(","));
+  });
+
+  it("does not clone palette or grammar across six distant domains", () => {
+    const ids = ["repo-voci", "clinica", "pulse", "carta-luce", "pastello", "segnale"];
+    const runs = PALETTE_CORPUS.filter((r) => ids.includes(r.id)).map((r) => ({ id: r.id, ...composeProduct(r.brief) }));
+    assert.equal(runs.length, 6);
+    const grammars = new Set(runs.map((r) => r.grammar.id));
+    assert.ok(grammars.size >= 5, [...grammars].join(","));
+    const palettes = new Set(runs.map((r) => `${r.tokens.palette.bg}:${r.tokens.palette.accent}`));
+    assert.equal(palettes.size, runs.length, [...palettes].join(" | "));
+    assert.equal(runs.find((r) => r.id === "repo-voci")?.grammar.id, "source-timeline");
+    assert.match(runs.find((r) => r.id === "repo-voci")!.html, /data-repo-stage="activity"/);
+    assert.match(runs.find((r) => r.id === "repo-voci")!.html, /class="commit"/);
   });
 });

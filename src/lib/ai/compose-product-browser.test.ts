@@ -20,6 +20,7 @@ import { EXTERNAL_BENCHMARK, runBlindTrial } from "../projects/blind-visual-benc
 
 const here = dirname(fileURLToPath(import.meta.url));
 const SHOTS = join(here, "fixtures/graphic/pipeline");
+const PALETTE_SHOTS = join(here, "fixtures/graphic/palette");
 const OUT = process.env.FENIX_SCORECARD_OUT || "/workspace/screenshots/fase3-graphic-pipeline";
 const VIEWPORTS = [
   ["D", { width: 1280, height: 800 }],
@@ -27,9 +28,9 @@ const VIEWPORTS = [
   ["M", { width: 390, height: 844 }],
 ] as const;
 
-async function shot(page: Page, name: string) {
-  mkdirSync(SHOTS, { recursive: true });
-  const dest = join(SHOTS, name);
+async function shot(page: Page, name: string, dir = SHOTS) {
+  mkdirSync(dir, { recursive: true });
+  const dest = join(dir, name);
   await page.screenshot({ path: dest, fullPage: false });
   try {
     mkdirSync(OUT, { recursive: true });
@@ -486,7 +487,7 @@ describe("graphic pipeline visual QA D/T/M", () => {
               await tabs.nth(1).click();
               await tabs.nth(0).click();
             }
-            const interactable = page.locator(".btn, .deal, .look, .ticket, .room, .fragrance, .plate").first();
+            const interactable = page.locator(".btn, .deal, .look, .ticket, .room, .fragrance, .plate, .commit").first();
             if ((await interactable.count()) > 0) {
               await interactable.hover();
               const hovered = await interactable.evaluate((el) => el.matches(":hover"));
@@ -557,7 +558,7 @@ describe("graphic pipeline visual QA D/T/M", () => {
               });
               assert.notEqual(nav.pos, "fixed", `${fix.id}/D nav should not be a phone tabbar (${nav.pos})`);
             }
-            if (vp === "M" && fix.grammar !== "ops-desk" && fix.grammar !== "magazine") {
+            if (vp === "M" && fix.grammar !== "ops-desk" && fix.grammar !== "magazine" && fix.grammar !== "source-timeline") {
               const nav = await page.evaluate(() => {
                 const el = document.querySelector("nav");
                 if (!el) return { pos: "none", bottom: 0, vh: 0 };
@@ -597,5 +598,62 @@ describe("graphic pipeline visual QA D/T/M", () => {
     assert.equal(EXTERNAL_BENCHMARK.declaration, "benchmark esterno non disponibile");
     const pipeline = runGraphicPipeline(gold.brief);
     assert.equal(pipeline.qa.ok, true);
+  });
+
+  it("captures RepoVoci and five distant domains on D/T/M with distinct palettes", async () => {
+    const { composeProduct } = await import("./compose-product.ts");
+    const { PALETTE_CORPUS } = await import("../projects/palette-engine.ts");
+    const ids = ["repo-voci", "clinica", "pulse", "carta-luce", "pastello", "segnale"];
+    const rows = PALETTE_CORPUS.filter((r) => ids.includes(r.id));
+    assert.equal(rows.length, 6);
+    const browser = await launchChromium();
+    const palettes: string[] = [];
+    try {
+      for (const row of rows) {
+        const composed = composeProduct(row.brief);
+        palettes.push(`${composed.tokens.palette.bg}:${composed.tokens.palette.accent}`);
+        for (const [vp, viewport] of VIEWPORTS) {
+          const page = await isolatedPage(browser, { viewport });
+          const errors: string[] = [];
+          page.on("pageerror", (err) => {
+            if (!isBlockedPublicNetworkError(String(err))) errors.push(String(err));
+          });
+          page.on("console", (msg) => {
+            if (msg.type() === "error" && !isBlockedPublicNetworkError(msg.text())) errors.push(msg.text());
+          });
+          try {
+            const src = prepareSrcDoc(composed.html, composed.tokens.palette, row.id, composed.grammar.kind);
+            await page.setContent(src, { waitUntil: "domcontentloaded", timeout: 15000 });
+            await waitForFenixReady(page, 8000);
+            await shot(page, `${row.id}-${vp}.png`, PALETTE_SHOTS);
+            const overflow = await page.evaluate(
+              () => document.documentElement.scrollWidth - window.innerWidth,
+            );
+            assert.ok(overflow <= 8, `${row.id}/${vp} overflow ${overflow}`);
+            assert.equal(errors.length, 0, `${row.id}/${vp} ${errors.join(" | ")}`);
+            if (row.id === "repo-voci") {
+              assert.ok((await page.locator(".commit").count()) >= 3, `${row.id} commits`);
+              assert.equal(await page.locator(".kpi").count(), 0);
+              assert.ok((await page.locator("[data-repo-stage]").count()) >= 1);
+            }
+            const tabs = page.locator("button[data-view]");
+            if ((await tabs.count()) > 1) {
+              await tabs.nth(1).click();
+              await tabs.nth(0).click();
+            }
+          } finally {
+            await page.close();
+          }
+        }
+      }
+    } finally {
+      await browser.close();
+    }
+    assert.equal(new Set(palettes).size, palettes.length, palettes.join(" | "));
+    mkdirSync(PALETTE_SHOTS, { recursive: true });
+    writeFileSync(
+      join(PALETTE_SHOTS, "manifest.json"),
+      `${JSON.stringify({ files: palettes, note: "adaptive palette + anti-template D/T/M" }, null, 2)}\n`,
+    );
   });
 });

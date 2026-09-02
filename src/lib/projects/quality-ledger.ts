@@ -255,6 +255,14 @@ export const QUALITY_LEDGER: LedgerRow[] = [
     ok: true,
   },
   {
+    id: "adaptive-palette",
+    claim:
+      "Motore palette deterministico: 8 famiglie distinte, override colore, anti-ripetizione OKLab sulle ultime 5, fallback hashato dal brief (mai #101114/#e1693f). Repository usa source-timeline, non home KPI.",
+    evidence:
+      "src/lib/projects/palette-engine.test.ts corpus 20+; src/lib/ai/compose-product.test.ts RepoVoci; fixtures/graphic/palette",
+    ok: true,
+  },
+  {
     id: "emergent",
     claim:
       "Emergent resta un benchmark esterno: fonti ufficiali e dieci assi sono datati, ma nessuna graduatoria competitiva è provata senza la stessa esecuzione testa-a-testa.",

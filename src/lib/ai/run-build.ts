@@ -324,6 +324,7 @@ async function consumeViaWorker(
           const result = parseBuildOutput(
             `<<<META>>>\n${JSON.stringify(job.meta ?? {})}\n<<<HTML>>>\n${job.html}\n<<<END>>>`,
             lockKind,
+            current?.prompt ?? body.prompt,
           );
           if (!result) throw new Error("Risposta non valida");
           resetAudit();
@@ -358,10 +359,11 @@ async function consumeStream(
   quiet = false,
 ): Promise<boolean> {
   const store = useProjectStore.getState();
+  const recentPalettes = store.recentPalettes ?? [];
   const res = await fetch("/api/build", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
+    body: JSON.stringify({ ...body, recentPalettes }),
   });
 
   if (!res.ok || !res.body) {
@@ -468,6 +470,7 @@ async function polishDraft(
       parseBuildOutput(
         `<<<META>>>\n${JSON.stringify(data.meta ?? {})}\n${fileBlocks}\n<<<HTML>>>\n${data.html ?? ""}\n<<<END>>>`,
         lockKind,
+        existing?.prompt ?? prompt,
       );
     if (result?.html) {
       resetAudit();

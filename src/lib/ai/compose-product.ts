@@ -9,6 +9,7 @@ import {
   familyFromBrief,
   variantFromBrief,
   type DesignTokens,
+  type TokenOptions,
 } from "../projects/design-tokens.ts";
 import {
   grammarFromBrief,
@@ -318,6 +319,30 @@ function synthesizeSpec(brief: string): PipelineSpec {
     .replace(/\bkind\s*=\s*\w+/gi, "")
     .trim()
     .slice(0, 28) || "Atelier";
+  if (tokens.family === "repo" || grammar.id === "source-timeline") {
+    return {
+      id: `${tokens.family}-seed`,
+      name,
+      kicker: grammar.voice.census,
+      place: tokens.mood.split(",")[0] || "linea",
+      collection: "voci",
+      brief,
+      tabs: [
+        { id: "attivita", label: "Attività" },
+        { id: "rami", label: "Rami" },
+        { id: "sync", label: "Sync" },
+        { id: "scarto", label: "Scarto" },
+      ],
+      rows: [
+        { id: "v1", title: "Allinea il nastro delle voci", kicker: "main", note: "a3f1c2 · Marta", meta: "allineato" },
+        { id: "v2", title: "Chiude lo scarto sul parser", kicker: "feat/sync", note: "9b2e18 · Leo", meta: "in-volo" },
+        { id: "v3", title: "Riduce il rumore sul diff", kicker: "fix/nastro", note: "c8d044 · Noa", meta: "in-attesa" },
+        { id: "v4", title: `${name} in linea`, kicker: "main", note: "11ae90 · voce", meta: "allineato" },
+      ],
+      formTitle: "Registra una voce",
+      cta: "Metti in linea",
+    };
+  }
   return {
     id: `${tokens.family}-seed`,
     name,
@@ -346,7 +371,7 @@ function tabSvg(tab: { id: string; label: string }, i: number): string {
 }
 
 function kickerCss(t: DesignTokens): string {
-  if (t.family === "ops") {
+  if (t.family === "ops" || t.family === "repo") {
     return `.kicker,header .place{font-size:11px;letter-spacing:.03em;text-transform:none;font-variant-numeric:tabular-nums;color:var(--muted)}`;
   }
   if (t.family === "food" || t.family === "hospitality") {
@@ -371,6 +396,11 @@ function phoneCss(id: GrammarId): string {
   .tickets{display:grid;gap:10px}.ticket{display:grid;grid-template-columns:96px 1fr auto;gap:12px;align-items:center;min-height:88px}
   .ticket .thumb{width:96px;height:80px;overflow:hidden;position:relative;border-radius:calc(var(--r) * .4)}
   .ticket .thumb svg{width:96px;height:80px;display:block}`
+            : id === "pocket-tool"
+              ? `.hero{min-height:22vh;max-height:26vh}.hero svg{height:22vh;min-height:120px;width:100%}
+  .ticket{display:grid;grid-template-columns:72px 1fr auto;gap:12px;align-items:center;min-height:76px}
+  .ticket .thumb{width:72px;height:56px;overflow:hidden}
+  .ticket .thumb svg{width:72px;height:56px;display:block}`
             : "";
   return `${stage}
 .app{display:grid;grid-template-rows:auto 1fr auto;grid-template-areas:"head" "main" "nav";width:100%;min-height:100dvh}
@@ -439,6 +469,45 @@ main{grid-area:main;min-height:0;overflow:auto;padding:8px 16px 20px}
 }
 
 function deskCss(id: GrammarId): string {
+  if (id === "source-timeline") {
+    return `.app[data-fenix-craft-desk]{display:grid;grid-template-rows:auto auto 1fr;grid-template-areas:"head" "nav" "main";min-height:100dvh;width:100%}
+header{grid-area:head;padding:12px 16px;border-bottom:1px solid var(--line);align-items:center;gap:16px;overflow:visible}
+header .place{max-width:46%;overflow:visible;white-space:normal;text-align:right}
+nav.rail{grid-area:nav;display:flex;gap:4px;overflow:auto;padding:6px 16px;border-bottom:1px solid var(--line)}
+nav.rail button{border:0;background:none;color:var(--muted);min-height:40px;padding:8px 10px;font:650 13px/1 var(--body),system-ui,sans-serif;white-space:nowrap;display:inline-flex;align-items:center;gap:8px;border-radius:0}
+nav.rail button.on{color:var(--accent);box-shadow:inset 0 -2px 0 var(--accent)}
+nav.rail svg{width:16px;height:16px;flex:0 0 16px;overflow:hidden;display:block}
+main{grid-area:main;padding:0;min-width:0;display:flex;flex-direction:column}
+.repo-stage{display:grid;grid-template-columns:1fr;min-height:0;flex:1}
+.timeline{padding:12px 16px 20px;border-right:0}
+.commit{display:grid;grid-template-columns:72px 1fr auto;gap:10px;align-items:start;padding:12px 0;border-bottom:1px solid var(--line);margin:0;background:transparent;border-radius:0;cursor:pointer}
+.commit h2{font-family:var(--body);font-size:15px;font-weight:650;letter-spacing:-.02em;margin:0 0 4px}
+.sha{font-variant-numeric:tabular-nums;font-size:12px;color:var(--accent);letter-spacing:.04em}
+.branches{padding:12px 16px 20px;background:var(--surface);border-top:1px solid var(--line)}
+.branch{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}
+.diff-pane{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;line-height:1.55;padding:12px 16px 24px;background:var(--elevated);border-top:1px solid var(--line);min-height:180px}
+.diff-pane .add{color:var(--success)}
+.diff-pane .del{color:var(--warning)}
+.sync-row{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--line);font-size:13px}
+.timeline-art{height:96px;overflow:hidden;border-bottom:1px solid var(--line);margin:0}
+.timeline-art svg{width:100%;height:96px;display:block}
+.hero{display:none}
+.kpis{display:none}
+@media(min-width:768px){
+  header,nav.rail{padding-left:24px;padding-right:24px}
+  .repo-stage{grid-template-columns:minmax(0,1.35fr) minmax(220px,.75fr);min-height:calc(100vh - 108px)}
+  .branches{border-top:0;border-left:1px solid var(--line)}
+  .timeline{padding:16px 22px 28px}
+  .diff-pane{grid-column:1 / -1}
+  .timeline-art{height:120px}
+  .timeline-art svg{height:120px}
+}
+@media(min-width:1024px){
+  header,nav.rail{padding-left:32px;padding-right:32px}
+  .repo-stage{grid-template-columns:minmax(0,1.4fr) minmax(260px,.7fr)}
+  .commit{grid-template-columns:88px 1fr auto;padding:14px 0}
+}`;
+  }
   if (id === "magazine") {
     return `.app{display:grid;grid-template-rows:auto auto 1fr auto;grid-template-areas:"head" "nav" "main" "foot";min-height:100dvh}
 header.mast{grid-area:head;display:flex;justify-content:space-between;align-items:end;gap:24px;padding:22px 20px 14px;border-bottom:1px solid var(--line)}
@@ -514,7 +583,7 @@ function visualKitCss(t: DesignTokens, grammar: LayoutGrammar): string {
 .btn{appearance:none;border:0;cursor:pointer;font:650 14px/1 var(--body),system-ui,sans-serif;border-radius:${t.family === "editorial" || t.family === "fashion" ? "0" : "999px"};padding:12px 18px;background:var(--accent);color:var(--accent-ink);min-height:44px;min-width:44px}
 .btn.ghost{background:transparent;color:var(--fg);border:1px solid var(--line)}
 .btn.sm{padding:8px 12px;min-height:40px;font-size:13px}
-.btn:hover,.deal:hover,.look:hover,.ticket:hover,.room:hover,.fragrance:hover,.plate:hover{filter:brightness(1.06);box-shadow:0 10px 28px color-mix(in srgb,var(--fg) 16%,transparent);border-color:var(--accent)}
+.btn:hover,.deal:hover,.look:hover,.ticket:hover,.room:hover,.fragrance:hover,.plate:hover,.commit:hover,.slot:hover{filter:brightness(1.06);box-shadow:0 10px 28px color-mix(in srgb,var(--fg) 16%,transparent);border-color:var(--accent)}
 .btn:active,.deal:active,.look:active,.ticket:active,.room:active,.fragrance:active{transform:translateY(1px) scale(.98);filter:brightness(.94)}
 .look[data-state=on],.fragrance[data-state=on],.room[data-state=on],.deal[data-state=on],.ticket[data-state=on],.plate[data-state=on]{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent),0 14px 32px color-mix(in srgb,var(--fg) 14%,transparent)}
 .look[data-state=on] h2:after,.fragrance[data-state=on] h2:after{content:" · in prova";color:var(--accent);font-size:.62em;letter-spacing:.04em}
@@ -522,8 +591,8 @@ label{display:block;font-size:11px;letter-spacing:.08em;color:var(--muted);margi
 input,select,textarea{width:100%;font:inherit;padding:12px 14px;border-radius:calc(var(--r) * .55);border:1px solid var(--line);background:var(--elevated);color:var(--fg);min-height:44px}
 button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .pill,.chip{display:inline-flex;align-items:center;min-height:24px;padding:0 8px;border-radius:999px;border:1px solid var(--line);font-size:11px;letter-spacing:.06em;color:var(--muted)}
-.chip.ok,.chip.chiuso,.chip.in-house,.chip.al-passo,.chip.in-sala{color:var(--success);border-color:color-mix(in srgb,var(--success) 45%,var(--line))}
-.chip.wait,.chip.trattativa,.chip.firma,.chip.in-cottura,.chip.in-forno,.chip.arrivo{color:var(--warning);border-color:color-mix(in srgb,var(--warning) 45%,var(--line))}
+.chip.ok,.chip.chiuso,.chip.in-house,.chip.al-passo,.chip.in-sala,.chip.allineato{color:var(--success);border-color:color-mix(in srgb,var(--success) 45%,var(--line))}
+.chip.wait,.chip.trattativa,.chip.firma,.chip.in-cottura,.chip.in-forno,.chip.arrivo,.chip.in-volo,.chip.in-attesa{color:var(--warning);border-color:color-mix(in srgb,var(--warning) 45%,var(--line))}
 .notes{color:var(--muted);font-size:14px;line-height:1.45}
 .spark{display:flex;gap:3px;align-items:flex-end;height:28px;margin-top:10px}
 .spark i{display:block;width:7px;border-radius:2px 2px 0 0;background:var(--accent)}
@@ -535,8 +604,8 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
 .thumb{width:56px;height:56px;border-radius:calc(var(--r) * .45);overflow:hidden;border:1px solid var(--line);background:var(--elevated);flex-shrink:0}
 .thumb svg{width:56px;height:56px;display:block}
 @media(prefers-reduced-motion:no-preference){
-  .btn,.card,.look,.slot,.ticket,.room,.plate,.deal,.fragrance{transition:transform .18s ease, box-shadow .18s ease, filter .18s ease, border-color .18s ease}
-  .btn:hover,.deal:hover,.look:hover,.ticket:hover,.room:hover,.fragrance:hover,.plate:hover{transform:translateY(-2px)}
+  .btn,.card,.look,.slot,.ticket,.room,.plate,.deal,.fragrance,.commit{transition:transform .18s ease, box-shadow .18s ease, filter .18s ease, border-color .18s ease}
+  .btn:hover,.deal:hover,.look:hover,.ticket:hover,.room:hover,.fragrance:hover,.plate:hover,.commit:hover,.slot:hover{transform:translateY(-2px)}
   .hero svg,.sil svg,.plate svg{animation:fenix-breathe 14s ease-in-out infinite}
   @keyframes fenix-breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.01)}}
 }
@@ -565,6 +634,10 @@ function productHtml(spec: PipelineSpec, tokens: DesignTokens, grammar: LayoutGr
   const deskAttr = desk ? ` data-fenix-craft-desk${grammar.kind === "dashboard" ? " data-fenix-crud" : ""}` : "";
   const navClass = desk ? (grammar.chrome === "masthead" ? "rail" : "rail") : "tabs";
   const headerExtra = grammar.chrome === "masthead" ? " mast" : "";
+  const bootMain =
+    grammar.id === "source-timeline"
+      ? `<section class="repo-stage" data-repo-stage="activity"><div class="timeline-art">${hero}</div></section>`
+      : `<div class="hero">${hero}</div>`;
   const navButtons = spec.tabs
     .map(
       (tab, i) =>
@@ -614,8 +687,8 @@ ${visualKitCss(tokens, grammar)}
 <nav class="${navClass}" id="tabs" aria-label="Navigazione">
 ${navButtons}
 </nav>
-<main id="root"><div class="hero">${hero}</div></main>
-${grammar.chrome === "masthead" ? `<footer>Atelier Carta · lastre originali · niente stock</footer>` : ""}
+<main id="root">${bootMain}</main>
+${grammar.chrome === "masthead" ? `<footer>${spec.name} · lastre originali · niente stock</footer>` : ""}
 </div>
 <div class="toast" id="toast" hidden>${grammar.voice.ok}</div>
 <div class="state-load" id="load" hidden>${grammar.voice.load}</div>
@@ -630,6 +703,8 @@ const hero=${JSON.stringify(hero)};
 const tabDefs=${JSON.stringify(spec.tabs)};
 const glyphs=${JSON.stringify(spec.tabs.map((t, i) => tabSvg(t, i)))};
 const grammarId=${JSON.stringify(grammar.id)};
+const tokenVariant=${tokens.variant};
+const chroma=${JSON.stringify(tokens.chroma)};
 const emptyVoice=${JSON.stringify(grammar.voice.empty)};
 const census=${JSON.stringify(grammar.voice.census)};
 const formTitle=${JSON.stringify(spec.formTitle)};
@@ -745,19 +820,87 @@ function renderList(){
 function renderStats(){
   return '<div class="hero">'+hero+'</div><div class="card span"><p class="kicker">Studio</p><h2>'+data.items.length+" "+census+'</h2><p class="notes">'+place+"</p></div>";
 }
+function renderAgenda(){
+  var html='<div class="hero">'+hero+'<div class="caption"><p class="kicker">'+kicker+"</p><h2>"+data.items.length+" "+census+"</h2></div></div>";
+  if(!data.items.length) return html+emptyBox();
+  data.items.forEach(function(e,i){
+    html+='<article class="slot" data-id="'+e.id+'" data-state="'+(i===0?"on":"idle")+'"><p class="kicker">'+e.kicker+" · "+e.meta+"</p><h2>"+e.title+'</h2><p class="notes">'+e.note+'</p><button class="btn sm ghost" data-act="advance" data-id="'+e.id+'">Avanza slot</button></article>';
+  });
+  return html;
+}
+function shaOf(e){
+  var m=(e.note||"").match(/[a-f0-9]{6}/i);
+  return m?m[0]:(e.id||"000000").slice(0,6);
+}
+function renderSource(mode){
+  mode=mode||"activity";
+  var html="";
+  if(mode==="activity" || mode==="branches"){
+    html+='<section class="repo-stage" data-repo-stage="'+(mode==="branches"?"branches":"activity")+'">';
+    html+='<div class="timeline"><div class="timeline-art">'+(mode==="branches"?arts[1]||hero:hero)+'</div>';
+    if(!data.items.length) html+=emptyBox();
+    data.items.forEach(function(e,i){
+      html+='<article class="commit" data-id="'+e.id+'" data-hash="'+shaOf(e)+'" data-act="wear" data-state="'+(i===0?"on":"idle")+'"><span class="sha">'+shaOf(e)+'</span><div><h2>'+e.title+'</h2><p class="notes">'+e.note+' · '+e.kicker+'</p></div>'+chip(e.meta||e.kicker)+"</article>";
+    });
+    html+="</div>";
+    var branches={};
+    data.items.forEach(function(e){ branches[e.kicker]=(branches[e.kicker]||0)+1; });
+    html+='<aside class="branches" data-repo-stage="branches"><p class="kicker">Rami</p>';
+    Object.keys(branches).forEach(function(b){
+      html+='<div class="branch"><b>'+b+'</b><span class="chip">'+branches[b]+" voci</span></div>";
+    });
+    var aligned=data.items.filter(function(x){return /allineato/.test(x.meta||"");}).length;
+    html+='<div class="sync-row"><span>Allineati</span><b>'+aligned+" / "+data.items.length+"</b></div>";
+    html+='<div class="sync-row"><span>In volo</span><b>'+data.items.filter(function(x){return /volo/.test(x.meta||"");}).length+"</b></div>";
+    html+="</aside></section>";
+  }
+  if(mode==="sync"){
+    html+='<section class="timeline" data-repo-stage="sync"><div class="timeline-art">'+(arts[2]||hero)+'</div>';
+    html+='<div class="sync-row"><span>Origine</span><b>'+place+"</b></div>";
+    html+='<div class="sync-row"><span>Voci</span><b>'+data.items.length+"</b></div>";
+    html+='<div class="sync-row"><span>Allineati</span><b>'+data.items.filter(function(x){return /allineato/.test(x.meta||"");}).length+"</b></div>";
+    html+='<div class="sync-row"><span>In attesa</span><b>'+data.items.filter(function(x){return /attesa/.test(x.meta||"");}).length+"</b></div>";
+    html+="</section>"+renderForm();
+  }
+  if(mode==="diff" || mode==="activity"){
+    html+='<section class="diff-pane" data-repo-stage="diff"><p class="kicker">Scarto</p>';
+    html+='<div class="add">+ nastro delle voci, niente hero KPI</div>';
+    html+='<div class="add">+ rami in colonna, stato sync visibile</div>';
+    html+='<div class="del">- home universale grigia</div>';
+    html+='<div class="del">- due riquadri vuoti</div></section>';
+  }
+  return html;
+}
 function renderHome(){
   if(grammarId==="lookbook") return renderLookbook();
   if(grammarId==="hospitality") return renderRooms();
   if(grammarId==="service-board") return renderTickets();
   if(grammarId==="ops-desk") return renderDesk();
   if(grammarId==="magazine") return renderMagazine();
+  if(grammarId==="source-timeline") return renderSource("activity");
+  if(grammarId==="agenda") return renderAgenda();
+  if(grammarId==="pocket-tool") return renderTool();
+  if(grammarId==="phone-seed") return renderList();
   return renderPerfume();
+}
+function renderTool(){
+  var html='<div class="hero">'+hero+'<div class="caption"><p class="kicker">'+kicker+"</p><h2>"+data.items.length+" "+census+"</h2></div></div>";
+  if(!data.items.length) return html+emptyBox();
+  data.items.forEach(function(e,i){
+    html+='<article class="ticket" data-id="'+e.id+'" data-state="'+(i===0?"on":"idle")+'"><div class="thumb">'+(arts[i%arts.length]||hero)+'</div><div><h2>'+e.title+'</h2><p class="notes">'+e.note+" · "+e.meta+"</p></div>"+chip(e.kicker)+"</article>";
+  });
+  return html;
 }
 function render(){
   renderTabs();
   var root=document.getElementById("root");
   var id=view;
-  if(id===tabDefs[0].id) root.innerHTML=renderHome();
+  if(grammarId==="source-timeline"){
+    if(id===tabDefs[0].id) root.innerHTML=renderSource("activity");
+    else if(id===tabDefs[1].id) root.innerHTML=renderSource("branches");
+    else if(id===tabDefs[2].id) root.innerHTML=renderSource("sync");
+    else root.innerHTML=renderSource("diff");
+  } else if(id===tabDefs[0].id) root.innerHTML=renderHome();
   else if(id===tabDefs[1].id) root.innerHTML=renderForm();
   else if(id===tabDefs[2].id) root.innerHTML=grammarId==="ops-desk"?renderDesk():renderList();
   else root.innerHTML=grammarId==="magazine"?renderForm():renderStats();
@@ -773,7 +916,7 @@ document.getElementById("root").addEventListener("click",function(e){
   var id=b.getAttribute("data-id");
   var act=b.getAttribute("data-act");
   if(act==="del"){ data.items=data.items.filter(function(x){return x.id!==id;}); save(); ping(true); render(); }
-  if(act==="wear"){ var row=data.items.find(function(x){return x.id===id;}); if(row){ data.items=[row].concat(data.items.filter(function(x){return x.id!==id;})); save(); ping(true); view=tabDefs[2].id; render(); } }
+  if(act==="wear"){ var row=data.items.find(function(x){return x.id===id;}); if(row){ data.items=[row].concat(data.items.filter(function(x){return x.id!==id;})); save(); ping(true); if(grammarId!=="source-timeline") view=tabDefs[2].id; render(); } }
   if(act==="advance"){
     var item=data.items.find(function(x){return x.id===id;});
     if(!item) return;
@@ -807,11 +950,13 @@ setTimeout(function(){ if(!document.documentElement.getAttribute("data-fenix-rea
 
 function polishFor(tokens: DesignTokens, grammar: LayoutGrammar): string {
   const chrome =
-    grammar.chrome === "desk"
-      ? DASHBOARD_POLISH_INSTRUCTION
-      : grammar.chrome === "masthead"
-        ? SITE_POLISH_INSTRUCTION
-        : "Mantieni chrome di mestiere e tab dal brief. Vietato Ciao/Operatore e tab Home/Nuovo/Elenco.";
+    grammar.id === "source-timeline"
+      ? "Chrome da registro di repository: testata + rail, timeline commit, rami, stato sync, scarto/diff. Vietato hero grigio, due KPI, empty card, clone GitHub."
+      : grammar.chrome === "desk"
+        ? DASHBOARD_POLISH_INSTRUCTION
+        : grammar.chrome === "masthead"
+          ? SITE_POLISH_INSTRUCTION
+          : "Mantieni chrome di mestiere e tab dal brief. Vietato Ciao/Operatore e tab Home/Nuovo/Elenco.";
   return [
     tokensInstruction(tokens),
     grammarInstruction(grammar),
@@ -821,8 +966,8 @@ function polishFor(tokens: DesignTokens, grammar: LayoutGrammar): string {
   ].join("\n");
 }
 
-export function composeProduct(brief: string): ComposedProduct {
-  const tokens = tokensFromBrief(brief);
+export function composeProduct(brief: string, opts?: TokenOptions): ComposedProduct {
+  const tokens = tokensFromBrief(brief, opts);
   const grammar = grammarFromBrief(brief);
   const spec = specForBrief(brief);
   const used = spec || synthesizeSpec(brief);

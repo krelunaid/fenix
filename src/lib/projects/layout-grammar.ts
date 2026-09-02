@@ -8,6 +8,7 @@ import {
   variantFromBrief,
   type TokenFamily,
 } from "./design-tokens.ts";
+import { extractBriefAxes } from "./palette-engine.ts";
 import { inferKind, kindFromPrompt } from "./infer.ts";
 import type { ProjectKind } from "./types.ts";
 
@@ -20,6 +21,7 @@ export type GrammarId =
   | "ops-desk"
   | "magazine"
   | "pocket-tool"
+  | "source-timeline"
   | "phone-seed";
 
 export type GrammarChrome = "tabs" | "desk" | "masthead";
@@ -29,7 +31,7 @@ export type LayoutGrammar = {
   family: TokenFamily | "unknown";
   kind: ProjectKind;
   chrome: GrammarChrome;
-  stage: "split" | "plates" | "agenda" | "rooms" | "tickets" | "table" | "magazine" | "tool" | "seed";
+  stage: "split" | "plates" | "agenda" | "rooms" | "tickets" | "table" | "magazine" | "tool" | "timeline" | "seed";
   desktop: string;
   tablet: string;
   mobile: string;
@@ -50,7 +52,124 @@ export function grammarFromBrief(brief: string): LayoutGrammar {
   const family = familyFromBrief(brief);
   const kind = kindOf(brief);
   const variant = variantFromBrief(brief);
+  if (family === "repo") {
+    return {
+      id: "source-timeline",
+      family,
+      kind: kind === "site" || kind === "landing" ? kind : "app",
+      chrome: "desk",
+      stage: "timeline",
+      desktop: variant
+        ? "testata editoriale + colonna diff a tutta altezza + rami, niente hero KPI"
+        : "testata tecnica + timeline commit + rami/sync, niente hero grigio e niente 2 KPI",
+      tablet: "nav in testata, timeline e rami in colonna densa",
+      mobile: "timeline in colonna, rami in nastro, nav in testata, niente tabbar Home/Nuovo",
+      voice: {
+        census: variant ? "in luce" : "in voce",
+        empty: "Nessuna voce in linea. Registra un commit.",
+        load: "Allineo il repo",
+        ok: "In linea",
+        err: "Sync non registrato.",
+      },
+    };
+  }
   if (!isProductFamily(family)) {
+    const axes = extractBriefAxes(brief);
+    if (axes.domain === "clinical") {
+      return {
+        id: "agenda",
+        family,
+        kind,
+        chrome: "tabs",
+        stage: "agenda",
+        desktop: "luce clinica + agenda a binario, niente hero KPI",
+        tablet: "giornata e slot in colonna",
+        mobile: "slot in colonna, tabbar mestiere",
+        voice: {
+          census: "in cura",
+          empty: "Nessuno slot in agenda. Aprine uno.",
+          load: "Apro l'agenda",
+          ok: "In agenda",
+          err: "Lo slot non è confermato.",
+        },
+      };
+    }
+    if (axes.domain === "music") {
+      return {
+        id: "split-stage",
+        family,
+        kind,
+        chrome: "tabs",
+        stage: "split",
+        desktop: "palco a tutta altezza + palinsesto, niente tabbar",
+        tablet: "palco e lista in colonna",
+        mobile: "palco 42vh, lista, tabbar",
+        voice: {
+          census: "in onda",
+          empty: "Nessun brano in palinsesto. Mettine uno.",
+          load: "Apro il palco",
+          ok: "In onda",
+          err: "Il brano non è in linea.",
+        },
+      };
+    }
+    if (axes.domain === "docs") {
+      return {
+        id: "magazine",
+        family,
+        kind: kind === "app" ? "site" : kind,
+        chrome: "masthead",
+        stage: "magazine",
+        desktop: "testata + lastre di documento a tutta larghezza",
+        tablet: "copertina e fascicolo in colonna",
+        mobile: "copertina, lastre, nav in testata",
+        voice: {
+          census: "in fascicolo",
+          empty: "Nessuna lastra. Scrivine una.",
+          load: "Apro il fascicolo",
+          ok: "In fascicolo",
+          err: "Lastra non registrata.",
+        },
+      };
+    }
+    if (axes.domain === "studio") {
+      return {
+        id: "service-board",
+        family,
+        kind,
+        chrome: "tabs",
+        stage: "tickets",
+        desktop: "bacheca lezioni, niente inventario",
+        tablet: "biglietti in colonna",
+        mobile: "biglietti, tabbar mestiere",
+        voice: {
+          census: "in studio",
+          empty: "Nessuna lezione in bacheca. Aprine una.",
+          load: "Apro lo studio",
+          ok: "In studio",
+          err: "Lezione non registrata.",
+        },
+      };
+    }
+    if (axes.tone === "austere") {
+      return {
+        id: "pocket-tool",
+        family,
+        kind: kind === "app" ? "tool" : kind,
+        chrome: "tabs",
+        stage: "tool",
+        desktop: "nastro di misura a tutta larghezza, niente KPI",
+        tablet: "nastro e registro",
+        mobile: "nastro in tasca",
+        voice: {
+          census: "sul nastro",
+          empty: "Nessuna misura. Prendine una.",
+          load: "Apro il nastro",
+          ok: "Sul nastro",
+          err: "Misura non registrata.",
+        },
+      };
+    }
     return {
       id: "phone-seed",
       family,
@@ -231,6 +350,8 @@ export function grammarInstruction(grammar: LayoutGrammar): string {
     `voce: ${grammar.voice.census}; empty="${grammar.voice.empty}"`,
     "Navigazione device-aware: tabbar solo sotto 768px; tablet e desktop usano header/nav in testata. Vietato allargare la tabbar a tutta larghezza.",
     "Vietato riciclare la stessa phone-shell, «3 in casa», Ciao/Operatore, tab Home/Nuovo/Elenco.",
-    "Stati empty/loading/success/error visibili. Motion solo se prefers-reduced-motion: no-preference. Target ≥24px, focus visibile, AA.",
+    grammar.id === "source-timeline"
+      ? "Repository: attività, rami, sync, diff. Vietato home universale hero grigio + due KPI + CTA + empty card. Non copiare GitHub, Apple o Emergent."
+      : "Stati empty/loading/success/error visibili. Motion solo se prefers-reduced-motion: no-preference. Target ≥24px, focus visibile, AA.",
   ].join("\n");
 }

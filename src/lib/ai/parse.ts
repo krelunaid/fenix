@@ -1,5 +1,6 @@
 import { assembleHtml, dropPhoneScreenFiles, ensureScreenFiles, ingestProjectFiles, parseProjectFiles, seedFiveScreens, type ProjectFile } from "@/lib/projects/files";
-import { DEFAULT_PALETTE, type Palette, type ProjectKind } from "@/lib/projects/types";
+import { type Palette, type ProjectKind } from "@/lib/projects/types";
+import { fallbackPaletteFromBrief } from "@/lib/projects/design-tokens";
 import { isPhoneKind } from "@/lib/projects/infer";
 import { fenix2Files } from "@/lib/projects/fenix2";
 
@@ -39,7 +40,8 @@ function asText(value: unknown, fallback: string, max = 80) {
   return t.slice(0, max);
 }
 
-function parseMeta(raw: string): Omit<BuildResult, "html" | "files"> {
+function parseMeta(raw: string, brief?: string): Omit<BuildResult, "html" | "files"> {
+  const hashed = fallbackPaletteFromBrief(brief || "studio");
   try {
     const data = JSON.parse(raw) as Record<string, unknown>;
     const paletteIn =
@@ -53,11 +55,11 @@ function parseMeta(raw: string): Omit<BuildResult, "html" | "files"> {
       summary: asText(data.summary, "", 280),
       direction: asText(data.direction, "", 80),
       palette: {
-        bg: asHex(paletteIn.bg, DEFAULT_PALETTE.bg),
-        surface: asHex(paletteIn.surface, DEFAULT_PALETTE.surface),
-        fg: asHex(paletteIn.fg, DEFAULT_PALETTE.fg),
-        muted: asHex(paletteIn.muted, DEFAULT_PALETTE.muted),
-        accent: asHex(paletteIn.accent, DEFAULT_PALETTE.accent),
+        bg: asHex(paletteIn.bg, hashed.bg),
+        surface: asHex(paletteIn.surface, hashed.surface),
+        fg: asHex(paletteIn.fg, hashed.fg),
+        muted: asHex(paletteIn.muted, hashed.muted),
+        accent: asHex(paletteIn.accent, hashed.accent),
       },
     };
   } catch {
@@ -67,7 +69,7 @@ function parseMeta(raw: string): Omit<BuildResult, "html" | "files"> {
       kind: "app",
       summary: "",
       direction: "",
-      palette: DEFAULT_PALETTE,
+      palette: hashed,
     };
   }
 }
@@ -80,7 +82,7 @@ function extractHtml(text: string) {
   return "";
 }
 
-export function parseBuildOutput(text: string, lockKind?: ProjectKind): BuildResult | null {
+export function parseBuildOutput(text: string, lockKind?: ProjectKind, brief?: string): BuildResult | null {
   const trimmed = text.trim();
   const metaBlock = trimmed.match(/<<<META>>>\s*([\s\S]*?)(?:<<<HTML>>>|<<<FILE |$)/);
   const htmlBlock = trimmed.match(/<<<HTML>>>\s*([\s\S]*?)(?:<<<FILE |<<<END>>>|$)/);
@@ -93,7 +95,7 @@ export function parseBuildOutput(text: string, lockKind?: ProjectKind): BuildRes
   if (!html || html.length < 80) return null;
   if (!/<\/html>/i.test(html)) html = `${html}\n</body>\n</html>`;
 
-  const meta = parseMeta(metaBlock?.[1]?.trim() || "{}");
+  const meta = parseMeta(metaBlock?.[1]?.trim() || "{}", brief);
   if (lockKind) meta.kind = lockKind;
   if (meta.name === "Studio") {
     const title = html.match(/<title>([^<]+)<\/title>/i)?.[1]?.trim();

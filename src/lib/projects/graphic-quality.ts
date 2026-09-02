@@ -353,6 +353,35 @@ export function auditGraphicQuality(
     );
   }
 
+  if (
+    family === "repo" &&
+    /class=["'][^"']*\bkpi\b/.test(text) &&
+    !/data-repo-stage|data-hash=/.test(text)
+  ) {
+    findings.push(
+      finding(
+        "hierarchy",
+        "fail",
+        "template-home",
+        "Home universale a KPI su un brief di repository, senza timeline/diff.",
+        "kpi senza data-repo-stage",
+      ),
+    );
+  }
+
+  const fallbackClone = /#101114/i.test(vars.bg || "") && /#e1693f/i.test(vars.accent || "");
+  if (fallbackClone) {
+    findings.push(
+      finding(
+        "color",
+        "fail",
+        "static-fallback",
+        "Palette caduta sul fallback unico #101114/#e1693f.",
+        `${vars.bg} / ${vars.accent}`,
+      ),
+    );
+  }
+
   if (PLACEHOLDER_GRAY.test(text) && product) {
     findings.push(
       finding("imagery", "fail", "gray-placeholder", "Placeholder grigi al posto di materiali.", "background #ccc/#ddd"),

@@ -9,8 +9,9 @@ export async function designVisual(input: {
   apiKey: string;
   prompt: string;
   signal: AbortSignal;
+  recentPalettes?: import("../projects/palette-engine.ts").PaletteRecord[];
 }): Promise<string | null> {
-  const tokens = tokensFromBrief(input.prompt);
+  const tokens = tokensFromBrief(input.prompt, { recent: input.recentPalettes });
   const grammar = grammarFromBrief(input.prompt);
   const res = await fetch(XAI_CHAT_COMPLETIONS_URL, {
     method: "POST",

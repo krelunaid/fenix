@@ -5,11 +5,13 @@ import { SYSTEM_PROMPT } from "./prompt";
 import { kindFromPrompt } from "@/lib/projects/infer";
 import { contractInstruction, planContract } from "./build-contract";
 import { composeProduct } from "./compose-product";
+import { sanitizePaletteHistory, type PaletteRecord } from "@/lib/projects/palette-engine";
 
 export type GenerateInput = {
   prompt: string;
   html?: string;
   instruction?: string;
+  recentPalettes?: PaletteRecord[];
 };
 
 export type GenerateResponse =
@@ -30,6 +32,7 @@ export const generateBuild = createServerFn({ method: "POST" })
       prompt: prompt.slice(0, 2500),
       html: (data.html ?? "").slice(0, 50000),
       instruction: (data.instruction ?? "").trim().slice(0, 2500),
+      recentPalettes: sanitizePaletteHistory(data.recentPalettes),
     };
   })
   .handler(async ({ data }): Promise<GenerateResponse> => {
@@ -39,7 +42,7 @@ export const generateBuild = createServerFn({ method: "POST" })
       return { ok: false, error: XAI_MISSING_KEY_ERROR };
     }
 
-    const composed = composeProduct(data.prompt);
+    const composed = composeProduct(data.prompt, { recent: data.recentPalettes });
     const userParts = [
       `BRIEF:\n${data.prompt}`,
       contractInstruction(planContract(data.prompt)),
@@ -91,7 +94,7 @@ export const generateBuild = createServerFn({ method: "POST" })
         choices?: { message?: { content?: string } }[];
       };
       const text = payload.choices?.[0]?.message?.content ?? "";
-      const parsed = parseBuildOutput(text, kindFromPrompt(data.prompt));
+      const parsed = parseBuildOutput(text, kindFromPrompt(data.prompt), data.prompt);
       if (!parsed) {
         return {
           ok: false,
