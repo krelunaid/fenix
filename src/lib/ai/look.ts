@@ -171,7 +171,8 @@ export function lookInstruction(audit: PreviewAudit | null, hasShot: boolean) {
       : "Ho misurato il DOM dell'anteprima.",
     seen,
     "Correggi SOLO chrome/CSS/icone. NON spegnere il JS.",
-    "Obbligo canvas telefono: html/body 100dvh, colonna, width 100%, niente max-width 1100, niente 3 colonne desktop.",
+    "Canvas telefono: html/body 100dvh, colonna, width 100%. Su desktop/tablet: griglia editoriale a tutta larghezza, niente max-width 1080 boxed, niente 3 colonne vuote.",
+    "Imagery di dominio originale (data-imagery=domain, alt/aria-label). Vietati placeholder geometrici, gradient clone, hotlink Unsplash/Apple/Emergent.",
     "Tab bar in flusso in basso, 4–5 voci STESSA larghezza, SVG 24px + label 10px intere, niente testo tagliato.",
     (audit?.mainChars ?? 0) < 80
       ? "HOME VUOTA. Riempi main: metriche, blocco, CTA, lista. Non lasciare il bianco."

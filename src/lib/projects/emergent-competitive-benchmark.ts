@@ -161,8 +161,9 @@ export const EMERGENT_COMPETITIVE_AXES: CompetitiveAxis[] = [
     status: "partial",
     emergentClaimed: "Build e test automatici dalla stessa conversazione.",
     fenixEvidence:
-      "Sei prodotti storici e tre identità visive premium (profumi, moda, prenotazioni) con journey D/T/M, gate grafico blocking, screenshot e console/overflow/focus/target. Essenza scheletrica è rifiutata. Nessun confronto testa-a-testa con Emergent.",
-    remainingGap: "Valutazione cieca degli output generati dallo stesso prompt, e un confronto testa-a-testa, non ancora eseguiti.",
+      "Sei prodotti storici, tre geometrici rifiutati dal gate, dieci identità premium (5 brief × 2 varianti) con imagery di dominio originale, journey D/T/M, protocollo cieco a 10 criteri. Essenza scheletrica è rifiutata. Nessun output Emergent equivalente è depositato: benchmark esterno non disponibile.",
+    remainingGap:
+      "Valutazione cieca contro un set Emergent equivalente non eseguita: manca accesso legittimo agli output del concorrente. Parità e superiorità restano non provate.",
     sourceIds: ["emergent-features"],
     headToHeadRun: false,
   },

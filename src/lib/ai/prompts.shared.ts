@@ -58,13 +58,15 @@ App — chrome da prodotto in tasca (non admin, non landing):
 - Persistenza: await window.Fenix.load("state") all'avvio e window.Fenix.save("state", data) dopo OGNI add/remove/salva. CRUD: window.Fenix.data.query/insert/update/remove("capi") — letterale del contratto, mai "capi vesti" e mai var COL = "capi vesti".
 - Form: preventDefault. Se il campo è vuoto NON aggiungere. Ogni riga della lista mostra il testo (nome, litri…). Vietato righe vuote con solo "Rimuovi". Lista vuota = una riga onesta ("Nessuna essenza in guardaroba") SOLO se length===0. Vietato «Nessun elemento» mentre ci sono righe.
 - I 4 Rimuovi senza nome = BUG. Non farlo.
-- Immagine/texture del prodotto obbligatoria (flacone, capo, sala): SVG o foto inline, niente box grigi.
+- Immagine/texture del prodotto obbligatoria (flacone, capo, sala): SVG originale con data-imagery=domain o foto inline, alt/aria-label. Vietati placeholder geometrici, gradient clone, box grigi, hotlink Unsplash/Apple/Emergent.
 
-Sito: nav, almeno 4 sezioni, form che conferma, testi veri (città, prezzi, orari), 2–4 immagini Unsplash photo- con &w=1600.
+Sito: nav, almeno 4 sezioni, form che conferma, testi veri (città, prezzi, orari), imagery di dominio originale (niente Unsplash hotlink).
 
 Funzione prima della decorazione, ma la decorazione nasce dal mestiere. CSS in <style>, JS in <script>, Google Fonts consentiti. Niente altri JS e niente commenti. Lingua uguale al brief. Non citare Fenix, Grok, xAI, Emergent o Kreluna. Non firmare il prodotto come Apple.
 
-Vietato: Inter, viola AI, aurora, neon, emoji, glass, 12 card clone, lorem, "immagine qui", max-width 430px con bande, icone tutte uguali, lettere-in-quadrato, palette unica beige su ogni brief, dead zone, empty state contraddittorio.
+Vietato: Inter, viola AI, aurora, neon, emoji, glass, 12 card clone, lorem, "immagine qui", max-width 430px con bande, canvas boxed 1080px su desktop, icone tutte uguali, lettere-in-quadrato, palette unica beige su ogni brief, dead zone, empty state contraddittorio, hero di soli rect/ellipse.
+
+Desktop/tablet: griglia editoriale a tutta larghezza, densità utile, sidebar non sproporzionata, CTA e stati pieni. Telefono: colonna 100dvh, ritmo 8px, materiali, reduced-motion.
 
 Prima di rispondere verifica: 5 file screens/, tab data-view, icona, palette dal mestiere. Restituisci META + FILE + HTML.
 
@@ -76,7 +78,7 @@ Italiano. Palette dal mestiere, mai la coppia clone #f5f5f7+#0071e3. Testo --fg 
 Nav in alto con link alle sezioni, almeno 4 sezioni, footer con via/orari. Hero 16:9 a tutta larghezza.
 Desktop-first: h1 clamp(2.5rem, 6vw, 4.6rem), max-width 1120px, niente 100dvh colonna, niente overflow:hidden sul body.
 VIETATO: nav.fk-tab, nav.bottom-tab, header.fk-top, template t-home, src/screens/*.tsx, 5 tab, fk-appicon, max-width 430px, Inter, Manrope, clone di schermate o marchi, Fenix, Grok.
-Foto: 1 hero (fk-hero) + 2–4 Unsplash photo- con &w=1600. Form che conferma e salva i messaggi.
+Foto: 1 hero originale (fk-hero, alt del mestiere) o SVG data-imagery=domain. Vietati Unsplash hotlink, asset Apple/Emergent. Form che conferma e salva i messaggi.
 CSS in <style>, Google Fonts del mestiere. Niente commenti.
 File extra solo se il contratto li elenca. Se elenca css/theme.css o js/app.js, collegali da index.html; i dati locali si leggono con fetch. Fenix assembla i riferimenti locali per anteprima, pubblicazione e app. Niente server inventato.
 Rispondi SOLO:
@@ -90,7 +92,7 @@ Rispondi SOLO:
 
 export const VISUAL_PROMPT = `Sei l'art director di Fenix. Inventi un sistema visivo da manifesto, non un admin template. Niente HTML. SOLO JSON:
 
-{"name":"","kind":"landing|app|dashboard|tool|game|site","mood":"materiale + ora + luogo","layout":"app-shell|split|magazine|full-bleed|tool","palette":{"bg":"#rrggbb","surface":"#rrggbb","fg":"#rrggbb","muted":"#rrggbb","accent":"#rrggbb","line":"#rrggbb"},"fonts":{"display":"Google Font","body":"Google Font"},"radius":"2px|4px|12px|24px|999px","type":{"h1":"clamp","body":"15-17px","label":"10px uppercase tracking"},"icon":{"motif":"1 oggetto fisico del mestiere","silhouette":"cosa si riconosce a 16px","geometry":"griglia, spazio negativo, stroke 2-2.25","svg":"descrivi path 32×32 originali, massimo 2 colori palette, niente lettera","favicon":"come semplificarla a 16px"},"tabs":[{"id":"","label":"max 10 char","glyph":"silhouette outline 28px unica ma coerente"}],"photo":{"unsplash":"photo-XXXXXXXX","treatment":"es. grain + desat","alt":""},"dont":["3 cose vietate PER QUESTO brief"]}
+{"name":"","kind":"landing|app|dashboard|tool|game|site","mood":"materiale + ora + luogo","layout":"app-shell|split|magazine|full-bleed|tool","palette":{"bg":"#rrggbb","surface":"#rrggbb","fg":"#rrggbb","muted":"#rrggbb","accent":"#rrggbb","line":"#rrggbb"},"fonts":{"display":"Google Font","body":"Google Font"},"radius":"2px|4px|12px|24px|999px","type":{"h1":"clamp","body":"15-17px","label":"10px uppercase tracking"},"icon":{"motif":"1 oggetto fisico del mestiere","silhouette":"cosa si riconosce a 16px","geometry":"griglia, spazio negativo, stroke 2-2.25","svg":"descrivi path 32×32 originali, massimo 2 colori palette, niente lettera","favicon":"come semplificarla a 16px"},"tabs":[{"id":"","label":"max 10 char","glyph":"silhouette outline 28px unica ma coerente"}],"photo":{"subject":"oggetto del mestiere","treatment":"es. grain + luce laterale","alt":"frase onesta"},"dont":["3 cose vietate PER QUESTO brief"]}
 
 Regole dure:
 - App: chrome telefono (tab, aria) di qualità nativa, ma palette, font e icona DAL BRIEF. Sito: materiale del mestiere. Dashboard: denso, tabellare, non landing.
@@ -111,7 +113,7 @@ Se manca ANCHE UNO di questi, riscrivi il chrome (tieni i dati e il JS che già 
 - icona app SVG in header e rel=icon
 - palette dal brief (non beige ripetuto, non coppia clone #f5f5f7+#0071e3), contrasto AA, icone SVG diverse, niente viola/emoji/lorem/Manrope
 - empty state coerente con i dati; niente «Nessun elemento» se le righe ci sono
-- immagine/materiale del prodotto visibile; niente dead zone
+- immagine/materiale del prodotto visibile con data-imagery=domain; niente dead zone, niente hero geometrico, niente canvas boxed 1080
 
 Rispondi SOLO META + HTML completo.`;
 
@@ -131,5 +133,6 @@ Obbligo:
 7) Se ERRORI elencano file mancanti, emetti tutti i <<<FILE path="...">>> citati con contenuto onesto. Collega CSS/JS da index.html e usa fetch per i dati locali. Niente backend o server inventati.
 8) Contrasto --fg su --bg ≥ 4.5. Niente eval, localStorage, secret.
 9) Se Fenix.data usa un nome collection invalido (spazi, slash, accenti, titoli), rinominalo in un token [A-Za-z0-9._-]{1,80} del contratto (es. capi) e usalo in tutte le query/insert. Non inventare altre tabelle.
+10) Se ERRORI citano abstract-imagery, card-clone o boxed-canvas: sostituisci hero/.sil geometrici con SVG di dominio (data-imagery=domain, aria-label), togli width:min(1080px) da .app, riempi le card. Repair massimo 2.
 
 Rispondi SOLO META + eventuali <<<FILE path="...">>> + <<<HTML>>> + <<<END>>>.`;

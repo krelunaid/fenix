@@ -24,6 +24,7 @@ const PASSES = 5;
 const SYSTEM = `Sei il motore visivo di Fenix. Vedi uno screenshot TELEFONO 390×844 e l'HTML.
 Legge grafica: chrome da prodotto (tab in basso se app), identità DAL BRIEF. Token cromatici del contratto, non beige ripetuto.
 Qualità nativa da tasca consentita (tipo, ritmo, profondità, materiali, motion ridotto). Vietato clonare schermate, marchi, SF Symbols o la coppia #f5f5f7+#0071e3.
+Desktop/tablet: griglia editoriale piena, niente canvas boxed 1080, niente dead zone. Imagery di dominio originale (data-imagery=domain, alt/aria-label): niente hero geometrico, niente gradient clone, niente hotlink Unsplash/Apple/Emergent.
 Testo --fg su --bg contrasto 4.5:1. Niente grigio su grigio. Non firmare il prodotto come Apple.
 - font dalla direzione visiva (serif manifesto + sans/mono bottega). Vietato Inter, Manrope, SF Pro come default da clone.
 - raggio, aria e CTA dal brief. Vietato card bianche + CTA pillola blu + coppia #f5f5f7+#0071e3.

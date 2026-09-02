@@ -2,12 +2,18 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { formatPrefix } from "../projects/infer.ts";
-import type { Palette } from "../projects/types.ts";
+import type { Palette, ProjectKind } from "../projects/types.ts";
 import { tokensFromBrief } from "../projects/design-tokens.ts";
+import { loadPremiumFixtures, type PremiumFixtureId } from "./premium-fixtures.ts";
 
 const here = dirname(fileURLToPath(import.meta.url));
 
-export type GraphicFixtureId = "essenza-fail" | "maison-lumiere" | "sfilata-atelier" | "sala-ore";
+export type GraphicFixtureId =
+  | "essenza-fail"
+  | "maison-lumiere"
+  | "sfilata-atelier"
+  | "sala-ore"
+  | PremiumFixtureId;
 
 export type GraphicFixture = {
   id: GraphicFixtureId;
@@ -16,13 +22,14 @@ export type GraphicFixture = {
   html: string;
   palette: Palette;
   mustPass: boolean;
+  kind?: ProjectKind;
 };
 
 function loadHtml(name: string): string {
   return readFileSync(join(here, "fixtures/graphic", name), "utf8");
 }
 
-export function loadGraphicFixtures(): GraphicFixture[] {
+export function loadLegacyGraphicFixtures(): GraphicFixture[] {
   const perfumeBrief = `${formatPrefix("app")}Maison Lumière: gestione profumi premium, flaconi, note olfattive e guardaroba.`;
   const fashionBrief = `${formatPrefix("app")}Sfilata Atelier: moda e vendite, lookbook, capi in passerella e cassa.`;
   const bookingBrief = `${formatPrefix("app")}Sala delle Ore: prenotazioni di un servizio, agenda, trattamenti e studio.`;
@@ -35,30 +42,38 @@ export function loadGraphicFixtures(): GraphicFixture[] {
       html: loadHtml("essenza-fail.html"),
       palette: tokensFromBrief(failBrief).palette,
       mustPass: false,
+      kind: "app",
     },
     {
       id: "maison-lumiere",
-      family: "profumi premium",
+      family: "profumi premium (legacy geometrico)",
       brief: perfumeBrief,
       html: loadHtml("maison-lumiere.html"),
       palette: tokensFromBrief(perfumeBrief).palette,
-      mustPass: true,
+      mustPass: false,
+      kind: "app",
     },
     {
       id: "sfilata-atelier",
-      family: "moda/vendite",
+      family: "moda/vendite (legacy card-clone)",
       brief: fashionBrief,
       html: loadHtml("sfilata-atelier.html"),
       palette: tokensFromBrief(fashionBrief).palette,
-      mustPass: true,
+      mustPass: false,
+      kind: "app",
     },
     {
       id: "sala-ore",
-      family: "prenotazioni servizio",
+      family: "prenotazioni servizio (legacy schematico)",
       brief: bookingBrief,
       html: loadHtml("sala-ore.html"),
       palette: tokensFromBrief(bookingBrief).palette,
-      mustPass: true,
+      mustPass: false,
+      kind: "app",
     },
   ];
+}
+
+export function loadGraphicFixtures(): GraphicFixture[] {
+  return [...loadLegacyGraphicFixtures(), ...loadPremiumFixtures()];
 }

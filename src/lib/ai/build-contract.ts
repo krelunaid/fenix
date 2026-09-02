@@ -334,7 +334,7 @@ export function contractInstruction(contract: BuildContract): string {
       : 'Documento META + <<<HTML>>> + <<<END>>>. Extra file solo con <<<FILE path="...">>> se servono, e solo se il contratto li elenca.',
     `accetta: ${contract.acceptance.join("; ")}`,
     tokensInstruction(tokensFromBrief(contract.intent)),
-    "Schermata ready/pubblicabile solo se passa il gate grafico: gerarchia, densità, originalità, colore dal brief, immagini di mestiere, controlli rifiniti, empty-state coerente, responsive, AA, console pulita. Compilare non basta.",
+    "Schermata ready/pubblicabile solo se passa il gate grafico: gerarchia, densità, originalità, colore dal brief, imagery di dominio (data-imagery=domain, niente placeholder geometrici, card-clone o canvas boxed 1080), controlli rifiniti, empty-state coerente, responsive, AA, console pulita. Compilare non basta.",
     `a11y: ${contract.constraints.a11y.join("; ")}`,
     `sicurezza: ${contract.constraints.security.join("; ")}`,
     `responsive: ${contract.constraints.responsive.join("; ")}`,

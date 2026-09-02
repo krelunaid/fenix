@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { parseBuildOutput } from "@/lib/ai/parse";
 import { generateHeroUrl, injectHero, injectCraftHero, heroAspect, materializeHero, scrubCraftMedia } from "@/lib/ai/hero-image";
+import { altForBrief } from "@/lib/ai/domain-imagery";
 import { SYSTEM_PROMPT, SITE_PROMPT } from "@/lib/ai/prompt";
 import { looksCheap, reviewBuild } from "@/lib/ai/qa";
 import { gateBuildResult } from "@/lib/ai/repair";
@@ -391,7 +392,7 @@ export const Route = createFileRoute("/api/build")({
                     const hero = remote ? await materializeHero(remote, imgCtl.signal) : null;
                     clearTimeout(imgTimer);
                     if (hero) {
-                      result = { ...result, html: injectHero(result.html, hero) };
+                      result = { ...result, html: injectHero(result.html, hero, altForBrief(prompt)) };
                     }
                     result = { ...result, html: scrubCraftMedia(result.html) };
                   }

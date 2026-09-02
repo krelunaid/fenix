@@ -13,7 +13,9 @@ import {
   GRAPHIC_SCORE_THRESHOLD,
 } from "../projects/graphic-quality.ts";
 import { evaluateContract, planContract, blocksPublish } from "./build-contract.ts";
-import { loadGraphicFixtures } from "./graphic-fixtures.ts";
+import { loadGraphicFixtures, loadLegacyGraphicFixtures } from "./graphic-fixtures.ts";
+import { loadPremiumFixtures } from "./premium-fixtures.ts";
+import { runBlindTrial } from "../projects/blind-visual-benchmark.ts";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const SHOTS = join(here, "fixtures/graphic/shots");
@@ -45,7 +47,7 @@ async function shot(page: Page, name: string) {
 }
 
 describe("graphic quality visual QA D/T/M", () => {
-  it("scores painted screens: Essenza fails, three products pass with distinct identities", async () => {
+  it("scores painted screens: legacy geometric fails, ten premium products pass", async () => {
     const fixtures = loadGraphicFixtures();
     const browser = await launch();
     const manifest: {
@@ -54,6 +56,7 @@ describe("graphic quality visual QA D/T/M", () => {
     } = { threshold: GRAPHIC_SCORE_THRESHOLD, files: [] };
     try {
       for (const fix of fixtures) {
+        const kind = fix.kind || "app";
         const contract = planContract(fix.brief);
         for (const [vp, viewport] of VIEWPORTS) {
           const page = await browser.newPage({ viewport });
@@ -62,7 +65,7 @@ describe("graphic quality visual QA D/T/M", () => {
           page.on("console", (msg) => {
             if (msg.type() === "error") errors.push(msg.text());
           });
-          const src = prepareSrcDoc(fix.html, fix.palette, fix.id, "app");
+          const src = prepareSrcDoc(fix.html, fix.palette, fix.id, kind);
           await page.setContent(src, { waitUntil: "domcontentloaded", timeout: 15000 });
           await waitForFenixReady(page, 8000);
           if (fix.id === "essenza-fail") {
@@ -73,14 +76,14 @@ describe("graphic quality visual QA D/T/M", () => {
           rendered.consoleErrors = errors.length;
           const report = auditGraphicQuality(fix.html, {
             brief: fix.brief,
-            kind: "app",
+            kind,
             rendered,
           });
           const evaluation = evaluateContract({
             html: fix.html,
             files: [{ path: "index.html", content: fix.html }],
             contract,
-            kind: "app",
+            kind,
             brief: fix.brief,
             rendered,
           });
@@ -112,13 +115,13 @@ describe("graphic quality visual QA D/T/M", () => {
             );
             assert.ok(report.score >= GRAPHIC_SCORE_THRESHOLD, `${fix.id} score ${report.score}`);
             assert.equal(evaluation.ok, true, `${fix.id}/${vp} contract`);
-            assert.equal(blocksPublish(fix.html, "app", undefined, fix.brief), "");
+            assert.equal(blocksPublish(fix.html, kind, undefined, fix.brief), "");
             assert.ok(rendered.headingCount >= 1, `${fix.id} heading`);
-            assert.ok(rendered.deadRatio < 0.78, `${fix.id} dead ${rendered.deadRatio}`);
+            assert.ok(rendered.deadRatio < 0.58, `${fix.id} dead ${rendered.deadRatio}`);
           } else {
-            assert.equal(report.ok, false, "Essenza must not pass visual QA");
+            assert.equal(report.ok, false, `${fix.id} must not pass visual QA`);
             assert.equal(evaluation.checks.find((c) => c.id === "graphic")?.ok, false);
-            assert.match(blocksPublish(fix.html, "app", undefined, fix.brief), /graphic|empty|skeletal|generic/i);
+            assert.match(blocksPublish(fix.html, kind, undefined, fix.brief), /graphic|empty|skeletal|generic|abstract|clone|boxed/i);
           }
           await page.close();
         }
@@ -127,9 +130,20 @@ describe("graphic quality visual QA D/T/M", () => {
       await browser.close();
     }
     const palettes = fixtures.filter((f) => f.mustPass).map((f) => f.palette.bg.toLowerCase());
-    assert.equal(new Set(palettes).size, 3, "three distinct grounds");
+    assert.ok(new Set(palettes).size >= 5, "at least five distinct grounds");
     mkdirSync(SHOTS, { recursive: true });
     writeFileSync(join(SHOTS, "manifest.json"), `${JSON.stringify(manifest, null, 2)}\n`);
     assert.equal(manifest.files.length, fixtures.length * VIEWPORTS.length);
+
+    const legacy = loadLegacyGraphicFixtures().find((f) => f.id === "maison-lumiere")!;
+    const gold = loadPremiumFixtures().find((f) => f.id === "lumiere-or")!;
+    const trial = runBlindTrial({
+      briefId: "perfume",
+      brief: gold.brief,
+      left: { id: legacy.id, html: legacy.html },
+      right: { id: gold.id, html: gold.html },
+    });
+    writeFileSync(join(SHOTS, "blind-trial.json"), `${JSON.stringify(trial, null, 2)}\n`);
+    assert.equal(trial.labels.A, "Candidate A");
   });
 });

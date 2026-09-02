@@ -233,9 +233,9 @@ export const QUALITY_LEDGER: LedgerRow[] = [
   {
     id: "graphic-quality-gate",
     claim:
-      "Ready/pubblica richiede un gate grafico riproducibile: token dal brief, niente dead zone, empty state coerente, originalità anti-clone, immagini di mestiere, controlli rifiniti. Essenza scheletrica fallisce; tre prodotti (profumi, moda, prenotazioni) passano D/T/M con screenshot. Compilare non basta. 0 crediti LLM.",
+      "Ready/pubblica richiede un gate grafico riproducibile: token e varianti dal brief, niente dead zone, empty state coerente, originalità anti-clone, imagery di dominio originale (data-imagery, alt, provenienza CC0), niente card-clone né canvas boxed. Essenza e i tre prodotti geometrici (Maison/Sfilata/Sala) falliscono; dieci prodotti premium (5 brief × 2 varianti) passano D/T/M. Protocollo cieco con rubric a 10 criteri; benchmark esterno non disponibile, confronto competitivo non concluso. Compilare non basta. Imagine solo su build utente, fallback SVG a 0 crediti.",
     evidence:
-      "design-tokens.ts + graphic-quality.ts + graphic-quality.test.ts + graphic-quality-browser.test.ts fixtures/graphic shots",
+      "design-tokens.ts + domain-imagery.ts + graphic-quality.ts + graphic-quality.test.ts + graphic-quality-browser.test.ts + blind-visual-benchmark.ts fixtures/graphic shots",
     ok: true,
   },
   {

@@ -26,62 +26,272 @@
       "name": "maison-lumiere-D.png",
       "sha256": "1a820181fe83de896633dcce168750b0e112e7702d007134b38a1af95ca0507a",
       "bytes": 60645,
-      "score": 100,
-      "ok": true
+      "score": 68,
+      "ok": false
     },
     {
       "name": "maison-lumiere-T.png",
       "sha256": "45dccbb13d2cb89b13d1c5c50999d697b1a75f82cf97828bb47d2119a53db42f",
       "bytes": 60440,
-      "score": 100,
-      "ok": true
+      "score": 68,
+      "ok": false
     },
     {
       "name": "maison-lumiere-M.png",
       "sha256": "5c61e9104d88e9ba8fd990a1df2cdddabd0785beac50891874b12c93acffc977",
       "bytes": 43384,
-      "score": 100,
-      "ok": true
+      "score": 68,
+      "ok": false
     },
     {
       "name": "sfilata-atelier-D.png",
       "sha256": "0d66badd9999259b040dd4c12ccf15989f9d439b8a7fbce8ff795890ac3e406e",
       "bytes": 21926,
-      "score": 100,
-      "ok": true
+      "score": 52,
+      "ok": false
     },
     {
       "name": "sfilata-atelier-T.png",
       "sha256": "f97bc2d0b705effc60de8ccfe7c799ec4dc13fe388c4c691fa00d21b62e38103",
       "bytes": 22502,
-      "score": 100,
-      "ok": true
+      "score": 36,
+      "ok": false
     },
     {
       "name": "sfilata-atelier-M.png",
       "sha256": "68964aa0278be8f8dcb95e4f416bb5a40fa72a50edae002e57ebc59911c75f25",
       "bytes": 18284,
-      "score": 100,
-      "ok": true
+      "score": 52,
+      "ok": false
     },
     {
       "name": "sala-ore-D.png",
       "sha256": "09f806fff47d809df1d2a44a0f29c71dac3e5d95365915303a81a6ea731790c9",
       "bytes": 37007,
-      "score": 100,
-      "ok": true
+      "score": 68,
+      "ok": false
     },
     {
       "name": "sala-ore-T.png",
       "sha256": "e9addb9d637277df312cb8c09b8e4fd89a5cf957fe564c76582b140a1952af93",
       "bytes": 36324,
-      "score": 100,
-      "ok": true
+      "score": 68,
+      "ok": false
     },
     {
       "name": "sala-ore-M.png",
       "sha256": "4f5eb4d3976c58f27e010dbd5c8355963c486a121b73f6dd26d2b33682c91403",
       "bytes": 28854,
+      "score": 68,
+      "ok": false
+    },
+    {
+      "name": "lumiere-or-D.png",
+      "sha256": "89ef842bc26e19d5e092546b9decc85e976d6d9354bca3aedb814c62c6ab79ec",
+      "bytes": 54718,
+      "score": 100,
+      "ok": true
+    },
+    {
+      "name": "lumiere-or-T.png",
+      "sha256": "5f13b07fe53e07da326756d0ff8df25bb29c04b2d080468d86236a9853396ba5",
+      "bytes": 44238,
+      "score": 100,
+      "ok": true
+    },
+    {
+      "name": "lumiere-or-M.png",
+      "sha256": "716b24672c72ff615d8b96d4b496b5eab65ff02a79e3bb4bafc30c1400a3e02a",
+      "bytes": 39033,
+      "score": 100,
+      "ok": true
+    },
+    {
+      "name": "vetro-nebbia-D.png",
+      "sha256": "7b8f8b3982b25c3066bd0b3eaadfe49c9b114a97b70c41a4bbe25cf0915dcc04",
+      "bytes": 52227,
+      "score": 100,
+      "ok": true
+    },
+    {
+      "name": "vetro-nebbia-T.png",
+      "sha256": "3a36b1d4d795254915bb55de1afac64b3a7109c732f1f909d0653d9c9af4e673",
+      "bytes": 44420,
+      "score": 100,
+      "ok": true
+    },
+    {
+      "name": "vetro-nebbia-M.png",
+      "sha256": "7b5e43d3a98bc32f2917785bc686658d9699bbb51bab4efd24afcac93c0499ab",
+      "bytes": 36693,
+      "score": 100,
+      "ok": true
+    },
+    {
+      "name": "sfilata-inchiostro-D.png",
+      "sha256": "1eed0f146a7a08b36be69cb20cfdffcd06771cc8466fc2e793dcff39126dc98e",
+      "bytes": 36390,
+      "score": 100,
+      "ok": true
+    },
+    {
+      "name": "sfilata-inchiostro-T.png",
+      "sha256": "786727102e43233d2547b625b7e1fa25fba8c30787d96442f2dc0ce8141bc96e",
+      "bytes": 36705,
+      "score": 100,
+      "ok": true
+    },
+    {
+      "name": "sfilata-inchiostro-M.png",
+      "sha256": "ce7ae0899959025b4a8a34cff78b2b15ad0cfa9333a037c58f376d247fc9f1ad",
+      "bytes": 23566,
+      "score": 100,
+      "ok": true
+    },
+    {
+      "name": "atelier-osso-D.png",
+      "sha256": "677fbe0d70b5b8645fed5a2d9851be3b850b4361010b7af439800542562bc58b",
+      "bytes": 33771,
+      "score": 100,
+      "ok": true
+    },
+    {
+      "name": "atelier-osso-T.png",
+      "sha256": "f3c0798fd1606eb8debf3678e4605386a49a28e27283512dd2820957ace2c206",
+      "bytes": 34873,
+      "score": 100,
+      "ok": true
+    },
+    {
+      "name": "atelier-osso-M.png",
+      "sha256": "12295940d60455f35e5174cda8d764f449f65ab56860ee4a1b634c922c18ca9f",
+      "bytes": 23547,
+      "score": 100,
+      "ok": true
+    },
+    {
+      "name": "sala-giardini-D.png",
+      "sha256": "723566bc9b2e04cab120e95b6d90b03f4725666f5980f5a5df5da38a102fdd84",
+      "bytes": 44048,
+      "score": 100,
+      "ok": true
+    },
+    {
+      "name": "sala-giardini-T.png",
+      "sha256": "1bee7f1935b4a7f44737681398f4e24f97e5295b6980a1e891aa48529737ee76",
+      "bytes": 36497,
+      "score": 100,
+      "ok": true
+    },
+    {
+      "name": "sala-giardini-M.png",
+      "sha256": "031c3260e4b6d62d48fd497820cb79f16b9c51893b764e1839852999e46444e1",
+      "bytes": 36335,
+      "score": 100,
+      "ok": true
+    },
+    {
+      "name": "studio-lino-D.png",
+      "sha256": "a53f230bf8a5c1992d39f39cfe2a30758db2ee1abc2935fedb58aea6937bedf6",
+      "bytes": 41156,
+      "score": 100,
+      "ok": true
+    },
+    {
+      "name": "studio-lino-T.png",
+      "sha256": "e76793376f10c4ce4004eb98949e1c49c5215bfb3d2b8e32be33a50e66f1d797",
+      "bytes": 34891,
+      "score": 100,
+      "ok": true
+    },
+    {
+      "name": "studio-lino-M.png",
+      "sha256": "1d7113b1ca55c961b23b0119be56de1a73f61f9a6637240585cf4453e42a2c40",
+      "bytes": 35336,
+      "score": 100,
+      "ok": true
+    },
+    {
+      "name": "nord-ledger-D.png",
+      "sha256": "328d8e64743f4b044adb14946635aa4373062d5b75a83604ff709e895ac13494",
+      "bytes": 47919,
+      "score": 100,
+      "ok": true
+    },
+    {
+      "name": "nord-ledger-T.png",
+      "sha256": "d584d8100282509b1b043ac018591605478e0efba2f04361b6361f06ecb60799",
+      "bytes": 48113,
+      "score": 100,
+      "ok": true
+    },
+    {
+      "name": "nord-ledger-M.png",
+      "sha256": "e0dad29bb0744b319856200a57e2ea33c40d10dff0f7e2111a07fd0f2ffacd77",
+      "bytes": 24998,
+      "score": 100,
+      "ok": true
+    },
+    {
+      "name": "orto-flusso-D.png",
+      "sha256": "01e46fdbd1a56359b726e45d49866b15139532a29676b6aadff23d834b5390cc",
+      "bytes": 45340,
+      "score": 100,
+      "ok": true
+    },
+    {
+      "name": "orto-flusso-T.png",
+      "sha256": "49b6b01be3e9c566018787064d61d4e2bb5c864e33e06b3cc53b4b264b51f916",
+      "bytes": 50221,
+      "score": 100,
+      "ok": true
+    },
+    {
+      "name": "orto-flusso-M.png",
+      "sha256": "67588fabe824afbd3ebeffc4fbc4a384183ad9a60b378fa5727af19fda06bce7",
+      "bytes": 26144,
+      "score": 100,
+      "ok": true
+    },
+    {
+      "name": "taglia-D.png",
+      "sha256": "b57a08a4cb2922850d21e26bc8b356306a87c36035b41d3785c58a66055d10c0",
+      "bytes": 46559,
+      "score": 100,
+      "ok": true
+    },
+    {
+      "name": "taglia-T.png",
+      "sha256": "c9e08a52f030ddb38f4bb19020f8134ff5c76115f380a14b0cb79cca8c48ad31",
+      "bytes": 48316,
+      "score": 100,
+      "ok": true
+    },
+    {
+      "name": "taglia-M.png",
+      "sha256": "4f480627c29e9efa9e4f53e2a5b90bc6011799b5e552dc5b6d543d239d6537ca",
+      "bytes": 35646,
+      "score": 100,
+      "ok": true
+    },
+    {
+      "name": "metro-tasca-D.png",
+      "sha256": "8e6562defb9321d21d9adb8168e4c0bc1101cf3328a733cf28c9821890b3b873",
+      "bytes": 39403,
+      "score": 100,
+      "ok": true
+    },
+    {
+      "name": "metro-tasca-T.png",
+      "sha256": "76a290cfbc7b4bc5e53ba1561eda8a52f761a36527ecbe8fa1fd7e22cbf48a74",
+      "bytes": 38424,
+      "score": 100,
+      "ok": true
+    },
+    {
+      "name": "metro-tasca-M.png",
+      "sha256": "9c872b69d541c1404c2f8ac7ba16532cf154559b059bc90a26882df9495d3d9a",
+      "bytes": 28473,
       "score": 100,
       "ok": true
     }

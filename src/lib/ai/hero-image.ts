@@ -1,4 +1,5 @@
 import { CRAFT_GALLERY_FILES } from "./craft-media.ts";
+import { heroPromptForBrief } from "./domain-imagery.ts";
 
 const XAI_IMAGES = "https://api.x.ai/v1/images/generations";
 const HERO_MAX_BYTES = 900_000;
@@ -39,7 +40,7 @@ export async function generateHeroUrl(
     signal,
     body: JSON.stringify({
       model: "grok-imagine-image-2.0",
-      prompt: `Photorealistic close-up of the craft itself (clay, kiln, tools, hands, vessels). No text, no logo, no watermark, no website, no UI, no screenshot, no browser chrome, no navbar, no form, no page collage. Subject: ${prompt.slice(0, 280)}`,
+      prompt: heroPromptForBrief(prompt),
       aspect_ratio: aspect,
       quality: "low",
       n: 1,
@@ -107,13 +108,14 @@ export function injectCraftHero(html: string) {
   return placeHeroMarkup(html, CRAFT_HERO_MARKUP);
 }
 
-export function injectHero(html: string, url: string) {
+export function injectHero(html: string, url: string, alt = "") {
   if (!html || !url || !isHeroSrc(url) || /["<>]/.test(url)) return html;
   if (isDataImageSrc(url) && !isPhoneApp(html)) return injectCraftHero(html);
   const phone = isPhoneApp(html);
+  const label = String(alt || "Oggetto del mestiere").replace(/["<>]/g, "").slice(0, 120);
   const img = phone
-    ? `<img class="fk-hero" src="${url}" alt="" width="400" height="400" style="width:100%;height:140px;object-fit:cover;border-radius:20px;display:block;margin:8px 0 12px" onerror="this.removeAttribute('src')"/>`
-    : `<img class="fk-hero" src="${url}" alt="" width="1600" height="900" style="width:100%;height:min(52vh,560px);min-height:280px;object-fit:cover;display:block" onerror="this.removeAttribute('src')"/>`;
+    ? `<img class="fk-hero" data-imagery="domain" src="${url}" alt="${label}" width="400" height="400" style="width:100%;height:140px;object-fit:cover;border-radius:20px;display:block;margin:8px 0 12px" onerror="this.removeAttribute('src')"/>`
+    : `<img class="fk-hero" data-imagery="domain" src="${url}" alt="${label}" width="1600" height="900" style="width:100%;height:min(52vh,560px);min-height:280px;object-fit:cover;display:block" onerror="this.removeAttribute('src')"/>`;
   return placeHeroMarkup(html, img);
 }
 

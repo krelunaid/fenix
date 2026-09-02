@@ -287,9 +287,9 @@ export const FASE3_SCORECARD: ScoreDimension[] = [
         id: "visual-regressions",
         points: 3,
         claim:
-          "CSS grezzo, schema gestionale, tabbar, palette fangose e gate grafico (Essenza scheletrica, token dal brief, D/T/M) hanno regressivi dedicati.",
+          "CSS grezzo, schema gestionale, tabbar, palette fangose e gate grafico (Essenza e tre geometrici rifiutati, dieci identità premium, token/varianti dal brief, D/T/M, protocollo cieco) hanno regressivi dedicati.",
         reproduce:
-          "npm test -- src/lib/projects/validate-html.test.ts src/lib/projects/dashboard-crud.test.ts src/lib/projects/preview-contrast.test.ts src/lib/projects/graphic-quality.test.ts src/lib/ai/graphic-quality-browser.test.ts",
+          "npm test -- src/lib/projects/validate-html.test.ts src/lib/projects/dashboard-crud.test.ts src/lib/projects/preview-contrast.test.ts src/lib/projects/graphic-quality.test.ts src/lib/ai/graphic-quality-browser.test.ts src/lib/ai/domain-imagery.test.ts src/lib/projects/blind-visual-benchmark.test.ts",
       },
       {
         id: "accessibility",
@@ -308,7 +308,7 @@ export const FASE3_SCORECARD: ScoreDimension[] = [
       },
     ],
     remaining:
-      "La dimensione qualità resta al massimo interno: il gate grafico blocca ready/pubblica su scheletri tipo Essenza e tre identità visive sono provate. Resta utile una valutazione comparativa cieca esterna, che non viene simulata nel repository e non equivale a un benchmark competitivo.",
+      "La dimensione qualità resta al massimo interno: il gate grafico blocca ready/pubblica su scheletri e sui tre geometrici (Maison/Sfilata/Sala), dieci identità premium sono provate, il protocollo cieco esiste. Il benchmark esterno non è disponibile e non conclude un confronto competitivo.",
   },
   {
     id: "reliability-deploy",

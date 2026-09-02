@@ -20,8 +20,10 @@ const DATA = `data:image/png;base64,${PNG.toString("base64")}`;
 describe("injectHero / materializeHero", () => {
   it("injects https and data image urls, rejects javascript", () => {
     const html = "<html><body><main></main></body></html>";
-    const https = injectHero(html, "https://cdn.example/a.jpg");
+    const https = injectHero(html, "https://cdn.example/a.jpg", "Flacone in vetro");
     assert.match(https, /class="fk-hero"/);
+    assert.match(https, /data-imagery="domain"/);
+    assert.match(https, /alt="Flacone in vetro"/);
     assert.match(https, /onerror="this.removeAttribute\('src'\)"/);
     const data = injectHero(html, DATA);
     assert.match(data, /fk-hero-craft/);

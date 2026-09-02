@@ -9,6 +9,7 @@ import type { Palette, ProjectKind } from "./types.ts";
 import type { ProjectFile } from "./files.ts";
 import { FENIX_DATA_API_RUNTIME } from "./fenix-data-api.ts";
 import { rewriteFenixCollections } from "./fenix-collection.ts";
+import { upgradeProductChrome } from "../ai/domain-imagery.ts";
 import {
   CONTRACT_REPAIR_MAX,
   contractAllowsReady,
@@ -131,6 +132,11 @@ export async function gateIncompleteHtml(input: {
     lockKind,
   );
   if (current.html !== input.result.html) input.onStage?.("Adatto Fenix");
+  const chrome = upgradeProductChrome(current.html, input.prompt);
+  if (chrome !== current.html) {
+    current = { ...current, html: chrome };
+    input.onStage?.("Imagery di dominio");
+  }
 
   const assess = (product: GatedProduct) =>
     assessProduct({
@@ -168,6 +174,7 @@ export async function gateIncompleteHtml(input: {
         { ...fixed, kind: lockKind || fixed.kind, files: fixed.files ?? current.files },
         lockKind,
       );
+      current = { ...current, html: upgradeProductChrome(current.html, input.prompt) };
       scored = assess(current);
       if (scored.ok)
         return { result: current, report: scored.report, evaluation: scored.evaluation };

@@ -4,7 +4,7 @@ Aggiornato il 2 settembre 2026. Questa matrice separa tre cose che non vanno con
 
 1. la scorecard interna Fenix, arrivata al proprio tetto di prova 100/100;
 2. le funzionalità che Emergent dichiara nelle proprie pagine pubbliche;
-3. un confronto testa-a-testa, che non è ancora stato eseguito.
+3. un confronto testa-a-testa, che non è ancora stato eseguito. Protocollo cieco interno: sì. Benchmark esterno: non disponibile.
 
 Le fonti correnti e i dieci assi sono codificati in `emergent-competitive-benchmark.ts`. Le dichiarazioni del concorrente restano dichiarazioni del concorrente: non valgono come prova di comportamento. Fenix conta soltanto test, artifact, commit e deploy riproducibili.
 

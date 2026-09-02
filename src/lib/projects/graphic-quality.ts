@@ -2,7 +2,7 @@
  * Graphic quality gate. Compilation is not enough for ready/publish.
  * Structured, reproducible findings. No self-assigned scores without evidence.
  */
-import { familyFromBrief, tokensFromBrief, type TokenFamily } from "./design-tokens.ts";
+import { familyFromBrief, isProductFamily, tokensFromBrief, type TokenFamily } from "./design-tokens.ts";
 import { looksLikeIosWidgetHome } from "./craft-icons.ts";
 import { auditCraft, extractCssVars } from "./visual-quality.ts";
 
@@ -48,6 +48,9 @@ const CLONE_FACE = /San Francisco|\bSF Pro\b|-apple-system|BlinkMacSystemFont/i;
 const PLACEHOLDER_GRAY = /background(?:-color)?\s*:\s*(?:#(?:c{3,6}|d{3,6}|e5e5e5|eeeeee)|gray(?:text)?)/i;
 const DEAD_MINHEIGHT = /min-height\s*:\s*(?:[5-9]\d|1[0-9]\d)vh/i;
 const WEAK_CTA = />(?:Salva|Rimuovi|OK|Invia)<\/button>/gi;
+const HOTLINK = /images\.unsplash\.com|emergent\.sh\/|apple\.com\/[^\s"']+\.(?:png|jpe?g|webp|gif|svg)/i;
+const BOXED_APP = /\.app\s*\{[^}]*width\s*:\s*min\(\s*(?:1000|1040|1080|1100)px/i;
+const PRODUCT_STAGE = /class=["'][^"']*\b(?:hero|sil|look)\b/i;
 
 function finding(
   axis: GraphicAxis,
@@ -81,8 +84,37 @@ function count(re: RegExp, src: string): number {
   return (String(src || "").match(re) || []).length;
 }
 
-function isProductFamily(family: TokenFamily | "unknown"): boolean {
-  return family === "perfume" || family === "fashion" || family === "booking";
+function silBlocks(html: string): string[] {
+  return String(html || "").match(/<div[^>]*class=["'][^"']*\bsil\b[^"']*["'][^>]*>[\s\S]*?<\/div>/gi) || [];
+}
+
+function hasDomainMark(html: string): boolean {
+  return /data-imagery\s*=\s*(?:\\?["']|")domain(?:\\?["']|")/i.test(html);
+}
+
+function abstractImagery(html: string): boolean {
+  if (!PRODUCT_STAGE.test(html)) return false;
+  if (hasDomainMark(html)) return false;
+  return true;
+}
+
+function cardClone(html: string): boolean {
+  if (hasDomainMark(html)) return false;
+  const css = html.match(/\.sil\s*\{[^}]+\}/i)?.[0] || "";
+  const emptySil = /<div[^>]*class=["'][^"']*\bsil\b[^"']*["'][^>]*>\s*<\/div>/i.test(html);
+  if (emptySil && /linear-gradient/i.test(css)) return true;
+  const sils = silBlocks(html);
+  if (sils.length < 3) return false;
+  const original = sils.filter((s) => /<svg[\s\S]{180,}/i.test(s) || /<img\b/i.test(s));
+  return original.length === 0;
+}
+
+function emptyProductAlt(html: string): boolean {
+  const tags = String(html || "").match(/<img\b[^>]*>/gi) || [];
+  return tags.some((tag) => {
+    if (!/fk-hero|\bhero\b|data-imagery=["']domain["']/i.test(tag)) return false;
+    return !/\balt=/.test(tag) || /\balt=(""|'')/.test(tag);
+  });
 }
 
 export type RenderedGraphicMetrics = {
@@ -107,7 +139,9 @@ export function collectRenderedGraphic(): RenderedGraphicMetrics {
   const area = Math.max(1, rect.width * rect.height);
   let covered = 0;
   const colors = new Set<string>();
-  for (const el of main.querySelectorAll<HTMLElement>("h1,h2,h3,p,li,article,button,a,img,svg,figure,label,td,dt,dd")) {
+  for (const el of main.querySelectorAll<HTMLElement>(
+    "h1,h2,h3,p,li,article,button,a,img,svg,figure,label,td,th,dt,dd,span,b,strong,time,table,.hero,.sil,.look,.card,.kpi,.day,.measure,.fragrance",
+  )) {
     const b = el.getBoundingClientRect();
     if (b.width < 8 || b.height < 8) continue;
     const interW = Math.max(0, Math.min(rect.right, b.right) - Math.max(rect.left, b.left));
@@ -129,7 +163,7 @@ export function collectRenderedGraphic(): RenderedGraphicMetrics {
     mainChars: text.length,
     headingCount: document.querySelectorAll("h1,h2,h3").length,
     visibleImages: images,
-    visibleCards: document.querySelectorAll("article, .card, .look, .slot, .fragrance, .fk-tile").length,
+    visibleCards: document.querySelectorAll("article, .card, .look, .slot, .fragrance, .fk-tile, .kpi, .measure").length,
     emptyStateVisible: /nessun elemento/i.test(text),
     rowCount: document.querySelectorAll("[data-id], article, .card, li, tr").length,
     deadRatio: Math.max(0, 1 - covered / area),
@@ -153,6 +187,7 @@ export function auditGraphicQuality(
   const body = markup(text);
   const findings: GraphicFinding[] = [];
   const craft = auditCraft(text);
+  const product = isProductFamily(family);
 
   const cloneSet = CLONE_GRAY.test(text) && CLONE_BLUE.test(text) && CLONE_FACE.test(text);
   if (cloneSet) {
@@ -205,7 +240,7 @@ export function auditGraphicQuality(
     .filter(Boolean);
   const genericNav =
     tabLabels.length >= 4 && tabLabels.filter((l) => GENERIC_TABS.test(l)).length >= 3;
-  if (genericNav && isProductFamily(family)) {
+  if (genericNav && product) {
     findings.push(
       finding(
         "hierarchy",
@@ -236,7 +271,7 @@ export function auditGraphicQuality(
   }
 
   const imgs = count(/<img\b/gi, text) + count(/<svg\b/gi, text) + count(/class=["'][^"']*hero/gi, text);
-  if (isProductFamily(family) && imgs < 2) {
+  if (product && imgs < 2) {
     findings.push(
       finding(
         "imagery",
@@ -248,11 +283,65 @@ export function auditGraphicQuality(
     );
   }
 
+  if (product && abstractImagery(text)) {
+    findings.push(
+      finding(
+        "imagery",
+        "fail",
+        "abstract-imagery",
+        "Hero/card con forme geometriche o gradienti al posto di imagery di dominio.",
+        "manca data-imagery=domain su .hero/.sil/.look",
+      ),
+    );
+  }
+
+  if (product && cardClone(text)) {
+    findings.push(
+      finding(
+        "imagery",
+        "fail",
+        "card-clone",
+        "Tre o più card clone con lo stesso gradiente e senza illustrazione.",
+        `${silBlocks(text).length} .sil vuoti`,
+      ),
+    );
+  }
+
+  if (product && BOXED_APP.test(text)) {
+    findings.push(
+      finding(
+        "density",
+        "fail",
+        "boxed-canvas",
+        "Desktop boxed (max 1080/1100) con bande vuote ai lati.",
+        ".app width:min(1080px) o 1100px",
+      ),
+    );
+  }
+
+  if (HOTLINK.test(text)) {
+    findings.push(
+      finding(
+        "imagery",
+        "fail",
+        "hotlink-stock",
+        "Hotlink di stock (Unsplash/Emergent/Apple) al posto di asset originali.",
+        (text.match(HOTLINK) || ["hotlink"])[0],
+      ),
+    );
+  }
+
+  if (product && emptyProductAlt(text)) {
+    findings.push(
+      finding("a11y", "fail", "empty-alt", "Imagery di prodotto senza alt text.", "img hero alt vuoto"),
+    );
+  }
+
   const vars = extractCssVars(text);
   const terracotta =
     (TERRACOTTA_BG.test(vars.bg || "") || TERRACOTTA_BG.test(text.slice(0, 2500))) &&
     (TERRACOTTA_ACCENT.test(vars.accent || "") || TERRACOTTA_ACCENT.test(text.slice(0, 2500)));
-  if (terracotta && isProductFamily(family) && family !== "ceramic") {
+  if (terracotta && product && family !== "ceramic") {
     findings.push(
       finding(
         "color",
@@ -264,7 +353,7 @@ export function auditGraphicQuality(
     );
   }
 
-  if (PLACEHOLDER_GRAY.test(text) && isProductFamily(family)) {
+  if (PLACEHOLDER_GRAY.test(text) && product) {
     findings.push(
       finding("imagery", "fail", "gray-placeholder", "Placeholder grigi al posto di materiali.", "background #ccc/#ddd"),
     );
@@ -280,7 +369,7 @@ export function auditGraphicQuality(
     findings.push(
       finding("density", "fail", "empty-main", "Schermata quasi vuota.", `testo visibile ${vis.length} caratteri`),
     );
-  } else if (vis.length < 160 && isProductFamily(family)) {
+  } else if (vis.length < 160 && product) {
     findings.push(
       finding("density", "fail", "sparse-product", "Prodotto di mestiere con home troppo sparsa.", `chars=${vis.length}`),
     );
@@ -288,7 +377,7 @@ export function auditGraphicQuality(
 
   const nativeInputs = count(/<(?:input|select|textarea)\b(?![^>]*class=)/gi, text);
   const styledInputs = count(/<(?:input|select|textarea)\b[^>]*class=/gi, text);
-  if (nativeInputs >= 2 && styledInputs === 0 && isProductFamily(family)) {
+  if (nativeInputs >= 2 && styledInputs === 0 && product) {
     findings.push(
       finding(
         "controls",
@@ -302,7 +391,7 @@ export function auditGraphicQuality(
 
   const weakCtas = count(WEAK_CTA, text);
   const strongCtas = count(/<(?:button|a)[^>]*>[^<]{6,40}<\/(?:button|a)>/gi, text);
-  if (isProductFamily(family) && weakCtas >= 2 && strongCtas < 2) {
+  if (product && weakCtas >= 2 && strongCtas < 2) {
     findings.push(
       finding("controls", "fail", "weak-cta", "CTA deboli (solo Salva/Rimuovi).", `weak=${weakCtas}`),
     );
@@ -328,18 +417,19 @@ export function auditGraphicQuality(
         ),
       );
     }
-    if (rendered.deadRatio > 0.78) {
+    const deadLimit = product ? 0.58 : 0.78;
+    if (rendered.deadRatio > deadLimit) {
       findings.push(
         finding(
           "density",
           "fail",
           "dead-zone-render",
           "Dead zone misurata: gran parte del main senza contenuto.",
-          `deadRatio=${rendered.deadRatio.toFixed(2)}`,
+          `deadRatio=${rendered.deadRatio.toFixed(2)} limit=${deadLimit}`,
         ),
       );
     }
-    if (isProductFamily(family) && rendered.visibleImages < 1) {
+    if (product && rendered.visibleImages < 1) {
       findings.push(
         finding("imagery", "fail", "no-image-render", "Nessuna immagine visibile nel viewport.", `images=${rendered.visibleImages}`),
       );
@@ -357,7 +447,7 @@ export function auditGraphicQuality(
         finding("console", "fail", "console-error", "Errori in console.", `n=${rendered.consoleErrors}`),
       );
     }
-    if (rendered.uniqueTextColors <= 1 && isProductFamily(family)) {
+    if (rendered.uniqueTextColors <= 1 && product) {
       findings.push(
         finding("color", "warn", "flat-ink", "Un solo inchiostro visibile, gerarchia debole.", `colors=${rendered.uniqueTextColors}`),
       );
