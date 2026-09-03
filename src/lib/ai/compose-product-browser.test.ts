@@ -537,6 +537,87 @@ describe("graphic pipeline visual QA D/T/M", () => {
                 );
               }
             }
+            if (["locanda-pietra", "hotel-notte"].includes(fix.id)) {
+              const rooms = await page.evaluate(() =>
+                [...document.querySelectorAll(".room")].map((el) => {
+                  const h2 = el.querySelector("h2")?.getBoundingClientRect();
+                  return {
+                    title: el.querySelector("h2")?.textContent || "",
+                    room: el.querySelector("[data-room]")?.getAttribute("data-room") || "",
+                    parts: [...el.querySelectorAll("[data-part]")].map((n) => n.getAttribute("data-part") || ""),
+                    titleH: h2?.height || 0,
+                    titleW: h2?.width || 0,
+                  };
+                }),
+              );
+              assert.ok(rooms.length >= 4, `${fix.id}/${vp} rooms ${rooms.length}`);
+              for (const r of rooms) {
+                assert.ok(r.titleH >= 14 && r.titleW >= 40, `${fix.id}/${vp} room title ${r.title} ${r.titleW}x${r.titleH}`);
+                const expected = /pozzo/i.test(r.title)
+                  ? "pozzo"
+                  : /olivo/i.test(r.title)
+                    ? "olivo"
+                    : /fienile/i.test(r.title)
+                      ? "fienile"
+                      : /salice/i.test(r.title)
+                        ? "salice"
+                        : /champagne/i.test(r.title)
+                          ? "champagne"
+                          : /inchiostro/i.test(r.title)
+                            ? "inchiostro"
+                            : /attico/i.test(r.title)
+                              ? "attico"
+                              : /silenzio/i.test(r.title)
+                                ? "silenzio"
+                                : "";
+                if (expected) assert.equal(r.room, expected, `${fix.id}/${vp} ${r.title} -> ${r.room}`);
+              }
+              assert.ok(new Set(rooms.map((r) => r.room).filter(Boolean)).size >= 4, `${fix.id}/${vp} room diversity`);
+              if (vp !== "M") {
+                const fps = await paintFingerprints(page, ".room .thumb svg");
+                if (fps.length >= 2) {
+                  for (let i = 0; i < fps.length; i++) {
+                    for (let j = i + 1; j < fps.length; j++) {
+                      const d = fingerprintDistance(fps[i]!, fps[j]!);
+                      assert.ok(d >= 24, `${fix.id}/${vp} room ${i}/${j} look the same (dist ${d.toFixed(1)})`);
+                    }
+                  }
+                }
+              }
+            }
+            if (fix.id === "essenza-or" || fix.id === "essenza-ice") {
+              const frags = await page.evaluate(() =>
+                [...document.querySelectorAll(".fragrance")].map((el) => ({
+                  title: el.querySelector("h2")?.textContent || "",
+                  bottle: el.querySelector("[data-bottle]")?.getAttribute("data-bottle") || "",
+                })),
+              );
+              assert.ok(frags.length >= 4, `${fix.id}/${vp} bottles ${frags.length}`);
+              for (const f of frags) {
+                const ice = fix.id === "essenza-ice";
+                let expected = "";
+                if (/nuit|sale adriatico/i.test(f.title)) expected = ice ? "sale" : "nuit";
+                else if (/acqua|nebbia/i.test(f.title)) expected = ice ? "nebbia" : "acqua";
+                else if (/fleur|pino/i.test(f.title)) expected = ice ? "pino" : "fleur";
+                else if (/pelle|vetro/i.test(f.title)) expected = ice ? "vetro" : "pelle";
+                if (expected) assert.equal(f.bottle, expected, `${fix.id}/${vp} ${f.title} -> ${f.bottle}`);
+              }
+              assert.ok(new Set(frags.map((f) => f.bottle).filter(Boolean)).size >= 4, `${fix.id}/${vp} bottle diversity`);
+            }
+            if (fix.id === "nord-desk") {
+              const desk = await page.evaluate(() => {
+                const sparks = [...document.querySelectorAll(".kpi .spark")].map((s) =>
+                  [...s.querySelectorAll("i")].map((i) => (i as HTMLElement).style.height || "").join("|"),
+                );
+                const lanes = [...document.querySelectorAll("[data-lane]")].map((n) => n.getAttribute("data-lane") || "");
+                const kpis = [...document.querySelectorAll("[data-kpi]")].map((n) => n.getAttribute("data-kpi") || "");
+                return { sparks, lanes, kpis };
+              });
+              assert.ok(desk.sparks.length >= 3, `${fix.id}/${vp} sparks ${desk.sparks.length}`);
+              assert.ok(new Set(desk.sparks).size >= 3, `${fix.id}/${vp} cloned sparks ${desk.sparks.join(" / ")}`);
+              assert.equal(new Set(desk.lanes.filter(Boolean)).size, 4, `${fix.id}/${vp} lanes ${desk.lanes}`);
+              assert.ok(desk.kpis.includes("book") && desk.kpis.includes("ticket"), `${fix.id}/${vp} kpi ${desk.kpis}`);
+            }
             const tabs = page.locator("button[data-view]");
             if ((await tabs.count()) > 1) {
               await tabs.nth(1).click();

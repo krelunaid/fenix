@@ -162,5 +162,27 @@ describe("domain imagery", () => {
     const oldCapsule = "c16-28 48-40 72-28 24-12 56 0 72 28";
     assert.ok(GEOMETRIC_REGRESSIONS.some((r) => r.test(oldCapsule)));
     assert.equal(GEOMETRIC_REGRESSIONS.some((r) => r.test(domainIllustration("fashion", 0, "c", 0))), false);
+    const locandaRooms = [0, 1, 2, 3].map((s) => materialSignature(domainIllustration("hospitality", 0, "camera", s)).room);
+    assert.deepEqual(locandaRooms, ["pozzo", "olivo", "fienile", "salice"]);
+    const hotelRooms = [0, 1, 2, 3].map((s) => materialSignature(domainIllustration("hospitality", 1, "suite", s)).room);
+    assert.deepEqual(hotelRooms, ["champagne", "inchiostro", "attico", "silenzio"]);
+    const bottles = [0, 1, 2, 3].map((s) => materialSignature(domainIllustration("perfume", 0, "flacone", s)).bottle);
+    assert.deepEqual(bottles, ["nuit", "acqua", "fleur", "pelle"]);
+    const ice = [0, 1, 2, 3].map((s) => materialSignature(domainIllustration("perfume", 1, "vetro", s)).bottle);
+    assert.deepEqual(ice, ["sale", "nebbia", "pino", "vetro"]);
+    const mill = materialSignature(domainIllustration("ops", 0, "ledger", 0));
+    assert.equal(mill.scenes.includes("mill") || mill.parts.includes("mill"), true, `ops mill ${mill.scenes} ${mill.parts}`);
+    const shears = materialSignature(domainIllustration("utility", 0, "taglio", 0));
+    assert.equal(shears.tool, "shears");
+    for (const family of ["hospitality", "perfume", "ops"] as const) {
+      for (const variant of [0, 1] as const) {
+        for (const slot of [0, 1, 2, 3]) {
+          const svg = domainIllustration(family, variant, family, slot);
+          for (const re of GEOMETRIC_REGRESSIONS) {
+            assert.equal(re.test(svg), false, `${family}/${variant}/${slot} ${re}`);
+          }
+        }
+      }
+    }
   });
 });

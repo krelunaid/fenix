@@ -83,7 +83,15 @@ describe("graphic pipeline prompt→plan→generate→visual→QA", () => {
         assert.doesNotMatch(run.generated.html, /ops-hero/);
         assert.match(run.generated.html, /table-wrap/);
         assert.match(run.generated.html, /data-act="advance"/);
+        assert.match(run.generated.html, /data-lane=/);
+        assert.match(run.generated.html, /function spark\(seed/);
+        assert.match(run.generated.html, /data-kpi=/);
+        assert.match(run.generated.html, /ledger-art/);
+        assert.doesNotMatch(run.generated.html, /height:40%[\s\S]*height:70%[\s\S]*height:55%[\s\S]*height:90%[\s\S]*height:62%/);
       }
+      assert.match(run.generated.html, /--t-h1:/);
+      assert.match(run.generated.html, /--t-h2:/);
+      assert.match(run.generated.html, /--ink-quiet:/);
       if (run.tokens.family !== "ceramic") {
         assert.doesNotMatch(run.generated.html.slice(0, 2500), /#efe6d4/);
       }
@@ -142,6 +150,19 @@ describe("graphic pipeline prompt→plan→generate→visual→QA", () => {
     );
     assert.match(osso.html, /Cappotto latte/);
     assert.match(osso.html, /data-garment=\\"skirt\\"/);
+    const locanda = composeProduct(HARD[2]!);
+    assert.match(locanda.html, /data-room="pozzo"/);
+    assert.match(locanda.html, /data-room=\\"olivo\\"/);
+    assert.match(locanda.html, /data-room=\\"fienile\\"/);
+    assert.match(locanda.html, /data-room=\\"salice\\"/);
+    assert.match(locanda.html, /grid-row:1 \/ span 2/);
+    const essenza = composeProduct(HARD[0]!);
+    assert.match(essenza.html, /data-bottle="nuit"/);
+    assert.match(essenza.html, /data-bottle=\\"acqua\\"/);
+    assert.match(essenza.html, /var plates=\[hero\]/);
+    const nord = composeProduct(HARD[4]!);
+    assert.match(nord.html, /data-lane=/);
+    assert.match(nord.html, /function spark\(seed/);
   });
 
   it("produces two really different directions for perfume, fashion and hospitality", () => {

@@ -124,6 +124,30 @@ const NAV_ICONS = {
   diff: navIcon(
     '<path d="M6.4 8h11.2M6.4 12h8M6.4 16h11.2"/><path d="M17.6 10.2v3.6M15.8 12h3.6"/>',
   ),
+  today: navIcon(
+    '<rect x="6.2" y="7.4" width="11.6" height="10.2" rx="1.2"/><path d="M8.6 7.4V5.8M15.4 7.4V5.8M6.2 10.4h11.6"/><path d="M9.2 13.2h2M13.4 13.2h2"/>',
+  ),
+  archive: navIcon(
+    '<path d="M6.2 8.2h11.6v10.2H6.2z"/><path d="M5.6 5.8h12.8v2.4H5.6z"/><path d="M10.2 12.4h3.6"/>',
+  ),
+  report: navIcon(
+    '<rect x="6.4" y="5.6" width="11.2" height="12.8" rx="1.1"/><path d="M8.8 14.8V11M12 14.8V8.6M15.2 14.8v-4"/>',
+  ),
+  info: navIcon(
+    '<rect x="6.4" y="5.6" width="11.2" height="12.8" rx="1.2"/><path d="M12 10.2v5M12 7.6h.01"/>',
+  ),
+  coins: navIcon(
+    '<ellipse cx="12" cy="9.2" rx="6.2" ry="2.6"/><path d="M5.8 9.2v3.4c0 1.4 2.8 2.6 6.2 2.6s6.2-1.2 6.2-2.6V9.2"/><path d="M5.8 12.6v3.2c0 1.4 2.8 2.6 6.2 2.6s6.2-1.2 6.2-2.6v-3.2"/>',
+  ),
+  climate: navIcon(
+    '<circle cx="9.4" cy="10.2" r="2.4"/><path d="M12.2 8.6a4.2 4.2 0 0 1 5.2 4H9.6"/><path d="M8.2 16.6h8.4M10.2 18.4h4.8"/>',
+  ),
+  back: navIcon(
+    '<path d="M11.2 7.2 6.6 12l4.6 4.8"/><path d="M6.8 12h10.6"/><path d="M17.4 12v5.2"/>',
+  ),
+  week: navIcon(
+    '<rect x="5.8" y="6.4" width="12.4" height="11.2" rx="1.2"/><path d="M5.8 10h12.4"/><path d="M8.2 13.2h.01M12 13.2h.01M15.8 13.2h.01M8.2 16h.01M12 16h.01"/>',
+  ),
 } as const;
 
 const NAV_FALLBACKS = [NAV_ICONS.book, NAV_ICONS.pencil, NAV_ICONS.atelier, NAV_ICONS.kanban] as const;
@@ -167,6 +191,14 @@ export function craftNavIcon(tab: { id: string; label: string }, index = 0): str
   else if (/rami|branch/.test(key)) svg = NAV_ICONS.branch;
   else if (/sync/.test(key)) svg = NAV_ICONS.sync;
   else if (/scarto|diff/.test(key)) svg = NAV_ICONS.diff;
+  else if (/oggi|giorno/.test(key)) svg = NAV_ICONS.today;
+  else if (/archivio/.test(key)) svg = NAV_ICONS.archive;
+  else if (/rapporti|report/.test(key)) svg = NAV_ICONS.report;
+  else if (/info|scheda/.test(key)) svg = NAV_ICONS.info;
+  else if (/casse|conti/.test(key)) svg = NAV_ICONS.coins;
+  else if (/clima|meteo/.test(key)) svg = NAV_ICONS.climate;
+  else if (/resa|ritorno/.test(key)) svg = NAV_ICONS.back;
+  else if (/settimana/.test(key)) svg = NAV_ICONS.week;
   else if (/atelier|laboratorio|studio/.test(key)) svg = NAV_ICONS.atelier;
   if (isLetterAIcon(svg)) svg = NAV_ICONS.book;
   return svg;

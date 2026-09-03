@@ -6,6 +6,7 @@ import {
   BLIND_RUBRIC,
   EXTERNAL_BENCHMARK,
   blindProtocolVerdict,
+  collectVisualEvidence,
   runBlindTrial,
   shufflePair,
 } from "./blind-visual-benchmark.ts";
@@ -64,6 +65,12 @@ describe("blind visual benchmark protocol", () => {
     const imgP = premiumSlot.criteria.find((c) => c.id === "imagery")!.score;
     const imgL = legacySlot.criteria.find((c) => c.id === "imagery")!.score;
     assert.ok(imgP > imgL, `imagery delta ${imgP} vs ${imgL}`);
+    const typP = premiumSlot.criteria.find((c) => c.id === "typography")!.score;
+    const typL = legacySlot.criteria.find((c) => c.id === "typography")!.score;
+    assert.ok(typP !== 8 || typL !== 8, "default-8 tautological rubric is forbidden");
+    const evP = collectVisualEvidence(premium.html);
+    const evL = collectVisualEvidence(legacy.html);
+    assert.ok(evP.domain || evP.semantic > evL.semantic, "premium must show domain evidence");
   });
 
   it("declares the external set unavailable and does not assign parity", () => {

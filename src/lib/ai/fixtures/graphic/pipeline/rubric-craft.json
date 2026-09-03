@@ -1,0 +1,58 @@
+{
+  "against": "e5c0884cfa4beed7c128eb8b94f81ee8e820cc87",
+  "slice": "type ramp + domain rooms/bottles + ops sparks + evidence rubric",
+  "visualScoreHonest": 95,
+  "externalParity": false,
+  "externalBenchmark": "benchmark esterno non disponibile",
+  "claim100": false,
+  "independentPrior": 93,
+  "priorSlice": "7812483c7d7066bf62d4a59a3818dd91661237ab",
+  "axes": {
+    "navIcons": {
+      "before": 92,
+      "after": 93,
+      "note": "Added today/archive/report/info/coins/climate/back/week glyphs. Existing 24-box round-join craft nav kept. CRAFT_TAB_ICONS Apple rewrite untouched."
+    },
+    "typeSystems": {
+      "before": 88,
+      "after": 93,
+      "note": "--t-h1/--t-h2/--ink-quiet/--ink-loud in product CSS. Look/room/ticket notes use quiet ink so uniqueTextColors > 1. Caption overlay stronger."
+    },
+    "imagery": {
+      "before": 91,
+      "after": 94,
+      "note": "Hospitality rooms: pozzo well, olivo grove+terrace, fienile beams, salice willow+water; hotel champagne/inchiostro/attico/silenzio. Perfume bottles tagged nuit/acqua/fleur/pelle and ice pair. Ops mill/light/dock/yarn instead of cloned bars. Still procedural SVG, not photography."
+    },
+    "semanticDiversity": {
+      "before": 93,
+      "after": 95,
+      "note": "Room titles map 1:1 onto data-room. Fragrance titles map 1:1 onto data-bottle. Fashion/food/editorial 1:1 kept. Nord KPI sparks are data-driven, four distinct series, four lane accents."
+    },
+    "emptySpaceHierarchy": {
+      "before": 91,
+      "after": 93,
+      "note": "Hospitality D/T featured room spans two rows like lookbook. Hero hidden on desktop so the plate is the room, not a stretched phone banner."
+    },
+    "opsDesk": {
+      "before": 90,
+      "after": 94,
+      "note": "Book/open/won/ticket KPIs with tabular euros, unique sparks, lane top-accents, ledger-art mill strip. No ops-hero, no cloned 40/70/55/90/62 bars."
+    },
+    "interaction": {
+      "before": 90,
+      "after": 90,
+      "note": "in prova / data-state=on kept. Hover/pressed/loading/empty/success gates kept D/T/M."
+    }
+  },
+  "nonTautological": [
+    "blind rubric scores evidence (type ramp, data-room/bottle/garment/dish/scene, unique nav, breakpoints) instead of default 8",
+    "hospitality slots 0-3 require data-room pozzo/olivo/fienile/salice (or hotel champagne/inchiostro/attico/silenzio)",
+    "perfume slots 0-3 require data-bottle nuit/acqua/fleur/pelle or sale/nebbia/pino/vetro",
+    "room title Camera Pozzo|Suite Olivo|... must equal data-room",
+    "fragrance title Bois de Nuit|Acqua Chiara|... must equal data-bottle",
+    "nord-desk: four spark series pairwise distinct; four data-lane values; data-kpi book+ticket",
+    "spark() is seed-driven; hardcoded 40/70/55/90/62 is a regression",
+    "look/room notes use --ink-quiet so uniqueTextColors > 1 (flat-ink warn is real)",
+    "EXTERNAL_BENCHMARK.available === false"
+  ]
+}
