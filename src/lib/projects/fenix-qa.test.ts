@@ -345,6 +345,13 @@ describe("focus-visible and worker model", () => {
     assert.match(harness, /instrumentBrowser/);
     assert.match(harness, /browser\.newContext/);
     assert.match(harness, /fonts\.googleapis\.com/);
+    assert.match(harness, /LAUNCH_TIMEOUT_MS = 30_000/);
+    assert.match(harness, /timeout:\s*LAUNCH_TIMEOUT_MS/);
+    assert.match(harness, /CLOSE_TIMEOUT_MS = 5_000/);
+    assert.match(harness, /isTransientLaunchError/);
+    assert.match(harness, /sweepStaleChromium/);
+    assert.match(harness, /launchChromiumWith/);
+    assert.match(harness, /isPlaywrightChromiumProcess/);
     const testFiles = readdirSync(join(root, "src"), { recursive: true, encoding: "utf8" }) as string[];
     for (const rel of testFiles) {
       if (!rel.endsWith(".test.ts")) continue;
