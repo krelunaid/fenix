@@ -349,9 +349,18 @@ describe("focus-visible and worker model", () => {
     assert.match(harness, /timeout:\s*LAUNCH_TIMEOUT_MS/);
     assert.match(harness, /CLOSE_TIMEOUT_MS = 5_000/);
     assert.match(harness, /isTransientLaunchError/);
-    assert.match(harness, /sweepStaleChromium/);
     assert.match(harness, /launchChromiumWith/);
-    assert.match(harness, /isPlaywrightChromiumProcess/);
+    assert.match(harness, /withChromiumLease/);
+    assert.match(harness, /sweepOwnedLaunch/);
+    assert.match(harness, /resolveInsideRoot/);
+    assert.match(harness, /RETRY_BACKOFF_MS/);
+    assert.match(harness, /pidOwningDir/);
+    assert.match(harness, /chromium\.launch\(/);
+    assert.doesNotMatch(harness, /sweepStaleChromium/);
+    assert.doesNotMatch(harness, /isPlaywrightChromiumProcess/);
+    assert.doesNotMatch(harness, /launchServer/);
+    assert.doesNotMatch(harness, /chromium\.connect\(/);
+    assert.doesNotMatch(harness, /playwright_chromiumdev_profile-/);
     const testFiles = readdirSync(join(root, "src"), { recursive: true, encoding: "utf8" }) as string[];
     for (const rel of testFiles) {
       if (!rel.endsWith(".test.ts")) continue;

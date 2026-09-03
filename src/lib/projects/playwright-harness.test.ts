@@ -1,5 +1,14 @@
 import assert from "node:assert/strict";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { spawn } from "node:child_process";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, it } from "node:test";
@@ -9,14 +18,15 @@ import { prepareSrcDoc } from "./color-scheme.ts";
 import { waitForFenixReady } from "../../../scripts/fenix-ready.mjs";
 import {
   isLocalTestUrl,
-  isPlaywrightChromiumCmdline,
-  isPlaywrightChromiumProcess,
   isTransientLaunchError,
   launchChromium,
   launchChromiumWith,
   LAUNCH_TIMEOUT_MS,
+  pidOwningDir,
   PUBLIC_TEST_BLOCK,
-  sweepStaleChromium,
+  resolveInsideRoot,
+  RETRY_BACKOFF_MS,
+  sweepOwnedLaunch,
 } from "./playwright-harness.ts";
 
 const STUDIO_HEAD = `<!DOCTYPE html><html><head>
@@ -27,6 +37,15 @@ const STUDIO_HEAD = `<!DOCTYPE html><html><head>
 <section class="hidden md:block"><div class="pointer-events-none absolute inset-x-0 top-0 z-20">overlay</div></section>
 <button type="button">Versioni</button>
 </body></html>`;
+
+function alive(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 describe("playwright harness isolates public network", () => {
   it("allows loopback and data URLs, blocks CDN and Railway", () => {
@@ -107,26 +126,30 @@ describe("playwright harness bounds Chromium spawn", () => {
   it("keeps launch timeout finite and no higher than Playwright's default", () => {
     assert.equal(LAUNCH_TIMEOUT_MS, 30_000);
     assert.ok(LAUNCH_TIMEOUT_MS > 0);
+    assert.ok(RETRY_BACKOFF_MS > 0);
+    assert.ok(RETRY_BACKOFF_MS <= 200);
   });
 
-  it("retries only a transient launch after sweep, never an assertion", async () => {
+  it("retries only a transient launch after bounded backoff, never an assertion", async () => {
     let launches = 0;
-    let swept = 0;
+    let cleaned = 0;
     const fake = { isConnected: () => true } as unknown as Browser;
+    const started = Date.now();
     const browser = await launchChromiumWith(
       async () => {
         launches += 1;
         if (launches === 1) throw new Error("Timeout 30000ms exceeded.");
         return fake;
       },
-      { sweep: () => { swept += 1; } },
+      { onTransient: () => { cleaned += 1; }, backoffMs: 40 },
     );
     assert.equal(browser, fake);
     assert.equal(launches, 2);
-    assert.equal(swept, 1);
+    assert.equal(cleaned, 1);
+    assert.ok(Date.now() - started >= 40, "transient retry skipped backoff");
 
     launches = 0;
-    swept = 0;
+    cleaned = 0;
     await assert.rejects(
       () =>
         launchChromiumWith(
@@ -134,78 +157,137 @@ describe("playwright harness bounds Chromium spawn", () => {
             launches += 1;
             throw new assert.AssertionError({ message: "product gate" });
           },
-          { sweep: () => { swept += 1; } },
+          { onTransient: () => { cleaned += 1; } },
         ),
       /product gate/,
     );
     assert.equal(launches, 1);
-    assert.equal(swept, 0);
+    assert.equal(cleaned, 0);
     assert.equal(isTransientLaunchError(new Error("Failed to launch browser")), true);
     assert.equal(isTransientLaunchError(new assert.AssertionError({ message: "no" })), false);
   });
 
-  it("sweep kills playwright chrome pids and drops leftover profiles, never pid 1, self, ppid or bash", () => {
-    const procDir = mkdtempSync(join(tmpdir(), "fenix-proc-"));
-    const tmp = mkdtempSync(join(tmpdir(), "fenix-tmp-"));
+  it("cleans only owned pid/dir; a foreign Playwright profile and process survive", async () => {
+    const host = mkdtempSync(join(tmpdir(), "fenix-host-"));
+    const root = mkdtempSync(join(host, "fenix-playwright-"));
+    const foreignDir = join(host, "playwright_chromiumdev_profile-foreign");
+    mkdirSync(foreignDir);
+    const sentinel = join(foreignDir, "sentinel.txt");
+    writeFileSync(sentinel, "foreign-keep");
+    const ownedDir = join(root, "owned-stale");
+    mkdirSync(ownedDir);
+    writeFileSync(join(ownedDir, "junk"), "stale");
+    const sleeper = ["-e", "setTimeout(() => {}, 30000)"];
+    const foreign = spawn(process.execPath, sleeper, { stdio: "ignore" });
+    const ownedProc = spawn(process.execPath, sleeper, { stdio: "ignore" });
+    const foreignPid = foreign.pid;
+    const ownedPid = ownedProc.pid;
     try {
-      mkdirSync(join(procDir, "1"));
-      writeFileSync(join(procDir, "1", "cmdline"), "init\0");
-      writeFileSync(join(procDir, "1", "comm"), "init\n");
-      mkdirSync(join(procDir, "79"));
-      writeFileSync(
-        join(procDir, "79", "cmdline"),
-        "/root/.cache/ms-playwright/chromium-1194/chrome-headless-shell\0--ppid-trap\0",
-      );
-      writeFileSync(join(procDir, "79", "comm"), "chrome-headless-s\n");
-      mkdirSync(join(procDir, "80"));
-      writeFileSync(join(procDir, "80", "cmdline"), "node\0--test\0");
-      writeFileSync(join(procDir, "80", "comm"), "node\n");
-      mkdirSync(join(procDir, "81"));
-      writeFileSync(
-        join(procDir, "81", "cmdline"),
-        "/root/.cache/ms-playwright/chromium-1194/chrome-headless-shell\0--headless=new\0",
-      );
-      writeFileSync(join(procDir, "81", "comm"), "chrome-headless-s\n");
-      mkdirSync(join(procDir, "82"));
-      writeFileSync(
-        join(procDir, "82", "cmdline"),
-        "/usr/bin/bash\0-c\0grep ms-playwright chrome-headless-shell\0",
-      );
-      writeFileSync(join(procDir, "82", "comm"), "bash\n");
-      mkdirSync(join(tmp, "playwright_chromiumdev_profile-abc"));
-      mkdirSync(join(tmp, "playwright-artifacts-xyz"));
-      mkdirSync(join(tmp, "agent-browser-chrome-keep"));
+      assert.ok(foreignPid && ownedPid);
       const killed: number[] = [];
-      const out = sweepStaleChromium({
-        procDir,
-        tmpDir: tmp,
-        selfPid: 80,
-        ppid: 79,
-        kill: (pid) => {
-          killed.push(pid);
+      const out = sweepOwnedLaunch(
+        { token: "owned-1", pid: ownedPid, dir: ownedDir, root },
+        {
+          selfPid: process.pid,
+          ppid: process.ppid,
+          kill: (pid, signal) => {
+            killed.push(pid);
+            process.kill(pid, signal);
+          },
         },
-      });
-      assert.deepEqual(killed, [81]);
-      assert.equal(out.killed, 1);
-      assert.equal(out.removedDirs, 2);
-      assert.equal(isPlaywrightChromiumCmdline("node --test"), false);
-      assert.equal(
-        isPlaywrightChromiumProcess(
-          "/usr/bin/bash -c grep ms-playwright chrome-headless-shell",
-          "bash",
-        ),
-        false,
       );
+      assert.deepEqual(killed, [ownedPid]);
+      assert.equal(out.killed, true);
+      assert.equal(out.removed, true);
+      assert.equal(existsSync(ownedDir), false);
+      assert.equal(existsSync(foreignDir), true);
+      assert.equal(readFileSync(sentinel, "utf8"), "foreign-keep");
+      assert.equal(alive(foreignPid), true);
+      const deadline = Date.now() + 1000;
+      while (alive(ownedPid) && Date.now() < deadline) {
+        await new Promise((r) => setTimeout(r, 20));
+      }
+      assert.equal(alive(ownedPid), false);
       assert.equal(
-        isPlaywrightChromiumProcess(
-          "/root/.cache/ms-playwright/chromium-1194/chrome-headless-shell --headless=new",
-          "chrome-headless-s",
+        pidOwningDir(
+          "/tmp/fenix-playwright/run/owned-token",
+          [
+            { pid: 1, args: "init /tmp/fenix-playwright/run/owned-token" },
+            { pid: 80, args: "node --test" },
+            {
+              pid: 81,
+              args: "/root/.cache/ms-playwright/chromium/chrome-headless-shell --user-data-dir=/tmp/fenix-playwright/run/owned-token",
+            },
+            {
+              pid: 82,
+              args: "/root/.cache/ms-playwright/chromium/chrome-headless-shell --user-data-dir=/tmp/playwright_chromiumdev_profile-foreign",
+            },
+          ],
+          { selfPid: 80, ppid: 79 },
         ),
-        true,
+        81,
       );
     } finally {
-      rmSync(procDir, { recursive: true, force: true });
-      rmSync(tmp, { recursive: true, force: true });
+      try {
+        if (foreignPid) process.kill(foreignPid, "SIGKILL");
+      } catch {
+        /* gone */
+      }
+      try {
+        if (ownedPid) process.kill(ownedPid, "SIGKILL");
+      } catch {
+        /* already swept */
+      }
+      rmSync(host, { recursive: true, force: true });
+    }
+  });
+
+  it("path traversal and symlinks cannot leave the dedicated Fenix root", () => {
+    const host = mkdtempSync(join(tmpdir(), "fenix-esc-"));
+    const root = join(host, "root");
+    const outside = join(host, "outside");
+    mkdirSync(root);
+    mkdirSync(outside);
+    writeFileSync(join(outside, "keep"), "secret");
+    mkdirSync(join(root, "owned"));
+    writeFileSync(join(root, "owned", "junk"), "stale");
+    symlinkSync(outside, join(root, "escape"));
+    try {
+      assert.throws(() => resolveInsideRoot(root, join(root, "..", "outside", "keep")), /escapes/);
+      assert.throws(() => resolveInsideRoot(root, join(root, "escape")), /escapes/);
+      assert.throws(() => resolveInsideRoot(root, join(root, "escape", "keep")), /escapes/);
+      assert.throws(
+        () =>
+          sweepOwnedLaunch({
+            token: "esc-1",
+            pid: 0,
+            dir: join(root, "..", "outside"),
+            root,
+          }),
+        /escapes/,
+      );
+      assert.throws(
+        () =>
+          sweepOwnedLaunch({
+            token: "esc-2",
+            pid: 0,
+            dir: join(root, "escape"),
+            root,
+          }),
+        /escapes/,
+      );
+      assert.equal(readFileSync(join(outside, "keep"), "utf8"), "secret");
+      const cleaned = sweepOwnedLaunch({
+        token: "esc-3",
+        pid: 0,
+        dir: join(root, "owned"),
+        root,
+      });
+      assert.equal(cleaned.removed, true);
+      assert.equal(existsSync(join(root, "owned")), false);
+      assert.equal(existsSync(join(outside, "keep")), true);
+    } finally {
+      rmSync(host, { recursive: true, force: true });
     }
   });
 
