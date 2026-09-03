@@ -824,9 +824,17 @@ describe("graphic pipeline visual QA D/T/M", () => {
             await page.setContent(src, { waitUntil: "domcontentloaded", timeout: 15000 });
             await waitForFenixReady(page, 8000);
             if (row.id === "agenda") {
-              assert.ok((await page.locator("[data-fenix-rail='day']").count()) >= 1, `${row.id} rail`);
-              assert.ok((await page.locator("article.slot").count()) >= 3, `${row.id} slots`);
               assert.equal(await page.locator('button[data-view="home"]').count(), 0);
+              await page.locator('nav button[data-view="settimana"]').click();
+              assert.equal(await page.locator(".week-day[data-day]").count(), 5, `${row.id} days`);
+              const dayCounts = await page.locator(".week-day [data-count]").evaluateAll((els) =>
+                els.map((el) => Number(el.getAttribute("data-count") || 0)),
+              );
+              assert.equal(dayCounts.length, 5, `${row.id} day counts`);
+              assert.ok(
+                dayCounts.reduce((a, b) => a + b, 0) >= 3,
+                `${row.id} week slots ${dayCounts.join(",")}`,
+              );
             }
             const overflow = await page.evaluate(
               () => document.documentElement.scrollWidth - window.innerWidth,
@@ -848,17 +856,17 @@ describe("graphic pipeline visual QA D/T/M", () => {
             if (vp === "D") {
               const tabIndex = row.id === "repo" ? 2 : 1;
               const tabs = page.locator("button[data-view]");
-              if ((await tabs.count()) > tabIndex) {
-                await tabs.nth(tabIndex).click();
-                const name = page.locator("#n");
-                if (await name.count()) {
-                  await name.fill(`Prova ${row.id}`);
-                  await page.locator("#fnew button[type='submit']").click();
-                  await page.getByText(`Prova ${row.id}`).waitFor({ timeout: 4000 });
-                  const body = await page.locator("body").innerText();
-                  assert.doesNotMatch(body, /\bundefined\b|\bNaN\b/);
-                }
-              }
+              assert.ok((await tabs.count()) > tabIndex, `${row.id} form tab`);
+              await tabs.nth(tabIndex).click();
+              const name = page.locator("#n");
+              assert.equal(await name.count(), 1, `${row.id} name field`);
+              await name.fill(`Prova ${row.id}`);
+              const submit = page.locator("#fnew button[type='submit'], #fnew [data-act='save']");
+              assert.equal(await submit.count(), 1, `${row.id} form submit`);
+              await submit.click();
+              await page.getByText(`Prova ${row.id}`).waitFor({ timeout: 4000 });
+              const body = await page.locator("body").innerText();
+              assert.doesNotMatch(body, /\bundefined\b|\bNaN\b/);
             }
             void dest;
           } finally {

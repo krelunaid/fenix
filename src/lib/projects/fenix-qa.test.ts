@@ -326,6 +326,17 @@ describe("focus-visible and worker model", () => {
     assert.match(compose, /--t-headline/);
     assert.match(compose, /grammar\.id === "agenda"/);
     assert.doesNotMatch(compose, /state-empty:before/);
+    assert.match(compose, /function weekDays/);
+    assert.match(compose, /AGENDA_CYCLE/);
+    assert.match(compose, /selectedDay/);
+    assert.match(compose, /name="ora"/);
+    assert.match(compose, /name="luogo"/);
+    assert.match(compose, /name="cliente"/);
+    assert.doesNotMatch(compose, /idx%5/);
+    assert.doesNotMatch(compose, /\.slot\{[^}]*padding:18px 0/);
+    assert.match(compose, /padding:18px 20px/);
+    assert.match(compose, /closest\("\.week-day\[data-day\]"\)/);
+    assert.equal(existsSync(join(root, "src/lib/projects/agenda-runtime-browser.test.ts")), true);
     const craft = readFileSync(join(root, "src/lib/projects/craft-icons.ts"), "utf8");
     assert.match(craft, /data-fenix-id="icon:\$\{t\.id\}"/);
     assert.match(craft, /data-icon-grid="24"/);

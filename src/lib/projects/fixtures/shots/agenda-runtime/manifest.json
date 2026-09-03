@@ -1,0 +1,42 @@
+{
+  "product": "Agenda-runtime",
+  "viewports": [
+    "D",
+    "T",
+    "M"
+  ],
+  "files": [
+    {
+      "name": "agenda-runtime-week-d.png",
+      "sha256": "826916b1e8256cdee10080e5de60e05888ebc0f44c4f6ec468de50815324df1e",
+      "bytes": 50974
+    },
+    {
+      "name": "agenda-runtime-d.png",
+      "sha256": "8bf314d221aa34a6dbc5f51795e867493d93b5f566de08e7cb8cfcf4ef7da086",
+      "bytes": 75359
+    },
+    {
+      "name": "agenda-runtime-week-t.png",
+      "sha256": "9ca9b7f5324770ece181625af6c7e72b676a7b63a5dbe415611ffc8e96106e56",
+      "bytes": 51378
+    },
+    {
+      "name": "agenda-runtime-t.png",
+      "sha256": "4733de8f742febb6a26596ff47b3abb0604db9e61b830827fea81eabfa671b65",
+      "bytes": 56716
+    },
+    {
+      "name": "agenda-runtime-week-m.png",
+      "sha256": "cb3bf839507eb593233e0ddabab160264d535327a1069f5b9368836c908396e2",
+      "bytes": 45390
+    },
+    {
+      "name": "agenda-runtime-m.png",
+      "sha256": "ef46f48dfcee5da5487c9026b73a28272225db75d6174b87aad9293013b828f1",
+      "bytes": 56745
+    }
+  ],
+  "credits": 0,
+  "residual": "Graphic five-brief proof remains after-only: no parent-SHA before/after, three mobile palettes still close. This file proves Agenda function, not 9/10 craft."
+}

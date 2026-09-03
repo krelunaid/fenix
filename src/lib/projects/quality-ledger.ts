@@ -279,6 +279,14 @@ export const QUALITY_LEDGER: LedgerRow[] = [
     ok: true,
   },
   {
+    id: "agenda-runtime",
+    claim:
+      "Agenda generata: selezione giorno con date ISO, ARIA e tastiera; stato appuntamento distinto dall'orario e persistito; form di dominio (prestazione/ora/luogo/cliente); create/update/delete/reload; inset desktop. Luogo non è la mood-word salvia. 0 crediti xAI. Il residuo grafico five-brief (manifest solo after, palette mobile vicine) resta aperto e non è prova di 9/10.",
+    evidence:
+      "compose-product.ts weekDays/AGENDA_CYCLE/domain form + compose-product.test.ts agenda runtime + agenda-runtime-browser.test.ts D/T/M + fixtures/shots/agenda-runtime",
+    ok: true,
+  },
+  {
     id: "emergent",
     claim:
       "Emergent resta un benchmark esterno: fonti ufficiali e dieci assi sono datati, ma nessuna graduatoria competitiva è provata senza la stessa esecuzione testa-a-testa.",
