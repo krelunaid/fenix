@@ -76,6 +76,25 @@ export function leakedRuntimeText(html: string): boolean {
     .replace(/\s+/g, " ");
   return /\bundefined\b/.test(vis) || /\bNaN\b/.test(vis) || /(^|[^A-Za-z])null([^A-Za-z]|$)/.test(vis);
 }
+
+/** CSS that paints compressed/overlapping/clipped tabs or cards — blocks ready without a browser. */
+export function staticClippingHint(html: string): boolean {
+  const css = (String(html || "").match(/<style\b[\s\S]*?<\/style>/gi) || []).join("\n");
+  const squeezedTabs =
+    /nav(?:\.fk-tab)?[^{]*\{[^}]*(?:overflow\s*:\s*(?:hidden|clip)|flex-wrap\s*:\s*nowrap)[^}]*\}/i.test(
+      css,
+    ) &&
+    /(?:nav(?:\.fk-tab)?\s+button|\.fk-tab button)[^{]*\{[^}]*min-width\s*:\s*(?:1[2-9]\d|[2-9]\d{2})px/i.test(
+      css,
+    );
+  const negMargin =
+    /(?:nav(?:\.fk-tab)?\s+button|\.fk-tab button)[^{]*\{[^}]*margin-(?:left|right)\s*:\s*-/i.test(
+      css,
+    );
+  const absTile =
+    /(?:\.fk-tile|\.card|\.overlap)[^{]*\{[^}]*position\s*:\s*absolute/i.test(css);
+  return squeezedTabs || negMargin || absTile;
+}
 function contentText(html: string): string {
   return String(html || "")
     .replace(/<style\b[\s\S]*?<\/style>/gi, " ")
@@ -163,12 +182,70 @@ export function collectRenderedGraphic(): RenderedGraphicMetrics {
   const text = String((main as HTMLElement).innerText || "").replace(/\s+/g, " ").trim();
   let clipping = 0;
   let overlap = 0;
-  for (const el of document.querySelectorAll<HTMLElement>("nav button, .fk-tile, .card, .fk-tab button, [data-view]")) {
-    const r = el.getBoundingClientRect();
-    if (r.width < 8 || r.height < 8) continue;
-    if (r.right > window.innerWidth + 8 || r.left < -8) {
-      clipping += 1;
-      overlap += 1;
+  const seen = new Set<HTMLElement>();
+  const boxes: { el: HTMLElement; r: DOMRect; parent: HTMLElement | null; clip: boolean }[] = [];
+  const push = (node: HTMLElement, clip: boolean) => {
+    if (seen.has(node)) {
+      const prev = boxes.find((b) => b.el === node);
+      if (prev && clip) prev.clip = true;
+      return;
+    }
+    seen.add(node);
+    const tag = node.tagName;
+    if (tag === "SVG" || tag === "IMG" || tag === "PATH" || node.closest("svg")) return;
+    const r = node.getBoundingClientRect();
+    if (r.width < 8 || r.height < 8) return;
+    boxes.push({ el: node, r, parent: node.parentElement, clip });
+  };
+  for (const node of document.querySelectorAll<HTMLElement>("nav button, .fk-tab button, [data-view], .fk-tile")) {
+    push(node, true);
+  }
+  for (const node of document.querySelectorAll<HTMLElement>(".card")) {
+    push(node, false);
+  }
+  for (const box of boxes) {
+    if (!box.clip) continue;
+    const r = box.r;
+    let scrollX = false;
+    let parent = box.parent;
+    while (parent && parent !== document.body) {
+      const cs = getComputedStyle(parent);
+      const ox = cs.overflowX;
+      const oy = cs.overflowY;
+      if (ox === "auto" || ox === "scroll") scrollX = true;
+      const clipX = ox === "hidden" || ox === "clip";
+      const clipY = oy === "hidden" || oy === "clip";
+      if (clipX || clipY) {
+        const pr = parent.getBoundingClientRect();
+        const shell = parent.tagName === "HTML" || parent.tagName === "BODY";
+        if (!shell) {
+          if (clipX && (r.right > pr.right + 8 || r.left < pr.left - 8)) clipping += 1;
+          else if (clipY && (r.bottom > pr.bottom + 8 || r.top < pr.top - 8)) clipping += 1;
+        }
+        break;
+      }
+      parent = parent.parentElement;
+    }
+    if (!scrollX && (r.right > window.innerWidth + 8 || r.left < -8)) clipping += 1;
+  }
+  const byParent = new Map<HTMLElement, DOMRect[]>();
+  for (const box of boxes) {
+    if (!box.parent) continue;
+    const list = byParent.get(box.parent) || [];
+    list.push(box.r);
+    byParent.set(box.parent, list);
+  }
+  for (const list of byParent.values()) {
+    for (let i = 0; i < list.length; i += 1) {
+      for (let j = i + 1; j < list.length; j += 1) {
+        const a = list[i]!;
+        const b = list[j]!;
+        const w = Math.max(0, Math.min(a.right, b.right) - Math.max(a.left, b.left));
+        const h = Math.max(0, Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top));
+        const area = w * h;
+        const smaller = Math.min(a.width * a.height, b.width * b.height);
+        if (area >= 24 && smaller > 0 && area / smaller >= 0.22) overlap += 1;
+      }
     }
   }
   const images = [...document.querySelectorAll("img, svg, canvas, .hero, .sil")].filter((n) => {
@@ -220,6 +297,18 @@ export function auditGraphicQuality(
         "leaked-runtime-text",
         "Testo visibile undefined/null/NaN.",
         "token JS in pagina",
+      ),
+    );
+  }
+
+  if (staticClippingHint(text)) {
+    findings.push(
+      finding(
+        "responsive",
+        "fail",
+        "clipping-css",
+        "Tab o schede compresse, sovrapposte o tagliate.",
+        "layout CSS",
       ),
     );
   }
@@ -504,6 +593,17 @@ export function auditGraphicQuality(
     if (rendered.overflowX > 8) {
       findings.push(
         finding("responsive", "fail", "overflow-x", "Overflow orizzontale.", `px=${rendered.overflowX}`),
+      );
+    }
+    if ((rendered.clipping || 0) > 0 || (rendered.overlap || 0) > 0) {
+      findings.push(
+        finding(
+          "responsive",
+          "fail",
+          "clipping-render",
+          "Clipping o sovrapposizioni visibili.",
+          `clip=${rendered.clipping} overlap=${rendered.overlap}`,
+        ),
       );
     }
     if (rendered.leakedText) {

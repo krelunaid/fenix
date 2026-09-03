@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="color-scheme" content="light"/>
+<title>Agenda compressa</title>
+<style>
+:root{--bg:#f3eee4;--surface:#fffaf1;--fg:#1c1712;--muted:#5a5148;--accent:#2f5d50;--line:#d4c8b6}
+html,body{height:100%;margin:0}
+body{font:400 16px/1.4 "Source Sans 3",system-ui,sans-serif;background:var(--bg);color:var(--fg);display:flex;flex-direction:column;min-height:100dvh}
+button,a,input{min-height:44px;box-sizing:border-box}
+button:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+header.fk-top{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;background:var(--surface);border-bottom:1px solid var(--line);gap:12px}
+.fk-appicon{width:36px;height:36px;border-radius:9px;background:var(--accent);color:#fffaf1;display:inline-grid;place-items:center;flex-shrink:0}
+h1.fk-hello{margin:0;font-size:1.25rem}
+p.fk-role{margin:0;color:var(--muted);font-size:.85rem}
+main.fk-main{flex:1;min-height:0;overflow:auto;padding:16px 16px 80px}
+nav.fk-tab{position:fixed;left:0;right:0;bottom:0;height:64px;display:flex;flex-wrap:nowrap;overflow:hidden;gap:0;padding:6px 0;background:var(--surface);border-top:1px solid var(--line)}
+nav.fk-tab button{flex:0 0 140px;min-width:140px;margin-left:-24px;border:0;background:transparent;color:var(--muted);font-size:11px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
+nav.fk-tab button:first-child{margin-left:0}
+nav.fk-tab button svg{width:22px;height:22px;flex:0 0 22px;overflow:hidden;display:block}
+nav.fk-tab button.on{color:var(--accent);font-weight:700}
+.fk-btn{background:var(--accent);color:#fffaf1;border:0;border-radius:8px;padding:10px 16px}
+.fk-field{display:flex;flex-direction:column;gap:8px}
+.fk-clip{position:relative;height:52px;overflow:hidden;margin-bottom:12px}
+.fk-tile{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px;position:absolute;left:0;top:0;width:80%;height:72px}
+.fk-tile.overlap{left:36px;top:8px}
+.fk-kicker{text-transform:uppercase;letter-spacing:.08em;font-size:11px;color:var(--muted)}
+.hero{border:1px solid var(--line);border-radius:12px;background:var(--surface);padding:12px;margin-bottom:14px;overflow:hidden}
+.hero svg{width:100%;height:96px;display:block}
+</style>
+</head>
+<body>
+<header class="fk-top">
+  <span class="fk-appicon" data-fenix-id="icon:app" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" overflow="hidden"><rect x="5" y="4" width="14" height="16" rx="1.5"/><path d="M8 8h8M8 12h6"/></svg></span>
+  <div>
+    <h1 class="fk-hello">Agenda Studio</h1>
+    <p class="fk-role">Impegni in tasca, carta e inchiostro</p>
+  </div>
+</header>
+<main class="fk-main" id="main"></main>
+<nav class="fk-tab" aria-label="Navigazione">
+  <button type="button" data-view="home" data-fenix-id="icon:home" class="on"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" overflow="hidden" aria-hidden="true"><path d="M6 3.5h11.5v17H6z"/><path d="M9 3.5v17"/></svg>Oggi</button>
+  <button type="button" data-view="new" data-fenix-id="icon:new"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" overflow="hidden" aria-hidden="true"><path d="M14 3.5 20.5 10 11 19.5H5.5V14z"/></svg>Prenota</button>
+  <button type="button" data-view="list" data-fenix-id="icon:list"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" overflow="hidden" aria-hidden="true"><path d="M8 6h12v13H8z"/></svg>Appunti</button>
+  <button type="button" data-view="stats" data-fenix-id="icon:stats"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" overflow="hidden" aria-hidden="true"><path d="M6 5v14M10 5v14"/></svg>Settimana</button>
+  <button type="button" data-view="more" data-fenix-id="icon:more"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" overflow="hidden" aria-hidden="true"><rect x="6" y="3.5" width="12" height="10" rx="1.2"/></svg>Studio</button>
+</nav>
+<template id="t-home">
+  <section class="fk-sheet">
+    <div class="hero" data-imagery="domain" aria-label="Taccuino aperto sullo scrittoio">
+      <svg viewBox="0 0 320 96" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><rect width="320" height="96" fill="#e7dcc8"/><rect x="18" y="14" width="70" height="68" rx="4" fill="#fffaf1" stroke="#2f5d50"/></svg>
+    </div>
+    <p class="fk-kicker">Oggi in studio</p>
+    <div class="fk-clip">
+      <div class="fk-tile">Prima scheda</div>
+      <div class="fk-tile overlap">Scheda tagliata</div>
+    </div>
+    <p id="home-count">Nessun impegno in agenda.</p>
+    <button type="button" class="fk-btn" data-go="new">Registra impegno</button>
+  </section>
+</template>
+<template id="t-new">
+  <form class="fk-field" id="fnew">
+    <label class="fk-lbl" for="nome">Impegno</label>
+    <input class="fk-input" id="nome" name="nome" placeholder="Es. prova tessuti" required/>
+    <label class="fk-lbl" for="ora">Ora</label>
+    <input class="fk-input" id="ora" name="ora" placeholder="Es. 10:30" required/>
+    <button class="fk-btn" type="button" id="salva">Registra impegno</button>
+  </form>
+</template>
+<template id="t-list">
+  <div id="elenco"><p class="fk-role">Nessun impegno in elenco.</p></div>
+</template>
+<template id="t-stats">
+  <div class="fk-panel"><h3>Settimana</h3><p id="stats-count">0 impegni</p></div>
+</template>
+<template id="t-more">
+  <section><h3>Studio</h3><p>Gli impegni restano su questo dispositivo.</p></section>
+</template>
+<script>
+(function(){
+  var current = "home";
+  function rows(){
+    return window.Fenix.data.query("impegni");
+  }
+  function show(view){
+    current = view;
+    document.querySelectorAll("nav.fk-tab button").forEach(function(b){
+      b.classList.toggle("on", b.getAttribute("data-view") === view);
+    });
+    var tpl = document.getElementById("t-" + view);
+    var main = document.getElementById("main");
+    if (!tpl || !main) return;
+    main.innerHTML = tpl.innerHTML;
+    if (view === "home" || view === "list" || view === "stats") paint();
+    var saveBtn = document.getElementById("salva");
+    if (saveBtn) saveBtn.addEventListener("click", onSave);
+  }
+  function paint(){
+    rows().then(function(list){
+      var n = list.length;
+      var home = document.getElementById("home-count");
+      if (home) home.textContent = n ? (n + " impegni in agenda") : "Nessun impegno in agenda.";
+      var stats = document.getElementById("stats-count");
+      if (stats) stats.textContent = n + " impegni";
+      var elenco = document.getElementById("elenco");
+      if (elenco) {
+        if (!n) elenco.innerHTML = '<p class="fk-role">Nessun impegno in elenco.</p>';
+        else elenco.innerHTML = list.map(function(it){
+          return '<div class="fk-row"><b>'+it.nome+'</b><span>'+(it.ora||"")+'</span></div>';
+        }).join("");
+      }
+    });
+  }
+  function onSave(ev){
+    if (ev && ev.preventDefault) ev.preventDefault();
+    var form = document.getElementById("fnew");
+    if (!form) return;
+    var nome = (form.nome && form.nome.value || "").trim();
+    var ora = (form.ora && form.ora.value || "").trim();
+    if (!nome) return;
+    window.Fenix.data.insert("impegni", { nome: nome, ora: ora }).then(function(){
+      show("list");
+    });
+  }
+  document.querySelectorAll("[data-view]").forEach(function(b){
+    b.addEventListener("click", function(){ show(b.getAttribute("data-view")); });
+  });
+  document.addEventListener("click", function(ev){
+    var go = ev.target && ev.target.getAttribute && ev.target.getAttribute("data-go");
+    if (go) show(go);
+  });
+  rows().then(function(){
+    show("home");
+    document.documentElement.setAttribute("data-fenix-ready","1");
+  });
+})();
+</script>
+</body>
+</html>

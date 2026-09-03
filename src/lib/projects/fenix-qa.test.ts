@@ -219,7 +219,10 @@ describe("focus-visible and worker model", () => {
     assert.match(iconPatch, /refundIconFailure/);
     assert.doesNotMatch(iconPatch, /reasoningEffort/);
     assert.equal(existsSync(join(root, "src/lib/projects/fixtures/agenda.html")), true);
+    assert.equal(existsSync(join(root, "src/lib/projects/fixtures/agenda-clip.html")), true);
     assert.equal(existsSync(join(root, "src/lib/projects/agenda-browser.test.ts")), true);
+    assert.equal(existsSync(join(root, "src/lib/projects/icon-build.test.ts")), true);
+    assert.equal(existsSync(join(root, "src/lib/projects/icon-build.ts")), true);
   });
 
   it("drops iOS template fallbacks from look, shell, types and cards", () => {
@@ -288,12 +291,23 @@ describe("focus-visible and worker model", () => {
     assert.match(runBuild, /looksLikeIconInstruction/);
     assert.match(runBuild, /applyIconRevision/);
     assert.match(runBuild, /runIconBuild/);
+    assert.match(runBuild, /runIconRevisionFlow/);
     assert.match(runBuild, /Nessuna seconda POST/);
     const runFn = runBuild.slice(runBuild.indexOf("export async function runBuild"));
     assert.ok(
       runFn.indexOf("looksLikeIconInstruction") < runFn.indexOf("spendCredit"),
       "icon gate must run before spendCredit",
     );
+    const iconFn = runBuild.slice(runBuild.indexOf("async function runIconBuild"));
+    assert.match(iconFn, /runIconRevisionFlow/);
+    assert.match(iconFn, /settlePreviewBoot/);
+    assert.doesNotMatch(iconFn, /repairBootFailures/);
+    assert.doesNotMatch(iconFn, /consumeStream/);
+    const iconFlow = readFileSync(join(root, "src/lib/projects/icon-build.ts"), "utf8");
+    assert.match(iconFlow, /settleBoot/);
+    assert.doesNotMatch(iconFlow, /repairBootFailures/);
+    assert.doesNotMatch(iconFlow, /consumeStream/);
+    assert.doesNotMatch(iconFlow, /\/api\/build/);
     assert.match(runBuild, /isIOS\(\) \|\| desk/);
     assert.match(runBuild, /GENERATE_POLL_MAX = 300/);
     assert.match(runBuild, /isTransientNetwork/);

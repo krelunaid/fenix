@@ -21,6 +21,7 @@ import {
   auditGraphicQuality,
   formatGraphicErrors,
   leakedRuntimeText,
+  staticClippingHint,
   type RenderedGraphicMetrics,
 } from "../projects/graphic-quality.ts";
 import {
@@ -439,9 +440,9 @@ export function evaluateContract(input: {
   const overflowRendered = Boolean(input.rendered && input.rendered.overflowX > 8);
   const clipRendered = Boolean(
     input.rendered &&
-      input.rendered.overflowX > 8 &&
       ((input.rendered.clipping || 0) > 0 || (input.rendered.overlap || 0) > 0),
   );
+  const clipStatic = staticClippingHint(runtimeHtml);
   const iframeSameOrigin = /sandbox\s*=\s*["'][^"']*allow-same-origin/i.test(runtimeHtml);
   const evalCall = /\beval\s*\(|\bnew Function\s*\(/.test(code);
   const hasFocus = /:focus-visible|:focus\b/.test(`${runtimeHtml}\n${css}`);
@@ -540,8 +541,8 @@ export function evaluateContract(input: {
     ),
     check(
       "clipping",
-      !clipRendered,
-      clipRendered ? "clipping o sovrapposizioni" : "ok",
+      !clipRendered && !clipStatic,
+      clipRendered || clipStatic ? "clipping o sovrapposizioni" : "ok",
     ),
     check(
       "aa",
@@ -607,10 +608,11 @@ export function blocksPublish(
   kind?: string,
   files?: ProjectFile[],
   prompt?: string,
+  rendered?: RenderedGraphicMetrics,
 ): string {
   const k = asKind(kind) ?? "app";
   const contract = planContract(`${formatPrefix(k)}${prompt || ""}`);
-  const evaluation = evaluateContract({ html, files, contract, kind: k, brief: prompt });
+  const evaluation = evaluateContract({ html, files, contract, kind: k, brief: prompt, rendered });
   return evaluation.ok ? "" : formatContractErrors(evaluation);
 }
 

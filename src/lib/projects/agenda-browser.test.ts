@@ -22,6 +22,7 @@ import { isStudioLocked } from "./studio-lock.ts";
 const here = dirname(fileURLToPath(import.meta.url));
 const AGENDA = readFileSync(join(here, "fixtures/agenda.html"), "utf8");
 const BROKEN = readFileSync(join(here, "fixtures/agenda-broken.html"), "utf8");
+const CLIP = readFileSync(join(here, "fixtures/agenda-clip.html"), "utf8");
 const SHOTS = join(here, "fixtures/shots/agenda");
 const BRIEF = `${formatPrefix("app")}Agenda studio: impegni e appuntamenti in tasca.`;
 const PALETTE = { bg: "#f3eee4", fg: "#1c1712", surface: "#fffaf1", muted: "#5a5148", accent: "#2f5d50" };
@@ -186,6 +187,31 @@ window.addEventListener("message", function(e){
       await frame.locator('[data-view="list"]').click();
       await frame.getByText("Taglio prova").waitFor({ timeout: 8000 });
       await persist.close();
+
+      for (const [vp, viewport] of VIEWPORTS) {
+        const page = await browser.newPage({ viewport });
+        const src = prepareSrcDoc(CLIP, PALETTE, "agenda-clip", "app");
+        await page.setContent(src, { waitUntil: "domcontentloaded", timeout: 15000 });
+        await waitForFenixReady(page, 8000);
+        const metrics = await page.evaluate(collectRenderedGraphic);
+        assert.ok(
+          metrics.clipping > 0 || metrics.overlap > 0,
+          `${vp} clip fixture clip=${metrics.clipping} overlap=${metrics.overlap}`,
+        );
+        const evaluation = evaluateContract({
+          html: CLIP,
+          files: [{ path: "index.html", content: CLIP }],
+          contract,
+          kind: "app",
+          brief: BRIEF,
+          rendered: metrics,
+        });
+        assert.equal(evaluation.ok, false, `${vp} clip should fail contract`);
+        assert.equal(evaluation.checks.find((c) => c.id === "clipping")?.ok, false, `${vp} clipping gate`);
+        assert.match(blocksPublish(CLIP, "app", undefined, BRIEF, metrics), /clip/i);
+        assert.equal(isPublishable({ status: "ready", html: CLIP, kind: "app", prompt: BRIEF }), false);
+        await page.close();
+      }
     } finally {
       await browser.close();
     }

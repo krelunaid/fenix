@@ -19,12 +19,13 @@ import {
 import { evaluateContract, planContract, blocksPublish } from "../ai/build-contract.ts";
 import { formatPrefix } from "./infer.ts";
 import { isPublishable } from "./recover.ts";
-import { leakedRuntimeText } from "./graphic-quality.ts";
+import { leakedRuntimeText, staticClippingHint } from "./graphic-quality.ts";
 import { isStudioLocked } from "./studio-lock.ts";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const AGENDA = readFileSync(join(here, "fixtures/agenda.html"), "utf8");
 const BROKEN = readFileSync(join(here, "fixtures/agenda-broken.html"), "utf8");
+const CLIP = readFileSync(join(here, "fixtures/agenda-clip.html"), "utf8");
 const BRIEF = `${formatPrefix("app")}Agenda studio: impegni e appuntamenti in tasca.`;
 
 function innerSvg(html: string, id: string) {
@@ -43,6 +44,32 @@ describe("atomic icon patch", () => {
     assert.equal(looksLikeIconInstruction("Sistema il form di Prenota"), false);
     assert.ok(ICON_DELTA_BUDGET <= 8192);
     assert.ok(ICON_HTML_BOUND >= 80_000);
+  });
+
+  it("inserts SVG into a target without svg and replaces a non-SVG glyph, keeping the label", () => {
+    const noSvg = `<!DOCTYPE html><html><body>
+<nav>
+<button type="button" data-view="home" data-fenix-id="icon:home">Oggi</button>
+<button type="button" data-view="new" data-fenix-id="icon:new">Prenota</button>
+</nav>
+</body></html>`;
+    const patchedEmpty = applyIconPatch(noSvg, "icon:home", AGENDA_CALENDAR_SVG);
+    assert.equal(patchedEmpty.applied, true, patchedEmpty.reason);
+    assert.match(innerSvg(patchedEmpty.html, "icon:home"), /M8 4v4M16 4v4/);
+    assert.match(patchedEmpty.html, /icon:home"[^>]*>[\s\S]*Oggi<\/button>/);
+    assert.doesNotMatch(innerSvg(patchedEmpty.html, "icon:new") || "Prenota", /M8 4v4/);
+
+    const glyph = `<!DOCTYPE html><html><body>
+<nav>
+<button type="button" data-view="home" data-fenix-id="icon:home"><span aria-hidden="true">📅</span>Oggi</button>
+</nav>
+</body></html>`;
+    const patchedGlyph = applyIconPatch(glyph, "icon:home", AGENDA_CALENDAR_SVG);
+    assert.equal(patchedGlyph.applied, true);
+    assert.match(innerSvg(patchedGlyph.html, "icon:home"), /<svg/i);
+    assert.match(patchedGlyph.html, /Oggi/);
+    assert.doesNotMatch(patchedGlyph.html, /📅/);
+    assert.match(patchedGlyph.html, /data-fenix-id="icon:home"/);
   });
 
   it("patches one owned icon and keeps files/views/CRUD byte-stable", () => {
@@ -186,5 +213,18 @@ describe("atomic icon patch", () => {
     assert.ok(ids.includes("leaked-text") || ids.includes("overflow") || ids.includes("graphic"), ids.join(","));
     assert.match(blocksPublish(BROKEN, "app", undefined, BRIEF), /undefined|overflow|graphic|NaN|clip/i);
     assert.equal(isPublishable({ status: "ready", html: BROKEN, kind: "app", prompt: BRIEF }), false);
+    assert.equal(staticClippingHint(AGENDA), false);
+    assert.equal(staticClippingHint(CLIP), true);
+    const clipped = evaluateContract({
+      html: CLIP,
+      files: [{ path: "index.html", content: CLIP }],
+      contract,
+      kind: "app",
+      brief: BRIEF,
+    });
+    assert.equal(clipped.ok, false);
+    assert.equal(clipped.checks.find((c) => c.id === "clipping")?.ok, false);
+    assert.match(blocksPublish(CLIP, "app", undefined, BRIEF), /clip/i);
+    assert.equal(isPublishable({ status: "ready", html: CLIP, kind: "app", prompt: BRIEF }), false);
   });
 });

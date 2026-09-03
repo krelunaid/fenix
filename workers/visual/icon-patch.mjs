@@ -170,10 +170,21 @@ export function resolveIconTarget(html, instruction) {
 }
 
 function replaceSvgInChunk(chunk, svg) {
-  if (/<svg[\s\S]*?<\/svg>/i.test(chunk)) {
-    return chunk.replace(/<svg[\s\S]*?<\/svg>/i, svg);
+  const inner = String(chunk || "");
+  if (/<svg[\s\S]*?<\/svg>/i.test(inner)) {
+    return inner.replace(/<svg[\s\S]*?<\/svg>/i, svg);
   }
-  return chunk.replace(/(<button\b[^>]*>|<span\b[^>]*fk-appicon[^>]*>)/i, `$1${svg}`);
+  if (/<img\b[^>]*\/?>/i.test(inner)) {
+    return inner.replace(/<img\b[^>]*\/?>/i, svg);
+  }
+  if (/<span\b[^>]*aria-hidden=["']true["'][^>]*>[\s\S]*?<\/span>/i.test(inner)) {
+    return inner.replace(/<span\b[^>]*aria-hidden=["']true["'][^>]*>[\s\S]*?<\/span>/i, svg);
+  }
+  const emoji = inner.match(
+    /^(\s*)(\p{Extended_Pictographic}(?:\uFE0F|\u200D\p{Extended_Pictographic})*)/u,
+  );
+  if (emoji) return inner.replace(emoji[0], `${emoji[1]}${svg}`);
+  return `${svg}${inner}`;
 }
 
 export function applyIconPatch(html, fenixId, svg) {
@@ -184,11 +195,11 @@ export function applyIconPatch(html, fenixId, svg) {
   }
   const attr = id.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const buttonRe = new RegExp(
-    `(<(?:button|span|a|div)[^>]*${ICON_ID_ATTR}=["']${attr}["'][^>]*>)([\\s\\S]*?)(</(?:button|span|a|div)>)`,
+    `(<(button|span|a|div)[^>]*${ICON_ID_ATTR}=["']${attr}["'][^>]*>)([\\s\\S]*?)(<\\/\\2>)`,
     "i",
   );
   if (buttonRe.test(html)) {
-    const next = String(html).replace(buttonRe, (_, open, inner, close) => {
+    const next = String(html).replace(buttonRe, (_, open, _tag, inner, close) => {
       return `${open}${replaceSvgInChunk(inner, safe)}${close}`;
     });
     if (next === html) return { html, applied: false, reason: "unchanged", id };

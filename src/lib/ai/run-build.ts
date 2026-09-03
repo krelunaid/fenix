@@ -38,6 +38,7 @@ import {
   looksLikeIconInstruction,
   refundIconFailure,
 } from "../../../workers/visual/icon-patch.mjs";
+import { runIconRevisionFlow } from "@/lib/projects/icon-build";
 
 const inflight = new Set<string>();
 /** A successful polishDraft for this project in the current runBuild. Blocks a second POST. */
@@ -1028,73 +1029,34 @@ async function runIconBuild(
   project: { html: string; files?: { path: string; content: string }[]; prompt: string; name?: string },
 ) {
   const store = useProjectStore.getState();
-  const verdict = applyIconRevision({
-    html: project.html,
-    files: project.files,
-    instruction,
-  });
-  if (verdict.status === "absent" || verdict.status === "ambiguous" || !verdict.spent) {
-    store.addMessage(projectId, {
-      id: uid(),
-      role: "assistant",
-      content: verdict.reason || "Icona non applicabile. Nessun credito speso.",
-    });
-    return;
-  }
-  const cost = ITERATE_COST;
-  if (!store.spendCredit(cost)) {
-    store.updateProject(projectId, {
-      status: "error",
-      error: "Crediti esauriti. Il tetto di questa sessione è finito.",
-    });
-    store.addMessage(projectId, {
-      id: uid(),
-      role: "assistant",
-      content: "Crediti esauriti. Una creazione usa 4 crediti, una modifica 2.",
-    });
-    return;
-  }
   const epoch = nextBuildEpoch(
     (store.getProject(projectId) as { buildEpoch?: number } | undefined)?.buildEpoch,
   );
-  const snap = captureStableSnapshot(project);
-  store.updateProject(projectId, {
-    status: "building",
-    error: undefined,
-    buildLog: ["Patch atomica icona"],
-    creditRefunded: false,
-    buildEpoch: epoch,
-    ...snap,
-  });
   polishedOnce.add(projectId);
-  const syntax = validateProductHtml(verdict.html, { kind: store.getProject(projectId)?.kind });
-  if (!syntax.syntaxOk) {
-    refundBuildCredit(projectId, cost);
-    store.updateProject(projectId, {
-      ...restoreStablePatch(store.getProject(projectId)),
-      status: "error",
-      error: formatHtmlErrors(syntax) || "Patch icona non valida",
-      ...clearVisualJobPatch(),
-    });
-    store.addMessage(projectId, {
-      id: uid(),
-      role: "assistant",
-      content: `Non pubblico: ${formatHtmlErrors(syntax)}. Credito rimborsato.`,
-    });
-    return;
-  }
-  store.updateProject(projectId, {
-    html: verdict.html,
-    files: verdict.files,
-    status: "building",
-    buildLog: uniqueLogs([...(store.getProject(projectId)?.buildLog ?? []), ...verdict.log]),
-  });
+  const result = await runIconRevisionFlow(
+    {
+      instruction,
+      html: project.html,
+      files: project.files,
+      kind: store.getProject(projectId)?.kind,
+      epoch,
+    },
+    {
+      spendCredit: (n) => store.spendCredit(n),
+      refundCredit: (n) => Boolean(refundBuildCredit(projectId, n)),
+      getProject: () => store.getProject(projectId),
+      updateProject: (patch) => store.updateProject(projectId, patch),
+      addMessage: (content) =>
+        store.addMessage(projectId, { id: uid(), role: "assistant", content }),
+      settleBoot: async () => {
+        const reason = await settlePreviewBoot(projectId);
+        if (reason) rememberBootError(reason);
+        return reason;
+      },
+      stillCurrent: () => stillCurrent(projectId, epoch),
+    },
+  );
+  if (result.outcome !== "ok" || result.reason === "stale") return;
   if (!stillCurrent(projectId, epoch)) return;
-  const booted = await repairBootFailures(projectId, project.prompt, epoch);
-  if (!stillCurrent(projectId, epoch)) return;
-  if (!booted) {
-    finishPolish(projectId, project.html, cost);
-    return;
-  }
-  finishPolish(projectId, verdict.html);
+  finishPolish(projectId, result.html);
 }

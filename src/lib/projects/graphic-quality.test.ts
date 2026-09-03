@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { familyFromBrief, hueBucket, isProductFamily, tokensFromBrief, variantFromBrief } from "./design-tokens.ts";
-import { auditGraphicQuality, GRAPHIC_SCORE_THRESHOLD } from "./graphic-quality.ts";
+import { auditGraphicQuality, GRAPHIC_SCORE_THRESHOLD, staticClippingHint } from "./graphic-quality.ts";
 import { loadGraphicFixtures, loadLegacyGraphicFixtures } from "../ai/graphic-fixtures.ts";
 import { loadPremiumFixtures } from "../ai/premium-fixtures.ts";
 import { evaluateContract, planContract, blocksPublish, criticBudget } from "../ai/build-contract.ts";
@@ -169,5 +169,67 @@ describe("graphic quality gate", () => {
     const codes = report.findings.filter((f) => f.severity === "fail").map((f) => f.code);
     assert.equal(codes.includes("no-product-image"), false, codes.join(","));
     assert.equal(blocksPublish(VALID_APP, "app", [{ path: "index.html", content: VALID_APP }], brief), "");
+  });
+
+  it("fails overlapping/clipped Agenda chrome and keeps a clean Agenda green", () => {
+    const agenda = readFileSync(join(here, "fixtures/agenda.html"), "utf8");
+    const clip = readFileSync(join(here, "fixtures/agenda-clip.html"), "utf8");
+    const broken = readFileSync(join(here, "fixtures/agenda-broken.html"), "utf8");
+    assert.equal(staticClippingHint(agenda), false);
+    assert.equal(staticClippingHint(clip), true);
+    assert.equal(staticClippingHint(broken), true);
+    const brief = `${formatPrefix("app")}Agenda studio: impegni e appuntamenti in tasca.`;
+    const good = auditGraphicQuality(agenda, { brief, kind: "app" });
+    assert.equal(
+      good.findings.some((f) => f.severity === "fail" && /clip/.test(f.code)),
+      false,
+      good.findings.filter((f) => f.severity === "fail").map((f) => f.code).join(","),
+    );
+    const bad = auditGraphicQuality(clip, { brief, kind: "app" });
+    assert.equal(bad.ok, false);
+    assert.ok(bad.findings.some((f) => f.code === "clipping-css"));
+    const painted = auditGraphicQuality(agenda, {
+      brief,
+      kind: "app",
+      rendered: {
+        mainChars: 80,
+        headingCount: 2,
+        visibleImages: 1,
+        visibleCards: 1,
+        emptyStateVisible: false,
+        rowCount: 1,
+        deadRatio: 0.2,
+        uniqueTextColors: 3,
+        nativeUnstyledInputs: 0,
+        overflowX: 0,
+        title: "Agenda",
+        consoleErrors: 0,
+        clipping: 2,
+        overlap: 1,
+        leakedText: false,
+      },
+    });
+    assert.equal(painted.ok, false);
+    assert.ok(painted.findings.some((f) => f.code === "clipping-render"));
+    assert.match(blocksPublish(clip, "app", undefined, brief), /clip/i);
+    const renderedClip = {
+      mainChars: 80,
+      headingCount: 2,
+      visibleImages: 1,
+      visibleCards: 2,
+      emptyStateVisible: false,
+      rowCount: 2,
+      deadRatio: 0.2,
+      uniqueTextColors: 3,
+      nativeUnstyledInputs: 0,
+      overflowX: 0,
+      title: "Agenda",
+      consoleErrors: 0,
+      clipping: 3,
+      overlap: 2,
+      leakedText: false,
+    };
+    assert.match(blocksPublish(agenda, "app", undefined, brief, renderedClip), /clip/i);
+    assert.equal(blocksPublish(agenda, "app", undefined, brief), "");
   });
 });
