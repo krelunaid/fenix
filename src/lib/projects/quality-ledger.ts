@@ -281,9 +281,9 @@ export const QUALITY_LEDGER: LedgerRow[] = [
   {
     id: "agenda-runtime",
     claim:
-      "Agenda generata: selezione giorno con date ISO, ARIA e tastiera; stato appuntamento distinto dall'orario e persistito; form di dominio (prestazione/ora/luogo/cliente); create/update/delete/reload; inset desktop. Luogo non è la mood-word salvia. 0 crediti xAI. Il residuo grafico five-brief (manifest solo after, palette mobile vicine) resta aperto e non è prova di 9/10.",
+      "Agenda generata: settimana Lun-Dom con date reali, weekend e clock iniettabile; selezione giorno ISO/ARIA/tastiera; stato distinto dall'orario; form di dominio con data esplicita e validazione checkValidity (niente 09:00 silenzioso); create/update/delete/reload; pannello day-rail anche vuoto; prenotazioni ISO non riassegnate al cambio settimana. 0 crediti xAI. Il residuo grafico five-brief (manifest solo after, palette mobile vicine, niente before/parentSHA) resta aperto e non è prova di 9/10.",
     evidence:
-      "compose-product.ts weekDays/AGENDA_CYCLE/domain form + compose-product.test.ts agenda runtime + agenda-runtime-browser.test.ts D/T/M + fixtures/shots/agenda-runtime",
+      "compose-product.ts weekDays 7/nowDate/shiftIso/checkValidity/date field + compose-product.test.ts calendar edges + agenda-runtime-browser.test.ts D/T/M + fixtures/shots/agenda-runtime",
     ok: true,
   },
   {

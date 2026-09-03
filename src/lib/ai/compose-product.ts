@@ -476,8 +476,8 @@ function phoneCss(id: GrammarId): string {
   .slot-body h2{font-family:ui-sans-serif,system-ui,sans-serif;font-size:var(--t-headline);font-weight:650;letter-spacing:-.022em;margin:0 0 4px;line-height:1.2;color:var(--ink-loud)}
   .slot-actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
   .slot .btn{margin-top:0}
-  .week-strip{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;margin:0 0 14px}
-  .week-day{appearance:none;border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:calc(var(--r) * .55);min-height:64px;min-width:44px;padding:8px 4px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font:650 13px/1.1 ui-sans-serif,system-ui,sans-serif;touch-action:manipulation}
+  .week-strip{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;margin:0 0 14px}
+  .week-day{appearance:none;border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:calc(var(--r) * .55);min-height:64px;min-width:0;padding:6px 2px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font:650 11px/1.1 ui-sans-serif,system-ui,sans-serif;touch-action:manipulation}
   .week-day.on{border-color:var(--accent);color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
   .week-day b{font-size:var(--t-headline);letter-spacing:-.02em}
   .week-day .count{font-size:10px;color:var(--muted);font-weight:650}
@@ -824,7 +824,7 @@ ${grammar.chrome === "masthead" ? `<footer>${spec.name} · lastre originali · n
 </div>
 <div class="toast" id="toast" hidden>${grammar.voice.ok}</div>
 <div class="state-load" id="load" hidden>${grammar.voice.load}</div>
-<div class="state-err" id="err" hidden>${grammar.voice.err}</div>
+<div class="state-err" id="err" hidden role="alert">${grammar.voice.err}</div>
 <script>
 const COL=${JSON.stringify(spec.collection)};
 const defaultData={items:[${jsRows(spec.rows)}]};
@@ -852,13 +852,33 @@ function isoDay(d){
   var day=("0"+d.getDate()).slice(-2);
   return y+"-"+m+"-"+day;
 }
-function todayIso(){ return isoDay(new Date()); }
+function nowDate(){
+  var n=typeof window!=="undefined"?window.__FENIX_NOW:null;
+  return n!=null && isFinite(Number(n))?new Date(Number(n)):new Date();
+}
+function todayIso(){ return isoDay(nowDate()); }
+function isIsoDay(s){
+  if(!s || String(s).length!==10) return false;
+  var p=String(s).split("-");
+  return p.length===3 && p[0].length===4 && p[1].length===2 && p[2].length===2;
+}
+function isHm(s){
+  if(!s || String(s).length!==5 || s.charAt(2)!==":") return false;
+  var h=Number(s.slice(0,2)), m=Number(s.slice(3));
+  return isFinite(h) && isFinite(m) && h>=0 && h<24 && m>=0 && m<60;
+}
+function shiftIso(iso, delta){
+  var p=String(iso||"").split("-");
+  var base=nowDate();
+  var d=new Date(Number(p[0])||base.getFullYear(), (Number(p[1])||1)-1, (Number(p[2])||1)+(delta|0));
+  return isoDay(d);
+}
 function weekDays(){
-  var now=new Date();
+  var now=nowDate();
   var monday=new Date(now.getFullYear(), now.getMonth(), now.getDate());
   var wd=monday.getDay();
   monday.setDate(monday.getDate()+(wd===0?-6:1-wd));
-  var labels=["Lun","Mar","Mer","Gio","Ven"];
+  var labels=["Lun","Mar","Mer","Gio","Ven","Sab","Dom"];
   return labels.map(function(label,i){
     var d=new Date(monday.getFullYear(), monday.getMonth(), monday.getDate()+i);
     return {label:label, iso:isoDay(d), n:d.getDate()};
@@ -870,31 +890,48 @@ function hydrateAgenda(){
   var today=todayIso();
   var inWeek=days.some(function(d){return d.iso===today;});
   var fallback=inWeek?today:days[0].iso;
-  if(!selectedDay || !days.some(function(d){return d.iso===selectedDay;})) selectedDay=fallback;
+  if(!selectedDay) selectedDay=fallback;
+  else if(!isIsoDay(selectedDay)) selectedDay=fallback;
   data.items.forEach(function(e,i){
     if(!e.status) e.status=["prenotato","confermato","in-corso","concluso"][i%4];
-    if(!e.day){
-      var off=Number(e.dayOffset);
-      var todayIdx=days.findIndex(function(d){return d.iso===fallback;});
-      if(todayIdx<0) todayIdx=0;
-      var idx=isFinite(off)?Math.max(0,Math.min(days.length-1,todayIdx+(off|0))):i%days.length;
-      e.day=days[idx].iso;
-    }
+    if(e.day && isIsoDay(e.day)) return;
+    var off=Number(e.dayOffset);
+    e.day=shiftIso(today, isFinite(off)?(off|0):(i%7));
   });
 }
 function save(){ if(window.Fenix) void window.Fenix.save(COL, data); }
 function commitForm(f){
   if(!f || f.id!=="fnew") return false;
-  var nome=(f.n && f.n.value || "").trim(); if(!nome) return false;
+  if(typeof f.checkValidity==="function" && !f.checkValidity()){
+    if(typeof f.reportValidity==="function") f.reportValidity();
+    var bad=f.querySelector(":invalid");
+    if(bad){ bad.setAttribute("aria-invalid","true"); try{ bad.focus(); }catch(err){} }
+    var ferr=f.querySelector("[data-fenix-form-error]");
+    if(ferr){ ferr.hidden=false; ferr.textContent="Controlla i campi obbligatori."; }
+    ping(false);
+    return false;
+  }
+  var nome=(f.n && f.n.value || "").trim(); if(!nome){
+    if(f.n){ f.n.setAttribute("aria-invalid","true"); try{ f.n.focus(); }catch(err){} }
+    ping(false); return false;
+  }
   var wasEdit=!!editId;
   if(grammarId==="agenda"){
     hydrateAgenda();
-    var ora=(f.ora&&f.ora.value||"").trim()||"09:00";
+    var ora=(f.ora&&f.ora.value||"").trim();
+    if(!isHm(ora)){
+      if(f.ora){ f.ora.setAttribute("aria-invalid","true"); try{ f.ora.focus(); }catch(err){} }
+      ping(false); return false;
+    }
+    var giorno=(f.data&&f.data.value||"").trim();
+    if(!isIsoDay(giorno)){
+      if(f.data){ f.data.setAttribute("aria-invalid","true"); try{ f.data.focus(); }catch(err){} }
+      ping(false); return false;
+    }
     var luogo=(f.luogo&&f.luogo.value||"").trim()||place;
     var cliente=(f.cliente&&f.cliente.value||"").trim()||"—";
     var prev=wasEdit?data.items.find(function(x){return x.id===editId;}):null;
-    var focusDay=view===tabDefs[2].id?selectedDay:todayIso();
-    var row={id:wasEdit?editId:("n"+Date.now()),title:nome,kicker:ora,note:luogo+" · "+cliente,meta:(prev&&prev.meta)||"30 min",status:(prev&&prev.status)||"prenotato",day:(prev&&prev.day)||focusDay||todayIso()};
+    var row={id:wasEdit?editId:("n"+Date.now()),title:nome,kicker:ora,note:luogo+" · "+cliente,meta:(prev&&prev.meta)||"30 min",status:(prev&&prev.status)||"prenotato",day:giorno};
     if(wasEdit){
       var idx=data.items.findIndex(function(x){return x.id===editId;});
       if(idx>=0) data.items[idx]=row;
@@ -902,8 +939,8 @@ function commitForm(f){
       data.items.unshift(row);
     }
     editId=null;
-    selectedDay=row.day;
-    view=row.day===todayIso()?tabDefs[0].id:tabDefs[2].id;
+    selectedDay=giorno;
+    view=giorno===todayIso()?tabDefs[0].id:tabDefs[2].id;
   } else {
     data.items.unshift({id:"n"+Date.now(),title:nome,kicker:(f.k&&f.k.value||"").trim()||census,note:(f.note&&f.note.value||"").trim()||"—",meta:"nuovo"});
     view=tabDefs[0].id;
@@ -1038,12 +1075,13 @@ ${
   var ora=editing?editing.kicker:"";
   var luogo="";
   var cliente="";
+  var giorno=editing&&editing.day?editing.day:(selectedDay||todayIso());
   if(editing&&editing.note){
     var parts=String(editing.note).split(" · ");
     luogo=parts[0]||"";
     cliente=parts.slice(1).join(" · ");
   }
-  return '<section class="card span" data-fenix-crud data-agenda-form="'+(editing?"edit":"create")+'"><p class="kicker">'+(editing?"Modifica":"Nuovo")+'</p><h2>'+(editing?"Aggiorna slot":formTitle)+'</h2><form id="fnew"><label for="n">Prestazione</label><input class="field" id="n" name="n" required placeholder="Es. Taglio e piega" value="'+title+'"><label for="ora">Ora</label><input class="field" id="ora" name="ora" type="time" required placeholder="09:30" value="'+(ora||"09:00")+'"><label for="luogo">Luogo</label><input class="field" id="luogo" name="luogo" placeholder="Sala 1" value="'+luogo+'"><label for="cliente">Cliente</label><input class="field" id="cliente" name="cliente" placeholder="Nome del cliente" value="'+cliente+'"><button class="btn" type="button" data-act="save" style="margin-top:14px;width:100%">'+(editing?"Salva modifiche":cta)+'</button></form></section>';`
+  return '<section class="card span" data-fenix-crud data-agenda-form="'+(editing?"edit":"create")+'"><p class="kicker">'+(editing?"Modifica":"Nuovo")+'</p><h2>'+(editing?"Aggiorna slot":formTitle)+'</h2><form id="fnew"><label for="n">Prestazione</label><input class="field" id="n" name="n" required placeholder="Es. Taglio e piega" value="'+title+'"><label for="ora">Ora</label><input class="field" id="ora" name="ora" type="time" required placeholder="09:30" value="'+(ora||"09:00")+'"><label for="data">Data</label><input class="field" id="data" name="data" type="date" required value="'+giorno+'"><label for="luogo">Luogo</label><input class="field" id="luogo" name="luogo" placeholder="Sala 1" value="'+luogo+'"><label for="cliente">Cliente</label><input class="field" id="cliente" name="cliente" placeholder="Nome del cliente" value="'+cliente+'"><p class="notes" data-fenix-form-error role="alert" hidden>Controlla i campi obbligatori.</p><button class="btn" type="button" data-act="save" style="margin-top:14px;width:100%">'+(editing?"Salva modifiche":cta)+'</button></form></section>';`
     : `  return '<section class="card span" data-fenix-crud><p class="kicker">Nuovo</p><h2>'+formTitle+'</h2><form id="fnew"><label for="n">Nome</label><input class="field" id="n" name="n" required placeholder="Nome"><label for="k">Dettaglio</label><input class="field" id="k" name="k" placeholder="stato, taglia, ora"><label for="note">Nota</label><input class="field" id="note" name="note" placeholder="materia"><button class="btn" type="submit" style="margin-top:14px;width:100%">'+cta+"</button></form></section>";`
 }
 }
@@ -1067,9 +1105,9 @@ function renderAgenda(){
   var focus=view===tabDefs[2].id?selectedDay:todayIso();
   var rows=data.items.filter(function(e){return e.day===focus;}).slice().sort(function(a,b){return String(a.kicker).localeCompare(String(b.kicker));});
   var html='<div class="day-head"><p class="kicker">'+kicker+" · "+focus+'</p><h2>'+rows.length+" "+census+"</h2></div>";
-  if(!rows.length) return html+emptyBox()+renderForm();
-  html+='<div class="day-rail" data-fenix-rail="day" id="day-rail">';
-  rows.forEach(function(e,i){ html+=slotMarkup(e,i); });
+  html+='<div class="day-rail" data-fenix-rail="day" id="day-rail" role="tabpanel" aria-labelledby="day-'+focus+'">';
+  if(!rows.length) html+=emptyBox();
+  else rows.forEach(function(e,i){ html+=slotMarkup(e,i); });
   return html+"</div>"+renderForm();
 }
 function renderWeek(){

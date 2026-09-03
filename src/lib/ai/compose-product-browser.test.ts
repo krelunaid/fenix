@@ -826,11 +826,11 @@ describe("graphic pipeline visual QA D/T/M", () => {
             if (row.id === "agenda") {
               assert.equal(await page.locator('button[data-view="home"]').count(), 0);
               await page.locator('nav button[data-view="settimana"]').click();
-              assert.equal(await page.locator(".week-day[data-day]").count(), 5, `${row.id} days`);
+              assert.equal(await page.locator(".week-day[data-day]").count(), 7, `${row.id} days`);
               const dayCounts = await page.locator(".week-day [data-count]").evaluateAll((els) =>
                 els.map((el) => Number(el.getAttribute("data-count") || 0)),
               );
-              assert.equal(dayCounts.length, 5, `${row.id} day counts`);
+              assert.equal(dayCounts.length, 7, `${row.id} day counts`);
               assert.ok(
                 dayCounts.reduce((a, b) => a + b, 0) >= 3,
                 `${row.id} week slots ${dayCounts.join(",")}`,

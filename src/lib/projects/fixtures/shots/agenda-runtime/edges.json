@@ -1,0 +1,67 @@
+{
+  "product": "Agenda-calendar-edges",
+  "files": [
+    {
+      "name": "agenda-runtime-weekend-d.png",
+      "sha256": "a542c8e71ed997466e7193466c3660e107a37eecad24b5281e146a5f5bfe7dc7",
+      "bytes": 44994
+    },
+    {
+      "name": "agenda-runtime-empty-d.png",
+      "sha256": "e2acd200b63ce9598c534967cfd81cecc88d8076908ce4b3fc56d4cde025f58e",
+      "bytes": 44893
+    },
+    {
+      "name": "agenda-runtime-valid-d.png",
+      "sha256": "6d5f84b21e3db4b3f4b1a2e641aed23c5b62eb340edeba07aa59d5100092736b",
+      "bytes": 45767
+    },
+    {
+      "name": "agenda-runtime-clean-d.png",
+      "sha256": "ff1f927cbcd92415243417fef0348631131cbb610ed5d63e435c77175f1d09c8",
+      "bytes": 43635
+    },
+    {
+      "name": "agenda-runtime-weekend-t.png",
+      "sha256": "13a0dde52203a23dfa1fbcb2fa2484c8b06562ab4b70090506c309b077cb32e8",
+      "bytes": 38041
+    },
+    {
+      "name": "agenda-runtime-empty-t.png",
+      "sha256": "e0ac57761ded7e8ef999e7b66a86a7113716cf077af86709e4c3c4348748e49c",
+      "bytes": 36181
+    },
+    {
+      "name": "agenda-runtime-valid-t.png",
+      "sha256": "eeb07eae2e0675ddbf2fe1d0ce4078188652c4be5a887851673191878e9f4499",
+      "bytes": 45028
+    },
+    {
+      "name": "agenda-runtime-clean-t.png",
+      "sha256": "6d796f724b3566fffaf27b31e6be80092a52a264cd3f9543493165fdb6488515",
+      "bytes": 36245
+    },
+    {
+      "name": "agenda-runtime-weekend-m.png",
+      "sha256": "7ee4e25ac4df9a81430ad2a4d1aef6ddb95a7f70be489b874ca54aa0ba503412",
+      "bytes": 35311
+    },
+    {
+      "name": "agenda-runtime-empty-m.png",
+      "sha256": "43ebb94210c7f0ec2a2a8c2eecbea1c4534e06f532fd3716026b9db4230c4583",
+      "bytes": 31487
+    },
+    {
+      "name": "agenda-runtime-valid-m.png",
+      "sha256": "a35cddabb31489e4eb21891bca79e4c69570e284bcebd76a9829d44dd0038269",
+      "bytes": 45512
+    },
+    {
+      "name": "agenda-runtime-clean-m.png",
+      "sha256": "d66c46ed0b80becf032aafb996ef847904dab7e80696785ea3e9a842489d52f0",
+      "bytes": 38207
+    }
+  ],
+  "credits": 0,
+  "residual": "Graphic five-brief proof remains after-only: no parent-SHA before/after, three mobile palettes still close. Calendar edges prove function, not 9/10 craft."
+}

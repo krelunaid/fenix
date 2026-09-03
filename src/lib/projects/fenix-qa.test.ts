@@ -332,8 +332,14 @@ describe("focus-visible and worker model", () => {
     assert.match(compose, /name="ora"/);
     assert.match(compose, /name="luogo"/);
     assert.match(compose, /name="cliente"/);
-    assert.doesNotMatch(compose, /idx%5/);
-    assert.doesNotMatch(compose, /\.slot\{[^}]*padding:18px 0/);
+    assert.match(compose, /name="data"/);
+    assert.match(compose, /function nowDate/);
+    assert.match(compose, /checkValidity/);
+    assert.match(compose, /reportValidity/);
+    assert.match(compose, /\["Lun","Mar","Mer","Gio","Ven","Sab","Dom"\]/);
+    assert.doesNotMatch(compose, /Math\.min\(days\.length-1,todayIdx/);
+    assert.doesNotMatch(compose, /if\(!rows\.length\) return html\+emptyBox/);
+    assert.doesNotMatch(compose, /idx%5/);    assert.doesNotMatch(compose, /\.slot\{[^}]*padding:18px 0/);
     assert.match(compose, /padding:18px 20px/);
     assert.match(compose, /closest\("\.week-day\[data-day\]"\)/);
     assert.equal(existsSync(join(root, "src/lib/projects/agenda-runtime-browser.test.ts")), true);

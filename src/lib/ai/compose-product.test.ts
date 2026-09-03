@@ -343,4 +343,33 @@ describe("graphic pipeline prompt→plan→generate→visual→QA", () => {
     assert.doesNotMatch(html, /placeholder="stato, taglia, ora"/);
     assert.doesNotMatch(html, /placeholder="materia"/);
   });
+
+  it("agenda calendar edges: 7 real days, date field, validity, empty rail, no week clamp", () => {
+    const brief = `${formatPrefix("app")}Agenda: appuntamenti, calendario giornaliero, trattamenti e studio.`;
+    const product = composeProduct(brief);
+    const html = product.html;
+    assert.equal(product.grammar.id, "agenda");
+    assert.match(html, /\["Lun","Mar","Mer","Gio","Ven","Sab","Dom"\]/);
+    assert.doesNotMatch(html, /\["Lun","Mar","Mer","Gio","Ven"\]/);
+    assert.match(html, /function nowDate/);
+    assert.match(html, /__FENIX_NOW/);
+    assert.match(html, /function shiftIso/);
+    assert.match(html, /checkValidity/);
+    assert.match(html, /reportValidity/);
+    assert.match(html, /name="data"/);
+    assert.match(html, /id="data"/);
+    assert.match(html, /type="date"/);
+    assert.match(html, /for="data"/);
+    assert.match(html, /role="alert"/);
+    assert.match(html, /data-fenix-form-error/);
+    assert.match(html, /role="tabpanel"/);
+    assert.match(html, /repeat\(7,/);
+    assert.doesNotMatch(html, /repeat\(5,/);
+    assert.doesNotMatch(html, /trim\(\)\|\|"09:00"/);
+    assert.doesNotMatch(html, /Math\.min\(days\.length-1,todayIdx/);
+    assert.doesNotMatch(html, /if\(!rows\.length\) return html\+emptyBox/);
+    assert.match(html, /id="day-rail"/);
+    assert.match(html, /aria-invalid/);
+    assert.match(html, /selectedDay\|\|todayIso\(\)/);
+  });
 });
