@@ -254,4 +254,57 @@ describe("graphic pipeline prompt→plan→generate→visual→QA", () => {
     assert.match(runs.find((r) => r.id === "repo-voci")!.html, /data-repo-stage="activity"/);
     assert.match(runs.find((r) => r.id === "repo-voci")!.html, /class="commit"/);
   });
+
+  it("composes five distinct briefs on the real generator: agenda rail, perfume, fashion, repo, kitchen", () => {
+    const five = {
+      agenda: `${formatPrefix("app")}Agenda: appuntamenti, calendario giornaliero, trattamenti e studio.`,
+      profumi: `${formatPrefix("app")}Essenza: gestione profumi premium, flaconi, note olfattive e guardaroba.`,
+      abbigliamento: `${formatPrefix("app")}Vesti: moda e vendite, lookbook, capi in passerella e cassa.`,
+      repo: `${formatPrefix("app")}Taccuino: note e repository, commit, rami, sync e scarto del repo.`,
+      ristorazione: `${formatPrefix("app")}Osteria del Passo: ristorazione, menu degustazione, comande al passo cucina e sala da pranzo.`,
+    };
+    const runs = Object.entries(five).map(([id, brief]) => ({ id, ...composeProduct(brief) }));
+    const grammars = new Set(runs.map((r) => r.grammar.id));
+    const palettes = new Set(runs.map((r) => `${r.tokens.palette.bg}:${r.tokens.palette.accent}`));
+    const fonts = new Set(runs.map((r) => r.tokens.fonts.display));
+    assert.equal(grammars.size, 5, [...grammars].join(","));
+    assert.equal(palettes.size, 5, [...palettes].join(" | "));
+    assert.ok(fonts.size >= 4, [...fonts].join(","));
+    const agenda = runs.find((r) => r.id === "agenda")!;
+    assert.equal(agenda.grammar.id, "agenda");
+    assert.match(agenda.html, /data-fenix-rail="day"/);
+    assert.match(agenda.html, /data-view="oggi"/);
+    assert.match(agenda.html, /data-view="settimana"/);
+    assert.match(agenda.html, /<time class="time"/);
+    assert.match(agenda.html, /--t-headline/);
+    assert.match(agenda.html, /min-height:44px/);
+    assert.match(agenda.html, /data-icon-grid="24"/);
+    assert.match(agenda.html, /Fenix\.save/);
+    assert.match(agenda.html, /data-fenix-crud|id="fnew"/);
+    assert.doesNotMatch(agenda.html, /data-view="home"/);
+    assert.doesNotMatch(agenda.html, /data-view="elenco"/);
+    assert.doesNotMatch(agenda.html, /state-empty:before/);
+    assert.doesNotMatch(agenda.html, /#f5f5f7|#0071e3|#007aff/);
+    assert.doesNotMatch(agenda.html, /-apple-system|BlinkMacSystemFont|SF Pro/);
+    const locked = composeProduct(
+      `${formatPrefix("app")}Agenda: appuntamenti. Sfondo #dce8e2 accento #0f766e.`,
+    );
+    assert.equal(locked.tokens.palette.bg.toLowerCase(), "#dce8e2");
+    assert.equal(locked.tokens.palette.accent.toLowerCase(), "#0f766e");
+    for (const run of runs) {
+      const qa = auditGraphicQuality(run.html, { brief: five[run.id as keyof typeof five], kind: run.grammar.kind });
+      assert.equal(
+        qa.ok,
+        true,
+        `${run.id}: ${qa.findings.filter((f) => f.severity === "fail").map((f) => f.code).join(" · ")}`,
+      );
+      assert.match(run.html, /viewBox="0 0 24 24"/);
+      assert.match(run.html, /data-craft-nav="1"/);
+      assert.match(run.html, /Fenix\.load/);
+    }
+    assert.equal(runs.find((r) => r.id === "profumi")!.grammar.id, "split-stage");
+    assert.equal(runs.find((r) => r.id === "abbigliamento")!.grammar.id, "lookbook");
+    assert.equal(runs.find((r) => r.id === "repo")!.grammar.id, "source-timeline");
+    assert.equal(runs.find((r) => r.id === "ristorazione")!.grammar.id, "service-board");
+  });
 });

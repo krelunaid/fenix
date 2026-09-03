@@ -271,6 +271,14 @@ export const QUALITY_LEDGER: LedgerRow[] = [
     ok: true,
   },
   {
+    id: "generated-app-craft",
+    claim:
+      "Il generatore condiviso (composeProduct, non le sole fixture) produce cinque brief distinti — Agenda, profumi, abbigliamento, note/repository, ristorazione — con icone semantiche su griglia 24, palette diverse dal brief (override utente conservato), tipo 17/headline, imagery di dominio e niente hero KPI o tab Home/Elenco sull'agenda. D/T/M, CRUD reale, console pulita, AA, overflow/clipping chiusi. Punteggio tecnico, giudizio grafico e benchmark esterno restano assi distinti. Nessun 9/10 senza prova. 0 crediti xAI su questi gate.",
+    evidence:
+      "compose-product.ts agendaRailMarkup + craft-icons.ts data-icon-grid=24 + design-tokens booking 17/1.75 + compose-product.test.ts five briefs + compose-product-browser.test.ts D/T/M CRUD + fixtures/graphic/five",
+    ok: true,
+  },
+  {
     id: "emergent",
     claim:
       "Emergent resta un benchmark esterno: fonti ufficiali e dieci assi sono datati, ma nessuna graduatoria competitiva è provata senza la stessa esecuzione testa-a-testa.",

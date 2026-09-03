@@ -209,6 +209,18 @@ document.getElementById('main').innerHTML = 'x';
     assert.match(piramide, /width="24"/);
     assert.match(piramide, /stroke-linejoin="round"/);
     assert.match(piramide, /data-craft-nav="1"/);
+    assert.match(piramide, /data-icon-grid="24"/);
+    assert.match(piramide, /stroke-width="1\.7"/);
+    const agenda = ["Oggi", "Nuovo", "Settimana", "Archivio"].map((label, i) =>
+      craftNavIcon({ id: label.toLowerCase(), label }, i),
+    );
+    assert.equal(new Set(agenda).size, 4, "agenda tabs must be four distinct glyphs");
+    for (const svg of agenda) {
+      assert.match(svg, /viewBox="0 0 24 24"/);
+      assert.match(svg, /width="24"/);
+      assert.match(svg, /height="24"/);
+      assert.equal(isAppleChromeSvg(svg), false);
+    }
     const tabs = [
       { id: "collezione", label: "Collezione" },
       { id: "piramide", label: "Piramide" },

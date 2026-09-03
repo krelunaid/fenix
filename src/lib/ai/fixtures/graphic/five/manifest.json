@@ -1,0 +1,65 @@
+{
+  "files": [
+    {
+      "name": "agenda-D.png",
+      "sha256": "7759c33c5553a9a620a875c801538ada15b552b997fb920aea5eae684dfe4f92"
+    },
+    {
+      "name": "agenda-T.png",
+      "sha256": "10469b4fb718ee8371b75fb7fbc1902392b170c06798841f495c9273813f6047"
+    },
+    {
+      "name": "agenda-M.png",
+      "sha256": "3e24c3cf81ae16644115a50bf97e0d313fa4637986ab29bfac0ee41512a121f0"
+    },
+    {
+      "name": "profumi-D.png",
+      "sha256": "bfdcc9d9370a6ae71f27b51b19c70bcf2b29f51072aa9d986d1bb7930a0c08cc"
+    },
+    {
+      "name": "profumi-T.png",
+      "sha256": "82e9be82577a5d9f8e2fdcfa1b5158c223f34af3130c92a918bc941614594445"
+    },
+    {
+      "name": "profumi-M.png",
+      "sha256": "81d0bf9691b3afa714836c70feb86bfe02664056c50950b89180e9ab0001df18"
+    },
+    {
+      "name": "abbigliamento-D.png",
+      "sha256": "cc477f65405c4846b36faadc9bb1ec007499f59aac0863ab76a3ed34e7e4c322"
+    },
+    {
+      "name": "abbigliamento-T.png",
+      "sha256": "fe1e4f17d93861299f37df1dc7890f7f69528fa468d7b7d44a74e360683ec52a"
+    },
+    {
+      "name": "abbigliamento-M.png",
+      "sha256": "aebca37dfcbf7edd63830827028e85d4b9993618080e8a4be16654b4a03ddcc7"
+    },
+    {
+      "name": "repo-D.png",
+      "sha256": "25750700c0e2f95de82c1f850747b84403d30961e378d8c154b149ad1324ceda"
+    },
+    {
+      "name": "repo-T.png",
+      "sha256": "737c4b4fa7c732d05beb856856d888a33aa6357b62b8bb6918cb56355f27d2ac"
+    },
+    {
+      "name": "repo-M.png",
+      "sha256": "2577d60fba12f0e522438a1accb2486615e33c82f6aaffd4d68006b91f7f1e21"
+    },
+    {
+      "name": "ristorazione-D.png",
+      "sha256": "94ae0e4f0cdf9d35e40bb64d546e7821a90ef02c4f1f3dc920c3658c15f5bcca"
+    },
+    {
+      "name": "ristorazione-T.png",
+      "sha256": "ba70c73d1f3872e6c254d08815aabe9b150828aae58fc90c816b5708080ea2ad"
+    },
+    {
+      "name": "ristorazione-M.png",
+      "sha256": "39aa61f6f8ee53b01ba9ae4bb172f0d32352889e6f061357e13c7726d5630710"
+    }
+  ],
+  "note": "composeProduct five briefs D/T/M"
+}

@@ -792,4 +792,81 @@ describe("graphic pipeline visual QA D/T/M", () => {
       `${JSON.stringify({ files: palettes, note: "adaptive palette + anti-template D/T/M" }, null, 2)}\n`,
     );
   });
+
+  it("paints five distinct generated briefs D/T/M from composeProduct with live CRUD", async () => {
+    const { composeProduct } = await import("./compose-product.ts");
+    const { formatPrefix } = await import("../projects/infer.ts");
+    const FIVE_SHOTS = join(here, "fixtures/graphic/five");
+    const AFTER = "/workspace/screenshots/fase3-graphic/five-after";
+    const briefs: { id: string; brief: string }[] = [
+      { id: "agenda", brief: `${formatPrefix("app")}Agenda: appuntamenti, calendario giornaliero, trattamenti e studio.` },
+      { id: "profumi", brief: `${formatPrefix("app")}Essenza: gestione profumi premium, flaconi, note olfattive e guardaroba.` },
+      { id: "abbigliamento", brief: `${formatPrefix("app")}Vesti: moda e vendite, lookbook, capi in passerella e cassa.` },
+      { id: "repo", brief: `${formatPrefix("app")}Taccuino: note e repository, commit, rami, sync e scarto del repo.` },
+      { id: "ristorazione", brief: `${formatPrefix("app")}Osteria del Passo: ristorazione, menu degustazione, comande al passo cucina e sala da pranzo.` },
+    ];
+    const browser = await launchChromium();
+    const files: { name: string; sha256: string }[] = [];
+    try {
+      for (const row of briefs) {
+        const composed = composeProduct(row.brief);
+        for (const [vp, viewport] of VIEWPORTS) {
+          const page = await isolatedPage(browser, { viewport });
+          const errors: string[] = [];
+          page.on("pageerror", (err) => {
+            if (!isBlockedPublicNetworkError(String(err))) errors.push(String(err));
+          });
+          page.on("console", (msg) => {
+            if (msg.type() === "error" && !isBlockedPublicNetworkError(msg.text())) errors.push(msg.text());
+          });
+          try {
+            const src = prepareSrcDoc(composed.html, composed.tokens.palette, row.id, composed.grammar.kind);
+            await page.setContent(src, { waitUntil: "domcontentloaded", timeout: 15000 });
+            await waitForFenixReady(page, 8000);
+            if (row.id === "agenda") {
+              assert.ok((await page.locator("[data-fenix-rail='day']").count()) >= 1, `${row.id} rail`);
+              assert.ok((await page.locator("article.slot").count()) >= 3, `${row.id} slots`);
+              assert.equal(await page.locator('button[data-view="home"]').count(), 0);
+            }
+            const overflow = await page.evaluate(
+              () => document.documentElement.scrollWidth - window.innerWidth,
+            );
+            assert.ok(overflow <= 8, `${row.id}/${vp} overflow ${overflow}`);
+            assert.equal(errors.length, 0, `${row.id}/${vp} ${errors.join(" | ")}`);
+            const rendered = await page.evaluate(collectRenderedGraphic);
+            assert.equal(rendered.leakedText, false, `${row.id} leaked`);
+            assert.ok(rendered.headingCount >= 1, `${row.id} heading`);
+            const dest = await shot(page, `${row.id}-${vp}.png`, FIVE_SHOTS);
+            mkdirSync(AFTER, { recursive: true });
+            await page.screenshot({ path: join(AFTER, `${row.id}-${vp}.png`), fullPage: false });
+            const buf = await page.screenshot({ type: "png" });
+            files.push({ name: `${row.id}-${vp}.png`, sha256: createHash("sha256").update(buf).digest("hex") });
+            if (vp === "D") {
+              const tabIndex = row.id === "repo" ? 2 : 1;
+              const tabs = page.locator("button[data-view]");
+              if ((await tabs.count()) > tabIndex) {
+                await tabs.nth(tabIndex).click();
+                const name = page.locator("#n");
+                if (await name.count()) {
+                  await name.fill(`Prova ${row.id}`);
+                  await page.locator("#fnew button[type='submit']").click();
+                  await page.getByText(`Prova ${row.id}`).waitFor({ timeout: 4000 });
+                  const body = await page.locator("body").innerText();
+                  assert.doesNotMatch(body, /\bundefined\b|\bNaN\b/);
+                }
+              }
+            }
+            void dest;
+          } finally {
+            await page.close();
+          }
+        }
+      }
+    } finally {
+      await browser.close();
+    }
+    mkdirSync(FIVE_SHOTS, { recursive: true });
+    writeFileSync(join(FIVE_SHOTS, "manifest.json"), `${JSON.stringify({ files, note: "composeProduct five briefs D/T/M" }, null, 2)}\n`);
+    assert.equal(files.length, briefs.length * VIEWPORTS.length);
+  });
 });

@@ -343,6 +343,39 @@ function synthesizeSpec(brief: string): PipelineSpec {
       cta: "Metti in linea",
     };
   }
+  if (grammar.id === "agenda" || tokens.family === "booking") {
+    const place = tokens.mood.split(",")[0] || "sala";
+    const clinical = /clinic|medic|pazient|terap|ospedal|dentist/.test(brief);
+    return {
+      id: `${tokens.family}-agenda`,
+      name,
+      kicker: `Oggi · ${place}`,
+      place,
+      collection: "slot",
+      brief,
+      tabs: [
+        { id: "oggi", label: "Oggi" },
+        { id: "nuovo", label: "Nuovo" },
+        { id: "settimana", label: "Settimana" },
+        { id: "archivio", label: "Archivio" },
+      ],
+      rows: clinical
+        ? [
+            { id: "s1", title: "Prima visita", kicker: "09:30", note: "Studio 1 · Marta", meta: "45 min" },
+            { id: "s2", title: "Controllo", kicker: "11:00", note: "Studio 2 · Leo", meta: "30 min" },
+            { id: "s3", title: "Terapia", kicker: "14:30", note: "Ambulatorio · Noa", meta: "60 min" },
+            { id: "s4", title: "Referto", kicker: "17:00", note: "Accoglienza", meta: "20 min" },
+          ]
+        : [
+            { id: "s1", title: "Taglio e piega", kicker: "09:30", note: `${place} · Marta`, meta: "45 min" },
+            { id: "s2", title: "Colore", kicker: "11:00", note: "Poltrona 2 · Leo", meta: "30 min" },
+            { id: "s3", title: "Trattamento", kicker: "14:30", note: "Studio nord · Noa", meta: "60 min" },
+            { id: "s4", title: "Chiusura", kicker: "17:00", note: "Accoglienza", meta: "20 min" },
+          ],
+      formTitle: "Nuovo slot",
+      cta: "Metti in agenda",
+    };
+  }
   return {
     id: `${tokens.family}-seed`,
     name,
@@ -366,6 +399,16 @@ function synthesizeSpec(brief: string): PipelineSpec {
   };
 }
 
+function agendaRailMarkup(spec: PipelineSpec, grammar: LayoutGrammar): string {
+  const slots = spec.rows
+    .map((e, i) => {
+      const state = i === 0 ? "on" : "idle";
+      return `<article class="slot" data-id="${e.id}" data-state="${state}"><time class="time" datetime="${e.kicker}">${e.kicker}</time><div class="slot-body"><h2>${e.title}</h2><p class="notes">${e.note} · ${e.meta}</p><button class="btn sm ghost" data-act="advance" data-id="${e.id}">Avanza slot</button></div></article>`;
+    })
+    .join("");
+  return `<div class="day-head"><p class="kicker">${spec.kicker}</p><h2>${spec.rows.length} ${grammar.voice.census}</h2></div><div class="day-rail" data-fenix-rail="day">${slots}</div>`;
+}
+
 function tabSvg(tab: { id: string; label: string }, i: number): string {
   return craftNavIcon(tab, i);
 }
@@ -378,17 +421,19 @@ function typeRampCss(t: DesignTokens): string {
         ? "1.08rem"
         : t.family === "fashion" || t.family === "perfume"
           ? "clamp(1.22rem, 2.4vw, 1.7rem)"
-          : "clamp(1.18rem, 2.2vw, 1.55rem)";
-  return `.brand{font-size:var(--t-h1);color:var(--ink-loud);letter-spacing:-.04em}
-.card h2,.look h2,.slot h2,.ticket h2,.room h2,.deal h2,.plate h2,.fragrance h2{font-size:var(--t-h2,${h2});color:var(--ink-loud);font-weight:600;letter-spacing:-.03em}
-.notes,.look p,.room .notes,.ticket .notes,.fragrance .notes{color:var(--ink-quiet);font-size:13.5px;line-height:1.5}
+          : t.family === "booking"
+            ? "var(--t-headline)"
+            : "clamp(1.18rem, 2.2vw, 1.55rem)";
+  return `.brand{font-size:var(--t-h1);color:var(--ink-loud);letter-spacing:-.03em;font-weight:700}
+.card h2,.look h2,.slot h2,.ticket h2,.room h2,.deal h2,.plate h2,.fragrance h2,.commit h2{font-size:var(--t-h2,${h2});color:var(--ink-loud);font-weight:650;letter-spacing:-.022em}
+.notes,.look p,.room .notes,.ticket .notes,.fragrance .notes,.commit .notes{color:var(--ink-quiet);font-size:var(--t-footnote);line-height:1.35}
 .kicker{color:var(--muted)}
-.hero .caption h2,.plate.hero .caption h2{font-size:clamp(1.35rem,2.8vw,2rem);color:var(--ink-loud)}`;
+.hero .caption h2,.plate.hero .caption h2,.day-head h2{font-size:var(--t-large);color:var(--ink-loud);letter-spacing:-.03em;font-weight:700;line-height:1.15}`;
 }
 
 function kickerCss(t: DesignTokens): string {
-  if (t.family === "ops" || t.family === "repo") {
-    return `.kicker,header .place{font-size:11px;letter-spacing:.03em;text-transform:none;font-variant-numeric:tabular-nums;color:var(--muted)}`;
+  if (t.family === "ops" || t.family === "repo" || t.family === "booking") {
+    return `.kicker,header .place{font-size:var(--t-caption);letter-spacing:.02em;text-transform:none;font-variant-numeric:tabular-nums;color:var(--muted)}`;
   }
   if (t.family === "food" || t.family === "hospitality") {
     return `.kicker,header .place{font-size:13px;letter-spacing:.01em;text-transform:none;color:var(--muted)}`;
@@ -417,21 +462,36 @@ function phoneCss(id: GrammarId): string {
   .ticket{display:grid;grid-template-columns:72px 1fr auto;gap:12px;align-items:center;min-height:76px}
   .ticket .thumb{width:72px;height:56px;overflow:hidden}
   .ticket .thumb svg{width:72px;height:56px;display:block}`
+            : id === "agenda"
+              ? `.hero{display:none;min-height:0;height:0;margin:0;border:0}
+  .day-head{padding:2px 0 10px}
+  .day-head h2{font-family:ui-sans-serif,system-ui,sans-serif;font-size:var(--t-large);font-weight:700;letter-spacing:-.03em;line-height:1.12;color:var(--ink-loud)}
+  .day-rail{display:flex;flex-direction:column;gap:8px}
+  .slot{display:grid;grid-template-columns:64px minmax(0,1fr);gap:12px;align-items:start;padding:14px 14px 14px 16px;margin:0;border:1px solid var(--line);border-radius:calc(var(--r) * .45);background:var(--surface);min-height:72px;box-shadow:inset 3px 0 0 var(--accent)}
+  .slot[data-state="on"]{border-color:var(--accent)}
+  .slot .time{font-variant-numeric:tabular-nums;font-feature-settings:"tnum";font-size:var(--t-footnote);font-weight:700;color:var(--accent);padding-top:3px;letter-spacing:-.01em}
+  .slot-body h2{font-family:ui-sans-serif,system-ui,sans-serif;font-size:var(--t-headline);font-weight:650;letter-spacing:-.022em;margin:0 0 4px;line-height:1.2;color:var(--ink-loud)}
+  .slot .btn{margin-top:8px}
+  .week-strip{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;margin:0 0 14px}
+  .week-day{appearance:none;border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:calc(var(--r) * .55);min-height:56px;min-width:44px;padding:8px 4px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font:650 13px/1.1 ui-sans-serif,system-ui,sans-serif;touch-action:manipulation}
+  .week-day.on{border-color:var(--accent);color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+  .week-day b{font-size:var(--t-headline);letter-spacing:-.02em}
+  .day-rail ~ [data-fenix-crud]{display:none}`
             : "";
   return `${stage}
 .app{display:grid;grid-template-rows:auto 1fr auto;grid-template-areas:"head" "main" "nav";width:100%;min-height:100dvh}
 header{grid-area:head;padding:14px 16px 10px}
 nav.tabs{grid-area:nav;display:grid;grid-template-columns:repeat(4,1fr);height:calc(64px + env(safe-area-inset-bottom));padding:6px 6px calc(6px + env(safe-area-inset-bottom));border-top:1px solid var(--line);background:color-mix(in srgb,var(--surface) 94%,transparent);position:sticky;bottom:0;z-index:8}
-nav.tabs button{border:0;background:none;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:3px;font:600 10px/1.1 var(--body),sans-serif;padding:4px;min-height:44px;min-width:44px}
+nav.tabs button{border:0;background:none;color:var(--muted);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font:600 10px/1.1 var(--body),sans-serif;padding:4px;min-height:44px;min-width:44px;touch-action:manipulation}
 nav.tabs button.on{color:var(--accent)}
-nav.tabs svg{width:22px;height:22px;flex:0 0 22px;overflow:hidden;display:block}
+nav.tabs svg{width:24px;height:24px;flex:0 0 24px;overflow:hidden;display:block}
 main{grid-area:main;min-height:0;overflow:auto;padding:8px 16px 20px}
 @media(min-width:768px){
   .app{grid-template-rows:auto 1fr;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"head nav" "main main"}
   header{padding:14px 22px;border-bottom:1px solid var(--line);align-items:center}
   nav.tabs{position:static;display:flex;flex-direction:row;flex-wrap:wrap;height:auto;min-height:56px;border:0;border-bottom:1px solid var(--line);padding:8px 18px;justify-content:flex-end;align-items:center;background:transparent}
   nav.tabs button{flex-direction:row;font:650 13px/1 var(--body),sans-serif;min-height:44px;padding:8px 12px;gap:8px}
-  nav.tabs svg{display:none}
+  nav.tabs svg{display:${id === "agenda" ? "block" : "none"}}
   main{padding:20px 22px 28px}
   .lookbook{grid-template-columns:minmax(0,1.32fr) minmax(0,1fr);grid-template-rows:1fr 1fr;gap:14px;align-items:stretch;min-height:calc(100vh - 124px)}
   .look{margin:0;min-height:0}
@@ -453,7 +513,12 @@ main{grid-area:main;min-height:0;overflow:auto;padding:8px 16px 20px}
   .hero,.hero.plate,.plate{grid-column:1;grid-row:1 / span 8;min-height:0;height:calc(100vh - 140px);max-height:calc(100vh - 140px);margin:0}
   .hero svg,.plate svg,.hero.plate svg,.plate.hero svg{height:100%;min-height:0;max-height:100%}
   .tickets,.span,.card{grid-column:2}`
-      : ""
+      : id === "agenda"
+        ? `.hero{display:none;min-height:0;height:0}
+  .day-head{padding-bottom:8px}
+  .slot{min-height:80px;padding:16px 0}
+  .week-strip{margin-bottom:18px}`
+        : ""
   }
 }
 @media(min-width:1024px){
@@ -490,6 +555,13 @@ main{grid-area:main;min-height:0;overflow:auto;padding:8px 16px 20px}
   .ticket{grid-template-columns:148px 1fr auto;min-height:118px;gap:14px}
   .ticket .thumb{width:148px;height:112px}
   .ticket .thumb svg{width:148px;height:112px}`
+            : id === "agenda"
+              ? `.hero{display:none}
+  main{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(280px,.8fr);gap:28px;align-content:start}
+  .day-head,.week-strip{grid-column:1 / -1}
+  .day-rail{grid-column:1;min-height:0}
+  .slot{padding:18px 0;min-height:88px}
+  .day-rail ~ [data-fenix-crud]{display:block;grid-column:2;grid-row:2 / span 8;align-self:start;margin:0}`
             : ""
   }
 }`;
@@ -616,9 +688,8 @@ ${kickerCss(t)}
 .state-load:not([hidden]){display:flex;align-items:center;gap:10px}
 .state-load:not([hidden]):before{content:"";width:14px;height:14px;border:2px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:fenix-spin .8s linear infinite}
 @keyframes fenix-spin{to{transform:rotate(360deg)}}
-.state-empty{padding:36px 16px;color:var(--muted);text-align:center;border:1px dashed var(--line);border-radius:var(--r)}
-.state-empty:before{content:"";display:block;width:40px;height:40px;margin:0 auto 12px;border:1.5px dashed var(--line);border-radius:50%}
-.state-empty .btn{margin:16px auto 0;display:inline-flex}
+.state-empty{padding:28px 16px;color:var(--muted);text-align:left;border:0;border-top:1px dashed var(--line);border-radius:0}
+.state-empty .btn{margin:16px 0 0;display:inline-flex}
 .btn{appearance:none;border:0;cursor:pointer;font:650 14px/1 var(--body),system-ui,sans-serif;border-radius:${t.family === "editorial" || t.family === "fashion" ? "0" : "999px"};padding:12px 18px;background:var(--accent);color:var(--accent-ink);min-height:44px;min-width:44px}
 .btn.ghost{background:transparent;color:var(--fg);border:1px solid var(--line)}
 .btn.sm{padding:8px 12px;min-height:40px;font-size:13px}
@@ -676,7 +747,9 @@ function productHtml(spec: PipelineSpec, tokens: DesignTokens, grammar: LayoutGr
   const bootMain =
     grammar.id === "source-timeline"
       ? `<section class="repo-stage" data-repo-stage="activity"><div class="timeline-art">${hero}</div></section>`
-      : `<div class="hero">${hero}</div>`;
+      : grammar.id === "agenda"
+        ? agendaRailMarkup(spec, grammar)
+        : `<div class="hero">${hero}</div>`;
   const navButtons = spec.tabs
     .map(
       (tab, i) =>
@@ -690,7 +763,9 @@ function productHtml(spec: PipelineSpec, tokens: DesignTokens, grammar: LayoutGr
         ? "1.08rem"
         : tokens.family === "fashion" || tokens.family === "perfume"
           ? "clamp(1.22rem, 2.4vw, 1.7rem)"
-          : "clamp(1.18rem, 2.2vw, 1.55rem)";
+          : tokens.family === "booking"
+            ? "var(--t-headline)"
+            : "clamp(1.18rem, 2.2vw, 1.55rem)";
   return `<!DOCTYPE html>
 <html lang="it"${desk ? ' data-fenix-craft-desk' : ""}>
 <head>
@@ -701,9 +776,9 @@ function productHtml(spec: PipelineSpec, tokens: DesignTokens, grammar: LayoutGr
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="${tokens.fonts.href}" rel="stylesheet"/>
 <style data-fenix-phone data-fenix-site data-fenix-craft>
-:root{color-scheme:${scheme};--bg:${p.bg};--surface:${p.surface};--elevated:${p.elevated};--fg:${p.fg};--muted:${p.muted};--accent:${p.accent};--line:${p.line};--accent-ink:${p.accentInk};--success:${p.success};--warning:${p.warning};--r:${tokens.radius};--display:"${tokens.fonts.display}",Georgia,serif;--body:"${tokens.fonts.body}",system-ui,sans-serif;--t-h1:${tokens.type.h1};--t-h2:${h2};--t-body:${tokens.type.body};--ink-loud:${p.fg};--ink-quiet:${p.muted}}
+:root{color-scheme:${scheme};--bg:${p.bg};--surface:${p.surface};--elevated:${p.elevated};--fg:${p.fg};--muted:${p.muted};--accent:${p.accent};--line:${p.line};--accent-ink:${p.accentInk};--success:${p.success};--warning:${p.warning};--r:${tokens.radius};--display:"${tokens.fonts.display}",ui-sans-serif,system-ui,sans-serif;--body:"${tokens.fonts.body}",ui-sans-serif,system-ui,sans-serif;--t-h1:${tokens.type.h1};--t-h2:${h2};--t-body:${tokens.type.body};--t-large:1.75rem;--t-headline:1.0625rem;--t-footnote:.8125rem;--t-caption:.6875rem;--ink-loud:${p.fg};--ink-quiet:${p.muted}}
 *{box-sizing:border-box;margin:0;padding:0}
-html,body{height:100%;background:var(--bg);color:var(--fg);font:400 ${tokens.type.body}/1.45 var(--body),system-ui,sans-serif}
+html,body{height:100%;background:var(--bg);color:var(--fg);font:400 ${tokens.type.body}/1.29 var(--body),ui-sans-serif,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
 body{min-height:100dvh}
 .app{min-height:100dvh;display:flex;flex-direction:column;width:100%}
 header{padding:16px 18px 10px;display:flex;align-items:flex-end;justify-content:space-between;gap:12px}
@@ -894,12 +969,23 @@ function renderStats(){
   return '<div class="hero">'+hero+'</div><div class="card span"><p class="kicker">Studio</p><h2>'+data.items.length+" "+census+'</h2><p class="notes">'+place+"</p></div>";
 }
 function renderAgenda(){
-  var html='<div class="hero">'+hero+'<div class="caption"><p class="kicker">'+kicker+"</p><h2>"+data.items.length+" "+census+"</h2></div></div>";
-  if(!data.items.length) return html+emptyBox();
+  var html='<div class="day-head"><p class="kicker">'+kicker+"</p><h2>"+data.items.length+" "+census+"</h2></div>";
+  if(!data.items.length) return html+emptyBox()+renderForm();
+  html+='<div class="day-rail" data-fenix-rail="day">';
   data.items.forEach(function(e,i){
-    html+='<article class="slot" data-id="'+e.id+'" data-state="'+(i===0?"on":"idle")+'"><p class="kicker">'+e.kicker+" · "+e.meta+"</p><h2>"+e.title+'</h2><p class="notes">'+e.note+'</p><button class="btn sm ghost" data-act="advance" data-id="'+e.id+'">Avanza slot</button></article>';
+    html+='<article class="slot" data-id="'+e.id+'" data-state="'+(i===0?"on":"idle")+'"><time class="time" datetime="'+e.kicker+'">'+e.kicker+'</time><div class="slot-body"><h2>'+e.title+'</h2><p class="notes">'+e.note+" · "+e.meta+'</p><button class="btn sm ghost" data-act="advance" data-id="'+e.id+'">Avanza slot</button></div></article>';
   });
-  return html;
+  return html+"</div>"+renderForm();
+}
+function renderWeek(){
+  var days=["Lun","Mar","Mer","Gio","Ven"];
+  var html='<div class="week-strip" role="tablist" aria-label="Settimana">';
+  days.forEach(function(d,i){
+    var n=data.items.filter(function(_,idx){return idx%5===i;}).length;
+    html+='<button type="button" class="week-day'+(i===0?" on":"")+'" data-day="'+d+'"><span class="kicker">'+d+"</span><b>"+(n||"·")+"</b></button>";
+  });
+  html+="</div>";
+  return html+renderAgenda();
 }
 function shaOf(e){
   var m=(e.note||"").match(/[a-f0-9]{6}/i);
@@ -975,7 +1061,7 @@ function render(){
     else root.innerHTML=renderSource("diff");
   } else if(id===tabDefs[0].id) root.innerHTML=renderHome();
   else if(id===tabDefs[1].id) root.innerHTML=renderForm();
-  else if(id===tabDefs[2].id) root.innerHTML=grammarId==="ops-desk"?renderDesk():renderList();
+  else if(id===tabDefs[2].id) root.innerHTML=grammarId==="ops-desk"?renderDesk():grammarId==="agenda"?renderWeek():renderList();
   else root.innerHTML=grammarId==="magazine"?renderForm():renderStats();
   root.setAttribute("data-state", data.items.length?"ready":"empty");
 }
@@ -1025,7 +1111,9 @@ function polishFor(tokens: DesignTokens, grammar: LayoutGrammar): string {
   const chrome =
     grammar.id === "source-timeline"
       ? "Chrome da registro di repository: testata + rail, timeline commit, rami, stato sync, scarto/diff. Vietato hero grigio, due KPI, empty card, clone GitHub."
-      : grammar.chrome === "desk"
+      : grammar.id === "agenda"
+        ? "Chrome da agenda: binario orario, tab Oggi/Nuovo/Settimana/Archivio, tipo 17/headline, target 44px. Vietato hero KPI, tab Home/Elenco, riquadri vuoti."
+        : grammar.chrome === "desk"
         ? DASHBOARD_POLISH_INSTRUCTION
         : grammar.chrome === "masthead"
           ? SITE_POLISH_INSTRUCTION

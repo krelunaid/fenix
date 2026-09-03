@@ -37,7 +37,7 @@ export const CRAFT_APP_ICON = `<svg ${ATTR}><path d="M6 3.5h11.5v17H6z"/><path d
 
 /** Nav icons: viewBox 24, content in ~5–19, round joins, no miter spike, no letter-A. */
 const NAV_ATTR =
-  'viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" overflow="hidden" aria-hidden="true" data-craft-nav="1"';
+  'viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" overflow="hidden" aria-hidden="true" data-craft-nav="1" data-icon-grid="24"';
 
 function navIcon(paths: string): string {
   return `<svg ${NAV_ATTR}>${paths}</svg>`;
@@ -191,7 +191,7 @@ export function craftNavIcon(tab: { id: string; label: string }, index = 0): str
   else if (/rami|branch/.test(key)) svg = NAV_ICONS.branch;
   else if (/sync/.test(key)) svg = NAV_ICONS.sync;
   else if (/scarto|diff/.test(key)) svg = NAV_ICONS.diff;
-  else if (/oggi|giorno/.test(key)) svg = NAV_ICONS.today;
+  else if (/oggi|giorno|agenda|calendario/.test(key)) svg = NAV_ICONS.today;
   else if (/archivio/.test(key)) svg = NAV_ICONS.archive;
   else if (/rapporti|report/.test(key)) svg = NAV_ICONS.report;
   else if (/info|scheda/.test(key)) svg = NAV_ICONS.info;

@@ -114,7 +114,7 @@ const FAMILIES: Record<TokenFamily, FamilySrc> = {
       href: "https://fonts.googleapis.com/css2?family=Karla:wght@400;600;700&family=Newsreader:opsz,wght@6..72,500;6..72,650&display=swap",
     },
     radius: "14px",
-    type: { h1: "clamp(1.6rem, 5vw, 2.2rem)", body: "16px", label: "11px uppercase tracking" },
+    type: { h1: "1.75rem", body: "17px", label: "13px" },
     palette: {
       bg: "#eef3ea",
       surface: "#f7faf4",
@@ -382,7 +382,7 @@ const VARIANTS: Partial<Record<TokenFamily, FamilySrc>> = {
       href: "https://fonts.googleapis.com/css2?family=Libre+Caslon+Text:wght@400;700&family=Red+Hat+Text:wght@400;600&display=swap",
     },
     radius: "6px",
-    type: { h1: "clamp(1.55rem, 5vw, 2.15rem)", body: "16px", label: "11px uppercase tracking" },
+    type: { h1: "1.75rem", body: "17px", label: "13px" },
     palette: {
       bg: "#f4efe4",
       surface: "#fffaf1",
@@ -698,7 +698,9 @@ export function tokensInstruction(tokens: DesignTokens): string {
     "Qualità nativa da tasca consentita (tipo, ritmo 8px, profondità, materiali, motion ridotto). Vietato clonare schermate, marchi, SF Symbols o la coppia #f5f5f7+#0071e3.",
     tokens.family === "repo"
       ? "Dominio repository: attività commit, rami, stato sync, timeline/diff. Vietato home universale con hero grigio + due KPI + CTA + empty card. Non copiare GitHub."
-      : `Asse dominio=${axes.domain}.`,
+      : tokens.family === "booking"
+        ? "Dominio agenda: binario orario, tab Oggi/Nuovo/Settimana/Archivio, tipo 17/headline, icone griglia 24, target 44px. Vietato hero KPI e tab Home/Elenco."
+        : `Asse dominio=${axes.domain}.`,
     "Desktop/tablet: grammatica editoriale a tutta larghezza (split-stage, lookbook, agenda, passo cucina, magazine, ops-desk, source-timeline). Niente canvas boxed 1080px, niente dead zone, niente telefono al centro. Imagery di dominio originale (data-imagery=domain), alt/aria-label, niente placeholder geometrici o hotlink.",
   ].join("\n");
 }

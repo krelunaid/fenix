@@ -321,8 +321,14 @@ describe("focus-visible and worker model", () => {
     const compose = readFileSync(join(root, "src/lib/ai/compose-product.ts"), "utf8");
     assert.match(compose, /data-fenix-id="icon:\$\{tab\.id\}"/);
     assert.match(compose, /data-fenix-id="icon:'\+t\.id\+'/);
+    assert.match(compose, /data-fenix-rail="day"/);
+    assert.match(compose, /agendaRailMarkup/);
+    assert.match(compose, /--t-headline/);
+    assert.match(compose, /grammar\.id === "agenda"/);
+    assert.doesNotMatch(compose, /state-empty:before/);
     const craft = readFileSync(join(root, "src/lib/projects/craft-icons.ts"), "utf8");
     assert.match(craft, /data-fenix-id="icon:\$\{t\.id\}"/);
+    assert.match(craft, /data-icon-grid="24"/);
     const appShell = readFileSync(join(root, "src/lib/ai/app-shell.ts"), "utf8");
     assert.match(appShell, /data-fenix-id="icon:app"/);
     const iconFn = runBuild.slice(runBuild.indexOf("async function runIconBuild"));
