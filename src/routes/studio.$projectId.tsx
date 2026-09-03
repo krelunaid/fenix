@@ -252,33 +252,31 @@ function StudioPage() {
               kind={project.kind}
             />
           ) : (
-            <>
-              <div className={cn("absolute inset-0 overflow-hidden", locked && "isolate")}>
-                <PreviewFrame
-                  html={project.html}
-                  files={project.files}
-                  name={project.name}
-                  device={device}
-                  background={project.palette.bg}
-                  palette={project.palette}
-                  projectId={project.id}
-                  kind={project.kind}
-                  locked={locked}
-                  className="h-full"
-                />
-                <BuildOverlay
-                  active={Boolean(locked)}
-                  steps={project.buildLog ?? []}
-                  startedAt={project.visualJobStartedAt ?? project.updatedAt}
-                  error={!locked && project.status === "error" ? project.error : undefined}
-                  onRetry={() =>
-                    canResume ? void resumePolish(project.id) : void runBuild(project.id)
-                  }
-                  retryLabel={canResume ? "Riprendi rifinitura" : "Riprova. Lo ricostruisco."}
-                  hasDraft={Boolean(project.lastStableHtml)}
-                />
-              </div>
-            </>
+            <div className="relative h-full min-h-[70vh]">
+              <PreviewFrame
+                html={project.html}
+                files={project.files}
+                name={project.name}
+                device={device}
+                background={project.palette.bg}
+                palette={project.palette}
+                projectId={project.id}
+                kind={project.kind}
+                locked={locked}
+                className="h-full"
+              />
+              <BuildOverlay
+                active={Boolean(locked)}
+                steps={project.buildLog ?? []}
+                startedAt={project.visualJobStartedAt ?? project.updatedAt}
+                error={!locked && project.status === "error" ? project.error : undefined}
+                onRetry={() =>
+                  canResume ? void resumePolish(project.id) : void runBuild(project.id)
+                }
+                retryLabel={canResume ? "Riprendi rifinitura" : "Riprova. Lo ricostruisco."}
+                hasDraft={Boolean(project.lastStableHtml)}
+              />
+            </div>
           )}
         </section>
 
@@ -316,33 +314,31 @@ function StudioPage() {
               kind={project.kind}
             />
           ) : (
-            <>
-              <div className={cn("absolute inset-0 overflow-hidden", locked && "isolate")}>
-                <PreviewFrame
-                  html={project.html}
-                  files={project.files}
-                  name={project.name}
-                  device={previewDevice(project.kind)}
-                  background={project.palette.bg}
-                  palette={project.palette}
-                  projectId={project.id}
-                  kind={project.kind}
-                  locked={locked}
-                  className="h-full"
-                />
-                <BuildOverlay
-                  active={Boolean(locked)}
-                  steps={project.buildLog ?? []}
-                  startedAt={project.visualJobStartedAt ?? project.updatedAt}
-                  error={!locked && project.status === "error" ? project.error : undefined}
-                  onRetry={() =>
-                    canResume ? void resumePolish(project.id) : void runBuild(project.id)
-                  }
-                  retryLabel={canResume ? "Riprendi rifinitura" : "Riprova. Lo ricostruisco."}
-                  hasDraft={Boolean(project.lastStableHtml)}
-                />
-              </div>
-            </>
+            <div className="relative h-full min-h-[70vh]">
+              <PreviewFrame
+                html={project.html}
+                files={project.files}
+                name={project.name}
+                device={previewDevice(project.kind)}
+                background={project.palette.bg}
+                palette={project.palette}
+                projectId={project.id}
+                kind={project.kind}
+                locked={locked}
+                className="h-full"
+              />
+              <BuildOverlay
+                active={Boolean(locked)}
+                steps={project.buildLog ?? []}
+                startedAt={project.visualJobStartedAt ?? project.updatedAt}
+                error={!locked && project.status === "error" ? project.error : undefined}
+                onRetry={() =>
+                  canResume ? void resumePolish(project.id) : void runBuild(project.id)
+                }
+                retryLabel={canResume ? "Riprendi rifinitura" : "Riprova. Lo ricostruisco."}
+                hasDraft={Boolean(project.lastStableHtml)}
+              />
+            </div>
           )}
         </section>
       </div>

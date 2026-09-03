@@ -4,7 +4,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, it } from "node:test";
 
-import { launchChromium } from "./playwright-harness.ts";
+import { isolatedPage, launchChromium } from "./playwright-harness.ts";
 import { requirePreview } from "./ensure-preview.ts";
 import { ensureFenixAdapter } from "./fenix-adapter.ts";
 import { OWNER_HEADER, OWNER_STORAGE_KEY, PUBLISHED_MAP_KEY } from "./publish-owner.ts";
@@ -494,7 +494,7 @@ describe("published site is server-side, not localStorage", () => {
 
     const browser = await launchChromium();
     try {
-      const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+      const page = await isolatedPage(browser, { viewport: { width: 1440, height: 900 } });
       await page.addInitScript(
         ({ pid, html, palette }: { pid: string; html: string; palette: typeof PALETTE }) => {
           if (window !== window.parent) return;
@@ -533,8 +533,9 @@ describe("published site is server-side, not localStorage", () => {
         { pid: argillaId, html: ADAPTED, palette: PALETTE },
       );
       await page.goto(`${PREVIEW}/`, { waitUntil: "domcontentloaded", timeout: 20000 });
+      await page.getByRole("heading", { name: "I miei progetti" }).waitFor({ state: "visible", timeout: 12000 });
       const article = page.locator("article").filter({ hasText: "Argilla Viva" });
-      await article.getByRole("heading", { name: "Argilla Viva" }).waitFor({ timeout: 12000 });
+      await article.getByRole("heading", { name: "Argilla Viva" }).waitFor({ state: "visible", timeout: 8000 });
       await article.getByRole("link", { name: /^Modifica$/ }).waitFor({ timeout: 8000 });
       assert.equal(await article.getByRole("link", { name: /Apri/ }).count(), 0);
       const hrefs = await article.locator("a").evaluateAll((nodes) =>

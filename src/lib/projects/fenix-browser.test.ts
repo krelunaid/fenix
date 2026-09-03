@@ -363,6 +363,7 @@ describe("studio overlay and resume in browser", () => {
         ({ html, resumeError }: { html: string; resumeError: string }) => {
           if (window !== window.parent) return;
           const now = Date.now();
+          localStorage.setItem("fenix.session", JSON.stringify({ email: "qa@fenix.test", name: "QA" }));
           const overlay = {
             id: "p-overlay",
             name: "Bozza overlay",
@@ -382,6 +383,10 @@ describe("studio overlay and resume in browser", () => {
             messages: [],
             buildLog: ["Direzione visiva", "Codice"],
             status: "building",
+            visualJobId: "job-overlay-hold",
+            visualJobStatus: "run",
+            visualJobStartedAt: now,
+            buildEpoch: 1,
             createdAt: now,
             updatedAt: now,
           };
@@ -391,6 +396,9 @@ describe("studio overlay and resume in browser", () => {
             name: "Bozza resume",
             status: "error",
             error: resumeError,
+            visualJobId: undefined,
+            visualJobStatus: undefined,
+            visualJobStartedAt: undefined,
             buildLog: ["Rifinitura interrotta"],
           };
           localStorage.setItem(
@@ -407,9 +415,8 @@ describe("studio overlay and resume in browser", () => {
         waitUntil: "domcontentloaded",
         timeout: 20000,
       });
-      const lock = page.locator('[data-fenix-lock="1"]').first();
-      await lock.waitFor({ timeout: 12000 });
-      await page.getByText("Fenix sta creando").first().waitFor({ timeout: 4000 });
+      const lock = page.getByRole("dialog", { name: "Fenix sta creando" }).first();
+      await lock.waitFor({ state: "visible", timeout: 12000 });
       const box = await lock.boundingBox();
       assert.ok(box && box.height > 300, `lock too short to cover preview: ${box?.height}`);
       const compact = page.locator(
