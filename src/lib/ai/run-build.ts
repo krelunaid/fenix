@@ -24,6 +24,14 @@ import {
   VISUAL_JOB_TTL_MS,
   visualJobPatch,
 } from "@/lib/projects/visual-job";
+import {
+  STALE_JOB,
+  captureStableSnapshot,
+  isCurrentBuild,
+  nextBuildEpoch,
+  readPersistedBuild,
+  restoreStablePatch,
+} from "@/lib/projects/studio-lock";
 import { uid } from "@/lib/utils";
 
 const inflight = new Set<string>();
@@ -32,7 +40,7 @@ const polishedOnce = new Set<string>();
 
 export const WORKER_POLL_MAX = 30;
 const WORKER_POLL_MS = 2000;
-/** 2s ticks while a persisted job is live. Overlay stays compact. */
+/** 2s ticks while a persisted job is live. Overlay stays locked. */
 export const WORKER_JOB_POLL_MAX = 180;
 /** Match the visible promise: generation never owns the UI for more than 10 min. */
 const GENERATE_POLL_MAX = 300;
@@ -42,6 +50,11 @@ function isTransientNetwork(msg: string) {
   return /load failed|failed to fetch|network error|timeout|aborted|ERR_NETWORK|Failed to fetch/i.test(
     String(msg || ""),
   );
+}
+
+function stillCurrent(projectId: string, epoch: number, jobId?: string): boolean {
+  const live = useProjectStore.getState().getProject(projectId);
+  return isCurrentBuild(live, epoch, jobId, readPersistedBuild(projectId));
 }
 
 function abandonVisualJob(projectId: string, raw: string) {
@@ -63,6 +76,7 @@ function abandonVisualJob(projectId: string, raw: string) {
     error: human,
     buildLog: dropLiveJobLogs(current?.buildLog ?? []),
     ...clearVisualJobPatch(),
+    ...restoreStablePatch(current),
   });
   const last = current?.messages[current.messages.length - 1];
   if (last?.role === "assistant" && last.content === human) return;
@@ -131,7 +145,7 @@ async function fetchJob(id: string): Promise<JobFetch> {
 
 const JOB_GONE = "Job visivo non trovato. Tocca Riprendi rifinitura.";
 
-async function pollWorkerJob(projectId: string, jobId: string): Promise<WorkerJob> {
+async function pollWorkerJob(projectId: string, jobId: string, epoch: number): Promise<WorkerJob> {
   const store = useProjectStore.getState();
   const existing = store.getProject(projectId);
   const started = existing?.visualJobStartedAt ?? Date.now();
@@ -146,6 +160,7 @@ async function pollWorkerJob(projectId: string, jobId: string): Promise<WorkerJo
   let misses = 0;
   while (Date.now() < deadline) {
     ticks += 1;
+    if (!stillCurrent(projectId, epoch, jobId)) throw new Error(STALE_JOB);
     const fetched = await fetchJob(jobId);
     if (fetched.state === "missing") {
       throw new Error(JOB_GONE);
@@ -165,6 +180,7 @@ async function pollWorkerJob(projectId: string, jobId: string): Promise<WorkerJo
         }
       }
       if (job.status === "ok" && job.html) {
+        if (!stillCurrent(projectId, epoch, jobId)) throw new Error(STALE_JOB);
         return job;
       }
       if (job.status === "err" || (job.status === "ok" && !job.html)) {
@@ -186,6 +202,7 @@ async function pollWorkerJob(projectId: string, jobId: string): Promise<WorkerJo
     await delay(WORKER_POLL_MS);
   }
   const last = await fetchJob(jobId);
+  if (!stillCurrent(projectId, epoch, jobId)) throw new Error(STALE_JOB);
   if (last.state === "job" && last.job.status === "ok" && last.job.html) return last.job;
   if (last.state === "job" && last.job.status === "err") {
     throw new Error(`${last.job.error || "Worker visivo fallito"}. Tocca Riprendi rifinitura.`);
@@ -198,12 +215,13 @@ async function startPolishJob(
   projectId: string,
   prompt: string,
   html: string,
-  instruction?: string,
+  instruction: string | undefined,
+  epoch: number,
 ): Promise<WorkerJob> {
   const store = useProjectStore.getState();
   const project = store.getProject(projectId);
   if (project && hasActiveVisualJob(project) && project.visualJobId) {
-    return pollWorkerJob(projectId, project.visualJobId);
+    return pollWorkerJob(projectId, project.visualJobId, epoch);
   }
   if (polishedOnce.has(projectId) && !instruction && project?.html) {
     return {
@@ -262,7 +280,7 @@ async function startPolishJob(
       lastErr = err instanceof Error ? err.message : "Load failed";
     }
   }
-  if (jobId) return pollWorkerJob(projectId, jobId);
+  if (jobId) return pollWorkerJob(projectId, jobId, epoch);
   throw new Error(lastErr);
 }
 
@@ -275,6 +293,7 @@ async function consumeViaWorker(
   projectId: string,
   body: { prompt: string; html?: string; instruction?: string; kind?: string },
   quiet = false,
+  epoch = 0,
 ): Promise<boolean> {
   const store = useProjectStore.getState();
   const bases = ["/__worker", WORKER_POLISH.replace(/\/$/, "")];
@@ -315,6 +334,7 @@ async function consumeViaWorker(
           store.updateProject(projectId, { buildLog: mergeUniqueLogs(live?.buildLog, job.log) });
         }
         if (job.status === "ok" && job.html) {
+          if (!stillCurrent(projectId, epoch, id)) throw new Error(STALE_JOB);
           const current = useProjectStore.getState().getProject(projectId);
           const lockKind = resolveProjectKind({
             stored: current?.kind,
@@ -357,6 +377,7 @@ async function consumeStream(
   projectId: string,
   body: { prompt: string; html?: string; instruction?: string; shot?: string },
   quiet = false,
+  epoch = 0,
 ): Promise<boolean> {
   const store = useProjectStore.getState();
   const recentPalettes = store.recentPalettes ?? [];
@@ -391,12 +412,14 @@ async function consumeStream(
         continue;
       }
       if (event.t === "s") {
+        if (!stillCurrent(projectId, epoch)) continue;
         const current = useProjectStore.getState().getProject(projectId);
         const log = current?.buildLog ?? [];
         if (log[log.length - 1] !== event.s) {
           store.updateProject(projectId, { buildLog: [...log, event.s] });
         }
       } else if (event.t === "ok") {
+        if (!stillCurrent(projectId, epoch)) throw new Error(STALE_JOB);
         const result = event.result as BuildResult;
         const report = applyBuildResult(projectId, result, "building");
         if (!report.syntaxOk) {
@@ -418,6 +441,7 @@ async function consumeStream(
         }
         finished = true;
       } else if (event.t === "err") {
+        if (!stillCurrent(projectId, epoch)) throw new Error(STALE_JOB);
         const salvage = event.result as BuildResult | undefined;
         if (salvage && typeof salvage === "object" && salvage.html) {
           applyBuildResult(projectId, salvage, "building");
@@ -450,12 +474,13 @@ async function polishDraft(
   projectId: string,
   prompt: string,
   html: string,
-  instruction?: string,
+  instruction: string | undefined,
+  epoch: number,
 ) {
   const store = useProjectStore.getState();
   let lastValidHtml = html;
   try {
-    const data = await startPolishJob(projectId, prompt, html, instruction);
+    const data = await startPolishJob(projectId, prompt, html, instruction, epoch);
     const fileBlocks = (data?.files ?? [])
       .map((f) => `<<<FILE path="${f.path}">>>\n${f.content}`)
       .join("\n");
@@ -473,6 +498,7 @@ async function polishDraft(
         existing?.prompt ?? prompt,
       );
     if (result?.html) {
+      if (!stillCurrent(projectId, epoch)) throw new Error(STALE_JOB);
       resetAudit();
       const report = applyBuildResult(projectId, result, "building");
       if (report.syntaxOk) {
@@ -510,6 +536,7 @@ async function polishDraft(
     }
   } catch (err) {
     const workerError = err instanceof Error ? err.message : "errore";
+    if (workerError === STALE_JOB) throw err instanceof Error ? err : new Error(STALE_JOB);
     if (workerError === JOB_STILL_RUNNING) {
       const current = useProjectStore.getState().getProject(projectId);
       if (current?.visualJobId) {
@@ -542,10 +569,11 @@ async function settlePreviewBoot(projectId: string): Promise<string | null> {
   return null;
 }
 
-async function repairBootFailures(projectId: string, prompt: string): Promise<boolean> {
+async function repairBootFailures(projectId: string, prompt: string, epoch: number): Promise<boolean> {
   const store = useProjectStore.getState();
   let firstReason: string | null = null;
   for (let attempt = 0; attempt < BOOT_REPAIR_MAX; attempt++) {
+    if (!stillCurrent(projectId, epoch)) return false;
     const reason = await settlePreviewBoot(projectId);
     if (!reason) return true;
     firstReason = firstReason || reason;
@@ -573,6 +601,7 @@ async function repairBootFailures(projectId: string, prompt: string): Promise<bo
         ].join("\n"),
       },
       true,
+      epoch,
     );
     const after = store.getProject(projectId)?.html;
     if (after === before) {
@@ -601,6 +630,8 @@ function finishPolish(projectId: string, lastValidHtml: string, refund?: number)
       status: "ready",
       error: undefined,
       messages: withoutPronto,
+      lastStableHtml: current?.html,
+      lastStableFiles: current?.files,
     });
     store.addMessage(projectId, {
       id: uid(),
@@ -613,8 +644,11 @@ function finishPolish(projectId: string, lastValidHtml: string, refund?: number)
   }
   if (refund) refundBuildCredit(projectId, refund);
   const detail = boot?.message || (!canaryOk ? "Avvio senza segnale" : formatHtmlErrors(promoted) || RESUME_ERROR);
+  const failed = store.getProject(projectId);
+  const restored = restoreStablePatch(failed);
   store.updateProject(projectId, {
-    html: lastValidHtml,
+    html: restored.html ?? lastValidHtml,
+    ...(restored.files ? { files: restored.files } : {}),
     status: "error",
     error: boot ? `Errore in avvio: ${boot.message}` : `Errore in avvio: ${detail}`,
     ...clearVisualJobPatch(),
@@ -649,11 +683,15 @@ export async function resumePolish(projectId: string) {
     prompt: project.prompt,
   });
   const live = Boolean(hasActiveVisualJob(project) && project.visualJobId);
+  const epoch = live ? (project.buildEpoch ?? 1) : nextBuildEpoch(project.buildEpoch);
+  const snap = captureStableSnapshot(project);
   store.updateProject(projectId, {
     kind,
     requestedKind: project.requestedKind ?? kind,
     status: "building",
     error: undefined,
+    buildEpoch: epoch,
+    ...snap,
     buildLog: live
       ? uniqueLogs(project.buildLog)
       : mergeUniqueLogs(project.buildLog ?? [], ["Riprendo rifinitura"]),
@@ -666,10 +704,11 @@ export async function resumePolish(projectId: string) {
         : kind === "site" || kind === "landing"
           ? SITE_POLISH_INSTRUCTION
           : undefined;
-    const lastValidHtml = await polishDraft(projectId, project.prompt, project.html, instruction);
+    const lastValidHtml = await polishDraft(projectId, project.prompt, project.html, instruction, epoch);
     const latest = useProjectStore.getState().getProject(projectId);
     if (hasActiveVisualJob(latest ?? {})) return;
-    const booted = await repairBootFailures(projectId, project.prompt);
+    if (!stillCurrent(projectId, epoch)) return;
+    const booted = await repairBootFailures(projectId, project.prompt, epoch);
     if (!booted) {
       refundBuildCredit(projectId, CREATE_COST);
       finishPolish(projectId, lastValidHtml, CREATE_COST);
@@ -678,6 +717,7 @@ export async function resumePolish(projectId: string) {
     finishPolish(projectId, lastValidHtml);
   } catch (err) {
     const message = err instanceof Error ? err.message : RESUME_ERROR;
+    if (message === STALE_JOB) return;
     if (message === JOB_STILL_RUNNING) {
       refundBuildCredit(projectId, CREATE_COST);
       abandonVisualJob(projectId, RESUME_ERROR);
@@ -724,11 +764,15 @@ export async function runBuild(projectId: string, instruction?: string) {
     metrics: { credits: cost },
   });
 
+  const epoch = nextBuildEpoch(project.buildEpoch);
+  const snap = captureStableSnapshot(project);
   store.updateProject(projectId, {
     status: "building",
     error: undefined,
     buildLog: [],
     creditRefunded: false,
+    buildEpoch: epoch,
+    ...snap,
   });
   resetAudit();
   store.addMessage(projectId, {
@@ -764,15 +808,16 @@ export async function runBuild(projectId: string, instruction?: string) {
     };
     try {
       streamed = isIOS() || desk
-        ? await consumeViaWorker(projectId, payload, true)
-        : await consumeStream(projectId, payload, true);
+        ? await consumeViaWorker(projectId, payload, true, epoch)
+        : await consumeStream(projectId, payload, true, epoch);
     } catch (first) {
       const msg = first instanceof Error ? first.message : "";
+      if (msg === STALE_JOB) throw first;
       if (msg === JOB_STILL_RUNNING) throw first;
       if (isTransientNetwork(msg)) {
-        streamed = await consumeViaWorker(projectId, payload, true);
+        streamed = await consumeViaWorker(projectId, payload, true, epoch);
       } else if (isIOS() || desk) {
-        streamed = await consumeStream(projectId, payload, true);
+        streamed = await consumeStream(projectId, payload, true, epoch);
       } else {
         throw first;
       }
@@ -782,6 +827,7 @@ export async function runBuild(projectId: string, instruction?: string) {
       if (latest?.status === "error") {
         refundBuildCredit(projectId, cost);
         charged = false;
+        store.updateProject(projectId, restoreStablePatch(latest));
         return;
       }
       if (latest?.html) {
@@ -790,6 +836,7 @@ export async function runBuild(projectId: string, instruction?: string) {
           refundBuildCredit(projectId, cost);
           charged = false;
           store.updateProject(projectId, {
+            ...restoreStablePatch(latest),
             status: "error",
             error: formatHtmlErrors(draftCheck) || "HTML non valido",
           });
@@ -800,15 +847,18 @@ export async function runBuild(projectId: string, instruction?: string) {
           });
           return;
         }
-        const booted = await repairBootFailures(projectId, project.prompt);
+        const booted = await repairBootFailures(projectId, project.prompt, epoch);
         if (!booted) {
+          if (!stillCurrent(projectId, epoch)) return;
           refundBuildCredit(projectId, cost);
           charged = false;
           const reason =
             getPreviewBootError()?.message ||
             formatHtmlErrors(validateProductHtml(latest.html, { kind: latest.kind })) ||
             "Errore in avvio";
+          const restored = restoreStablePatch(useProjectStore.getState().getProject(projectId));
           store.updateProject(projectId, {
+            ...(restored.html ? restored : {}),
             status: "error",
             error: `Errore in avvio: ${reason}`,
             ...clearVisualJobPatch(),
@@ -839,6 +889,7 @@ export async function runBuild(projectId: string, instruction?: string) {
             (kind === "site" || kind === "landing"
               ? SITE_POLISH_INSTRUCTION
               : instruction),
+          epoch,
         );
 
         if (!(instruction || isIOS()) && phone) {
@@ -862,6 +913,7 @@ export async function runBuild(projectId: string, instruction?: string) {
                 shot: shot || undefined,
               },
               true,
+              epoch,
             );
             const after = useProjectStore.getState().getProject(projectId);
             const afterReport = after?.html
@@ -891,7 +943,8 @@ export async function runBuild(projectId: string, instruction?: string) {
           }
         }
 
-        const canary = await repairBootFailures(projectId, project.prompt);
+        const canary = await repairBootFailures(projectId, project.prompt, epoch);
+        if (!stillCurrent(projectId, epoch)) return;
         charged = !finishPolish(projectId, lastValidHtml, canary ? undefined : cost);
         return;
       }
@@ -901,6 +954,7 @@ export async function runBuild(projectId: string, instruction?: string) {
     refundBuildCredit(projectId, cost);
     charged = false;
     store.updateProject(projectId, {
+      ...restoreStablePatch(useProjectStore.getState().getProject(projectId)),
       status: "error",
       error: "Non è arrivata una risposta. Riprova.",
     });
@@ -912,6 +966,7 @@ export async function runBuild(projectId: string, instruction?: string) {
   } catch (err) {
     const message =
       err instanceof Error ? err.message : "Qualcosa è andato storto. Riprova.";
+    if (message === STALE_JOB) return;
     if (message === JOB_STILL_RUNNING) {
       if (charged) refundBuildCredit(projectId, cost);
       charged = false;

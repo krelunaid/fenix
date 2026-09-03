@@ -90,6 +90,11 @@ export type Project = {
   visualJobId?: string;
   visualJobStatus?: "run" | "ok" | "err";
   visualJobStartedAt?: number;
+  /** Last syntax-ok preview shown to the user. Restored on a definitive error. */
+  lastStableHtml?: string;
+  lastStableFiles?: ProjectFile[];
+  /** Monotonic generation. Stale SSE/poll cannot apply or refund across it. */
+  buildEpoch?: number;
   /** Fenix.load/save collections. Persisted with the project so reload keeps rows. */
   appData?: Record<string, unknown>;
   /** One refund per failed build. Retry spend resets this. */

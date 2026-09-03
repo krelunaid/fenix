@@ -26,6 +26,7 @@ import { suggestEdits } from "@/lib/ai/suggest";
 import { codePaneFiles } from "@/lib/projects/fenix2";
 import { useProjectStore } from "@/lib/projects/store";
 import { isPublishable, needsResume } from "@/lib/projects/recover";
+import { isStudioLocked } from "@/lib/projects/studio-lock";
 import type { ProjectKind } from "@/lib/projects/types";
 import { cn } from "@/lib/utils";
 
@@ -87,9 +88,19 @@ function StudioPage() {
 
   const creditsRemaining = useProjectStore((s) => s.creditsRemaining);
   const emptyCredits = creditsRemaining < 1;
-  const building = project?.status === "building";
+  const locked = isStudioLocked(project);
+  const building = locked;
   const canResume = needsResume(project ?? {});
-  const publishable = Boolean(project && isPublishable(project));
+  const publishable = Boolean(project && isPublishable(project) && !locked);
+
+  useEffect(() => {
+    if (!locked) return;
+    setPane("preview");
+    setPublishOpen(false);
+    setExportOpen(false);
+    setVersionsOpen(false);
+    setShareOpen(false);
+  }, [locked]);
 
   useEffect(() => {
     if (project?.kind) setDevice(previewDevice(project.kind));
@@ -99,10 +110,17 @@ function StudioPage() {
 
   function handleIterate(text = draft) {
     const next = text.trim();
-    if (!project || next.length < 2 || building || emptyCredits) return;
+    if (!project || next.length < 2 || locked || emptyCredits) return;
     addMessage(project.id, { role: "user", content: next });
     setDraft("");
     void runBuild(project.id, next);
+  }
+
+  function unlessLocked(fn: () => void) {
+    return () => {
+      if (locked) return;
+      fn();
+    };
   }
 
   if (!project) {
@@ -114,7 +132,11 @@ function StudioPage() {
   }
 
   return (
-    <div className="flex h-dvh flex-col overflow-hidden bg-background text-foreground">
+    <div
+      className="flex h-dvh flex-col overflow-hidden bg-background text-foreground"
+      aria-busy={locked || undefined}
+      data-studio-lock={locked ? "1" : "0"}
+    >
       <header className="flex h-14 shrink-0 items-center gap-3 border-b border-border px-3 sm:px-4">
         <Button
           variant="ghost"
@@ -135,8 +157,8 @@ function StudioPage() {
         <CreditMeter className="hidden sm:inline-flex" />
         <VersionsButton
           count={project.revisions?.length ?? 0}
-          disabled={!project.html}
-          onClick={() => setVersionsOpen(true)}
+          disabled={locked || !project.html}
+          onClick={unlessLocked(() => setVersionsOpen(true))}
         />
         <div className="hidden items-center rounded-md border border-border p-0.5 md:flex">
           {(
@@ -149,11 +171,14 @@ function StudioPage() {
             <button
               key={id}
               type="button"
-              onClick={() => setDevice(id)}
+              onClick={unlessLocked(() => setDevice(id))}
               aria-label={id}
+              disabled={locked}
+              aria-disabled={locked || undefined}
               className={cn(
                 "grid size-9 place-items-center rounded-sm text-muted-foreground transition-colors duration-150",
                 device === id && "bg-raised text-foreground",
+                locked && "pointer-events-none opacity-40",
               )}
             >
               <Icon className="size-4" />
@@ -163,18 +188,19 @@ function StudioPage() {
         <Button
           variant="secondary"
           size="sm"
-          onClick={() => setPane((p) => (p === "code" ? "preview" : "code"))}
+          onClick={unlessLocked(() => setPane((p) => (p === "code" ? "preview" : "code")))}
+          disabled={locked}
           className="hidden sm:inline-flex"
         >
           <Code2 />
           Codice
         </Button>
-        <ShareButton disabled={!project.html} onClick={() => setShareOpen(true)} />
+        <ShareButton disabled={locked || !project.html} onClick={unlessLocked(() => setShareOpen(true))} />
         <Button
           variant="secondary"
           size="sm"
-          onClick={() => setExportOpen(true)}
-          disabled={!project.html}
+          onClick={unlessLocked(() => setExportOpen(true))}
+          disabled={locked || !project.html}
           aria-label="Esporta"
         >
           <FolderGit2 />
@@ -183,8 +209,8 @@ function StudioPage() {
         <Button
           variant="default"
           size="sm"
-          onClick={() => setPublishOpen(true)}
-          disabled={!publishable}
+          onClick={unlessLocked(() => setPublishOpen(true))}
+          disabled={!publishable || locked}
         >
           <Globe />
           <span className="hidden sm:inline">Pubblica</span>
@@ -227,29 +253,31 @@ function StudioPage() {
             />
           ) : (
             <>
-              <PreviewFrame
-                html={project.html}
-                files={project.files}
-                name={project.name}
-                device={device}
-                background={project.palette.bg}
-                palette={project.palette}
-                projectId={project.id}
-                kind={project.kind}
-                className="h-full"
-              />
-              <BuildOverlay
-                active={Boolean(building)}
-                compact={Boolean(project.html)}
-                steps={project.buildLog ?? []}
-                startedAt={project.visualJobStartedAt ?? project.updatedAt}
-                error={!building && project.status === "error" ? project.error : undefined}
-                onRetry={() =>
-                  canResume ? void resumePolish(project.id) : void runBuild(project.id)
-                }
-                retryLabel={canResume ? "Riprendi rifinitura" : "Riprova. Lo ricostruisco."}
-                hasDraft={Boolean(project.html)}
-              />
+              <div className={cn("absolute inset-0 overflow-hidden", locked && "isolate")}>
+                <PreviewFrame
+                  html={project.html}
+                  files={project.files}
+                  name={project.name}
+                  device={device}
+                  background={project.palette.bg}
+                  palette={project.palette}
+                  projectId={project.id}
+                  kind={project.kind}
+                  locked={locked}
+                  className="h-full"
+                />
+                <BuildOverlay
+                  active={Boolean(locked)}
+                  steps={project.buildLog ?? []}
+                  startedAt={project.visualJobStartedAt ?? project.updatedAt}
+                  error={!locked && project.status === "error" ? project.error : undefined}
+                  onRetry={() =>
+                    canResume ? void resumePolish(project.id) : void runBuild(project.id)
+                  }
+                  retryLabel={canResume ? "Riprendi rifinitura" : "Riprova. Lo ricostruisco."}
+                  hasDraft={Boolean(project.lastStableHtml)}
+                />
+              </div>
             </>
           )}
         </section>
@@ -289,29 +317,31 @@ function StudioPage() {
             />
           ) : (
             <>
-              <PreviewFrame
-                html={project.html}
-                files={project.files}
-                name={project.name}
-                device={previewDevice(project.kind)}
-                background={project.palette.bg}
-                palette={project.palette}
-                projectId={project.id}
-                kind={project.kind}
-                className="h-full"
-              />
-              <BuildOverlay
-                active={Boolean(building)}
-                compact={Boolean(project.html)}
-                steps={project.buildLog ?? []}
-                startedAt={project.visualJobStartedAt ?? project.updatedAt}
-                error={!building && project.status === "error" ? project.error : undefined}
-                onRetry={() =>
-                  canResume ? void resumePolish(project.id) : void runBuild(project.id)
-                }
-                retryLabel={canResume ? "Riprendi rifinitura" : "Riprova. Lo ricostruisco."}
-                hasDraft={Boolean(project.html)}
-              />
+              <div className={cn("absolute inset-0 overflow-hidden", locked && "isolate")}>
+                <PreviewFrame
+                  html={project.html}
+                  files={project.files}
+                  name={project.name}
+                  device={previewDevice(project.kind)}
+                  background={project.palette.bg}
+                  palette={project.palette}
+                  projectId={project.id}
+                  kind={project.kind}
+                  locked={locked}
+                  className="h-full"
+                />
+                <BuildOverlay
+                  active={Boolean(locked)}
+                  steps={project.buildLog ?? []}
+                  startedAt={project.visualJobStartedAt ?? project.updatedAt}
+                  error={!locked && project.status === "error" ? project.error : undefined}
+                  onRetry={() =>
+                    canResume ? void resumePolish(project.id) : void runBuild(project.id)
+                  }
+                  retryLabel={canResume ? "Riprendi rifinitura" : "Riprova. Lo ricostruisco."}
+                  hasDraft={Boolean(project.lastStableHtml)}
+                />
+              </div>
             </>
           )}
         </section>
@@ -328,8 +358,17 @@ function StudioPage() {
           <button
             key={id}
             type="button"
-            onClick={() => setPane(id)}
-            className={cn("flex-1 text-sm text-muted-foreground", pane === id && "text-foreground")}
+            disabled={locked && id === "code"}
+            aria-disabled={locked && id === "code" ? true : undefined}
+            onClick={() => {
+              if (locked && id === "code") return;
+              setPane(id);
+            }}
+            className={cn(
+              "flex-1 text-sm text-muted-foreground",
+              pane === id && "text-foreground",
+              locked && id === "code" && "pointer-events-none opacity-40",
+            )}
           >
             {label}
           </button>
@@ -537,38 +576,46 @@ function ChatColumn({
         className="border-t border-border p-3"
         onSubmit={(e) => {
           e.preventDefault();
+          if (building) return;
           onSubmit();
         }}
       >
-        <div className="rounded-lg bg-paper p-2">
-          <Textarea
-            rows={3}
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            placeholder={
-              emptyCredits
-                ? "Crediti esauriti. Puoi ancora aprire e pubblicare."
-                : "Una modifica, una schermata, un comportamento…"
-            }
-            disabled={building || emptyCredits}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                onSubmit();
+        <fieldset disabled={building || emptyCredits} className="min-w-0 border-0 p-0">
+          <legend className="sr-only">Messaggio allo studio</legend>
+          <div className="rounded-lg bg-paper p-2">
+            <Textarea
+              rows={3}
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              placeholder={
+                emptyCredits
+                  ? "Crediti esauriti. Puoi ancora aprire e pubblicare."
+                  : "Una modifica, una schermata, un comportamento…"
               }
-            }}
-          />
-          <div className="mt-1 flex justify-end">
-            <Button
-              type="submit"
-              variant="ink"
-              size="sm"
-              disabled={building || emptyCredits || draft.trim().length < 2}
-            >
-              Invia
-            </Button>
+              disabled={building || emptyCredits}
+              onKeyDown={(e) => {
+                if (building) {
+                  e.preventDefault();
+                  return;
+                }
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  onSubmit();
+                }
+              }}
+            />
+            <div className="mt-1 flex justify-end">
+              <Button
+                type="submit"
+                variant="ink"
+                size="sm"
+                disabled={building || emptyCredits || draft.trim().length < 2}
+              >
+                Invia
+              </Button>
+            </div>
           </div>
-        </div>
+        </fieldset>
       </form>
     </div>
   );

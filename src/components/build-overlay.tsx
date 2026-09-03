@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Check, Volume2, VolumeX } from "lucide-react";
 import { useTalkingKit } from "@/lib/kit-voice";
 import { BUILD_STAGES, inferStage } from "@/lib/projects/build-stages";
+import { EXIT_LABEL, isLockFocusAllowed } from "@/lib/projects/studio-lock";
 import { cn } from "@/lib/utils";
 
 const MUTE_KEY = "fenix-kit-muted";
@@ -25,6 +26,7 @@ export function BuildOverlay({
   retryLabel?: string;
   hasDraft?: boolean;
 }) {
+  const rootRef = useRef<HTMLDivElement>(null);
   const [now, setNow] = useState(() => Date.now());
   const [muted, setMuted] = useState(() => {
     try {
@@ -33,6 +35,7 @@ export function BuildOverlay({
       return false;
     }
   });
+  void compact;
   const levels = useTalkingKit(active && !muted);
   const stage = inferStage(steps);
   const current = steps[steps.length - 1] ?? BUILD_STAGES[stage];
@@ -54,16 +57,62 @@ export function BuildOverlay({
     }
   }, [muted]);
 
+  useEffect(() => {
+    if (!active) return;
+    const root = rootRef.current;
+    if (!root) return;
+    const lockRoot: HTMLElement = root;
+    const focusables = () => {
+      const back = document.querySelector<HTMLElement>(`[aria-label="${EXIT_LABEL}"]`);
+      const inner = [
+        ...lockRoot.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        ),
+      ].filter((el) => el.offsetParent !== null || el === lockRoot);
+      const items = [...(back ? [back] : []), ...inner, lockRoot];
+      return items.filter((el, i, arr) => arr.indexOf(el) === i);
+    };
+    const first = focusables().find((el) => el !== document.querySelector(`[aria-label="${EXIT_LABEL}"]`)) ?? lockRoot;
+    first.focus();
+    function onKey(event: KeyboardEvent) {
+      if (event.key !== "Tab") return;
+      const items = focusables();
+      if (!items.length) {
+        event.preventDefault();
+        lockRoot.focus();
+        return;
+      }
+      const index = items.indexOf(document.activeElement as HTMLElement);
+      event.preventDefault();
+      if (event.shiftKey) {
+        (index <= 0 ? items[items.length - 1] : items[index - 1]).focus();
+      } else {
+        (index === items.length - 1 || index === -1 ? items[0] : items[index + 1]).focus();
+      }
+    }
+    function onFocusIn(event: FocusEvent) {
+      if (isLockFocusAllowed(event.target, lockRoot)) return;
+      event.preventDefault();
+      lockRoot.focus();
+    }
+    document.addEventListener("keydown", onKey, true);
+    document.addEventListener("focusin", onFocusIn, true);
+    return () => {
+      document.removeEventListener("keydown", onKey, true);
+      document.removeEventListener("focusin", onFocusIn, true);
+    };
+  }, [active]);
+
   if (!active && !error) return null;
 
   if (error && !active) {
     const shell = (
-      <div className="w-full max-w-sm rounded-2xl border border-white/10 bg-[#120c28]/95 px-6 py-6">
+      <div className="w-full max-w-sm rounded-2xl border border-white/10 bg-[#120c28] px-6 py-6">
         <p className="text-[10px] tracking-[0.14em] text-[#9b93c2] uppercase">Bloccato</p>
         <p className="mt-2 text-lg font-semibold tracking-tight text-white">{error}</p>
         <p className="mt-2 text-sm leading-relaxed text-[#cfc8ea]">
           {hasDraft
-            ? "La bozza resta sotto. Puoi riprovare senza perdere quello che c’è."
+            ? "La bozza stabile resta sotto. Puoi riprovare senza perdere quello che c’è."
             : "Nessuna anteprima ancora. Riprova: il credito di questo tentativo è rimborsato."}
         </p>
         {onRetry ? (
@@ -95,23 +144,11 @@ export function BuildOverlay({
       );
     }
     return (
-      <div className="absolute inset-0 z-10 grid place-items-center bg-[#07041a]/88 px-6 backdrop-blur-[2px]">
+      <div className="absolute inset-0 z-20 grid place-items-center bg-[#07041a] px-6">
         {shell}
       </div>
     );
   }
-
-  const leds = (
-    <div className="kit-leds flex h-7 items-end gap-[2px]" aria-hidden>
-      {levels.map((n, i) => (
-        <span
-          key={i}
-          className="kit-led w-[5px] rounded-sm"
-          style={{ height: `${6 + n * 18}px` }}
-        />
-      ))}
-    </div>
-  );
 
   const progress = (
     <div
@@ -130,7 +167,7 @@ export function BuildOverlay({
           className={cn(
             "h-1 rounded-full bg-white/10",
             i < stage && "bg-[#8576ff]",
-            i === stage && "animate-pulse bg-[#b8afff]",
+            i === stage && "bg-[#b8afff] motion-safe:animate-pulse",
           )}
         />
       ))}
@@ -149,42 +186,27 @@ export function BuildOverlay({
     </button>
   );
 
-  if (compact) {
-    return (
-      <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex justify-center p-3">
-        <div className="pointer-events-auto flex max-w-[min(100%,36rem)] items-center gap-3 rounded-2xl border border-white/12 bg-[#120c28]/92 px-3 py-2 shadow-soft backdrop-blur-md">
-          <img src="/fenix-orb.png" alt="" className="kit-orb h-8 w-auto" />
-          {leds}
-          <div className="min-w-0 flex-1">
-            <ol className="flex flex-wrap gap-x-2 gap-y-0.5 text-[10px] tracking-[0.12em] uppercase">
-              {BUILD_STAGES.map((label, i) => (
-                <li
-                  key={label}
-                  className={cn(
-                    i < stage && "text-[#6e6794]",
-                    i === stage && "text-white",
-                    i > stage && "text-[#6e6794]/70",
-                  )}
-                >
-                  {label}
-                </li>
-              ))}
-            </ol>
-            {progress}
-            <p className="truncate text-xs text-[#cfc8ea]">{current}</p>
-            <p className="text-[10px] text-[#8f86b5]">Controllo live · {elapsed}</p>
-          </div>
-          {muteBtn}
-        </div>
-      </div>
-    );
-  }
+  const live = (
+    <div className="sr-only" aria-live="polite" aria-atomic="true" data-fenix-lock-live="1">
+      Fenix sta creando. Fase {BUILD_STAGES[stage]}. {current}.
+    </div>
+  );
 
   const done = steps.slice(0, -1);
 
   return (
-    <div className="absolute inset-0 z-10 grid place-items-center bg-[#07041a]/88 px-6 backdrop-blur-[2px]">
-      <div className="w-full max-w-sm rounded-2xl border border-white/10 bg-[#120c28]/95 px-6 py-7">
+    <div
+      ref={rootRef}
+      tabIndex={-1}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="fenix-lock-title"
+      data-fenix-lock="1"
+      data-lock-stage={BUILD_STAGES[stage]}
+      className="absolute inset-0 z-20 grid place-items-center bg-[#07041a] px-6"
+    >
+      {live}
+      <div className="w-full max-w-sm rounded-2xl border border-white/10 bg-[#120c28] px-6 py-7">
         <div className="flex flex-col items-center">
           <img src="/fenix-orb.png" alt="" className="kit-orb h-[120px] w-auto bg-transparent" />
           <div className="kit-leds mt-1 flex h-10 items-end gap-[3px]" aria-hidden>
@@ -197,7 +219,13 @@ export function BuildOverlay({
             ))}
           </div>
         </div>
-        <ol className="mt-5 flex flex-wrap justify-center gap-x-3 gap-y-1 text-[10px] tracking-[0.14em] text-[#9b93c2] uppercase">
+        <p
+          id="fenix-lock-title"
+          className="mt-5 text-center text-xl font-semibold tracking-tight text-white"
+        >
+          Fenix sta creando
+        </p>
+        <ol className="mt-3 flex flex-wrap justify-center gap-x-3 gap-y-1 text-[10px] tracking-[0.14em] text-[#9b93c2] uppercase">
           {BUILD_STAGES.map((label, i) => (
             <li key={label} className={cn(i === stage && "text-white")}>
               {label}
@@ -205,12 +233,12 @@ export function BuildOverlay({
           ))}
         </ol>
         {progress}
-        <p className={cn("mt-2 text-center text-xl font-semibold tracking-tight", "shimmer-text")}>
+        <p className={cn("mt-2 text-center text-sm font-medium tracking-tight", "shimmer-text")}>
           {current}
         </p>
         <p className="mt-3 text-center text-sm leading-relaxed text-[#cfc8ea]">
           Ci vogliono circa 5–10 minuti. Pazienza: sta scrivendo le schermate e guardando i pixel.
-          Non chiudere.
+          Non chiudere. Dopo 10 minuti Fenix si ferma e mostra Riprendi.
         </p>
         {done.length ? (
           <ul className="mt-4 space-y-1.5">
@@ -224,9 +252,7 @@ export function BuildOverlay({
         ) : null}
         <div className="mt-4 flex items-center justify-center gap-2">
           {muteBtn}
-          <p className="text-center text-[11px] text-[#6e6794]">
-            Controllo live · {elapsed}. Dopo 10 minuti Fenix si ferma e mostra Riprendi.
-          </p>
+          <p className="text-center text-[11px] text-[#9b93c2]">Controllo live · {elapsed}</p>
         </div>
       </div>
     </div>

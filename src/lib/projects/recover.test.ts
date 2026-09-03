@@ -257,6 +257,43 @@ describe("recoverPersistedProject", () => {
     }
   });
 
+  it("restores lastStableHtml on a definitive error and keeps Pubblica closed", () => {
+    const recovered = recoverPersistedProject(
+      seed({
+        status: "error",
+        error: RESUME_ERROR,
+        html: BROKEN,
+        lastStableHtml: VALID,
+        lastStableFiles: [{ path: "index.html", content: VALID }],
+      }),
+    );
+    assert.equal(recovered.status, "error");
+    assert.equal(recovered.html, VALID);
+    assert.equal(recovered.lastStableHtml, VALID);
+    assert.equal(recovered.files?.[0]?.path, "index.html");
+    assert.equal(isPublishable(recovered), false);
+    assert.equal(needsResume(recovered), true);
+  });
+
+  it("does not restore lastStable while a live job is still building", () => {
+    const now = Date.now();
+    const recovered = recoverPersistedProject(
+      seed({
+        html: VALID,
+        lastStableHtml: VALID,
+        visualJobId: "job-live",
+        visualJobStatus: "run",
+        visualJobStartedAt: now - 8_000,
+        updatedAt: now,
+      }),
+      now,
+    );
+    assert.equal(recovered.status, "building");
+    assert.equal(recovered.html, VALID);
+    assert.equal(recovered.visualJobId, "job-live");
+    assert.equal(isPublishable(recovered), false);
+  });
+
   it("does not publish a building draft whose HTML dumps phone-kit CSS", () => {
     const recovered = recoverPersistedProject(
       seed({ html: LEAKED_CSS, status: "building", updatedAt: Date.now() - 5_000 }),

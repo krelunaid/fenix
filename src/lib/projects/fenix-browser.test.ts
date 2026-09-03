@@ -352,7 +352,7 @@ describe("leaked phone-kit CSS in the preview", () => {
 });
 
 describe("studio overlay and resume in browser", () => {
-  it("shows compact overlay on a building draft and Riprendi on stale error", async () => {
+  it("covers the preview with an opaque creating lock, then Riprendi on stale error", async () => {
     await requirePreview();
     let browser;
     browser = await launch();
@@ -378,6 +378,7 @@ describe("studio overlay and resume in browser", () => {
               accent: "#c45c26",
             },
             html,
+            lastStableHtml: html,
             messages: [],
             buildLog: ["Direzione visiva", "Codice"],
             status: "building",
@@ -406,14 +407,18 @@ describe("studio overlay and resume in browser", () => {
         waitUntil: "domcontentloaded",
         timeout: 20000,
       });
+      const lock = page.locator('[data-fenix-lock="1"]').first();
+      await lock.waitFor({ timeout: 12000 });
+      await page.getByText("Fenix sta creando").first().waitFor({ timeout: 4000 });
+      const box = await lock.boundingBox();
+      assert.ok(box && box.height > 300, `lock too short to cover preview: ${box?.height}`);
       const compact = page.locator(
         "section.hidden.md\\:block .pointer-events-none.absolute.inset-x-0.top-0.z-20",
       );
-      await compact.waitFor({ timeout: 12000 });
-      const box = await compact.boundingBox();
-      assert.ok(box && box.height < 160, `overlay too tall: ${box?.height}`);
-      const full = page.locator(".absolute.inset-0.z-10.grid.place-items-center");
-      assert.equal(await full.count(), 0);
+      assert.equal(await compact.count(), 0);
+      assert.equal(await page.getAttribute("[data-studio-lock]", "data-studio-lock"), "1");
+      const iframe = page.locator("iframe[data-preview]").first();
+      assert.equal(await iframe.evaluate((el) => (el as HTMLIFrameElement).inert), true);
       await page.goto(PREVIEW + "/studio/p-resume", {
         waitUntil: "domcontentloaded",
         timeout: 20000,

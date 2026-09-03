@@ -9,6 +9,7 @@ import {
   uniqueLogs,
   type VisualJobStatus,
 } from "./visual-job.ts";
+import { restoreStablePatch } from "./studio-lock.ts";
 import { polishDashboardHtml, shouldRepairDashboard } from "./dashboard-crud.ts";
 import { replaceAppleTabIcons, rewriteIosWidgetHome, stripPhoneChromeFromSite, ensureMainElementId } from "./craft-icons.ts";
 import { repairLeakedCss } from "./color-scheme.ts";
@@ -33,6 +34,9 @@ export type Recoverable = {
   visualJobStatus?: VisualJobStatus;
   visualJobStartedAt?: number;
   files?: ProjectFile[];
+  lastStableHtml?: string;
+  lastStableFiles?: ProjectFile[];
+  buildEpoch?: number;
   appData?: Record<string, unknown>;
   publishedId?: string;
 };
@@ -57,8 +61,10 @@ export function recoverPersistedProject<T extends Recoverable>(p: T, now = Date.
   });
   const requestedKind = p.requestedKind ?? kindFromPrompt(p.prompt) ?? kind;
   const migrated = kind !== p.kind;
-  // Never rewrite building/error HTML: overlay and Riprendi must see the persisted fixture.
+  // Never rewrite building HTML: overlay and Riprendi must see the persisted fixture.
+  // Definitive error restores lastStableHtml when present.
   let html = p.html;
+  let files = p.files;
   if (p.status === "ready" && p.html) {
     html = repairLeakedCss(
       ensureMainElementId(
@@ -157,12 +163,18 @@ export function recoverPersistedProject<T extends Recoverable>(p: T, now = Date.
     if (p.visualJobId || isJobSentinelError(p.error)) {
       buildLog = dropLiveJobLogs(buildLog);
     }
+    const restored = restoreStablePatch(p);
+    if (restored.html) {
+      html = restored.html;
+      if (restored.files) files = restored.files;
+    }
   }
 
   const cleared = status !== "building" ? clearVisualJobPatch() : {};
   const withHtml = {
     ...p,
     html,
+    files,
     kind,
     requestedKind,
     buildLog,

@@ -23,6 +23,7 @@ export function PreviewFrame({
   projectId,
   kind,
   className,
+  locked = false,
 }: {
   html: string;
   files?: { path: string; content: string }[];
@@ -33,6 +34,7 @@ export function PreviewFrame({
   projectId?: string;
   kind?: string;
   className?: string;
+  locked?: boolean;
 }) {
   const width = WIDTH[device];
   const srcDoc = useMemo(() => {
@@ -117,18 +119,33 @@ export function PreviewFrame({
           style={width === "100%" ? { width: "100%" } : { width, maxWidth: "100%" }}
         >
           {srcDoc ? (
-            <div className="relative h-full min-h-[70vh] w-full">
+            <div
+              className="relative h-full min-h-[70vh] w-full"
+              aria-hidden={locked || undefined}
+              data-preview-locked={locked ? "1" : "0"}
+            >
               <iframe
                 key={`${name}-${srcDoc.length}`}
                 title={`Anteprima ${name}`}
                 data-preview={device}
                 sandbox="allow-scripts allow-forms allow-modals"
                 srcDoc={srcDoc}
+                inert={locked || undefined}
+                tabIndex={locked ? -1 : undefined}
+                aria-hidden={locked || undefined}
+                onFocus={
+                  locked
+                    ? (event) => {
+                        event.currentTarget.blur();
+                      }
+                    : undefined
+                }
                 className="absolute inset-0 h-full w-full border-0 bg-white"
                 style={{
                   background: background ?? "var(--color-card)",
                   overflow: "auto",
                   WebkitOverflowScrolling: "touch",
+                  pointerEvents: locked ? "none" : "auto",
                 }}
               />
             </div>
