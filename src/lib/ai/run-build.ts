@@ -486,15 +486,13 @@ async function polishDraft(
   const store = useProjectStore.getState();
   let lastValidHtml = html;
   try {
-    const data = await startPolishJob(projectId, prompt, html, instruction, epoch);
     const existing = useProjectStore.getState().getProject(projectId);
-    let accepted = data;
+    let data;
     if (instruction && looksLikeIconInstruction(instruction)) {
       const verdict = applyIconRevision({
         html,
         files: existing?.files,
         instruction,
-        worker: { html: data.html, files: data.files },
       });
       polishedOnce.add(projectId);
       if (verdict.status !== "ok") {
@@ -514,8 +512,16 @@ async function polishDraft(
         });
         return lastValidHtml;
       }
-      accepted = { ...data, html: verdict.html, files: verdict.files, log: verdict.log };
+      data = {
+        html: verdict.html,
+        files: verdict.files || [],
+        log: verdict.log,
+        meta: {},
+      };
+    } else {
+      data = await startPolishJob(projectId, prompt, html, instruction, epoch);
     }
+    let accepted = data;
     const fileBlocks = (accepted?.files ?? [])
       .map((f) => `<<<FILE path="${f.path}">>>\n${f.content}`)
       .join("\n");

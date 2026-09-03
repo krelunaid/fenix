@@ -129,10 +129,10 @@ describe("icon revision flow: local patch, zero POST", () => {
 
   it("absent target spends nothing and never posts", async () => {
     await withFetchSpy(async (calls) => {
-      const html = AGENDA.replace(/data-fenix-id="icon:home"/g, "").replace(
-        /data-view="home"/g,
-        'data-view="ghost"',
-      );
+      const html = AGENDA.replace(
+        /<button type="button" data-view="home"[\s\S]*?<\/button>/,
+        "",
+      ).replace(/data-fenix-id="icon:home"/g, "");
       const { io, state } = mockIo({ html, creditRefunded: false }, async () => null);
       const result = await runIconRevisionFlow({ instruction: AGENDA_ICON_INSTRUCTION, html }, io);
       assert.equal(result.outcome, "noop");

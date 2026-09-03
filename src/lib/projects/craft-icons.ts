@@ -251,7 +251,7 @@ export function replaceAppleTabIcons(html: string): string {
 export function craftTabNavHtml(): string {
   return CRAFT_TAB_ICONS.map((t, i) => {
     const on = i === 0 ? ' class="on"' : "";
-    return `<button type="button" data-view="${t.id}"${on}>${t.svg}<span>${t.label}</span></button>`;
+    return `<button type="button" data-view="${t.id}" data-fenix-id="icon:${t.id}"${on}>${t.svg}<span>${t.label}</span></button>`;
   }).join("");
 }
 

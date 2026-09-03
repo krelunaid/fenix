@@ -267,7 +267,7 @@ export const QUALITY_LEDGER: LedgerRow[] = [
     claim:
       "Una richiesta puntuale di icona applica una patch atomica sul DOM con data-fenix-id, senza rigenerare l'app. File non target restano byte-identici; 5 viste, CRUD e Fenix.data restano intatti. Target assente/ambiguo non spende crediti; full-rewrite/oversize/drift del worker ripristina lastStable e rimborsa una volta, senza seconda POST. Il path icona fa un solo canary di boot, mai repair/consumeStream. Overflow, clipping/sovrapposizioni e testo undefined/null/NaN tengono chiusa Pubblica. Overlay totale durante il lavoro. 0 crediti xAI su questi gate.",
     evidence:
-      "icon-patch.mjs + icon-build.ts + icon-patch.test.ts + icon-build.test.ts + agenda-browser.test.ts D/T/M + fixtures/agenda.html + fixtures/agenda-broken.html + fixtures/agenda-clip.html + run-build runIconBuild",
+      "icon-patch.mjs listTabNodes + namedTabToken + icon-build.ts + icon-patch.test.ts domain ids/compose-product Agenda + icon-build.test.ts + agenda-browser.test.ts D/T/M + fixtures/agenda.html + compose-product/craft-icons/app-shell data-fenix-id + run-build polishDraft short-circuit",
     ok: true,
   },
   {

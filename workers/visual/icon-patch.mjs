@@ -18,9 +18,9 @@ export const AGENDA_CALENDAR_SVG =
   "<svg viewBox=\"0 0 24 24\" width=\"24\" height=\"24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\" overflow=\"hidden\" aria-hidden=\"true\"><rect x=\"4\" y=\"6\" width=\"16\" height=\"14\" rx=\"2\"/><path d=\"M8 4v4M16 4v4M4 10h16\"/><path d=\"M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01\"/></svg>";
 
 const TAB_HINTS = [
-  { id: "home", re: /\b(oggi|home|inizio|prime|mattina)\b/i },
-  { id: "new", re: /\b(prenot|nuovo|new|inser|aggiungi)\b/i },
-  { id: "list", re: /\b(appunt[ie]|elenco|list|appunti)\b/i },
+  { id: "home", re: /\b(oggi|home|inizio|prime|mattina|tavolo)\b/i },
+  { id: "new", re: /\b(prenot|nuovo|new|inser|aggiungi|registr)\b/i },
+  { id: "list", re: /\b(appunt[ie]|elenco|list|appunti|archivio)\b/i },
   { id: "stats", re: /\b(settimana|stats|numer|week|kpi)\b/i },
   { id: "more", re: /\b(studio|altro|more|impost)\b/i },
   { id: "app", re: /\b(icona app|app icon|logo|intestaz|header)\b/i },
@@ -42,7 +42,7 @@ export function looksLikeIconInstruction(instruction) {
   if (/rifai|rigener|riscrivi|layout|palette|html intero|tutte le scherm|crud|formulario/.test(p)) {
     return false;
   }
-  if (/\ble icone\b|\btutte le icon|\bicon[ae] delle tab\b/.test(p)) return false;
+  if (/\btutte le icon|\ble icone\b|\bicone delle tab\b/.test(p)) return false;
   return /icona|pittogramm|simbolo della tab/.test(p);
 }
 
@@ -113,60 +113,137 @@ function identityFor(id) {
   return `icon:${id}`;
 }
 
+function stripMarkup(inner) {
+  return String(inner || "")
+    .replace(/<svg[\s\S]*?<\/svg>/gi, " ")
+    .replace(/<img\b[^>]*>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function namedTabToken(instruction) {
+  const p = String(instruction || "");
+  const tab = p.match(/\btab\s+["']?([A-Za-zÀ-ÿ0-9]+)["']?/i);
+  if (tab && tab[1] && !/^tab$/i.test(tab[1])) return tab[1];
+  const icona = p.match(/\bicona\s+(?:della\s+|delle\s+|di\s+)?(?:tab\s+)?["']?([A-Za-zÀ-ÿ0-9]+)["']?/i);
+  if (icona && icona[1] && !/^(della|delle|di|tab|app|solo)$/i.test(icona[1])) return icona[1];
+  return "";
+}
+
+export function listTabNodes(html) {
+  const nodes = [];
+  const re =
+    /<(button|a|span|div)([^>]*\b(?:data-view|data-fenix-id)=[^>]*)>([\s\S]*?)<\/\1>/gi;
+  let match;
+  while ((match = re.exec(String(html || "")))) {
+    const attrs = match[2] || "";
+    const inner = match[3] || "";
+    const view = (attrs.match(/\bdata-view=["']([^"']+)["']/i) || [])[1] || "";
+    const fenixId = (attrs.match(/\bdata-fenix-id=["']([^"']+)["']/i) || [])[1] || "";
+    const isApp =
+      /fk-appicon/i.test(attrs) || fenixId === "icon:app" || fenixId === "app";
+    if (!view && !fenixId && !isApp) continue;
+    const id = fenixId || (isApp ? "icon:app" : identityFor(view));
+    nodes.push({
+      id,
+      view: view || (isApp ? "app" : id.replace(/^icon:/, "")),
+      label: stripMarkup(inner),
+      app: Boolean(isApp && !view),
+      index: nodes.length,
+    });
+  }
+  return nodes;
+}
+
+function nodeMatchesToken(node, token) {
+  const needle = String(token || "").toLowerCase();
+  if (!needle) return false;
+  const view = String(node.view || "").toLowerCase();
+  const id = String(node.id || "").toLowerCase();
+  const label = String(node.label || "").toLowerCase();
+  return (
+    label === needle ||
+    label.includes(needle) ||
+    view === needle ||
+    id === needle ||
+    id === `icon:${needle}`
+  );
+}
+
 export function resolveIconTarget(html, instruction) {
-  const text = String(html || "");
+  const nodes = listTabNodes(html);
   const hinted = hintIds(instruction);
-  const identities = listIdentities(text);
-  const views = new Set(listViews(text));
+  const named = namedTabToken(instruction);
   const hits = [];
+  const canonical = new Set(["home", "new", "list", "stats", "more", "app"]);
 
-  const consider = (id, why) => {
-    const fenixId = identityFor(id);
-    const present =
-      identities.has(fenixId) ||
-      identities.has(id) ||
-      views.has(id) ||
-      (id === "app" && /fk-appicon|rel=["']icon["']/i.test(text));
-    if (present) hits.push({ id: identities.has(fenixId) ? fenixId : fenixId, why });
-  };
+  if (named) {
+    for (const node of nodes) {
+      if (nodeMatchesToken(node, named)) hits.push(node);
+    }
+  }
 
-  if (hinted.length === 1) consider(hinted[0], "instruction");
-  else if (hinted.length > 1) {
+  if (!hits.length && hinted.length === 1) {
+    const role = hinted[0];
+    if (role === "app") {
+      const app = nodes.find((n) => n.app || n.id === "icon:app" || n.view === "app");
+      if (app) hits.push(app);
+    } else {
+      for (const node of nodes) {
+        if (node.app) continue;
+        if (node.view === role || node.id === identityFor(role) || node.id === role) {
+          hits.push(node);
+        } else if (TAB_HINTS.find((row) => row.id === role)?.re.test(`${node.label} ${node.view}`)) {
+          hits.push(node);
+        }
+      }
+      const allowOrdinal = !named || canonical.has(named.toLowerCase());
+      if (!hits.length && allowOrdinal) {
+        const ordinal = ["home", "new", "list", "stats", "more"].indexOf(role);
+        const tabs = nodes.filter((n) => !n.app);
+        if (ordinal >= 0 && tabs[ordinal]) hits.push(tabs[ordinal]);
+      }
+    }
+  } else if (!hits.length && hinted.length > 1) {
     return {
       status: "ambiguous",
       id: "",
       reason: `Icona ambigua: ${hinted.join(", ")}. Nessun credito speso.`,
     };
-  } else if (/solo l['']icona|cambia l['']icona|modifica l['']icona/i.test(String(instruction || ""))) {
+  }
+
+  const unique = [...new Map(hits.map((h) => [h.id, h])).values()];
+  if (unique.length === 1) {
+    return { status: "ok", id: unique[0].id, reason: "" };
+  }
+  if (unique.length > 1) {
     return {
       status: "ambiguous",
       id: "",
-      reason: "Icona ambigua: manca il target (tab o icona app). Nessun credito speso.",
-    };
-  } else {
-    return {
-      status: "absent",
-      id: "",
-      reason: "Icona assente: nessun target nella richiesta. Nessun credito speso.",
+      reason: `Icona ambigua: ${unique.map((h) => h.id).join(", ")}. Nessun credito speso.`,
     };
   }
 
-  if (!hits.length) {
+  if (named) {
     return {
       status: "absent",
       id: "",
       reason: "Icona assente: nodo non trovato nel DOM. Nessun credito speso.",
     };
   }
-  const unique = [...new Set(hits.map((h) => h.id))];
-  if (unique.length !== 1) {
+  if (/solo l['']icona|cambia l['']icona|modifica(?:re)?\s+(?:un['']?|l['']|la\s+)?icona/i.test(String(instruction || ""))) {
     return {
       status: "ambiguous",
       id: "",
-      reason: `Icona ambigua: ${unique.join(", ")}. Nessun credito speso.`,
+      reason: "Icona ambigua: manca il target (tab o icona app). Nessun credito speso.",
     };
   }
-  return { status: "ok", id: unique[0], reason: "" };
+  return {
+    status: "absent",
+    id: "",
+    reason: "Icona assente: nodo non trovato nel DOM. Nessun credito speso.",
+  };
 }
 
 function replaceSvgInChunk(chunk, svg) {

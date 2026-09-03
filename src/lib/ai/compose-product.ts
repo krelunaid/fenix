@@ -680,7 +680,7 @@ function productHtml(spec: PipelineSpec, tokens: DesignTokens, grammar: LayoutGr
   const navButtons = spec.tabs
     .map(
       (tab, i) =>
-        `  <button type="button" data-view="${tab.id}"${i === 0 ? ' class="on"' : ""}>${tabSvg(tab, i)}<span>${tab.label}</span></button>`,
+        `  <button type="button" data-view="${tab.id}" data-fenix-id="icon:${tab.id}"${i === 0 ? ' class="on"' : ""}>${tabSvg(tab, i)}<span>${tab.label}</span></button>`,
     )
     .join("\n");
   const h2 =
@@ -771,7 +771,7 @@ function ping(ok){
 function renderTabs(){
   var nav=document.getElementById("tabs");
   nav.innerHTML=tabDefs.map(function(t,i){
-    return '<button type="button" data-view="'+t.id+'" class="'+(view===t.id?"on":"")+'">'+glyphs[i]+"<span>"+t.label+"</span></button>";
+    return '<button type="button" data-view="'+t.id+'" data-fenix-id="icon:'+t.id+'" class="'+(view===t.id?"on":"")+'">'+glyphs[i]+"<span>"+t.label+"</span></button>";
   }).join("");
 }
 function emptyBox(){ return '<div class="state-empty" data-state="empty"><p>'+emptyVoice+'</p><button class="btn" type="button" data-view="'+tabDefs[1].id+'">'+cta+"</button></div>"; }

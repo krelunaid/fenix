@@ -43,7 +43,7 @@ body{font:400 16px/1.4 "IBM Plex Sans",system-ui,sans-serif;background:var(--bg)
 <body>
 <header class="fk-top">
   <div>
-    <span class="fk-appicon" aria-hidden="true">${CRAFT_APP_ICON.replace("<svg", "<svg width='20' height='20'")}</span>
+    <span class="fk-appicon" data-fenix-id="icon:app" aria-hidden="true">${CRAFT_APP_ICON.replace("<svg", "<svg width='20' height='20'")}</span>
     <div>
     <h1 class="fk-hello">Ciao</h1>
     <p class="fk-role">Operatore</p>

@@ -57,6 +57,7 @@ describe("graphic pipeline prompt→plan→generate→visual→QA", () => {
       assert.match(run.generated.html, /data-fenix-flash/);
       assert.match(run.generated.html, /data-state/);
       assert.match(run.generated.html, /data-craft-nav="1"/);
+      assert.match(run.generated.html, /data-fenix-id="icon:/);
       assert.match(run.generated.html, /stroke-linejoin="round"/);
       assert.match(run.generated.html, /viewBox="0 0 24 24"/);
       assert.doesNotMatch(run.generated.html, /M5 19l7-14 7 14/);

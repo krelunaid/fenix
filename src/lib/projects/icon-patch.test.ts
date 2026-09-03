@@ -21,6 +21,7 @@ import { formatPrefix } from "./infer.ts";
 import { isPublishable } from "./recover.ts";
 import { leakedRuntimeText, staticClippingHint } from "./graphic-quality.ts";
 import { isStudioLocked } from "./studio-lock.ts";
+import { composeProduct } from "../ai/compose-product.ts";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const AGENDA = readFileSync(join(here, "fixtures/agenda.html"), "utf8");
@@ -40,6 +41,7 @@ describe("atomic icon patch", () => {
     assert.equal(looksLikeIconInstruction(AGENDA_ICON_INSTRUCTION), true);
     assert.equal(looksLikeIconInstruction("Cambia solo l'icona della tab Prenota"), true);
     assert.equal(looksLikeIconInstruction("Cambia le icone delle tab"), false);
+    assert.equal(looksLikeIconInstruction("Cambia l'icona delle tab Oggi"), true);
     assert.equal(looksLikeIconInstruction("Rifai tutta l'app e l'icona"), false);
     assert.equal(looksLikeIconInstruction("Sistema il form di Prenota"), false);
     assert.ok(ICON_DELTA_BUDGET <= 8192);
@@ -137,7 +139,10 @@ describe("atomic icon patch", () => {
   });
 
   it("fails absent and ambiguous targets without spending", () => {
-    const noHome = AGENDA.replace(/data-fenix-id="icon:home"/g, "").replace(/data-view="home"/g, 'data-view="ghost"');
+    const noHome = AGENDA.replace(
+      /<button type="button" data-view="home"[\s\S]*?<\/button>/,
+      "",
+    ).replace(/data-fenix-id="icon:home"/g, "");
     const absent = applyIconRevision({
       html: noHome,
       instruction: AGENDA_ICON_INSTRUCTION,
@@ -156,6 +161,67 @@ describe("atomic icon patch", () => {
     assert.equal(ambiguous.spent, false);
     assert.equal(ambiguous.html, AGENDA);
     assert.match(ambiguous.reason, /ambigua/i);
+
+    const unnamed = applyIconRevision({
+      html: AGENDA,
+      instruction: "modificare un'icona",
+    });
+    assert.equal(unnamed.status, "ambiguous");
+    assert.equal(unnamed.spent, false);
+  });
+
+  it("resolves domain tab ids without data-fenix-id and stamps only the target", () => {
+    const domain = `<!DOCTYPE html><html><body>
+<nav class="fk-tab">
+<button type="button" data-view="oggi"><svg viewBox="0 0 24 24" width="24" height="24"><circle cx="8" cy="8" r="2"/></svg>Oggi</button>
+<button type="button" data-view="prenota"><svg viewBox="0 0 24 24" width="24" height="24"><circle cx="8" cy="8" r="2"/></svg>Prenota</button>
+<button type="button" data-view="appunti"><svg viewBox="0 0 24 24" width="24" height="24"><circle cx="8" cy="8" r="2"/></svg>Appunti</button>
+<button type="button" data-view="settimana"><svg viewBox="0 0 24 24" width="24" height="24"><circle cx="8" cy="8" r="2"/></svg>Settimana</button>
+<button type="button" data-view="studio"><svg viewBox="0 0 24 24" width="24" height="24"><circle cx="8" cy="8" r="2"/></svg>Studio</button>
+</nav>
+<script>window.Fenix={data:{query:function(){return Promise.resolve([])},insert:function(){return Promise.resolve()},remove:function(){return Promise.resolve()}},load:function(){},save:function(){}}</script>
+</body></html>`;
+    const target = resolveIconTarget(domain, AGENDA_ICON_INSTRUCTION);
+    assert.equal(target.status, "ok", target.reason);
+    assert.equal(target.id, "icon:oggi");
+    const verdict = applyIconRevision({ html: domain, instruction: AGENDA_ICON_INSTRUCTION });
+    assert.equal(verdict.status, "ok", verdict.reason);
+    assert.match(verdict.html, /data-fenix-id="icon:oggi"/);
+    assert.match(innerSvg(verdict.html, "icon:oggi") || verdict.html, /M8 4v4M16 4v4/);
+    assert.doesNotMatch(verdict.html, /data-fenix-id="icon:prenota"/);
+    assert.match(verdict.html, /data-view="prenota"/);
+    assert.match(verdict.html, /data-view="appunti"/);
+    assert.match(verdict.html, /data-view="settimana"/);
+    assert.match(verdict.html, /data-view="studio"/);
+    assert.match(verdict.html, /Fenix=\{data:/);
+  });
+
+  it("patches a compose-product Agenda without rewriting views or CRUD", () => {
+    const composed = composeProduct(`${formatPrefix("app")}Agenda studio: impegni e appuntamenti in tasca.`);
+    assert.match(composed.html, /data-fenix-id="icon:/);
+    const extra = { path: "src/screens/Home.tsx", content: "export default function Home(){return null}" };
+    const files = [...(composed.files || []), extra];
+    const verdict = applyIconRevision({
+      html: composed.html,
+      files,
+      instruction: AGENDA_ICON_INSTRUCTION,
+    });
+    assert.equal(verdict.status, "ok", verdict.reason);
+    assert.equal(verdict.spent, true);
+    const beforeViews = [...composed.html.matchAll(/data-view=["']([^"']+)/gi)].map((m) => m[1]).sort().join(",");
+    const afterViews = [...verdict.html.matchAll(/data-view=["']([^"']+)/gi)].map((m) => m[1]).sort().join(",");
+    assert.equal(afterViews, beforeViews);
+    assert.match(verdict.html, /Fenix\.load/);
+    assert.match(verdict.html, /Fenix\.save/);
+    assert.equal(
+      verdict.files.find((f: { path: string }) => f.path === extra.path)?.content,
+      extra.content,
+    );
+    const drift = structuralDrift(
+      snapshotStructure(composed.html, files),
+      snapshotStructure(verdict.html, verdict.files),
+    );
+    assert.equal(drift, "");
   });
 
   it("rejects worker full-rewrite/oversize, restores snapshot, refunds once", () => {

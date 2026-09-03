@@ -220,9 +220,15 @@ describe("focus-visible and worker model", () => {
     assert.doesNotMatch(iconPatch, /reasoningEffort/);
     assert.match(iconPatch, /replaceSvgInChunk/);
     assert.match(iconPatch, /return `\$\{svg\}\$\{inner\}`/);
+    assert.match(iconPatch, /listTabNodes/);
+    assert.match(iconPatch, /namedTabToken/);
+    assert.match(iconPatch, /nodeMatchesToken/);
+    assert.doesNotMatch(iconPatch, /\\bicon\[ae\] delle tab\\b/);
     const iconPatchTest = readFileSync(join(root, "src/lib/projects/icon-patch.test.ts"), "utf8");
     assert.match(iconPatchTest, /inserts SVG into a target without svg/);
     assert.match(iconPatchTest, /<img src=/);
+    assert.match(iconPatchTest, /resolves domain tab ids without data-fenix-id/);
+    assert.match(iconPatchTest, /patches a compose-product Agenda/);
     const iconBuildTest = readFileSync(join(root, "src/lib/projects/icon-build.test.ts"), "utf8");
     assert.match(iconBuildTest, /withFetchSpy/);
     assert.match(iconBuildTest, /globalThis\.fetch/);
@@ -307,6 +313,18 @@ describe("focus-visible and worker model", () => {
       runFn.indexOf("looksLikeIconInstruction") < runFn.indexOf("spendCredit"),
       "icon gate must run before spendCredit",
     );
+    const polishFn = runBuild.slice(runBuild.indexOf("async function polishDraft"));
+    assert.ok(
+      polishFn.indexOf("looksLikeIconInstruction") < polishFn.indexOf("startPolishJob"),
+      "icon polish must not POST the visual worker",
+    );
+    const compose = readFileSync(join(root, "src/lib/ai/compose-product.ts"), "utf8");
+    assert.match(compose, /data-fenix-id="icon:\$\{tab\.id\}"/);
+    assert.match(compose, /data-fenix-id="icon:'\+t\.id\+'/);
+    const craft = readFileSync(join(root, "src/lib/projects/craft-icons.ts"), "utf8");
+    assert.match(craft, /data-fenix-id="icon:\$\{t\.id\}"/);
+    const appShell = readFileSync(join(root, "src/lib/ai/app-shell.ts"), "utf8");
+    assert.match(appShell, /data-fenix-id="icon:app"/);
     const iconFn = runBuild.slice(runBuild.indexOf("async function runIconBuild"));
     assert.match(iconFn, /runIconRevisionFlow/);
     assert.match(iconFn, /settlePreviewBoot/);
