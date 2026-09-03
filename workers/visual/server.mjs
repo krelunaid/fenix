@@ -9,6 +9,10 @@ import {
   resolvePatchTarget,
   shouldPolishTab,
 } from "./screen-patch.mjs";
+import {
+  applyIconRevision,
+  looksLikeIconInstruction,
+} from "./icon-patch.mjs";
 
 /**
  * Worker visivo Fenix — 5 giri (una tab ciascuno) Playwright + grok-build-0.1.
@@ -689,6 +693,18 @@ async function auditTab(page, index) {
 }
 
 async function polish(prompt, html, instruction, kind) {
+  if (looksLikeIconInstruction(instruction)) {
+    const verdict = applyIconRevision({ html, files: [], instruction });
+    if (verdict.status !== "ok") {
+      return { html, meta: {}, log: verdict.log.length ? verdict.log : [verdict.reason], files: [] };
+    }
+    return {
+      html: verdict.html,
+      meta: {},
+      log: ["Patch atomica icona", ...verdict.log],
+      files: [],
+    };
+  }
   const apiKey = (process.env.XAI_API_KEY || "").trim();
   if (!apiKey) throw new Error("Manca XAI_API_KEY");
   if (looksDashboard(prompt, instruction, kind)) {

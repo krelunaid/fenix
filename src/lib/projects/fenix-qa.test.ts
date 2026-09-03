@@ -209,6 +209,17 @@ describe("focus-visible and worker model", () => {
     assert.match(worker, /isAppleChromeSvg/);
     assert.match(worker, /CRAFT_TAB_ICONS/);
     assert.match(worker, /registro a righe/);
+    assert.match(worker, /from "\.\/icon-patch\.mjs"/);
+    assert.match(worker, /looksLikeIconInstruction\(instruction\)/);
+    assert.match(worker, /Patch atomica icona/);
+    const iconPatch = readFileSync(join(root, "workers/visual/icon-patch.mjs"), "utf8");
+    assert.match(iconPatch, /data-fenix-id/);
+    assert.match(iconPatch, /ICON_DELTA_BUDGET/);
+    assert.match(iconPatch, /applyIconRevision/);
+    assert.match(iconPatch, /refundIconFailure/);
+    assert.doesNotMatch(iconPatch, /reasoningEffort/);
+    assert.equal(existsSync(join(root, "src/lib/projects/fixtures/agenda.html")), true);
+    assert.equal(existsSync(join(root, "src/lib/projects/agenda-browser.test.ts")), true);
   });
 
   it("drops iOS template fallbacks from look, shell, types and cards", () => {
@@ -274,6 +285,15 @@ describe("focus-visible and worker model", () => {
     assert.match(runBuild, /withoutPronto/);
     assert.match(runBuild, /SITE_POLISH_INSTRUCTION/);
     assert.match(runBuild, /if \(!\(instruction \|\| isIOS\(\)\) && phone\)/);
+    assert.match(runBuild, /looksLikeIconInstruction/);
+    assert.match(runBuild, /applyIconRevision/);
+    assert.match(runBuild, /runIconBuild/);
+    assert.match(runBuild, /Nessuna seconda POST/);
+    const runFn = runBuild.slice(runBuild.indexOf("export async function runBuild"));
+    assert.ok(
+      runFn.indexOf("looksLikeIconInstruction") < runFn.indexOf("spendCredit"),
+      "icon gate must run before spendCredit",
+    );
     assert.match(runBuild, /isIOS\(\) \|\| desk/);
     assert.match(runBuild, /GENERATE_POLL_MAX = 300/);
     assert.match(runBuild, /isTransientNetwork/);

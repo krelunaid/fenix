@@ -33,6 +33,11 @@ import {
   restoreStablePatch,
 } from "@/lib/projects/studio-lock";
 import { uid } from "@/lib/utils";
+import {
+  applyIconRevision,
+  looksLikeIconInstruction,
+  refundIconFailure,
+} from "../../../workers/visual/icon-patch.mjs";
 
 const inflight = new Set<string>();
 /** A successful polishDraft for this project in the current runBuild. Blocks a second POST. */
@@ -481,19 +486,47 @@ async function polishDraft(
   let lastValidHtml = html;
   try {
     const data = await startPolishJob(projectId, prompt, html, instruction, epoch);
-    const fileBlocks = (data?.files ?? [])
+    const existing = useProjectStore.getState().getProject(projectId);
+    let accepted = data;
+    if (instruction && looksLikeIconInstruction(instruction)) {
+      const verdict = applyIconRevision({
+        html,
+        files: existing?.files,
+        instruction,
+        worker: { html: data.html, files: data.files },
+      });
+      polishedOnce.add(projectId);
+      if (verdict.status !== "ok") {
+        const restored = refundIconFailure(existing ?? {}, verdict);
+        if (restored.refundedNow) refundBuildCredit(projectId, ITERATE_COST);
+        store.updateProject(projectId, {
+          html: restored.html,
+          ...(restored.files ? { files: restored.files } : {}),
+          status: "error",
+          error: verdict.reason,
+          ...clearVisualJobPatch(),
+        });
+        store.addMessage(projectId, {
+          id: uid(),
+          role: "assistant",
+          content: `${verdict.reason} Nessuna seconda POST.`,
+        });
+        return lastValidHtml;
+      }
+      accepted = { ...data, html: verdict.html, files: verdict.files, log: verdict.log };
+    }
+    const fileBlocks = (accepted?.files ?? [])
       .map((f) => `<<<FILE path="${f.path}">>>\n${f.content}`)
       .join("\n");
-    const existing = useProjectStore.getState().getProject(projectId);
     const lockKind = resolveProjectKind({
       stored: existing?.kind,
       requested: existing?.requestedKind,
       prompt: existing?.prompt ?? prompt,
     });
     const result =
-      data &&
+      accepted &&
       parseBuildOutput(
-        `<<<META>>>\n${JSON.stringify(data.meta ?? {})}\n${fileBlocks}\n<<<HTML>>>\n${data.html ?? ""}\n<<<END>>>`,
+        `<<<META>>>\n${JSON.stringify(accepted.meta ?? {})}\n${fileBlocks}\n<<<HTML>>>\n${accepted.html ?? ""}\n<<<END>>>`,
         lockKind,
         existing?.prompt ?? prompt,
       );
@@ -503,7 +536,7 @@ async function polishDraft(
       const report = applyBuildResult(projectId, result, "building");
       if (report.syntaxOk) {
         lastValidHtml = result.html;
-        const logs = data?.log ?? [];
+        const logs = accepted?.log ?? [];
         store.updateProject(projectId, {
           ...clearVisualJobPatch(),
           buildLog: uniqueLogs([
@@ -739,6 +772,15 @@ export async function runBuild(projectId: string, instruction?: string) {
   const project = store.getProject(projectId);
   if (!project) {
     inflight.delete(projectId);
+    return;
+  }
+
+  if (instruction && looksLikeIconInstruction(instruction) && project.html) {
+    try {
+      await runIconBuild(projectId, instruction, project);
+    } finally {
+      inflight.delete(projectId);
+    }
     return;
   }
 
@@ -978,4 +1020,81 @@ export async function runBuild(projectId: string, instruction?: string) {
   } finally {
     inflight.delete(projectId);
   }
+}
+
+async function runIconBuild(
+  projectId: string,
+  instruction: string,
+  project: { html: string; files?: { path: string; content: string }[]; prompt: string; name?: string },
+) {
+  const store = useProjectStore.getState();
+  const verdict = applyIconRevision({
+    html: project.html,
+    files: project.files,
+    instruction,
+  });
+  if (verdict.status === "absent" || verdict.status === "ambiguous" || !verdict.spent) {
+    store.addMessage(projectId, {
+      id: uid(),
+      role: "assistant",
+      content: verdict.reason || "Icona non applicabile. Nessun credito speso.",
+    });
+    return;
+  }
+  const cost = ITERATE_COST;
+  if (!store.spendCredit(cost)) {
+    store.updateProject(projectId, {
+      status: "error",
+      error: "Crediti esauriti. Il tetto di questa sessione è finito.",
+    });
+    store.addMessage(projectId, {
+      id: uid(),
+      role: "assistant",
+      content: "Crediti esauriti. Una creazione usa 4 crediti, una modifica 2.",
+    });
+    return;
+  }
+  const epoch = nextBuildEpoch(
+    (store.getProject(projectId) as { buildEpoch?: number } | undefined)?.buildEpoch,
+  );
+  const snap = captureStableSnapshot(project);
+  store.updateProject(projectId, {
+    status: "building",
+    error: undefined,
+    buildLog: ["Patch atomica icona"],
+    creditRefunded: false,
+    buildEpoch: epoch,
+    ...snap,
+  });
+  polishedOnce.add(projectId);
+  const syntax = validateProductHtml(verdict.html, { kind: store.getProject(projectId)?.kind });
+  if (!syntax.syntaxOk) {
+    refundBuildCredit(projectId, cost);
+    store.updateProject(projectId, {
+      ...restoreStablePatch(store.getProject(projectId)),
+      status: "error",
+      error: formatHtmlErrors(syntax) || "Patch icona non valida",
+      ...clearVisualJobPatch(),
+    });
+    store.addMessage(projectId, {
+      id: uid(),
+      role: "assistant",
+      content: `Non pubblico: ${formatHtmlErrors(syntax)}. Credito rimborsato.`,
+    });
+    return;
+  }
+  store.updateProject(projectId, {
+    html: verdict.html,
+    files: verdict.files,
+    status: "building",
+    buildLog: uniqueLogs([...(store.getProject(projectId)?.buildLog ?? []), ...verdict.log]),
+  });
+  if (!stillCurrent(projectId, epoch)) return;
+  const booted = await repairBootFailures(projectId, project.prompt, epoch);
+  if (!stillCurrent(projectId, epoch)) return;
+  if (!booted) {
+    finishPolish(projectId, project.html, cost);
+    return;
+  }
+  finishPolish(projectId, verdict.html);
 }

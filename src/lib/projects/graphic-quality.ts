@@ -68,7 +68,14 @@ function markup(html: string): string {
     .replace(/<style\b[\s\S]*?<\/style>/gi, " ");
 }
 
-/** Markup plus JS template strings: generated apps paint into an empty <main>. */
+/** Visible product text, scripts stripped. Fail-closed on leaked JS tokens. */
+export function leakedRuntimeText(html: string): boolean {
+  const vis = markup(html)
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .replace(/\s+/g, " ");
+  return /\bundefined\b/.test(vis) || /\bNaN\b/.test(vis) || /(^|[^A-Za-z])null([^A-Za-z]|$)/.test(vis);
+}
 function contentText(html: string): string {
   return String(html || "")
     .replace(/<style\b[\s\S]*?<\/style>/gi, " ")
@@ -130,6 +137,9 @@ export type RenderedGraphicMetrics = {
   overflowX: number;
   title: string;
   consoleErrors: number;
+  clipping: number;
+  overlap: number;
+  leakedText: boolean;
 };
 
 /** DOM probe for Playwright. Measures the painted screen, not the source string. */
@@ -151,6 +161,16 @@ export function collectRenderedGraphic(): RenderedGraphicMetrics {
     if (c) colors.add(c);
   }
   const text = String((main as HTMLElement).innerText || "").replace(/\s+/g, " ").trim();
+  let clipping = 0;
+  let overlap = 0;
+  for (const el of document.querySelectorAll<HTMLElement>("nav button, .fk-tile, .card, .fk-tab button, [data-view]")) {
+    const r = el.getBoundingClientRect();
+    if (r.width < 8 || r.height < 8) continue;
+    if (r.right > window.innerWidth + 8 || r.left < -8) {
+      clipping += 1;
+      overlap += 1;
+    }
+  }
   const images = [...document.querySelectorAll("img, svg, canvas, .hero, .sil")].filter((n) => {
     const b = n.getBoundingClientRect();
     return b.width >= 24 && b.height >= 20;
@@ -172,6 +192,9 @@ export function collectRenderedGraphic(): RenderedGraphicMetrics {
     overflowX: Math.max(0, document.documentElement.scrollWidth - window.innerWidth),
     title: document.title || "",
     consoleErrors: 0,
+    clipping,
+    overlap,
+    leakedText: /\bundefined\b/.test(text) || /\bNaN\b/.test(text) || /(^|\s)null(\s|$)/.test(text),
   };
 }
 
@@ -188,6 +211,18 @@ export function auditGraphicQuality(
   const findings: GraphicFinding[] = [];
   const craft = auditCraft(text);
   const product = isProductFamily(family);
+
+  if (leakedRuntimeText(text) || opts?.rendered?.leakedText) {
+    findings.push(
+      finding(
+        "state",
+        "fail",
+        "leaked-runtime-text",
+        "Testo visibile undefined/null/NaN.",
+        "token JS in pagina",
+      ),
+    );
+  }
 
   const cloneSet = CLONE_GRAY.test(text) && CLONE_BLUE.test(text) && CLONE_FACE.test(text);
   if (cloneSet) {
@@ -469,6 +504,11 @@ export function auditGraphicQuality(
     if (rendered.overflowX > 8) {
       findings.push(
         finding("responsive", "fail", "overflow-x", "Overflow orizzontale.", `px=${rendered.overflowX}`),
+      );
+    }
+    if (rendered.leakedText) {
+      findings.push(
+        finding("state", "fail", "leaked-runtime-text", "Testo visibile undefined/null/NaN.", "token JS in pagina"),
       );
     }
     if (rendered.consoleErrors > 0) {

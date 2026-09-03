@@ -20,6 +20,7 @@ import { grammarFromBrief, grammarInstruction } from "../projects/layout-grammar
 import {
   auditGraphicQuality,
   formatGraphicErrors,
+  leakedRuntimeText,
   type RenderedGraphicMetrics,
 } from "../projects/graphic-quality.ts";
 import {
@@ -434,6 +435,13 @@ export function evaluateContract(input: {
 
   const bodyOverflow = /(?:^|})\s*body\s*\{[^}]*overflow\s*:\s*hidden/i.test(css);
   const phoneDesktop = isPhoneKind(kind) && /min-width\s*:\s*1[1-9]\d{2,}px/i.test(css);
+  const leaked = leakedRuntimeText(runtimeHtml) || Boolean(input.rendered?.leakedText);
+  const overflowRendered = Boolean(input.rendered && input.rendered.overflowX > 8);
+  const clipRendered = Boolean(
+    input.rendered &&
+      input.rendered.overflowX > 8 &&
+      ((input.rendered.clipping || 0) > 0 || (input.rendered.overlap || 0) > 0),
+  );
   const iframeSameOrigin = /sandbox\s*=\s*["'][^"']*allow-same-origin/i.test(runtimeHtml);
   const evalCall = /\beval\s*\(|\bnew Function\s*\(/.test(code);
   const hasFocus = /:focus-visible|:focus\b/.test(`${runtimeHtml}\n${css}`);
@@ -516,8 +524,24 @@ export function evaluateContract(input: {
     ),
     check(
       "overflow",
-      !(kind === "site" || kind === "landing" ? bodyOverflow : false) && !phoneDesktop,
-      phoneDesktop ? "min-width desktop su app" : bodyOverflow ? "overflow:hidden su body" : "ok",
+      !(kind === "site" || kind === "landing" ? bodyOverflow : false) && !phoneDesktop && !overflowRendered,
+      phoneDesktop
+        ? "min-width desktop su app"
+        : bodyOverflow
+          ? "overflow:hidden su body"
+          : overflowRendered
+            ? "overflow orizzontale"
+            : "ok",
+    ),
+    check(
+      "leaked-text",
+      !leaked,
+      leaked ? "testo undefined/null/NaN" : "ok",
+    ),
+    check(
+      "clipping",
+      !clipRendered,
+      clipRendered ? "clipping o sovrapposizioni" : "ok",
     ),
     check(
       "aa",
