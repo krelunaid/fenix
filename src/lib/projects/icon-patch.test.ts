@@ -70,6 +70,28 @@ describe("atomic icon patch", () => {
     assert.match(patchedGlyph.html, /Oggi/);
     assert.doesNotMatch(patchedGlyph.html, /📅/);
     assert.match(patchedGlyph.html, /data-fenix-id="icon:home"/);
+
+    const emoji = `<!DOCTYPE html><html><body>
+<nav>
+<button type="button" data-view="home" data-fenix-id="icon:home">📅Oggi</button>
+</nav>
+</body></html>`;
+    const patchedEmoji = applyIconPatch(emoji, "icon:home", AGENDA_CALENDAR_SVG);
+    assert.equal(patchedEmoji.applied, true, patchedEmoji.reason);
+    assert.match(innerSvg(patchedEmoji.html, "icon:home"), /M8 4v4/);
+    assert.match(patchedEmoji.html, /Oggi<\/button>/);
+    assert.doesNotMatch(patchedEmoji.html, /📅/);
+
+    const img = `<!DOCTYPE html><html><body>
+<nav>
+<button type="button" data-view="home" data-fenix-id="icon:home"><img src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" alt="" width="24" height="24"/>Oggi</button>
+</nav>
+</body></html>`;
+    const patchedImg = applyIconPatch(img, "icon:home", AGENDA_CALENDAR_SVG);
+    assert.equal(patchedImg.applied, true, patchedImg.reason);
+    assert.match(innerSvg(patchedImg.html, "icon:home"), /M8 4v4/);
+    assert.match(patchedImg.html, /Oggi<\/button>/);
+    assert.doesNotMatch(patchedImg.html, /<img\b/i);
   });
 
   it("patches one owned icon and keeps files/views/CRUD byte-stable", () => {

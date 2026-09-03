@@ -92,7 +92,7 @@ export function staticClippingHint(html: string): boolean {
       css,
     );
   const absTile =
-    /(?:\.fk-tile|\.card|\.overlap)[^{]*\{[^}]*position\s*:\s*absolute/i.test(css);
+    /(?:\.fk-tile|\.card|\.overlap)(?:\.[a-z0-9_-]+)?\s*\{[^}]*position\s*:\s*absolute/i.test(css);
   return squeezedTabs || negMargin || absTile;
 }
 function contentText(html: string): string {
@@ -228,18 +228,21 @@ export function collectRenderedGraphic(): RenderedGraphicMetrics {
     }
     if (!scrollX && (r.right > window.innerWidth + 8 || r.left < -8)) clipping += 1;
   }
-  const byParent = new Map<HTMLElement, DOMRect[]>();
+  const byParent = new Map<HTMLElement, { el: HTMLElement; r: DOMRect }[]>();
   for (const box of boxes) {
     if (!box.parent) continue;
     const list = byParent.get(box.parent) || [];
-    list.push(box.r);
+    list.push({ el: box.el, r: box.r });
     byParent.set(box.parent, list);
   }
   for (const list of byParent.values()) {
     for (let i = 0; i < list.length; i += 1) {
       for (let j = i + 1; j < list.length; j += 1) {
-        const a = list[i]!;
-        const b = list[j]!;
+        const A = list[i]!;
+        const B = list[j]!;
+        if (A.el.contains(B.el) || B.el.contains(A.el)) continue;
+        const a = A.r;
+        const b = B.r;
         const w = Math.max(0, Math.min(a.right, b.right) - Math.max(a.left, b.left));
         const h = Math.max(0, Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top));
         const area = w * h;

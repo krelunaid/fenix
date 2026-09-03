@@ -218,6 +218,15 @@ describe("focus-visible and worker model", () => {
     assert.match(iconPatch, /applyIconRevision/);
     assert.match(iconPatch, /refundIconFailure/);
     assert.doesNotMatch(iconPatch, /reasoningEffort/);
+    assert.match(iconPatch, /replaceSvgInChunk/);
+    assert.match(iconPatch, /return `\$\{svg\}\$\{inner\}`/);
+    const iconPatchTest = readFileSync(join(root, "src/lib/projects/icon-patch.test.ts"), "utf8");
+    assert.match(iconPatchTest, /inserts SVG into a target without svg/);
+    assert.match(iconPatchTest, /<img src=/);
+    const iconBuildTest = readFileSync(join(root, "src/lib/projects/icon-build.test.ts"), "utf8");
+    assert.match(iconBuildTest, /withFetchSpy/);
+    assert.match(iconBuildTest, /globalThis\.fetch/);
+    assert.match(iconBuildTest, /boot-failure restores snapshot/);
     assert.equal(existsSync(join(root, "src/lib/projects/fixtures/agenda.html")), true);
     assert.equal(existsSync(join(root, "src/lib/projects/fixtures/agenda-clip.html")), true);
     assert.equal(existsSync(join(root, "src/lib/projects/agenda-browser.test.ts")), true);
@@ -308,6 +317,8 @@ describe("focus-visible and worker model", () => {
     assert.doesNotMatch(iconFlow, /repairBootFailures/);
     assert.doesNotMatch(iconFlow, /consumeStream/);
     assert.doesNotMatch(iconFlow, /\/api\/build/);
+    assert.doesNotMatch(iconFlow, /\bfetch\s*\(/);
+    assert.doesNotMatch(iconFlow, /startPolishJob/);
     assert.match(runBuild, /isIOS\(\) \|\| desk/);
     assert.match(runBuild, /GENERATE_POLL_MAX = 300/);
     assert.match(runBuild, /isTransientNetwork/);

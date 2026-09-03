@@ -178,6 +178,16 @@ describe("graphic quality gate", () => {
     assert.equal(staticClippingHint(agenda), false);
     assert.equal(staticClippingHint(clip), true);
     assert.equal(staticClippingHint(broken), true);
+    assert.equal(
+      staticClippingHint(
+        "<style>nav.fk-tab{overflow:hidden}nav.fk-tab button{flex:1;min-width:0}nav.fk-tab button svg{overflow:hidden}</style>",
+      ),
+      false,
+    );
+    assert.equal(
+      staticClippingHint("<style>.card .cap{position:absolute;bottom:0}</style>"),
+      false,
+    );
     const brief = `${formatPrefix("app")}Agenda studio: impegni e appuntamenti in tasca.`;
     const good = auditGraphicQuality(agenda, { brief, kind: "app" });
     assert.equal(

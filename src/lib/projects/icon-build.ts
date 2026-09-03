@@ -1,5 +1,5 @@
 /**
- * Local icon revision: one DOM patch, one boot canary, never a model/worker POST.
+ * Local icon revision: one DOM patch, one boot canary, never a model round-trip.
  */
 import {
   applyIconRevision,
@@ -31,7 +31,6 @@ export type IconBuildIO = {
   updateProject: (patch: Record<string, unknown>) => void;
   addMessage: (content: string) => void;
   settleBoot: () => Promise<string | null>;
-  post?: (url: string, init?: RequestInit) => Promise<Response>;
   stillCurrent?: () => boolean;
 };
 
@@ -55,15 +54,7 @@ export async function runIconRevisionFlow(
   },
   io: IconBuildIO,
 ): Promise<IconBuildResult> {
-  let posts = 0;
-  if (typeof io.post === "function") {
-    const inner = io.post;
-    io.post = async (url, init) => {
-      posts += 1;
-      return inner(url, init);
-    };
-  }
-
+  const posts = 0;
   const html = String(input.html || "");
   const files = Array.isArray(input.files) ? input.files : [];
   const verdict = applyIconRevision({ html, files, instruction: input.instruction });
