@@ -837,8 +837,12 @@ describe("graphic pipeline visual QA D/T/M", () => {
             assert.equal(rendered.leakedText, false, `${row.id} leaked`);
             assert.ok(rendered.headingCount >= 1, `${row.id} heading`);
             const dest = await shot(page, `${row.id}-${vp}.png`, FIVE_SHOTS);
-            mkdirSync(AFTER, { recursive: true });
-            await page.screenshot({ path: join(AFTER, `${row.id}-${vp}.png`), fullPage: false });
+            try {
+              mkdirSync(AFTER, { recursive: true });
+              await page.screenshot({ path: join(AFTER, `${row.id}-${vp}.png`), fullPage: false });
+            } catch {
+              /* CI without scorecard dir */
+            }
             const buf = await page.screenshot({ type: "png" });
             files.push({ name: `${row.id}-${vp}.png`, sha256: createHash("sha256").update(buf).digest("hex") });
             if (vp === "D") {
