@@ -353,6 +353,8 @@ describe("focus-visible and worker model", () => {
     assert.match(harness, /withChromiumLease/);
     assert.match(harness, /sweepOwnedLaunch/);
     assert.match(harness, /resolveInsideRoot/);
+    assert.match(harness, /dirname\(/);
+    assert.match(harness, /basename\(/);
     assert.match(harness, /RETRY_BACKOFF_MS/);
     assert.match(harness, /pidOwningDir/);
     assert.match(harness, /chromium\.launch\(/);
@@ -361,6 +363,8 @@ describe("focus-visible and worker model", () => {
     assert.doesNotMatch(harness, /launchServer/);
     assert.doesNotMatch(harness, /chromium\.connect\(/);
     assert.doesNotMatch(harness, /playwright_chromiumdev_profile-/);
+    const harnessTest = readFileSync(join(root, "src/lib/projects/playwright-harness.test.ts"), "utf8");
+    assert.match(harnessTest, /canonicalizes Darwin-style tmp aliases/);
     const testFiles = readdirSync(join(root, "src"), { recursive: true, encoding: "utf8" }) as string[];
     for (const rel of testFiles) {
       if (!rel.endsWith(".test.ts")) continue;

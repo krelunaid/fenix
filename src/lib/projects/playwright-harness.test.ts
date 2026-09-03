@@ -5,6 +5,7 @@ import {
   mkdirSync,
   mkdtempSync,
   readFileSync,
+  realpathSync,
   rmSync,
   symlinkSync,
   writeFileSync,
@@ -286,6 +287,55 @@ describe("playwright harness bounds Chromium spawn", () => {
       assert.equal(cleaned.removed, true);
       assert.equal(existsSync(join(root, "owned")), false);
       assert.equal(existsSync(join(outside, "keep")), true);
+    } finally {
+      rmSync(host, { recursive: true, force: true });
+    }
+  });
+
+  it("canonicalizes Darwin-style tmp aliases, including a missing child", () => {
+    const host = mkdtempSync(join(tmpdir(), "fenix-alias-"));
+    const privateTmp = join(host, "private", "tmp");
+    mkdirSync(privateTmp, { recursive: true });
+    const aliasTmp = join(host, "tmp");
+    symlinkSync(privateTmp, aliasTmp);
+    const realRoot = join(privateTmp, "fenix-root");
+    const aliasRoot = join(aliasTmp, "fenix-root");
+    mkdirSync(realRoot);
+    const ownedAlias = join(aliasRoot, "owned");
+    mkdirSync(ownedAlias);
+    writeFileSync(join(ownedAlias, "junk"), "stale");
+    const missingAlias = join(aliasRoot, "not-yet");
+    const outside = join(privateTmp, "outside");
+    mkdirSync(outside);
+    writeFileSync(join(outside, "keep"), "secret");
+    symlinkSync(outside, join(realRoot, "escape"));
+    try {
+      assert.equal(resolveInsideRoot(realRoot, ownedAlias), realpathSync(ownedAlias));
+      assert.equal(resolveInsideRoot(aliasRoot, join(realRoot, "owned")), realpathSync(ownedAlias));
+      assert.equal(resolveInsideRoot(realRoot, missingAlias), join(realpathSync(realRoot), "not-yet"));
+      assert.equal(existsSync(missingAlias), false);
+      assert.throws(
+        () => resolveInsideRoot(realRoot, join(aliasRoot, "..", "outside", "keep")),
+        /escapes/,
+      );
+      assert.throws(() => resolveInsideRoot(aliasRoot, join(aliasRoot, "escape")), /escapes/);
+      assert.throws(() => resolveInsideRoot(realRoot, join(aliasRoot, "escape", "keep")), /escapes/);
+      const cleaned = sweepOwnedLaunch({
+        token: "alias-1",
+        pid: 0,
+        dir: ownedAlias,
+        root: realRoot,
+      });
+      assert.equal(cleaned.removed, true);
+      assert.equal(existsSync(join(realRoot, "owned")), false);
+      assert.equal(readFileSync(join(outside, "keep"), "utf8"), "secret");
+      const cleanedMissing = sweepOwnedLaunch({
+        token: "alias-2",
+        pid: 0,
+        dir: missingAlias,
+        root: aliasRoot,
+      });
+      assert.equal(cleanedMissing.removed, true);
     } finally {
       rmSync(host, { recursive: true, force: true });
     }

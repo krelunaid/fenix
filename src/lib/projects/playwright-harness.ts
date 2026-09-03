@@ -10,7 +10,7 @@ import {
   rmSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { isAbsolute, join, normalize, relative, resolve } from "node:path";
+import { dirname, basename, isAbsolute, join, resolve, sep } from "node:path";
 import {
   chromium,
   type Browser,
@@ -190,29 +190,47 @@ export function fenixPlaywrightRoot(): string {
 /**
  * Resolve `candidate` only if it stays inside `root` after normalize + realpath.
  * Symlinks and `..` that leave the dedicated Fenix tmp are rejected.
+ *
+ * Darwin `/tmp` is a symlink to `/private/tmp`. `realpathSync(root)` therefore
+ * lands on `/private/tmp/...` while an absolute candidate often still uses the
+ * `/tmp/...` alias. Containment must canonicalize the candidate (or the longest
+ * existing ancestor, then re-join a missing suffix) *before* the relative check,
+ * otherwise owned cleanup throws and leftover profiles reappear on macOS.
  */
+function staysInside(rootReal: string, resolved: string): boolean {
+  if (resolved === rootReal) return true;
+  return resolved.startsWith(rootReal.endsWith(sep) ? rootReal : rootReal + sep);
+}
+
 export function resolveInsideRoot(root: string, candidate: string): string {
   if (!root || !candidate) throw new Error("fenix playwright path required");
   const rootReal = realpathSync(root);
-  const abs = isAbsolute(candidate) ? candidate : resolve(rootReal, candidate);
-  const lex = normalize(abs);
-  const relLex = relative(rootReal, lex);
-  if (relLex.startsWith("..") || isAbsolute(relLex)) {
-    throw new Error("path escapes fenix playwright root");
+  const lex = isAbsolute(candidate) ? resolve(candidate) : resolve(rootReal, candidate);
+
+  let cursor = lex;
+  const missing: string[] = [];
+  while (!existsSync(cursor)) {
+    const parent = dirname(cursor);
+    if (parent === cursor) {
+      throw new Error("path escapes fenix playwright root");
+    }
+    missing.unshift(basename(cursor));
+    cursor = parent;
   }
-  if (existsSync(lex)) {
-    const st = lstatSync(lex);
+
+  if (missing.length === 0) {
+    const st = lstatSync(cursor);
     if (st.isSymbolicLink()) {
       throw new Error("path escapes fenix playwright root");
     }
-    const real = realpathSync(lex);
-    const relReal = relative(rootReal, real);
-    if (relReal.startsWith("..") || isAbsolute(relReal)) {
-      throw new Error("path escapes fenix playwright root");
-    }
-    return real;
   }
-  return lex;
+
+  const ancestorReal = realpathSync(cursor);
+  const resolved = missing.length ? join(ancestorReal, ...missing) : ancestorReal;
+  if (!staysInside(rootReal, resolved)) {
+    throw new Error("path escapes fenix playwright root");
+  }
+  return resolved;
 }
 
 export function registerOwnedLaunch(record: OwnedLaunch): void {
