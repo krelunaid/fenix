@@ -730,10 +730,13 @@ function persistHostQueue() {
 <script>
 window.__db = {};
 window.__rejectsLeft = 0;
+window.__rejectPlan = [];
 window.__delay = 0;
 window.__saves = [];
 window.__okSaves = [];
 window.__seen = {};
+window.__hold = false;
+window.__held = [];
 window.addEventListener("message", function(e){
   var m=e.data;
   if(!m || m.t!=="fenix-db" || !m.id) return;
@@ -747,8 +750,14 @@ window.addEventListener("message", function(e){
     var copy=m.data;
     try { copy=JSON.parse(JSON.stringify(m.data)); } catch(err) {}
     window.__saves.push(copy);
-    if(window.__rejectsLeft>0){
+    var deny=false;
+    if(window.__rejectPlan && window.__rejectPlan.length){
+      deny=!!window.__rejectPlan.shift();
+    } else if(window.__rejectsLeft>0){
       window.__rejectsLeft -= 1;
+      deny=true;
+    }
+    if(deny){
       e.source.postMessage({t:"fenix-db",id:m.id,v:{ok:false,error:"bridge-reject",durable:0}},"*");
       return;
     }
@@ -757,8 +766,12 @@ window.addEventListener("message", function(e){
     var n=Array.isArray(m.data&&m.data.items)?m.data.items.length:0;
     e.source.postMessage({t:"fenix-db",id:m.id,v:{ok:true,v:m.data,durable:n}},"*");
   };
-  if(m.op==="save" && window.__delay) setTimeout(ack, window.__delay);
-  else ack();
+  var run=function(){
+    if(m.op==="save" && window.__delay) setTimeout(ack, window.__delay);
+    else ack();
+  };
+  if(window.__hold && m.op==="save") window.__held.push(run);
+  else run();
 });
 </script></body></html>`;
 }
@@ -896,6 +909,275 @@ describe("Agenda persist queue rebase", () => {
         "sync throw rolls back the thrown advance",
       );
       await page.close();
+    } finally {
+      await browser.close();
+    }
+  });
+});
+
+type QueueWin = {
+  __db: Record<string, { items?: { title?: string; status?: string }[] }>;
+  __rejectPlan: boolean[];
+  __rejectsLeft: number;
+  __delay: number;
+  __saves: unknown[];
+  __okSaves: unknown[];
+  __hold: boolean;
+  __held: Array<() => void>;
+};
+
+describe("Agenda persist same-row rebase", () => {
+  it("rebases two advances on the stessa riga and queued edit/delete without prevRow wipe", async () => {
+    const composed = composeProduct(BRIEF);
+    const html = withFenixNow(composed.html, 2026, 9, 4);
+    const src = prepareSrcDoc(html, composed.tokens.palette, "agenda-same-row", "app");
+    const browser = await launchChromium();
+    try {
+      async function openQueue() {
+        const page = await isolatedPage(browser, { viewport: { width: 390, height: 844 } });
+        page.setDefaultTimeout(20000);
+        await page.setContent(persistHostQueue());
+        await page.locator("#f").evaluate((el, srcDoc: string) => {
+          (el as HTMLIFrameElement).srcdoc = srcDoc;
+        }, src);
+        const frame = page.frameLocator("#f");
+        await frame.locator("[data-fenix-ready]").waitFor({ timeout: 8000 });
+        return { page, frame };
+      }
+
+      async function createSlot(
+        frame: ReturnType<Page["frameLocator"]>,
+        title: string,
+        ora = "09:10",
+      ) {
+        await frame.locator("html:not([data-fenix-persist='busy'])").waitFor({ timeout: 8000 });
+        await frame.locator('nav button[data-view="nuovo"]').click();
+        await frame.locator("#n").fill(title);
+        await frame.locator("#ora").fill(ora);
+        await frame.locator("#data").fill("2026-09-04");
+        await frame.locator("#luogo").fill("Sala coda");
+        await frame.locator("#cliente").fill("Noa");
+        await frame.locator("#fnew [data-act='save']").click();
+        await frame.getByRole("heading", { name: title, exact: true }).waitFor({ timeout: 8000 });
+        await frame.locator("html:not([data-fenix-persist='busy'])").waitFor({ timeout: 8000 });
+        await frame.locator("#toast").waitFor({ state: "hidden", timeout: 4000 });
+      }
+
+      async function backendRow(page: Page, title: string) {
+        return page.evaluate((t) => {
+          const db = (window as unknown as QueueWin).__db;
+          const items = db && db.slot && Array.isArray(db.slot.items) ? db.slot.items : [];
+          return items.find((row) => row.title === t) || null;
+        }, title);
+      }
+
+      async function reloadFrame(page: Page, frame: ReturnType<Page["frameLocator"]>) {
+        await page.locator("#f").evaluate((el, srcDoc: string) => {
+          (el as HTMLIFrameElement).srcdoc = srcDoc;
+        }, src);
+        await frame.locator("[data-fenix-ready]").waitFor({ timeout: 8000 });
+      }
+
+      async function releaseHold(page: Page) {
+        await page.evaluate(() => {
+          const w = window as unknown as QueueWin;
+          w.__hold = false;
+          const q = (w.__held || []).splice(0);
+          q.forEach((fn) => fn());
+        });
+      }
+
+      async function armHold(page: Page, plan: boolean[]) {
+        await page.evaluate((rejectPlan) => {
+          const w = window as unknown as QueueWin;
+          w.__delay = 0;
+          w.__hold = true;
+          w.__held = [];
+          w.__rejectPlan = rejectPlan;
+        }, plan);
+      }
+
+      function slotOf(frame: ReturnType<Page["frameLocator"]>, title: string) {
+        const escaped = title.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        return frame.locator("article.slot").filter({
+          has: frame.locator("h2").filter({ hasText: new RegExp(`^${escaped}$`) }),
+        });
+      }
+
+      async function statusesOf(page: Page, title: string, skip: number) {
+        return page.evaluate(
+          ({ t, n }) => {
+            const w = window as unknown as QueueWin;
+            return (w.__saves || []).slice(n).map((pack) => {
+              const items = (pack as { items?: { title?: string; status?: string }[] }).items || [];
+              const hit = items.find((it) => it.title === t);
+              return hit ? hit.status : "";
+            });
+          },
+          { t: title, n: skip },
+        );
+      }
+
+      async function settlePersist(frame: ReturnType<Page["frameLocator"]>) {
+        await frame.locator("html:not([data-fenix-persist='busy'])").waitFor({ timeout: 8000 });
+        assert.equal(await frame.locator("html").getAttribute("data-fenix-persist"), null);
+        assert.equal(await frame.locator("html").getAttribute("data-fenix-queue"), null);
+      }
+
+      // reject/reject: both advances fail, UI+backend stay prenotato
+      {
+        const { page, frame } = await openQueue();
+        await createSlot(frame, "Stessa riga");
+        const savesBefore = await page.evaluate(() => (window as unknown as QueueWin).__saves.length);
+        await armHold(page, [true, true, true, true]);
+        const slot = slotOf(frame, "Stessa riga");
+        await slot.locator('[data-act="advance"]').click();
+        await slot.locator('[data-act="advance"]').click();
+        await frame.locator("html[data-fenix-queue='2']").waitFor({ state: "attached", timeout: 8000 });
+        await releaseHold(page);
+        await frame.locator("#err:not([hidden])").waitFor({ timeout: 8000 });
+        await settlePersist(frame);
+        assert.equal(
+          await frame.locator('article.slot:has-text("Stessa riga")').getAttribute("data-status"),
+          "prenotato",
+          "reject/reject ends on confirmed prenotato",
+        );
+        const row = await backendRow(page, "Stessa riga");
+        assert.equal(row && row.status, "prenotato");
+        const saves = await page.evaluate(() => (window as unknown as QueueWin).__saves.length);
+        assert.ok(saves - savesBefore >= 4, `each failed advance retries once, got ${saves - savesBefore}`);
+        const payloads = await statusesOf(page, "Stessa riga", savesBefore);
+        assert.deepEqual(payloads, ["confermato", "confermato", "confermato", "confermato"]);
+        await reloadFrame(page, frame);
+        await frame.getByRole("heading", { name: "Stessa riga", exact: true }).waitFor({ timeout: 8000 });
+        assert.equal(
+          await frame.locator('article.slot:has-text("Stessa riga")').getAttribute("data-status"),
+          "prenotato",
+        );
+        await page.close();
+      }
+
+      // first ok, second reject: stays confermato
+      {
+        const { page, frame } = await openQueue();
+        await createSlot(frame, "Stessa riga ok");
+        const savesBefore = await page.evaluate(() => (window as unknown as QueueWin).__saves.length);
+        await armHold(page, [false, true, true]);
+        const slotOk = slotOf(frame, "Stessa riga ok");
+        await slotOk.locator('[data-act="advance"]').click();
+        await slotOk.locator('[data-act="advance"]').click();
+        await frame.locator("html[data-fenix-queue='2']").waitFor({ state: "attached", timeout: 8000 });
+        await releaseHold(page);
+        await settlePersist(frame);
+        assert.equal(
+          await frame.locator('article.slot:has-text("Stessa riga ok")').getAttribute("data-status"),
+          "confermato",
+          "ok then reject keeps the ACK'd confermato",
+        );
+        assert.notEqual(
+          await frame.locator('article.slot:has-text("Stessa riga ok")').getAttribute("data-status"),
+          "in-corso",
+        );
+        const row = await backendRow(page, "Stessa riga ok");
+        assert.equal(row && row.status, "confermato");
+        const payloads = await statusesOf(page, "Stessa riga ok", savesBefore);
+        assert.equal(payloads[0], "confermato");
+        assert.ok(payloads.slice(1).every((st) => st === "in-corso"));
+        await reloadFrame(page, frame);
+        await frame.getByRole("heading", { name: "Stessa riga ok", exact: true }).waitFor({ timeout: 8000 });
+        assert.equal(
+          await frame.locator('article.slot:has-text("Stessa riga ok")').getAttribute("data-status"),
+          "confermato",
+        );
+        await page.close();
+      }
+
+      // first reject, second ok: second rebases onto prenotato → confermato
+      {
+        const { page, frame } = await openQueue();
+        await createSlot(frame, "Stessa riga rebase");
+        const savesBefore = await page.evaluate(() => (window as unknown as QueueWin).__saves.length);
+        await armHold(page, [true, true]);
+        const slotRe = slotOf(frame, "Stessa riga rebase");
+        await slotRe.locator('[data-act="advance"]').click();
+        await slotRe.locator('[data-act="advance"]').click();
+        await frame.locator("html[data-fenix-queue='2']").waitFor({ state: "attached", timeout: 8000 });
+        await releaseHold(page);
+        await settlePersist(frame);
+        assert.equal(
+          await frame.locator('article.slot:has-text("Stessa riga rebase")').getAttribute("data-status"),
+          "confermato",
+          "reject then ok rebases the second advance onto prenotato",
+        );
+        assert.notEqual(
+          await frame.locator('article.slot:has-text("Stessa riga rebase")').getAttribute("data-status"),
+          "in-corso",
+        );
+        const row = await backendRow(page, "Stessa riga rebase");
+        assert.equal(row && row.status, "confermato");
+        const payloads = await statusesOf(page, "Stessa riga rebase", savesBefore);
+        assert.ok(payloads.every((st) => st === "confermato"), `rebase payloads ${payloads.join(",")}`);
+        await reloadFrame(page, frame);
+        await frame.getByRole("heading", { name: "Stessa riga rebase", exact: true }).waitFor({ timeout: 8000 });
+        assert.equal(
+          await frame.locator('article.slot:has-text("Stessa riga rebase")').getAttribute("data-status"),
+          "confermato",
+        );
+        await page.close();
+      }
+
+      // queued edit reject + delete ok: row stays gone (no prevRow restore)
+      {
+        const { page, frame } = await openQueue();
+        await createSlot(frame, "Gamma coda");
+        await armHold(page, [true, true]);
+        await frame.locator('article.slot:has-text("Gamma coda") [data-act="edit"]').click();
+        await frame.locator("#n").waitFor({ timeout: 4000 });
+        await frame.locator("#n").fill("Gamma coda edit");
+        await frame.locator("#ora").fill("09:10");
+        await frame.locator("#data").fill("2026-09-04");
+        await frame.locator("#fnew [data-act='save']").click();
+        await frame.locator("html[data-fenix-queue='1']").waitFor({ state: "attached", timeout: 8000 });
+        await frame.locator('nav button[data-view="oggi"]').click();
+        await frame.locator('article.slot:has-text("Gamma coda edit") [data-act="del"]').click();
+        await frame.locator("html[data-fenix-queue='2']").waitFor({ state: "attached", timeout: 8000 });
+        await releaseHold(page);
+        await settlePersist(frame);
+        await frame.locator('nav button[data-view="oggi"]').click();
+        assert.equal(await frame.getByRole("heading", { name: "Gamma coda", exact: true }).count(), 0);
+        assert.equal(await frame.getByRole("heading", { name: "Gamma coda edit", exact: true }).count(), 0);
+        assert.equal(await backendRow(page, "Gamma coda"), null);
+        assert.equal(await backendRow(page, "Gamma coda edit"), null);
+        await reloadFrame(page, frame);
+        assert.equal(await frame.getByRole("heading", { name: "Gamma coda edit", exact: true }).count(), 0);
+        await page.close();
+      }
+
+      // queued edit ok + delete reject: edited row remains
+      {
+        const { page, frame } = await openQueue();
+        await createSlot(frame, "Gamma keep");
+        await armHold(page, [false, true, true]);
+        await frame.locator('article.slot:has-text("Gamma keep") [data-act="edit"]').click();
+        await frame.locator("#n").fill("Gamma keep edit");
+        await frame.locator("#ora").fill("09:10");
+        await frame.locator("#data").fill("2026-09-04");
+        await frame.locator("#fnew [data-act='save']").click();
+        await frame.locator("html[data-fenix-queue='1']").waitFor({ state: "attached", timeout: 8000 });
+        await frame.locator('nav button[data-view="oggi"]').click();
+        await frame.locator('article.slot:has-text("Gamma keep edit") [data-act="del"]').click();
+        await frame.locator("html[data-fenix-queue='2']").waitFor({ state: "attached", timeout: 8000 });
+        await releaseHold(page);
+        await settlePersist(frame);
+        await frame.locator('nav button[data-view="oggi"]').click();
+        await frame.getByRole("heading", { name: "Gamma keep edit", exact: true }).waitFor({ timeout: 8000 });
+        assert.equal(await frame.getByRole("heading", { name: "Gamma keep", exact: true }).count(), 0);
+        const kept = await backendRow(page, "Gamma keep edit");
+        assert.equal(kept && kept.title, "Gamma keep edit");
+        await reloadFrame(page, frame);
+        await frame.getByRole("heading", { name: "Gamma keep edit", exact: true }).waitFor({ timeout: 8000 });
+        await page.close();
+      }
     } finally {
       await browser.close();
     }

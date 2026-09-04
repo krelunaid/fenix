@@ -925,6 +925,7 @@ const cta=${JSON.stringify(spec.cta)};
 const kicker=${JSON.stringify(spec.kicker)};
 const place=${JSON.stringify(spec.place)};
 const AGENDA_CYCLE={prenotato:"confermato",confermato:"in-corso","in-corso":"concluso",concluso:"prenotato"};
+const KICKER_CYCLE={scouting:"trattativa",trattativa:"firma",firma:"chiuso",chiuso:"scouting","in-forno":"al-passo","al-passo":"in-sala","in-sala":"in-forno",arrivo:"in-house","in-house":"partenza",partenza:"arrivo"};
 function isoDay(d){
   var y=d.getFullYear();
   var m=("0"+(d.getMonth()+1)).slice(-2);
@@ -1001,10 +1002,52 @@ var persistBusy=false;
 var persistDepth=0;
 var persistTail=Promise.resolve(true);
 var flashGen=0;
-function cloneData(){ try { return JSON.parse(JSON.stringify(data)); } catch(err) { return {items:(data.items||[]).slice()}; } }
+function cloneOf(x){ try { return JSON.parse(JSON.stringify(x)); } catch(err) { return {items:((x&&x.items)||[]).slice()}; } }
+function cloneData(){ return cloneOf(data); }
+var confirmed=cloneData();
+var pendingOps=[];
+function applyOp(state, op){
+  if(!state || !op) return state;
+  if(!state.items) state.items=[];
+  if(op.kind==="advance"){
+    var item=state.items.find(function(x){return x.id===op.id;});
+    if(!item) return state;
+    if(grammarId==="agenda") item.status=AGENDA_CYCLE[item.status]||"confermato";
+    else item.kicker=KICKER_CYCLE[item.kicker]||item.kicker;
+  } else if(op.kind==="del"){
+    state.items=state.items.filter(function(x){return x.id!==op.id;});
+  } else if(op.kind==="wear"){
+    var worn=state.items.find(function(x){return x.id===op.id;});
+    if(!worn) return state;
+    state.items=[worn].concat(state.items.filter(function(x){return x.id!==op.id;}));
+  } else if(op.kind==="create"){
+    state.items.unshift(cloneOf(op.row));
+  } else if(op.kind==="edit"){
+    var ei=state.items.findIndex(function(x){return x.id===op.id;});
+    var nextRow=cloneOf(op.row);
+    if(ei>=0) state.items[ei]=nextRow;
+    else state.items.unshift(nextRow);
+  }
+  return state;
+}
+function replayPending(){
+  data=cloneOf(confirmed);
+  pendingOps.forEach(function(op){ applyOp(data, op); });
+}
+function payloadForHead(){
+  var state=cloneOf(confirmed);
+  if(pendingOps[0]) applyOp(state, pendingOps[0]);
+  return state;
+}
+function markQueue(){
+  try{
+    if(pendingOps.length) document.documentElement.setAttribute("data-fenix-queue", String(pendingOps.length));
+    else document.documentElement.removeAttribute("data-fenix-queue");
+  }catch(err){}
+}
 function saveOnce(){
   if(!window.Fenix || !window.Fenix.save) return Promise.resolve({ok:true});
-  var payload=cloneData();
+  var payload=pendingOps.length?payloadForHead():cloneData();
   return Promise.resolve().then(function(){
     return window.Fenix.save(COL, payload);
   }).then(function(res){
@@ -1053,10 +1096,17 @@ function markPersist(on){
 function persistThen(afterOk, afterFail){
   persistDepth+=1;
   markPersist(true);
+  markQueue();
   persistTail=persistTail.catch(function(){ return true; }).then(function(){
     return Promise.resolve().then(function(){
       return save();
     }).then(function(){
+      if(pendingOps[0]){
+        confirmed=payloadForHead();
+        pendingOps.shift();
+      }
+      replayPending();
+      markQueue();
       ping(true);
       try {
         if(afterOk) afterOk();
@@ -1064,6 +1114,10 @@ function persistThen(afterOk, afterFail){
       } catch (e) {}
       return true;
     }).catch(function(err){
+      if(pendingOps.length) pendingOps.shift();
+      replayPending();
+      markQueue();
+      render();
       try { if(afterFail) afterFail(); } catch (e2) {}
       flashErr(err && err.message ? err.message : "Salvataggio non riuscito.");
       ping(false);
@@ -1075,6 +1129,13 @@ function persistThen(afterOk, afterFail){
     });
   });
   return persistTail;
+}
+function enqueueOp(op, afterOk, afterFail){
+  pendingOps.push(op);
+  replayPending();
+  markQueue();
+  render();
+  return persistThen(afterOk, afterFail);
 }
 function commitForm(f){
   if(!f || f.id!=="fnew") return false;
@@ -1097,7 +1158,7 @@ function commitForm(f){
   var nextView=tabDefs[0].id;
   var nextDay=selectedDay;
   var createdId=null;
-  var prevRow=null;
+  var row=null;
   if(grammarId==="agenda"){
     hydrateAgenda();
     var ora=(f.ora&&f.ora.value||"").trim();
@@ -1114,47 +1175,23 @@ function commitForm(f){
     var cliente=(f.cliente&&f.cliente.value||"").trim()||"—";
     keep.ora=ora; keep.data=giorno; keep.luogo=luogo; keep.cliente=cliente;
     var prev=wasEdit?data.items.find(function(x){return x.id===editId;}):null;
-    prevRow=prev?JSON.parse(JSON.stringify(prev)):null;
-    var row={id:wasEdit?editId:("n"+Date.now()),title:nome,kicker:ora,note:luogo+" · "+cliente,meta:(prev&&prev.meta)||"30 min",status:(prev&&prev.status)||"prenotato",day:giorno};
+    row={id:wasEdit?editId:("n"+Date.now()),title:nome,kicker:ora,note:luogo+" · "+cliente,meta:(prev&&prev.meta)||"30 min",status:(prev&&prev.status)||"prenotato",day:giorno};
     createdId=row.id;
-    if(wasEdit){
-      var idx=data.items.findIndex(function(x){return x.id===editId;});
-      if(idx>=0) data.items[idx]=row;
-    } else {
-      data.items.unshift(row);
-    }
     nextDay=giorno;
     nextView=giorno===todayIso()?tabDefs[0].id:tabDefs[2].id;
   } else {
     var prevGeneric=wasEdit?data.items.find(function(x){return x.id===editId;}):null;
-    prevRow=prevGeneric?JSON.parse(JSON.stringify(prevGeneric)):null;
-    var genericRow={id:wasEdit?editId:("n"+Date.now()),title:nome,kicker:(f.k&&f.k.value||"").trim()||census,note:(f.note&&f.note.value||"").trim()||"—",meta:(prevGeneric&&prevGeneric.meta)||"nuovo"};
-    createdId=genericRow.id;
-    if(wasEdit){
-      var gidx=data.items.findIndex(function(x){return x.id===editId;});
-      if(gidx>=0) data.items[gidx]=genericRow;
-      else data.items.unshift(genericRow);
-    } else {
-      data.items.unshift(genericRow);
-    }
+    row={id:wasEdit?editId:("n"+Date.now()),title:nome,kicker:(f.k&&f.k.value||"").trim()||census,note:(f.note&&f.note.value||"").trim()||"—",meta:(prevGeneric&&prevGeneric.meta)||"nuovo"};
+    createdId=row.id;
     nextView=tabDefs[0].id;
   }
-  return persistThen(function(){
+  return enqueueOp({kind:wasEdit?"edit":"create",id:createdId,row:row}, function(){
     editId=null;
     selectedDay=nextDay;
     view=nextView;
     try { f.reset(); } catch(err) {}
     render();
   }, function(){
-    if(wasEdit){
-      var i=data.items.findIndex(function(x){return x.id===createdId;});
-      if(prevRow){
-        if(i>=0) data.items[i]=prevRow;
-        else data.items.unshift(prevRow);
-      }
-    } else {
-      data.items=data.items.filter(function(x){return x.id!==createdId;});
-    }
     view=snapView;
     editId=snapEdit;
     selectedDay=snapDay;
@@ -1471,15 +1508,7 @@ document.getElementById("root").addEventListener("click",function(e){
   }
   if(act==="save"){ commitForm(b.closest("form") || document.getElementById("fnew")); return; }
   if(act==="del"){
-    var idxDel=data.items.findIndex(function(x){return x.id===id;});
-    var removed=idxDel>=0?data.items[idxDel]:null;
-    data.items=data.items.filter(function(x){return x.id!==id;});
-    render();
-    persistThen(null, function(){
-      if(!removed || data.items.some(function(x){return x.id===id;})) return;
-      data.items.splice(Math.min(idxDel, data.items.length), 0, removed);
-      render();
-    });
+    enqueueOp({kind:"del",id:id}, null, null);
     return;
   }
   if(act==="edit"){
@@ -1489,51 +1518,16 @@ document.getElementById("root").addEventListener("click",function(e){
     return;
   }
   if(act==="wear"){
-    var row=data.items.find(function(x){return x.id===id;});
-    if(!row) return;
-    var prevIds=data.items.map(function(x){return x.id;});
-    data.items=[row].concat(data.items.filter(function(x){return x.id!==id;}));
-    render();
-    persistThen(function(){
+    if(!data.items.some(function(x){return x.id===id;})) return;
+    enqueueOp({kind:"wear",id:id}, function(){
       if(grammarId!=="source-timeline") view=tabDefs[2].id;
       render();
-    }, function(){
-      var map={};
-      data.items.forEach(function(x){ map[x.id]=x; });
-      var next=[];
-      prevIds.forEach(function(pid){ if(map[pid]) next.push(map[pid]); });
-      data.items.forEach(function(x){ if(prevIds.indexOf(x.id)<0) next.push(x); });
-      data.items=next;
-      render();
-    });
+    }, null);
     return;
   }
   if(act==="advance"){
-    var item=data.items.find(function(x){return x.id===id;});
-    if(!item) return;
-    var prevStatus=item.status;
-    var prevKicker=item.kicker;
-    var nextStatus=item.status;
-    var nextKicker=item.kicker;
-    if(grammarId==="agenda"){
-      nextStatus=AGENDA_CYCLE[item.status]||"confermato";
-      item.status=nextStatus;
-    } else {
-      var cycle={scouting:"trattativa",trattativa:"firma",firma:"chiuso",chiuso:"scouting","in-forno":"al-passo","al-passo":"in-sala","in-sala":"in-forno",arrivo:"in-house","in-house":"partenza",partenza:"arrivo"};
-      nextKicker=cycle[item.kicker]||item.kicker;
-      item.kicker=nextKicker;
-    }
-    render();
-    persistThen(null, function(){
-      var cur=data.items.find(function(x){return x.id===id;});
-      if(!cur) return;
-      if(grammarId==="agenda"){
-        if(cur.status===nextStatus) cur.status=prevStatus;
-      } else if(cur.kicker===nextKicker){
-        cur.kicker=prevKicker;
-      }
-      render();
-    });
+    if(!data.items.some(function(x){return x.id===id;})) return;
+    enqueueOp({kind:"advance",id:id}, null, null);
   }
 });
 document.getElementById("root").addEventListener("keydown",function(e){
@@ -1577,10 +1571,14 @@ async function boot(){
   if(load) load.hidden=false;
   try{ if(window.Fenix&&window.Fenix.load){ var r=await window.Fenix.load(COL); if(r&&typeof r==="object"&&Array.isArray(r.items)) data=r; } }catch(err){ var box=document.getElementById("err"); if(box) box.hidden=false; }
   if(load) load.hidden=true;
+  hydrateAgenda();
+  confirmed=cloneData();
+  pendingOps=[];
+  markQueue();
   render(); markReady();
 }
 boot();
-setTimeout(function(){ if(!document.documentElement.getAttribute("data-fenix-ready")) { render(); markReady(); } }, 500);
+setTimeout(function(){ if(!document.documentElement.getAttribute("data-fenix-ready")) { hydrateAgenda(); confirmed=cloneData(); pendingOps=[]; markQueue(); render(); markReady(); } }, 500);
 </script>
 </body>
 </html>`;

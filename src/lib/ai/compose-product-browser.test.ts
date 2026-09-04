@@ -73,21 +73,27 @@ async function waitIframeHeading(page: Page, title: string, timeout = 8000) {
   );
 }
 
-async function clickActOnHeading(page: Page, title: string, act: "edit" | "del") {
-  const ok = await page.locator("#f").evaluate(
-    (el, payload: { t: string; act: string }) => {
-      const doc = (el as HTMLIFrameElement).contentDocument;
-      if (!doc) return false;
-      const heading = [...doc.querySelectorAll("h2")].find((node) => (node.textContent || "").trim() === payload.t);
-      const root = heading && heading.closest("article, div.card");
-      const btn = root && (root.querySelector(`[data-act="${payload.act}"]`) as HTMLElement | null);
-      if (!btn) return false;
-      btn.click();
-      return true;
-    },
-    { t: title, act },
-  );
-  assert.equal(ok, true, `${act} control for ${title}`);
+async function clickActOnHeading(
+  frame: ReturnType<Page["frameLocator"]>,
+  title: string,
+  act: "edit" | "del",
+) {
+  const cards = frame.locator("article[data-id], div.card[data-id]");
+  const n = await cards.count();
+  for (let i = 0; i < n; i++) {
+    const text = await cards
+      .nth(i)
+      .locator("h2")
+      .first()
+      .evaluate((el) => (el.textContent || "").trim());
+    if (text !== title) continue;
+    await cards
+      .nth(i)
+      .locator(`[data-act="${act}"]`)
+      .click();
+    return;
+  }
+  assert.equal(true, false, `${act} control for ${title}`);
 }
 
 async function shot(page: Page, name: string, dir = SHOTS) {
@@ -1050,7 +1056,7 @@ describe("graphic pipeline visual QA D/T/M", () => {
             if (row.id !== "agenda" && row.id !== "repo") {
               await frame.locator("nav button[data-view]").nth(2).click();
             }
-            await clickActOnHeading(page, created, "edit");
+            await clickActOnHeading(frame, created, "edit");
             await frame.locator("#n").waitFor({ timeout: 4000 });
             await frame.locator("#n").fill(updated);
             if ((await frame.locator("#ora").count()) === 1) {
@@ -1061,6 +1067,10 @@ describe("graphic pipeline visual QA D/T/M", () => {
             await waitIframeHeading(page, updated);
             assert.equal(await iframeHeadingCount(page, created), 0, `${row.id}/${vp} update`);
             await frame.locator("html:not([data-fenix-persist='busy'])").waitFor({ timeout: 8000 });
+            const overflowAfter = await frame.locator("html").evaluate(
+              () => document.documentElement.scrollWidth - window.innerWidth,
+            );
+            assert.ok(overflowAfter <= 8, `${row.id}/${vp} overflow after UPDATE ${overflowAfter}`);
             await page.waitForFunction(
               (title) => {
                 const db = (window as unknown as { __db?: Record<string, { items?: { title?: string }[] }> }).__db;
@@ -1081,7 +1091,7 @@ describe("graphic pipeline visual QA D/T/M", () => {
             if (row.id !== "agenda" && row.id !== "repo") {
               await frame.locator("nav button[data-view]").nth(2).click();
             }
-            await clickActOnHeading(page, updated, "del");
+            await clickActOnHeading(frame, updated, "del");
             await frame.locator("html:not([data-fenix-persist='busy'])").waitFor({ timeout: 8000 });
             assert.equal(await iframeHeadingCount(page, updated), 0, `${row.id}/${vp} delete`);
             await page.waitForFunction(
