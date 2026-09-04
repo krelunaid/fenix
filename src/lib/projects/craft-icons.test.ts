@@ -240,7 +240,10 @@ document.getElementById('main').innerHTML = 'x';
       { id: "sala", label: "Sala" },
     ].map((t, i) => craftNavIcon(t, i));
     assert.equal(new Set(kitchen).size, 4, "kitchen tabs must be four distinct glyphs");
-    assert.match(kitchen[0]!, /M6\.6 10\.4h10\.8/);
+    assert.match(kitchen[0]!, /M7\.2 7\.4h9\.6/);
+    assert.match(kitchen[0]!, /M7\.2 10\.2H4\.6/);
+    assert.match(kitchen[0]!, /M16\.8 10\.2h2\.6/);
+    assert.doesNotMatch(kitchen[0]!, /M6\.6 10\.4h10\.8/);
     for (const svg of drawn) {
       assert.equal(isLetterAIcon(svg), false);
       assert.equal(isAppleChromeSvg(svg), false);

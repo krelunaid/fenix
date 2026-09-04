@@ -289,7 +289,13 @@ describe("graphic pipeline prompt→plan→generate→visual→QA", () => {
     assert.doesNotMatch(agenda.html, /data-view="elenco"/);
     assert.doesNotMatch(agenda.html, /state-empty:before/);
     assert.doesNotMatch(agenda.html, /#f5f5f7|#0071e3|#007aff/);
-    assert.doesNotMatch(agenda.html, /-apple-system|BlinkMacSystemFont|SF Pro/);
+    assert.doesNotMatch(agenda.html, /-apple-system|BlinkMacSystemFont|SF Pro|Newsreader|Georgia|\bInter\b/);
+    assert.match(agenda.html, /Figtree/);
+    assert.match(agenda.html, /ui-sans-serif,system-ui,"Segoe UI"/);
+    assert.doesNotMatch(agenda.html, /--display:"Newsreader"/);
+    assert.equal(agenda.tokens.fonts.display, "Figtree");
+    assert.equal(agenda.tokens.palette.bg.toLowerCase(), "#e8eef4");
+    assert.equal(agenda.tokens.palette.accent.toLowerCase(), "#1f6f68");
     const locked = composeProduct(
       `${formatPrefix("app")}Agenda: appuntamenti. Sfondo #dce8e2 accento #0f766e.`,
     );
@@ -310,7 +316,7 @@ describe("graphic pipeline prompt→plan→generate→visual→QA", () => {
     assert.equal(runs.find((r) => r.id === "abbigliamento")!.grammar.id, "lookbook");
     assert.equal(runs.find((r) => r.id === "repo")!.grammar.id, "source-timeline");
     assert.equal(runs.find((r) => r.id === "ristorazione")!.grammar.id, "service-board");
-    assert.equal(GRAPHIC_FIVE_PARENT_SHA, "77e2cb4307d55a447d19cfa9bc7ab80076475ec5");
+    assert.equal(GRAPHIC_FIVE_PARENT_SHA, "6a3dd1c135de83345e7ae77ec170767cf16988a5");
     assert.equal(runs.find((r) => r.id === "repo")!.tokens.fonts.display, "IBM Plex Mono");
     for (const run of runs) {
       assert.match(run.html, new RegExp(`data-family="${run.tokens.family}"`));
@@ -337,7 +343,7 @@ describe("graphic pipeline prompt→plan→generate→visual→QA", () => {
     }
   });
 
-  it("freezes five-brief before shots at parent SHA 77e2cb4", () => {
+  it("freezes five-brief before shots at parent SHA 6a3dd1c", () => {
     const here = dirname(fileURLToPath(import.meta.url));
     const before = join(here, "fixtures/graphic/five/before");
     const names = [
@@ -347,7 +353,7 @@ describe("graphic pipeline prompt→plan→generate→visual→QA", () => {
       "repo",
       "ristorazione",
     ].flatMap((id) => ["D", "T", "M"].map((vp) => `${id}-${vp}.png`));
-    assert.equal(GRAPHIC_FIVE_PARENT_SHA, "77e2cb4307d55a447d19cfa9bc7ab80076475ec5");
+    assert.equal(GRAPHIC_FIVE_PARENT_SHA, "6a3dd1c135de83345e7ae77ec170767cf16988a5");
     assert.equal(existsSync(before), true);
     const listed = readdirSync(before).filter((n) => n.endsWith(".png")).sort();
     assert.deepEqual(listed, [...names].sort());

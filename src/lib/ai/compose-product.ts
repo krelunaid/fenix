@@ -57,8 +57,8 @@ export type ComposedProduct = {
   files: { path: string; content: string }[];
 };
 
-/** Parent SHA of the five-brief before/after graphic residual. Frozen baseline, not a quality score. */
-export const GRAPHIC_FIVE_PARENT_SHA = "77e2cb4307d55a447d19cfa9bc7ab80076475ec5";
+/** Parent SHA of the five-brief before/after. Frozen 6a3dd1c baseline, not a quality score. */
+export const GRAPHIC_FIVE_PARENT_SHA = "6a3dd1c135de83345e7ae77ec170767cf16988a5";
 
 export type GraphicPipelineRun = {
   brief: string;
@@ -447,19 +447,26 @@ function kickerCss(t: DesignTokens): string {
   return `.kicker,header .place{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}`;
 }
 
+function isOperationalApp(t: DesignTokens): boolean {
+  return t.family === "booking" && t.variant === 0;
+}
+
 function displayStack(t: DesignTokens): string {
   if (t.family === "repo" || t.family === "ops") {
     return `"${t.fonts.display}",ui-monospace,"IBM Plex Mono",Menlo,monospace`;
   }
+  if (isOperationalApp(t) || t.family === "utility") {
+    return `"${t.fonts.display}",ui-sans-serif,system-ui,"Segoe UI",Roboto,Helvetica,Arial,sans-serif`;
+  }
   if (
     t.family === "perfume" ||
     t.family === "fashion" ||
-    t.family === "booking" ||
     t.family === "food" ||
     t.family === "editorial" ||
     t.family === "hospitality" ||
     t.family === "ceramic" ||
-    t.family === "paper"
+    t.family === "paper" ||
+    (t.family === "booking" && t.variant === 1)
   ) {
     return `"${t.fonts.display}",ui-serif,Georgia,"Times New Roman",serif`;
   }
@@ -467,8 +474,10 @@ function displayStack(t: DesignTokens): string {
 }
 
 function familyChromeCss(t: DesignTokens, grammar: LayoutGrammar): string {
-  const brand =
-    t.family === "perfume"
+  const operational = isOperationalApp(t);
+  const brand = operational
+    ? `.brand{font-weight:700;letter-spacing:-.028em}`
+    : t.family === "perfume"
       ? `.brand{font-style:italic;font-weight:600;letter-spacing:-.035em}`
       : t.family === "fashion"
         ? `.brand{letter-spacing:-.05em;text-transform:uppercase;font-size:clamp(1.35rem,5.4vw,2rem);font-weight:700}`
@@ -479,8 +488,13 @@ function familyChromeCss(t: DesignTokens, grammar: LayoutGrammar): string {
             : t.family === "booking"
               ? `.brand{font-weight:650;letter-spacing:-.03em}`
               : "";
-  const nav =
-    grammar.chrome === "tabs"
+  const nav = operational
+    ? `nav.tabs{border-top:1px solid var(--line);background:var(--surface)}
+nav.tabs button.on{color:var(--accent);background:transparent}
+header{background:var(--surface)}
+.week-day.on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.week-day.on .kicker,.week-day.on .count{color:var(--accent-ink)}`
+    : grammar.chrome === "tabs"
       ? `nav.tabs{border-top:2px solid var(--accent);background:var(--surface)}
 nav.tabs button.on{color:var(--accent);background:color-mix(in srgb,var(--accent) 14%,transparent);border-radius:calc(var(--r) * .4)}`
       : `nav.rail button.on{color:var(--accent)}`;
@@ -494,8 +508,11 @@ nav.tabs button.on{color:var(--accent);background:color-mix(in srgb,var(--accent
           : t.family === "repo"
             ? `.commit .sha{font-family:${displayStack(t)}}`
             : "";
+  const rail = operational
+    ? `html[data-family]::before{content:"";position:fixed;top:0;left:0;right:0;height:0;background:transparent;z-index:50;pointer-events:none}`
+    : `html[data-family]::before{content:"";position:fixed;top:0;left:0;right:0;height:3px;background:var(--accent);z-index:50;pointer-events:none}`;
   return `/* family-chrome ${t.family}/${grammar.id} */
-html[data-family]::before{content:"";position:fixed;top:0;left:0;right:0;height:3px;background:var(--accent);z-index:50;pointer-events:none}
+${rail}
 ${brand}
 ${nav}
 ${matter}`;
@@ -525,22 +542,22 @@ function phoneCss(id: GrammarId): string {
             : id === "agenda"
               ? `.hero{display:none;min-height:0;height:0;margin:0;border:0}
   .day-head{padding:2px 0 10px}
-  .day-head h2{font-family:ui-sans-serif,system-ui,sans-serif;font-size:var(--t-large);font-weight:700;letter-spacing:-.03em;line-height:1.12;color:var(--ink-loud)}
+  .day-head h2{font-family:var(--body),ui-sans-serif,system-ui,sans-serif;font-size:var(--t-large);font-weight:700;letter-spacing:-.03em;line-height:1.12;color:var(--ink-loud)}
   .day-rail{display:flex;flex-direction:column;gap:8px}
   .slot{display:grid;grid-template-columns:72px minmax(0,1fr);gap:12px;align-items:start;padding:14px 16px;margin:0;border:1px solid var(--line);border-radius:calc(var(--r) * .45);background:var(--surface);min-height:72px;box-shadow:inset 3px 0 0 var(--accent)}
   .slot[data-state="on"]{border-color:var(--accent)}
   .slot .time{font-variant-numeric:tabular-nums;font-feature-settings:"tnum";font-size:var(--t-footnote);font-weight:700;color:var(--accent);padding-top:3px;letter-spacing:-.01em}
-  .slot-body h2{font-family:ui-sans-serif,system-ui,sans-serif;font-size:var(--t-headline);font-weight:650;letter-spacing:-.022em;margin:0 0 4px;line-height:1.2;color:var(--ink-loud)}
+  .slot-body h2{font-family:var(--body),ui-sans-serif,system-ui,sans-serif;font-size:var(--t-headline);font-weight:650;letter-spacing:-.022em;margin:0 0 4px;line-height:1.2;color:var(--ink-loud)}
   .slot-actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
   .slot .btn{margin-top:0}
   .week-strip{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;margin:0 0 14px}
-  .week-day{appearance:none;border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:calc(var(--r) * .55);min-height:64px;min-width:0;padding:6px 2px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font:650 11px/1.1 ui-sans-serif,system-ui,sans-serif;touch-action:manipulation}
+  .week-day{appearance:none;border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:calc(var(--r) * .55);min-height:64px;min-width:0;padding:6px 2px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font:650 11px/1.1 var(--body),ui-sans-serif,system-ui,sans-serif;touch-action:manipulation}
   .week-day.on{border-color:var(--accent);color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
   .week-day b{font-size:var(--t-headline);letter-spacing:-.02em}
   .week-day .count{font-size:10px;color:var(--muted);font-weight:650}
   .week-day.on .count{color:var(--accent)}
   .week-nav{display:flex;align-items:center;gap:6px;margin:0 0 10px}
-  .week-nav .week-range{flex:1;text-align:center;font:650 12px/1.3 ui-sans-serif,system-ui,sans-serif;color:var(--muted);font-variant-numeric:tabular-nums}
+  .week-nav .week-range{flex:1;text-align:center;font:650 12px/1.3 var(--body),ui-sans-serif,system-ui,sans-serif;color:var(--muted);font-variant-numeric:tabular-nums}
   .week-nav .btn{min-height:40px;padding:8px 10px;width:auto}
   .day-rail ~ [data-fenix-crud]{display:none}`
             : "";
@@ -835,6 +852,7 @@ function productHtml(spec: PipelineSpec, tokens: DesignTokens, grammar: LayoutGr
           : tokens.family === "booking"
             ? "var(--t-headline)"
             : "clamp(1.18rem, 2.2vw, 1.55rem)";
+  const large = isOperationalApp(tokens) ? "2.125rem" : "1.75rem";
   return `<!DOCTYPE html>
 <html lang="it" data-family="${tokens.family}" data-grammar="${grammar.id}"${desk ? " data-fenix-craft-desk" : ""}>
 <head>
@@ -845,7 +863,7 @@ function productHtml(spec: PipelineSpec, tokens: DesignTokens, grammar: LayoutGr
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="${tokens.fonts.href}" rel="stylesheet"/>
 <style data-fenix-phone data-fenix-site data-fenix-craft>
-:root{color-scheme:${scheme};--bg:${p.bg};--surface:${p.surface};--elevated:${p.elevated};--fg:${p.fg};--muted:${p.muted};--accent:${p.accent};--line:${p.line};--accent-ink:${p.accentInk};--success:${p.success};--warning:${p.warning};--r:${tokens.radius};--display:${displayStack(tokens)};--body:"${tokens.fonts.body}",ui-sans-serif,system-ui,sans-serif;--t-h1:${tokens.type.h1};--t-h2:${h2};--t-body:${tokens.type.body};--t-large:1.75rem;--t-headline:1.0625rem;--t-footnote:.8125rem;--t-caption:.6875rem;--ink-loud:${p.fg};--ink-quiet:${p.muted}}
+:root{color-scheme:${scheme};--bg:${p.bg};--surface:${p.surface};--elevated:${p.elevated};--fg:${p.fg};--muted:${p.muted};--accent:${p.accent};--line:${p.line};--accent-ink:${p.accentInk};--success:${p.success};--warning:${p.warning};--r:${tokens.radius};--display:${displayStack(tokens)};--body:"${tokens.fonts.body}",ui-sans-serif,system-ui,sans-serif;--t-h1:${tokens.type.h1};--t-h2:${h2};--t-body:${tokens.type.body};--t-large:${large};--t-headline:1.0625rem;--t-footnote:.8125rem;--t-caption:.6875rem;--ink-loud:${p.fg};--ink-quiet:${p.muted}}
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%;background:var(--bg);color:var(--fg);font:400 ${tokens.type.body}/1.29 var(--body),ui-sans-serif,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
 body{min-height:100dvh}

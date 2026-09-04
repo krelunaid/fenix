@@ -107,27 +107,27 @@ const FAMILIES: Record<TokenFamily, FamilySrc> = {
     dont: ["ledger da magazzino", "oro da profumo", "tab generiche"],
   },
   booking: {
-    mood: "salvia, ottone, carta di studio",
+    mood: "carta operativa, teal di studio, tipo da tasca",
     fonts: {
-      display: "Newsreader",
-      body: "Karla",
-      href: "https://fonts.googleapis.com/css2?family=Karla:wght@400;600;700&family=Newsreader:opsz,wght@6..72,500;6..72,650&display=swap",
+      display: "Figtree",
+      body: "Figtree",
+      href: "https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&display=swap",
     },
-    radius: "14px",
-    type: { h1: "1.75rem", body: "17px", label: "13px" },
+    radius: "10px",
+    type: { h1: "2.125rem", body: "17px", label: "13px" },
     palette: {
-      bg: "#eef3ea",
-      surface: "#f7faf4",
-      elevated: "#ffffff",
-      fg: "#1a2a24",
-      muted: "#5c6e64",
+      bg: "#e8eef4",
+      surface: "#ffffff",
+      elevated: "#f4f7fa",
+      fg: "#1c242c",
+      muted: "#5c6b75",
       accent: "#1f6f68",
-      line: "#c9d6c8",
-      accentInk: "#f7faf4",
+      line: "#d3dce4",
+      accentInk: "#f4f7fa",
       success: "#1f6f68",
       warning: "#b45309",
     },
-    dont: ["carminio moda", "oro profumo", "terracotta da forno"],
+    dont: ["carminio moda", "oro profumo", "terracotta da forno", "serif da rivista", "Georgia da display"],
   },
   hospitality: {
     mood: "pietra di locanda, bosco, ottone di reception",
@@ -699,7 +699,7 @@ export function tokensInstruction(tokens: DesignTokens): string {
     tokens.family === "repo"
       ? "Dominio repository: attività commit, rami, stato sync, timeline/diff. Vietato home universale con hero grigio + due KPI + CTA + empty card. Non copiare GitHub."
       : tokens.family === "booking"
-        ? "Dominio agenda: binario orario, tab Oggi/Nuovo/Settimana/Archivio, tipo 17/headline, icone griglia 24, target 44px. Vietato hero KPI e tab Home/Elenco."
+        ? "Dominio agenda: binario orario, tab Oggi/Nuovo/Settimana/Archivio, tipo 17/headline da tasca (sans operativa, non serif da rivista), icone griglia 24, target 44px. Vietato hero KPI e tab Home/Elenco."
         : `Asse dominio=${axes.domain}.`,
     "Desktop/tablet: grammatica editoriale a tutta larghezza (split-stage, lookbook, agenda, passo cucina, magazine, ops-desk, source-timeline). Niente canvas boxed 1080px, niente dead zone, niente telefono al centro. Imagery di dominio originale (data-imagery=domain), alt/aria-label, niente placeholder geometrici o hotlink.",
   ].join("\n");

@@ -3,7 +3,7 @@
   "files": [
     {
       "name": "essenza-or-D.png",
-      "sha256": "aed476421aa5a2440e1334f038adde5c9bdfe8167092cf6eee629ee1894b4348",
+      "sha256": "83f0bf0098d47a29224fd2df6f3cfa779943861c3b529b6afe39a4b4e5ce0c74",
       "bytes": 212986,
       "score": 100,
       "ok": true,
@@ -11,7 +11,7 @@
     },
     {
       "name": "essenza-or-T.png",
-      "sha256": "4746d5cb48299167fdb77a34f2e802ab5c2e99819f58d9c2035dbfdb4e0a904b",
+      "sha256": "4dd6c1d29e068bf42649b803a0ecbd6c434cd5f03a227a8aa9773b3ebf6435c7",
       "bytes": 150015,
       "score": 100,
       "ok": true,
@@ -19,7 +19,7 @@
     },
     {
       "name": "essenza-or-M.png",
-      "sha256": "83f7e8e01da72920ae0b011921347940a395ec76ed0add5ab04c4154eda1a1ff",
+      "sha256": "eb70e523ee4108c526da4e66646e9bccb2d1e3bdefb8067765cf8d89850ebe9a",
       "bytes": 93068,
       "score": 100,
       "ok": true,
@@ -27,7 +27,7 @@
     },
     {
       "name": "essenza-ice-D.png",
-      "sha256": "c979317ecb4448a8e00c6f7ecdd9989a093c8cbcd0abc2e06dd4efa018344f7c",
+      "sha256": "5a7844771a14905254e915725391168c9f87470e786dfe6b923179511d6309ce",
       "bytes": 462179,
       "score": 100,
       "ok": true,
@@ -35,15 +35,15 @@
     },
     {
       "name": "essenza-ice-T.png",
-      "sha256": "fe1078657703e80020581de37e04e8770ae22553e34f59bb95607454a4ec5618",
-      "bytes": 360656,
+      "sha256": "3d2a55c5c65865a664bda2f8ec0393cc2cfb954f456bffee09786e9e7ecabc2e",
+      "bytes": 360741,
       "score": 100,
       "ok": true,
       "grammar": "split-stage"
     },
     {
       "name": "essenza-ice-M.png",
-      "sha256": "357f1b2c5a1d1346af936f077900e45681e4afa116ce3b1f19f9a875dcbf3f86",
+      "sha256": "1ce5494ea2a4d12d0a3711b2c2b91a60d28951024adcdc662c2314163862d88e",
       "bytes": 182254,
       "score": 100,
       "ok": true,
@@ -51,7 +51,7 @@
     },
     {
       "name": "vesti-inchiostro-D.png",
-      "sha256": "9aa6cb263f88c8b06a21d004e7829784a35b2322138080684aa75388f5a01db1",
+      "sha256": "5a39de28a11cc3247d3b2052df09e665d5f9ad982a8c60f9e56535b6cda73b13",
       "bytes": 710514,
       "score": 100,
       "ok": true,
@@ -59,7 +59,7 @@
     },
     {
       "name": "vesti-inchiostro-T.png",
-      "sha256": "a3dc81ebf73c67e49d0ea86b235c447dd831734eeebb19ba39803b9c18861aed",
+      "sha256": "8df6590612ee5a4ea02ef0f23a10a5eb2ef22d5a18b2745838dff7d42793b175",
       "bytes": 575861,
       "score": 100,
       "ok": true,
@@ -67,16 +67,16 @@
     },
     {
       "name": "vesti-inchiostro-M.png",
-      "sha256": "d341c48941587d6777622baea58786f68c668515398206b948e43bafe16a3dd3",
-      "bytes": 253037,
+      "sha256": "f1b0b66df5d862db8b2bf84e8a73df43a0443f95ff9c3d1e0e72c6d5101130c7",
+      "bytes": 253055,
       "score": 100,
       "ok": true,
       "grammar": "lookbook"
     },
     {
       "name": "vesti-osso-D.png",
-      "sha256": "6a17ebcfa68dc21cfd27ddf6978aba4c22687f26fbed1aa6bf66f4ca2096d3f2",
-      "bytes": 286329,
+      "sha256": "f95d5e0896403cbd4941d27d9d82879b963aac6a431317ad9c9c88ed3cd2c50b",
+      "bytes": 286392,
       "score": 100,
       "ok": true,
       "grammar": "lookbook"
@@ -131,7 +131,7 @@
     },
     {
       "name": "hotel-notte-T.png",
-      "sha256": "84073cf43f3a2f74cb89dfa4abf3e8fbe21e407e4df2e9784c5bbfde917e0ab8",
+      "sha256": "bc38901c7c93b9f6694164bb53fc1b37d6e74573f866796ecc3984e0f600f146",
       "bytes": 192144,
       "score": 100,
       "ok": true,
@@ -147,15 +147,15 @@
     },
     {
       "name": "osteria-passo-D.png",
-      "sha256": "a5f095aafd58261511d54823751f46f8aa166c5440f90ae24956b54774969407",
-      "bytes": 311199,
+      "sha256": "deb07efc8ae59f07df7ecdbb4f3bf6a9d2f6909bcae4ef884d065d9308fd051a",
+      "bytes": 311194,
       "score": 100,
       "ok": true,
       "grammar": "service-board"
     },
     {
       "name": "osteria-passo-T.png",
-      "sha256": "ae6a3caa79f0c0331b36c15806a6fd46ee646e683f8e350910ad92b3c835d4dc",
+      "sha256": "0766885bcc95e2c4675e8364186db82281743eed016bf303273f3f876e4d9b28",
       "bytes": 262222,
       "score": 100,
       "ok": true,
@@ -163,15 +163,15 @@
     },
     {
       "name": "osteria-passo-M.png",
-      "sha256": "493610e451fcb0c4c9c686c0f23a7bd12f35f146633c869cd76026099fb7c542",
-      "bytes": 131307,
+      "sha256": "1b16573d88b0c34592677c68d7d63c7755c524e99eb0ddae6e1567a35a0ff57c",
+      "bytes": 131376,
       "score": 100,
       "ok": true,
       "grammar": "service-board"
     },
     {
       "name": "crudo-mare-D.png",
-      "sha256": "db88339d6cc60f9a86a5c993e64732bec1c4932e2c502e9f03df16a08bcc1c1b",
+      "sha256": "575832081cd880b2cfc99ce02d890056accffddf6e729dce0c3714c96b35a1d6",
       "bytes": 533427,
       "score": 100,
       "ok": true,
@@ -179,7 +179,7 @@
     },
     {
       "name": "crudo-mare-T.png",
-      "sha256": "c2328f181cf8b899cb036b8d3ccc27333581ab52e222ae118df6edd6906aefdf",
+      "sha256": "6078c44c0e8b4646b215b81015126cc5b1b2d665da788ae9dc3a3a2def77c966",
       "bytes": 433389,
       "score": 100,
       "ok": true,
@@ -187,8 +187,8 @@
     },
     {
       "name": "crudo-mare-M.png",
-      "sha256": "718067b0b27b007f9a1e8054b833e72fa2748b736db6df426555fbd52e92a936",
-      "bytes": 204896,
+      "sha256": "3e2d6e5bac38af3acc7e6a1679a71e632b64081def8abf7e4c2a2f2cf1bc6466",
+      "bytes": 204964,
       "score": 100,
       "ok": true,
       "grammar": "service-board"
@@ -219,15 +219,15 @@
     },
     {
       "name": "atelier-carta-D.png",
-      "sha256": "0b17ba584be3db6e6066ffbcbc377ac85259696a9665fac2e10de47d048194fe",
-      "bytes": 664379,
+      "sha256": "f2090ba1d77fa2be80c762cef0075146cfac14d48c09900f20d63d9d308fae74",
+      "bytes": 664428,
       "score": 100,
       "ok": true,
       "grammar": "magazine"
     },
     {
       "name": "atelier-carta-T.png",
-      "sha256": "b748c076e8cf19c8985a805a5ff0142d4ae63430e9ea32d99577c3e3766dd75b",
+      "sha256": "0fb803161bf48bb65466ec7f6f32e2d3c38dd37d88212fdb4cbc5fd5b2f67b1c",
       "bytes": 499778,
       "score": 100,
       "ok": true,

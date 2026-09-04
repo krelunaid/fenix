@@ -356,6 +356,8 @@ describe("focus-visible and worker model", () => {
     assert.match(compose, /family-chrome /);
     assert.match(compose, /html\[data-family\]::before/);
     assert.match(compose, /function displayStack/);
+    assert.match(compose, /function isOperationalApp/);
+    assert.match(compose, /ui-sans-serif,system-ui,"Segoe UI"/);
     assert.equal(existsSync(join(root, "src/lib/projects/agenda-runtime-browser.test.ts")), true);
     const runtime = readFileSync(join(root, "src/lib/projects/color-scheme.ts"), "utf8");
     assert.match(runtime, /function productOwnsList/);
@@ -366,6 +368,9 @@ describe("focus-visible and worker model", () => {
     assert.match(craft, /data-fenix-id="icon:\$\{t\.id\}"/);
     assert.match(craft, /data-icon-grid="24"/);
     assert.match(craft, /pot: navIcon/);
+    assert.match(craft, /M7\.2 7\.4h9\.6/);
+    assert.match(craft, /M7\.2 10\.2H4\.6/);
+    assert.doesNotMatch(craft, /M6\.6 10\.4h10\.8/);
     const appShell = readFileSync(join(root, "src/lib/ai/app-shell.ts"), "utf8");
     assert.match(appShell, /data-fenix-id="icon:app"/);
     const iconFn = runBuild.slice(runBuild.indexOf("async function runIconBuild"));

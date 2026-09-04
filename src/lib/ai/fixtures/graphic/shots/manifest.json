@@ -66,22 +66,22 @@
     },
     {
       "name": "sala-ore-D.png",
-      "sha256": "fcaf0c695a6c1f4ce54cb4c629fff94e8b9c4f9da2e2df4172e83b5db25a175b",
-      "bytes": 37142,
+      "sha256": "6b135eafd3f7d3a02b2bb119d6e866fba795f22bc650dce888b1be76bf679d14",
+      "bytes": 37048,
       "score": 68,
       "ok": false
     },
     {
       "name": "sala-ore-T.png",
-      "sha256": "4701e73c4150550a13fea3d545fab9339e96788548aec9b6695867364c71b779",
-      "bytes": 36382,
+      "sha256": "39ef26efcb52aa086bc20a732e2288d67b815287947344070ccb4e1ec280f2cc",
+      "bytes": 36260,
       "score": 68,
       "ok": false
     },
     {
       "name": "sala-ore-M.png",
-      "sha256": "cff9753fbd6ae438222a699d9bfdb86ff7fb6d1f10048e89bd8f5df6ee160d1f",
-      "bytes": 30008,
+      "sha256": "8078c0d3079d34bc40b0ce79924fcdbf6c94656d62bb87297258e2353c8943b5",
+      "bytes": 29820,
       "score": 68,
       "ok": false
     },
@@ -171,22 +171,22 @@
     },
     {
       "name": "sala-giardini-D.png",
-      "sha256": "60aa36841205eaf4fa0dd979eeaeaec4907a1f267812dc842d8999bea456c317",
-      "bytes": 333379,
+      "sha256": "03371e2ec336130f351d3c88f62e10e77e5ccc65f57bb9d9584835744045ebb8",
+      "bytes": 329810,
       "score": 100,
       "ok": true
     },
     {
       "name": "sala-giardini-T.png",
-      "sha256": "086ca5b4b431d2d90b963ead352722dde6189e57c67d16f167789da543ca59a9",
-      "bytes": 214412,
+      "sha256": "df680510a3e437d5860c95354f58a36921162361d38c1dd44da72aaff64c8d08",
+      "bytes": 212963,
       "score": 100,
       "ok": true
     },
     {
       "name": "sala-giardini-M.png",
-      "sha256": "39dff3fbb5c72cb836ce548f6e0fa5203875f734c3e76577d812275d19ca460e",
-      "bytes": 131171,
+      "sha256": "9fb8b3e6da4f20b4c2d2266445cb7b420defbc5e46e47f978e01bf5d9566f757",
+      "bytes": 126818,
       "score": 100,
       "ok": true
     },

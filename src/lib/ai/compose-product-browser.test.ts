@@ -926,21 +926,28 @@ describe("graphic pipeline visual QA D/T/M", () => {
           before,
           after: files,
           palettes,
-          note: "composeProduct five briefs D/T/M before/after on parent 77e2cb4. Not a 9/10.",
+          note: "composeProduct five briefs D/T/M before/after on parent 6a3dd1c. Hash/ΔE are movement floors, not scores. Agenda and ristorazione must move; other briefs may stay if the generator did not restyle them.",
         },
         null,
         2,
       )}\n`,
     );
-    assert.equal(GRAPHIC_FIVE_PARENT_SHA, "77e2cb4307d55a447d19cfa9bc7ab80076475ec5");
+    assert.equal(GRAPHIC_FIVE_PARENT_SHA, "6a3dd1c135de83345e7ae77ec170767cf16988a5");
     assert.equal(files.length, briefs.length * VIEWPORTS.length);
     assert.equal(new Set(files.map((f) => f.sha256)).size, files.length, "after shots must differ");
     assert.equal(new Set(mobileChrome).size, briefs.length, mobileChrome.join(" || "));
     assert.equal(new Set(palettes.map((p) => `${p.bg}:${p.accent}`)).size, briefs.length);
+    const agendaPalette = palettes.find((p) => p.id === "agenda");
+    assert.equal(agendaPalette?.display, "Figtree");
+    assert.equal(agendaPalette?.bg.toLowerCase(), "#e8eef4");
+    assert.equal(agendaPalette?.accent.toLowerCase(), "#1f6f68");
+    const mustMove = /^(agenda|ristorazione)-[DTM]\.png$/;
     for (const file of files) {
       const prior = before.find((b) => b.name === file.name);
       assert.ok(prior, file.name);
-      assert.notEqual(file.sha256, prior!.sha256, `${file.name} after must move from parent 77`);
+      if (mustMove.test(file.name)) {
+        assert.notEqual(file.sha256, prior!.sha256, `${file.name} after must move from parent 6a3dd1c`);
+      }
       assert.equal(existsSync(join(BEFORE, file.name)), true);
     }
   });
