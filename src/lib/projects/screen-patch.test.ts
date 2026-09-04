@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, it } from "node:test";
+import { restoreHome, keepScripts } from "../../../workers/visual/artifact-restore.mjs";
 import {
   TAB_IDS,
   applyScreenPatch,
@@ -19,6 +20,31 @@ const PRODUCTION = readFileSync(join(here, "fixtures/vesti-production.html"), "u
 const WORKER = readFileSync(join(here, "../../../workers/visual/server.mjs"), "utf8");
 
 describe("visual worker screen patches", () => {
+  it("restores home and scripts without expanding literal replacement tokens", () => {
+    for (const token of ["$&", "$1", "$2", "$'", "$`", "$$", "$100"]) {
+      const inner = `<p>Literal ${token}</p>`;
+      const script = `<script>window.saved=${JSON.stringify(token)};</script>`;
+      const template = `<template id="t-home">${inner}</template>`;
+      const original = `<html><body><main>Old</main>${template}${script}</body></html>`;
+      const expected = `<html><body><main class="fk-main">${inner}</main>${template}${script}</body></html>`;
+      assert.equal(restoreHome(original), expected, token);
+      assert.equal(restoreHome(expected), expected, "idempotent home");
+      const stripped = `<html><body><main>New</main>${template}</body></html>`;
+      const restored = `<html><body><main>New</main>${template}${script}</body></html>`;
+      assert.equal(keepScripts(original, stripped), restored, token);
+      assert.equal(keepScripts(original, restored), restored, "no duplicate script");
+    }
+    assert.match(WORKER, /import \{ restoreHome, keepScripts \} from "\.\/artifact-restore\.mjs"/);
+  });
+
+  it("retains restoration guards and no-body fallback", () => {
+    for (const html of ['<main>Keep</main>', '<template id="t-home"><p>Home</p></template>', '<main>Keep</main><template id="t-home">.fk-tab { color: red }</template>']) {
+      assert.equal(restoreHome(html), html);
+    }
+    assert.equal(keepScripts("<p>No scripts</p>", "<main>Keep</main>"), "<main>Keep</main>");
+    assert.equal(keepScripts('<script>window.saved="$&";</script>', '<main>Keep</main>'), '<main>Keep</main><script>window.saved="$&";</script>');
+  });
+
   it("preserves replacement metacharacters literally and leaves other views untouched", () => {
     const original = '<header>Keep</header><template id="t-home"><p>Old</p></template><template id="t-list"><p>Saved</p></template><script>window.keep=true</script>';
     for (const token of ["$&", "$1", "$2", "$3", "$'", "$`", "$$", "$100"]) {

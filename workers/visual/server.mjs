@@ -1,10 +1,10 @@
 import { createServer } from "node:http";
+import { restoreHome, keepScripts } from "./artifact-restore.mjs";
 import { artifactContext, completeResponseText, MAX_ARTIFACT_CHARS } from "./artifact-context.mjs";
 import {
   TAB_IDS,
   applyScreenPatch,
   hasScreenTarget,
-  looksLikeCssDump,
   noteAbsent,
   noteSkip,
   resolvePatchTarget,
@@ -91,14 +91,6 @@ function looksPhoneShell(html) {
   return /fk-tab|id=["']t-home["']|id=["']t-new["']/i.test(String(html || ""));
 }
 
-function restoreHome(html) {
-  const m = html.match(/<template[^>]*id=["']t-home["'][^>]*>([\s\S]*?)<\/template>/i);
-  if (!m) return html;
-  if (!/<main\b/i.test(html)) return html;
-  if (looksLikeCssDump(m[1])) return html;
-  return html.replace(/<main\b[^>]*>[\s\S]*?<\/main>/i, `<main class="fk-main">${m[1]}</main>`);
-}
-
 function parseHtml(text) {
   const htmlMatch =
     text.match(/<!DOCTYPE html[\s\S]*?<\/html>/i) || text.match(/<html[\s\S]*?<\/html>/i);
@@ -113,22 +105,6 @@ function parseHtml(text) {
     meta = {};
   }
   return { html, meta };
-}
-
-function keepScripts(from, to) {
-  if (!from || !to) return to;
-  const grab = (html) => [...html.matchAll(/<script\b[\s\S]*?<\/script>/gi)].map((m) => m[0]);
-  const orig = grab(from);
-  if (!orig.length) return to;
-  const next = grab(to);
-  const origLen = orig.join("").length;
-  const nextLen = next.join("").length;
-  if (nextLen >= origLen * 0.85) return to;
-  const stripped = to.replace(/<script\b[\s\S]*?<\/script>/gi, "");
-  const block = orig.join("\n");
-  return /<\/body>/i.test(stripped)
-    ? stripped.replace(/<\/body>/i, `${block}</body>`)
-    : `${stripped}${block}`;
 }
 
 function inferTab(instruction) {
