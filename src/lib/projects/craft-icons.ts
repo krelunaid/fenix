@@ -265,13 +265,14 @@ export function looksLikeIosWidgetHome(html: string): boolean {
   return stats >= 4 && /Ultimo/i.test(html) && /Stato/i.test(html) && /fk-grid2/.test(html);
 }
 
-const LEDGER_HOME =
-  "home:function(){ return '<section class=\"fk-sheet\"><p class=\"fk-kicker\">Oggi</p><dl class=\"fk-ledger\"><div><dt>Voci</dt><dd>'+S.items.length+'</dd></div><div><dt>Limite</dt><dd>'+S.limit+'</dd></div><div><dt>Squadra</dt><dd>'+S.team.length+'</dd></div></dl><p class=\"fk-last\">'+(S.items[0]?S.items[0].t+' · '+S.items[0].n:'Nessuna riga. Compila e salva.')+'</p><button type=\"button\" class=\"fk-btn\" data-go=\"new\">Nuova riga</button></section>'; }";
+/** First-run product sheet. Not a Voci/Limite/Squadra ledger and not 4 KPI tiles. */
+export const FIRST_RUN_HOME =
+  "home:function(){ return '<section class=\"fk-sheet\"><p class=\"fk-kicker\">Oggi</p><h2>'+(S.items.length?S.items.length+\" in lista\":\"Niente in lista\")+'</h2><p class=\"fk-last\">'+(S.items[0]?S.items[0].t+' · '+S.items[0].n:'Compila e salva la prima riga.')+'</p><button type=\"button\" class=\"fk-btn\" data-go=\"new\">Nuova riga</button></section>'; }";
 
 export function rewriteIosWidgetHome(html: string): string {
   if (!html || !looksLikeIosWidgetHome(html)) return html;
   if (/home:function\(\)/.test(html)) {
-    return html.replace(/home:function\(\)\s*\{[\s\S]*?\n\s*\},/, `${LEDGER_HOME},\n    `);
+    return html.replace(/home:function\(\)\s*\{[\s\S]*?\n\s*\},/, `${FIRST_RUN_HOME},\n    `);
   }
   return html;
 }

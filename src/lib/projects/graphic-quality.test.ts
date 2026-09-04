@@ -154,6 +154,28 @@ describe("graphic quality gate", () => {
     assert.ok(loadGraphicFixtures().some((f) => f.id === "lumiere-or" && f.mustPass));
   });
 
+  it("fails the Apple clone SET but allows system type as a named-font fallback", () => {
+    const clone = `<!DOCTYPE html><html><head><style>
+body{background:#f5f5f7;color:#1d1d1f;font-family:"SF Pro Text",sans-serif}
+a,button{color:#0071e3}
+</style></head><body><nav></nav><main><h1>Clone</h1></main></body></html>`;
+    const fallback = `<!DOCTYPE html><html><head><style>
+body{background:#e8eef4;color:#1c1712;font-family:Figtree,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+a,button{color:#1f6f68}
+</style></head><body><nav></nav><main><h1>Agenda</h1></main></body></html>`;
+    const cloneCodes = auditGraphicQuality(clone, { brief: "app", kind: "app" }).findings
+      .filter((f) => f.severity === "fail")
+      .map((f) => f.code);
+    assert.ok(cloneCodes.includes("apple-clone"), cloneCodes.join(","));
+    const fallbackCodes = auditGraphicQuality(fallback, {
+      brief: `${formatPrefix("app")}Agenda studio`,
+      kind: "app",
+    }).findings
+      .filter((f) => f.severity === "fail")
+      .map((f) => f.code);
+    assert.equal(fallbackCodes.includes("apple-clone"), false, fallbackCodes.join(","));
+  });
+
   it("does not promote the phone shell as a finished perfume product", () => {
     const brief = "FORMATO: app telefono. kind=app. Essenza gestione profumi premium.";
     const report = auditGraphicQuality(APP_SHELL_HTML, { brief, kind: "app" });

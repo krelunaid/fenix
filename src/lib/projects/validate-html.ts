@@ -178,7 +178,7 @@ export function validateProductHtml(html: string, opts?: { kind?: string }): Htm
   }
   if ((kind === "app" || kind === "tool" || kind === "game") && looksLikeIosWidgetHome(text)) {
     errors.push(
-      "La home è lo scheletro iPhone (4 riquadri + Ultimo/Stato). Serve un registro del mestiere.",
+      "La home è lo scheletro iPhone (4 riquadri + Ultimo/Stato). Serve una home di prodotto, non un ledger imposto.",
     );
   }
 

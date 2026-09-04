@@ -370,6 +370,8 @@ function chromeProbe() {
   const br = btn ? btn.getBoundingClientRect() : null;
   return {
     ready: document.documentElement.getAttribute("data-fenix-ready"),
+    firstRun: Boolean(document.querySelector(".fk-sheet h2")),
+    firstRunText: (document.querySelector(".fk-sheet h2") as HTMLElement | null)?.innerText || "",
     ledger: Boolean(document.querySelector(".fk-ledger")),
     stats: document.querySelectorAll(".fk-stat").length,
     appleHouse: document.body.innerHTML.includes("M4 10.5"),
@@ -377,6 +379,7 @@ function chromeProbe() {
     tabCount: svgs.length,
     uniqueTabs: unique.size,
     btnRadius: rad(".fk-btn"),
+    btnMinH: btn ? parseFloat(getComputedStyle(btn).minHeight) || 0 : 0,
     hello: (document.querySelector(".fk-hello") as HTMLElement | null)?.innerText || "",
     btnText: (btn as HTMLElement | null)?.innerText || "",
     btnW: br ? Math.round(br.width) : 0,
@@ -384,8 +387,8 @@ function chromeProbe() {
   };
 }
 
-describe("phone chrome is workshop, not iPhone", () => {
-  it("renders APP_SHELL as a ledger with craft icons at 390", async () => {
+describe("phone chrome is pocket quality, not Apple clone", () => {
+  it("renders APP_SHELL as a first-run product sheet with craft icons at 390", async () => {
     assert.equal(looksLikeAppleTabIcons(APP_SHELL_HTML), false);
     assert.equal(looksLikeIosWidgetHome(APP_SHELL_HTML), false);
     const browser = await launch();
@@ -396,13 +399,16 @@ describe("phone chrome is workshop, not iPhone", () => {
       await waitForFenixReady(page, 8000);
       const chrome = await page.evaluate(chromeProbe);
       assert.equal(chrome.ready, "1");
-      assert.equal(chrome.ledger, true, "home must be a ledger");
+      assert.equal(chrome.ledger, false, "home must not be an imposed ledger");
+      assert.equal(chrome.firstRun, true, "home must be a first-run sheet");
+      assert.match(chrome.firstRunText, /in lista/i);
       assert.ok(chrome.stats < 4, `widget stats still on screen: ${chrome.stats}`);
       assert.equal(chrome.appleHouse, false, "house icon still in DOM");
       assert.equal(chrome.notebook, true, "notebook pictogram missing");
       assert.equal(chrome.tabCount, 5);
       assert.equal(chrome.uniqueTabs, 5, "tabs must be 5 different silhouettes");
-      assert.ok(chrome.btnRadius <= 6, `CTA still iOS-round ${chrome.btnRadius}`);
+      assert.ok(chrome.btnRadius >= 8, `CTA too sharp ${chrome.btnRadius}`);
+      assert.ok(chrome.btnMinH >= 44, `CTA hit ${chrome.btnMinH}`);
       assert.ok(chrome.btnW > 200, "CTA should span the sheet");
       await page.screenshot({ path: "/tmp/fenix-shell-390.png", fullPage: false });
       await page.close();
@@ -493,7 +499,7 @@ describe("phone chrome is workshop, not iPhone", () => {
     }
   });
 
-  it("recover of Taccuino-like Apple+widget HTML paints ledger and craft tabs", async () => {
+  it("recover of Taccuino-like Apple+widget HTML paints first-run home and craft tabs", async () => {
     assert.equal(looksLikeAppleTabIcons(TACCUINO_OLD), true);
     assert.equal(looksLikeIosWidgetHome(TACCUINO_OLD), true);
     const recovered = recoverPersistedProject({
@@ -520,11 +526,14 @@ describe("phone chrome is workshop, not iPhone", () => {
       await waitForFenixReady(page, 8000);
       const chrome = await page.evaluate(chromeProbe);
       assert.equal(chrome.ready, "1");
-      assert.equal(chrome.ledger, true, "Taccuino home still 4 widgets");
+      assert.equal(chrome.ledger, false, "Taccuino home must not be an imposed ledger");
+      assert.equal(chrome.firstRun, true, "Taccuino home still 4 widgets");
+      assert.match(chrome.firstRunText, /in lista/i);
       assert.equal(chrome.appleHouse, false);
       assert.equal(chrome.notebook, true);
       assert.equal(chrome.uniqueTabs, 5);
-      assert.ok(chrome.btnRadius <= 6, `Taccuino CTA radius ${chrome.btnRadius}`);
+      assert.ok(chrome.btnRadius >= 8, `Taccuino CTA radius ${chrome.btnRadius}`);
+      assert.ok(chrome.btnMinH >= 44, `Taccuino CTA hit ${chrome.btnMinH}`);
       const hello = await page.evaluate(() => {
         const el = document.querySelector(".fk-hello");
         if (!el) return null;

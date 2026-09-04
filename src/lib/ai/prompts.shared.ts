@@ -36,7 +36,7 @@ COLORE — già al primo HTML, DAL BRIEF:
 - Token cromatici del mestiere: --bg --surface --elevated --fg --muted --accent --line --accent-ink. Mai la stessa beige/terracotta su ogni progetto. Mai cadere su #101114/#191b20/#e1693f.
 - Famiglie distinte (anche fredde, luminose, monocromatiche, pastello, alta croma). Terre solo se il brief è ceramica/fornace.
 - Colori espliciti dell'utente: vincolo, correggi solo per AA.
-- Qualità nativa da tasca consentita: tipo ottico, ritmo 8px, profondità, materiali, motion ridotto. Vietato clonare schermate, marchi, SF Symbols o la coppia #f5f5f7+#0071e3.
+- Qualità nativa da tasca consentita: tipo ottico, ritmo 8px, profondità, materiali, motion ridotto. Tipo system (-apple-system, BlinkMacSystemFont, Segoe UI) solo in coda al font del mestiere. Vietato SF Pro/Inter come primario. Vietato clonare schermate, marchi, SF Symbols o la coppia #f5f5f7+#0071e3.
 - Testo --fg su --bg almeno 4.5:1. --muted non sotto contrasto 3:1.
 
 ICONE — il pezzo che fa la differenza:
@@ -49,7 +49,7 @@ CSS: :root con --bg --surface --fg --muted --accent --line. body 100dvh. App a c
 App — chrome da prodotto in tasca (non admin, non landing):
 - TELEFONO 390×844. html/body colonna 100dvh. Vietato desktop-only, 3 colonne, min-width 1100, bande.
 - Se il contratto dà una grammatica (split-stage, lookbook, agenda, hospitality, service-board, magazine, ops-desk, source-timeline) esegui QUELLA: non riciclare header.fk-top + nav.fk-tab + 4 stat. Altrimenti (app generica) usa header.fk-top, main.fk-main, nav.fk-tab.
-- Home: oggetto del mestiere + registro a righe o vetrina + CTA. VIETATO home fatta solo di 4 riquadri .fk-stat + «Ultimo» + «Stato». VIETATO main vuoto, dead zone, pagina bianca, Ciao/Operatore. VIETATO hero grigio + due KPI + CTA + empty card su un brief di repository.
+- Home: oggetto del mestiere + registro a righe o vetrina + CTA. VIETATO home fatta solo di 4 riquadri .fk-stat + «Ultimo» + «Stato». VIETATO imporre un ledger Voci/Limite/Squadra su ogni brief. VIETATO main vuoto, dead zone, pagina bianca, Ciao/Operatore. VIETATO hero grigio + due KPI + CTA + empty card su un brief di repository.
 - Un'app profumi deve sembrare un prodotto profumi, non un registro generico. Stesso per moda, prenotazioni, ristorazione, ospitalità. Un registro di repository mostra commit, rami, sync, timeline/diff — non copiare GitHub.
 - Tab: 4–5 button in .fk-tab, SVG 24 + span dal mestiere (niente Home/Nuovo/Elenco su un brief di prodotto), data-view, .on sull'attivo.
 - Tutte le viste conservano la stessa geometria della .fk-tab; nessun contenuto può spingerla verso l'alto o lasciarle vuoto sotto.
@@ -110,7 +110,7 @@ export const QA_PROMPT = `Sei il secondo agente di Fenix. Guardi l'HTML come uno
 Se manca ANCHE UNO di questi, riscrivi il chrome (tieni i dati e il JS che già girano):
 - tab bar fissata al fondo del viewport, altezza invariabile su ogni vista, safe-area, 4–5 voci, SVG diversi, label 10px
 - header saluto + azione
-- home: metriche + blocco eroico del mestiere + CTA
+- home: oggetto del mestiere + CTA (non 4 riquadri, non ledger Voci/Limite/Squadra imposto)
 - form con label, campo, chip se serve, salva; lista che mostra i nomi; niente righe Rimuovi vuote
 - JS: preventDefault, Fenix.save, niente localStorage
 - icona app SVG in header e rel=icon
@@ -137,5 +137,6 @@ Obbligo:
 8) Contrasto --fg su --bg ≥ 4.5. Niente eval, localStorage, secret.
 9) Se Fenix.data usa un nome collection invalido (spazi, slash, accenti, titoli), rinominalo in un token [A-Za-z0-9._-]{1,80} del contratto (es. capi) e usalo in tutte le query/insert. Non inventare altre tabelle.
 10) Se ERRORI citano abstract-imagery, card-clone o boxed-canvas: sostituisci hero/.sil geometrici con SVG di dominio (data-imagery=domain, aria-label), togli width:min(1080px) da .app, riempi le card. Repair massimo 2.
+11) Non imporre ledger Voci/Limite/Squadra. Non reintrodurre home a 4 riquadri + Ultimo/Stato. Conserva tipo system in coda al font del mestiere e raggio controlli da tasca. Niente coppia clone #f5f5f7+#0071e3.
 
 Rispondi SOLO META + eventuali <<<FILE path="...">>> + <<<HTML>>> + <<<END>>>.`;

@@ -184,7 +184,7 @@ const VISIBLE_PHONE_CSS_GUARD = `<script data-fenix-css-guard>
 
 const PHONE_KIT = `<style data-fenix-phone>
 *,*::before,*::after{box-sizing:border-box}
-html,body{height:100%!important;margin:0;max-width:100%;overflow:hidden;color:var(--fg,#1c1712);background:var(--bg,#efe6d4)}
+html,body{height:100%!important;margin:0;max-width:100%;overflow:hidden;color:var(--fg,#1c1712);background:var(--bg,#efe6d4);font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
 body{display:flex!important;flex-direction:column!important;min-height:100dvh;max-height:100dvh;padding-bottom:calc(64px + env(safe-area-inset-bottom));font-size:16px;-webkit-font-smoothing:antialiased;touch-action:pan-y}
 body>:is(.app,.fk-app,#app,#root):has(.fk-tab,.tabbar,nav[aria-label]){display:flex!important;flex-direction:column!important;width:100%;height:100%!important;min-height:0!important;overflow:hidden!important}
 .fk-top,body>header{flex-shrink:0;padding:14px 16px 10px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
@@ -208,13 +208,13 @@ body>:is(.app,.fk-app,#app,#root):has(.fk-tab,.tabbar,nav[aria-label]){display:f
 .fk-tile{background:transparent;border:0;border-bottom:1px solid var(--line,#c4b49a);border-radius:0;padding:12px 0}
 .fk-tile b{display:block;font-size:18px;margin-top:4px;letter-spacing:-.03em;color:var(--fg,#1c1712)}
 .fk-tile span{font-size:12px;color:var(--muted,#5c5348);letter-spacing:.04em;text-transform:uppercase}
-.fk-seg{display:flex;background:transparent;border:1px solid var(--line,#c4b49a);border-radius:0;padding:0;gap:0;margin:8px 0 14px}
-.fk-seg button{flex:1;border:0;border-right:1px solid var(--line,#c4b49a);background:none;color:var(--fg,#1c1712);border-radius:0;padding:8px 6px;font:600 13px/1 inherit}
+.fk-seg{display:flex;background:transparent;border:1px solid var(--line,#c4b49a);border-radius:10px;padding:0;gap:0;margin:8px 0 14px;overflow:hidden}
+.fk-seg button{flex:1;border:0;border-right:1px solid var(--line,#c4b49a);background:none;color:var(--fg,#1c1712);border-radius:0;padding:8px 6px;font:600 13px/1 inherit;min-height:44px}
 .fk-seg button:last-child{border-right:0}
 .fk-seg button.on{background:var(--fg,#1c1712);color:var(--bg,#efe6d4);box-shadow:none}
-.fk-btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;border:0;border-radius:2px;padding:14px 16px;font:700 15px/1 inherit;background:var(--accent,#3d4a1f);color:#fff;letter-spacing:.02em}
+.fk-btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;border:0;border-radius:12px;padding:14px 16px;font:700 15px/1 inherit;background:var(--accent,#3d4a1f);color:#fff;letter-spacing:.02em;min-height:44px;min-width:44px}
 .fk-chiprow{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 14px}
-.fk-chip{border:1px solid var(--line,#c4b49a);border-radius:2px;padding:8px 10px;font:650 13px/1 inherit;background:transparent;color:var(--fg,#1c1712)}
+.fk-chip{border:1px solid var(--line,#c4b49a);border-radius:10px;padding:8px 10px;font:650 13px/1 inherit;background:transparent;color:var(--fg,#1c1712);min-height:44px}
 .fk-field{display:flex;align-items:center;gap:10px;background:var(--field,var(--elevated,#fbf6ee))!important;border:1px solid var(--line,#c4b49a);border-radius:var(--radius,12px);padding:12px 14px;margin:6px 0 14px;color:var(--field-ink,#1c1712)!important}
 .fk-field input,.fk-field select,.fk-field textarea,
 input:not([type=hidden]):not([type=checkbox]):not([type=radio]):not([type=submit]):not([type=button]),
@@ -242,8 +242,9 @@ input::placeholder,textarea::placeholder{
   flex-shrink:0;display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr))!important;
   height:calc(64px + env(safe-area-inset-bottom))!important;min-height:calc(64px + env(safe-area-inset-bottom))!important;max-height:none!important;padding:6px 4px calc(6px + env(safe-area-inset-bottom));
   border-top:1px solid color-mix(in srgb, currentColor 12%, transparent);
-  background:var(--surface,#f7f1e4);color:var(--muted,#5c5348);
+  background:color-mix(in srgb,var(--surface,#f7f1e4) 86%,transparent);color:var(--muted,#5c5348);
   box-shadow:0 -10px 30px color-mix(in srgb,var(--fg,#1c1712) 8%,transparent);
+  -webkit-backdrop-filter:saturate(1.8) blur(20px);backdrop-filter:saturate(1.8) blur(20px);
   position:fixed!important;left:0!important;right:0!important;bottom:0!important;top:auto!important;z-index:20;
 }
 .fk-tab button,.tabbar button,nav[aria-label] button{

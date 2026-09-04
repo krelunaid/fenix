@@ -258,7 +258,7 @@ const SCREEN_IDS = ["home", "new", "list", "stats", "more"] as const;
 
 function stubScreen(id: string, name: string) {
   if (id === "home") {
-    return `<section class="fk-sheet"><p class="fk-kicker">Oggi</p><dl class="fk-ledger"><div><dt>Voci</dt><dd>—</dd></div><div><dt>In corso</dt><dd>—</dd></div></dl><button type="button" class="fk-btn" data-go="new">Nuova riga</button></section>`;
+    return `<section class="fk-sheet"><p class="fk-kicker">Oggi</p><h2>Niente in lista</h2><p class="fk-last">Compila e salva la prima riga.</p><button type="button" class="fk-btn" data-go="new">Nuova riga</button></section>`;
   }
   if (id === "new") {
     return `<h2>Nuovo</h2><form><label class="fk-lbl">Nome</label><div class="fk-field"><input name="n" required placeholder="Nome"/></div><button type="submit" class="fk-btn">Salva</button></form>`;

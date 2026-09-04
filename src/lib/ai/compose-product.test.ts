@@ -18,7 +18,8 @@ import { APP_SHELL_HTML } from "./app-shell.ts";
 import { hueBucket } from "../projects/design-tokens.ts";
 import { PALETTE_CORPUS, paletteDistance, CLOSE_DELTA_E } from "../projects/palette-engine.ts";
 import { domainIllustration, GEOMETRIC_REGRESSIONS, materialSignature } from "./domain-imagery.ts";
-import { isLetterAIcon } from "../projects/craft-icons.ts";
+import { isLetterAIcon, looksLikeIosWidgetHome } from "../projects/craft-icons.ts";
+import { prepareSrcDoc } from "../projects/color-scheme.ts";
 
 const HARD = [
   `${formatPrefix("app")}Essenza: gestione profumi premium, flaconi, note olfattive e guardaroba.`,
@@ -296,9 +297,10 @@ describe("graphic pipeline prompt→plan→generate→visual→QA", () => {
     assert.doesNotMatch(agenda.html, /data-view="elenco"/);
     assert.doesNotMatch(agenda.html, /state-empty:before/);
     assert.doesNotMatch(agenda.html, /#f5f5f7|#0071e3|#007aff/);
-    assert.doesNotMatch(agenda.html, /-apple-system|BlinkMacSystemFont|SF Pro|Newsreader|Georgia|\bInter\b/);
+    assert.doesNotMatch(agenda.html, /SF Pro|Newsreader|Georgia|\bInter\b/);
     assert.match(agenda.html, /Figtree/);
-    assert.match(agenda.html, /ui-sans-serif,system-ui,"Segoe UI"/);
+    assert.match(agenda.html, /ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI"/);
+    assert.match(agenda.html, /backdrop-filter:saturate\(1\.8\) blur\(20px\)/);
     assert.doesNotMatch(agenda.html, /--display:"Newsreader"/);
     assert.equal(agenda.tokens.fonts.display, "Figtree");
     assert.equal(agenda.tokens.palette.bg.toLowerCase(), "#e8eef4");
@@ -323,7 +325,7 @@ describe("graphic pipeline prompt→plan→generate→visual→QA", () => {
     assert.equal(runs.find((r) => r.id === "abbigliamento")!.grammar.id, "lookbook");
     assert.equal(runs.find((r) => r.id === "repo")!.grammar.id, "source-timeline");
     assert.equal(runs.find((r) => r.id === "ristorazione")!.grammar.id, "service-board");
-    assert.equal(GRAPHIC_FIVE_PARENT_SHA, "c8d23321fa272536bbcd403ff891fc1eeda828e0");
+    assert.equal(GRAPHIC_FIVE_PARENT_SHA, "9bb9a3c7829b956a9db8914928e3d5d85acf4982");
     const profumi = runs.find((r) => r.id === "profumi")!;
     const ristorazione = runs.find((r) => r.id === "ristorazione")!;
     const abbigliamento = runs.find((r) => r.id === "abbigliamento")!;
@@ -379,7 +381,7 @@ describe("graphic pipeline prompt→plan→generate→visual→QA", () => {
     }
   });
 
-  it("freezes five-brief before shots at parent SHA c8d23321", () => {
+  it("freezes five-brief before shots at parent SHA 9bb9a3c", () => {
     const here = dirname(fileURLToPath(import.meta.url));
     const before = join(here, "fixtures/graphic/five/before");
     const names = [
@@ -389,13 +391,27 @@ describe("graphic pipeline prompt→plan→generate→visual→QA", () => {
       "repo",
       "ristorazione",
     ].flatMap((id) => ["D", "T", "M"].map((vp) => `${id}-${vp}.png`));
-    assert.equal(GRAPHIC_FIVE_PARENT_SHA, "c8d23321fa272536bbcd403ff891fc1eeda828e0");
+    assert.equal(GRAPHIC_FIVE_PARENT_SHA, "9bb9a3c7829b956a9db8914928e3d5d85acf4982");
     assert.equal(existsSync(before), true);
     const listed = readdirSync(before).filter((n) => n.endsWith(".png")).sort();
     assert.deepEqual(listed, [...names].sort());
     for (const name of names) {
       assert.equal(existsSync(join(before, name)), true, name);
     }
+  });
+
+  it("prepareSrcDoc of composeProduct keeps product home and system fallbacks, no imposed ledger", () => {
+    const product = composeProduct(
+      `${formatPrefix("app")}Agenda: appuntamenti, calendario giornaliero, trattamenti e studio.`,
+    );
+    const src = prepareSrcDoc(product.html, product.tokens.palette, "agenda-keep", "app");
+    assert.equal(looksLikeIosWidgetHome(src), false);
+    assert.doesNotMatch(src, /fk-ledger/);
+    assert.doesNotMatch(src, /#f5f5f7|#0071e3|#007aff|SF Pro/);
+    assert.match(src, /-apple-system/);
+    assert.match(src, /Figtree/);
+    assert.match(src, /backdrop-filter:saturate\(1\.8\) blur\(20px\)/);
+    assert.doesNotMatch(src, /<style data-fenix-phone>\s*\*/);
   });
 
   it("agenda runtime: ISO days, status cycle, domain form, Sala place, desktop inset", () => {

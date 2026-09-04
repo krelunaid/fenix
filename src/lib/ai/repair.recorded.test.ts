@@ -6,6 +6,8 @@ import { describe, it } from "node:test";
 import { parseBuildOutput } from "./parse.ts";
 import { gateBuildResult, repairBuild } from "./repair.ts";
 import { CONTRACT_REPAIR_MAX } from "./build-contract.ts";
+import { prepareSrcDoc } from "../projects/color-scheme.ts";
+import { looksLikeIosWidgetHome } from "../projects/craft-icons.ts";
 
 /** Recorded polish/repair path. Not live-verified against xAI. */
 export const POLISH_REPAIR_LIVE_VERIFIED = false as const;
@@ -139,6 +141,56 @@ describe("polish/repair recorded responses (not live-verified)", () => {
       });
       assert.equal(fetchHits, 1);
       assert.equal(repaired, null);
+    } finally {
+      globalThis.fetch = prev;
+    }
+  });
+
+  it("prepareSrcDoc after repairBuild mock rewrites widget home to first-run, not ledger", async () => {
+    assert.equal(POLISH_REPAIR_LIVE_VERIFIED, false);
+    const brief = "FORMATO: app telefono. kind=app. Taccuino di bottega.";
+    const widget = `<!DOCTYPE html><html lang="it"><head><meta charset="utf-8"/><title>Taccuino</title></head><body>
+<main id="main"></main>
+<nav class="fk-tab" aria-label="Navigazione"><button data-view="home">Oggi</button><button data-view="new">Nuovo</button></nav>
+<script>
+var S={items:[],limit:100,team:[]};
+var views={
+    home:function(){
+      return '<div class="fk-panel"><h3>Oggi</h3><div class="fk-grid2"><div class="fk-stat"><b>0</b><span>attivita</span></div><div class="fk-stat"><b>4.5</b><span>ore</span></div><div class="fk-stat"><b>0</b><span>pezzi</span></div><div class="fk-stat"><b>65</b><span>%</span></div></div></div><div class="fk-grid2"><div class="fk-tile"><span>Ultimo</span><b>—</b></div><div class="fk-tile"><span>Stato</span><b>In corso</b></div></div><button type="button" class="fk-btn" data-go="new">Nuova riga</button>';
+    },
+    new:function(){ return 'x'; }
+};
+</script>
+</body></html>`;
+    const complete = `<<<META>>>
+{"name":"Taccuino","tagline":"bottega","kind":"app","summary":"note","direction":"inchiostro","palette":{"bg":"#efe6d4","surface":"#f7f1e4","fg":"#1c1712","muted":"#5c5348","accent":"#3d4a1f"}}
+<<<HTML>>>
+${widget}
+<<<END>>>`;
+    let fetchHits = 0;
+    const prev = globalThis.fetch;
+    globalThis.fetch = (async () => {
+      fetchHits += 1;
+      return mockCompletion(complete);
+    }) as typeof fetch;
+    try {
+      const repaired = await repairBuild({
+        apiKey: "unused",
+        prompt: brief,
+        html: "<p>vuoto</p>",
+        error: "La home è lo scheletro iPhone.",
+      });
+      assert.equal(fetchHits, 1, "must hit declared mock transport once");
+      assert.ok(repaired, "repairBuild must parse the mock payload");
+      assert.equal(looksLikeIosWidgetHome(repaired.html), true);
+      const src = prepareSrcDoc(repaired.html, repaired.palette, "repair-chrome", "app");
+      assert.equal(looksLikeIosWidgetHome(src), false);
+      assert.doesNotMatch(src, /class=\\"fk-ledger\\"|class="fk-ledger"/);
+      assert.doesNotMatch(src, /<dt>Voci<\/dt>/);
+      assert.match(src, /Niente in lista|in lista/);
+      assert.match(src, /border-radius:12px/);
+      assert.match(src, /-apple-system/);
+      assert.doesNotMatch(src, /#f5f5f7|#0071e3/);
     } finally {
       globalThis.fetch = prev;
     }

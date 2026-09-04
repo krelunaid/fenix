@@ -57,8 +57,8 @@ export type ComposedProduct = {
   files: { path: string; content: string }[];
 };
 
-/** Parent SHA of the five-brief before/after. Frozen c8d23321 baseline, not a quality score. */
-export const GRAPHIC_FIVE_PARENT_SHA = "c8d23321fa272536bbcd403ff891fc1eeda828e0";
+/** Parent SHA of the five-brief before/after. Frozen 9bb9a3c baseline, not a quality score. */
+export const GRAPHIC_FIVE_PARENT_SHA = "9bb9a3c7829b956a9db8914928e3d5d85acf4982";
 
 export type GraphicPipelineRun = {
   brief: string;
@@ -465,7 +465,7 @@ function displayStack(t: DesignTokens): string {
     return `"${t.fonts.display}",ui-monospace,"IBM Plex Mono",Menlo,monospace`;
   }
   if (isOperationalApp(t) || t.family === "utility") {
-    return `"${t.fonts.display}",ui-sans-serif,system-ui,"Segoe UI",Roboto,Helvetica,Arial,sans-serif`;
+    return `"${t.fonts.display}",ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif`;
   }
   if (
     t.family === "perfume" ||
@@ -479,7 +479,7 @@ function displayStack(t: DesignTokens): string {
   ) {
     return `"${t.fonts.display}",ui-serif,Georgia,"Times New Roman",serif`;
   }
-  return `"${t.fonts.display}",ui-sans-serif,system-ui,sans-serif`;
+  return `"${t.fonts.display}",ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif`;
 }
 
 function familyChromeCss(t: DesignTokens, grammar: LayoutGrammar): string {
@@ -499,15 +499,16 @@ header{align-items:center}`
               ? `.brand{font-weight:650;letter-spacing:-.03em}`
               : "";
   const nav = operational
-    ? `nav.tabs{border-top:1px solid var(--line);background:var(--surface)}
+    ? `nav.tabs{border-top:1px solid var(--line);background:color-mix(in srgb,var(--surface) 86%,transparent);-webkit-backdrop-filter:saturate(1.8) blur(20px);backdrop-filter:saturate(1.8) blur(20px)}
 nav.tabs button.on{color:var(--accent);background:transparent}
 header{background:var(--surface)}
 .week-day.on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
 .week-day.on .kicker,.week-day.on .count{color:var(--accent-ink)}`
     : grammar.chrome === "tabs"
-      ? `nav.tabs{border-top:2px solid var(--accent);background:var(--surface)}
+      ? `nav.tabs{border-top:2px solid var(--accent);background:color-mix(in srgb,var(--surface) 86%,transparent);-webkit-backdrop-filter:saturate(1.8) blur(20px);backdrop-filter:saturate(1.8) blur(20px)}
 nav.tabs button.on{color:var(--accent);background:color-mix(in srgb,var(--accent) 14%,transparent);border-radius:calc(var(--r) * .4)}`
-      : `nav.rail button.on{color:var(--accent)}`;
+      : `nav.rail{background:color-mix(in srgb,var(--surface) 86%,transparent);-webkit-backdrop-filter:saturate(1.8) blur(20px);backdrop-filter:saturate(1.8) blur(20px)}
+nav.rail button.on{color:var(--accent)}`;
   const matter =
     t.family === "food"
       ? `.ticket{border-left:4px solid var(--accent)}`
@@ -586,7 +587,7 @@ function phoneCss(id: GrammarId): string {
   return `${stage}
 .app{display:grid;grid-template-rows:auto 1fr auto;grid-template-areas:"head" "main" "nav";width:100%;min-height:100dvh}
 header{grid-area:head;padding:14px 16px 10px}
-nav.tabs{grid-area:nav;display:grid;grid-template-columns:repeat(4,1fr);height:calc(64px + env(safe-area-inset-bottom));padding:6px 6px calc(6px + env(safe-area-inset-bottom));border-top:1px solid var(--line);background:color-mix(in srgb,var(--surface) 94%,transparent);position:sticky;bottom:0;z-index:8}
+nav.tabs{grid-area:nav;display:grid;grid-template-columns:repeat(4,1fr);height:calc(64px + env(safe-area-inset-bottom));padding:6px 6px calc(6px + env(safe-area-inset-bottom));border-top:1px solid var(--line);background:color-mix(in srgb,var(--surface) 86%,transparent);-webkit-backdrop-filter:saturate(1.8) blur(20px);backdrop-filter:saturate(1.8) blur(20px);position:sticky;bottom:0;z-index:8}
 nav.tabs button{border:0;background:none;color:var(--muted);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font:600 10px/1.1 var(--body),sans-serif;padding:4px 2px;min-height:44px;min-width:44px;touch-action:manipulation}
 nav.tabs button.on{color:var(--accent)}
 nav.tabs svg{width:24px;height:24px;flex:0 0 24px;overflow:visible;display:block;margin-inline:auto}
@@ -901,9 +902,9 @@ function productHtml(spec: PipelineSpec, tokens: DesignTokens, grammar: LayoutGr
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="${tokens.fonts.href}" rel="stylesheet"/>
 <style data-fenix-phone data-fenix-site data-fenix-craft>
-:root{color-scheme:${scheme};--bg:${p.bg};--surface:${p.surface};--elevated:${p.elevated};--fg:${p.fg};--muted:${p.muted};--accent:${p.accent};--line:${p.line};--accent-ink:${p.accentInk};--success:${p.success};--warning:${p.warning};--r:${tokens.radius};--display:${displayStack(tokens)};--body:"${tokens.fonts.body}",ui-sans-serif,system-ui,sans-serif;--t-h1:${tokens.type.h1};--t-h2:${h2};--t-body:${tokens.type.body};--t-large:${large};--t-headline:1.0625rem;--t-footnote:.8125rem;--t-caption:.6875rem;--ink-loud:${p.fg};--ink-quiet:${p.muted}}
+:root{color-scheme:${scheme};--bg:${p.bg};--surface:${p.surface};--elevated:${p.elevated};--fg:${p.fg};--muted:${p.muted};--accent:${p.accent};--line:${p.line};--accent-ink:${p.accentInk};--success:${p.success};--warning:${p.warning};--r:${tokens.radius};--display:${displayStack(tokens)};--body:"${tokens.fonts.body}",ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;--t-h1:${tokens.type.h1};--t-h2:${h2};--t-body:${tokens.type.body};--t-large:${large};--t-headline:1.0625rem;--t-footnote:.8125rem;--t-caption:.6875rem;--ink-loud:${p.fg};--ink-quiet:${p.muted}}
 *{box-sizing:border-box;margin:0;padding:0}
-html,body{height:100%;background:var(--bg);color:var(--fg);font:400 ${tokens.type.body}/1.29 var(--body),ui-sans-serif,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+html,body{height:100%;background:var(--bg);color:var(--fg);font:400 ${tokens.type.body}/1.29 var(--body),ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}
 body{min-height:100dvh}
 .app{min-height:100dvh;display:flex;flex-direction:column;width:100%}
 header{padding:16px 18px 10px;display:flex;align-items:flex-end;justify-content:space-between;gap:12px}

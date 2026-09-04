@@ -13,7 +13,7 @@ export function looksCheap(html: string, kind?: string) {
   const h = html.toLowerCase();
   if (!html || html.length < 400) return true;
   const appleClone =
-    h.includes("#f5f5f7") && (h.includes("#0071e3") || h.includes("#007aff")) && (h.includes("manrope") || h.includes("sf pro") || h.includes("-apple-system"));
+    h.includes("#f5f5f7") && (h.includes("#0071e3") || h.includes("#007aff")) && (h.includes("sf pro") || h.includes("san francisco"));
   if (isDeskKind(kind)) {
     return appleClone || !h.includes("<nav");
   }

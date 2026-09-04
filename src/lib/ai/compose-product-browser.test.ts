@@ -1323,13 +1323,13 @@ describe("graphic pipeline visual QA D/T/M", () => {
           before,
           after: files,
           palettes,
-          note: "composeProduct+prepareSrcDoc five briefs D/T/M before/after on parent c8d23321. Identity (slot) is independent of meet/slice. Planner/polish LLM skipped (quota). Hash/ΔE are movement floors, not scores. Not a 9/10.",
+          note: "composeProduct+prepareSrcDoc five briefs D/T/M before/after on parent 9bb9a3c. Pocket chrome (system type in coda, tabbar blur) vs workshop/ledger. Identity (slot) is independent of meet/slice. Bottle/dish thumbs remain backlog. Planner/polish LLM skipped (quota). Hash/ΔE are movement floors, not scores. Not a 9/10.",
         },
         null,
         2,
       )}\n`,
     );
-    assert.equal(GRAPHIC_FIVE_PARENT_SHA, "c8d23321fa272536bbcd403ff891fc1eeda828e0");
+    assert.equal(GRAPHIC_FIVE_PARENT_SHA, "9bb9a3c7829b956a9db8914928e3d5d85acf4982");
     assert.equal(files.length, briefs.length * VIEWPORTS.length);
     assert.equal(new Set(files.map((f) => f.sha256)).size, files.length, "after shots must differ");
     assert.equal(new Set(mobileChrome).size, briefs.length, mobileChrome.join(" || "));
@@ -1338,12 +1338,12 @@ describe("graphic pipeline visual QA D/T/M", () => {
     assert.equal(agendaPalette?.display, "Figtree");
     assert.equal(agendaPalette?.bg.toLowerCase(), "#e8eef4");
     assert.equal(agendaPalette?.accent.toLowerCase(), "#1f6f68");
-    const mustMove = /^(profumi-[DTM]|ristorazione-[DTM])\.png$/;
+    const mustMove = /^(agenda|profumi|abbigliamento|repo|ristorazione)-[DTM]\.png$/;
     for (const file of files) {
       const prior = before.find((b) => b.name === file.name);
       assert.ok(prior, file.name);
       if (mustMove.test(file.name)) {
-        assert.notEqual(file.sha256, prior!.sha256, `${file.name} after must move from parent c8d23321`);
+        assert.notEqual(file.sha256, prior!.sha256, `${file.name} after must move from parent 9bb9a3c`);
       }
       assert.equal(existsSync(join(BEFORE, file.name)), true);
     }

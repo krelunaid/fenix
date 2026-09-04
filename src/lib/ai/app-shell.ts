@@ -4,7 +4,8 @@ import { CRAFT_APP_ICON, craftTabNavHtml } from "../projects/craft-icons.ts";
 export const APP_SHELL_INSTRUCTION = `Questa è già un'app telefono funzionante.
 SOSTITUISCI testi, numeri, icone SVG, nomi delle tab e i campi col BRIEF.
 Le 5 icone tab devono essere OGGETTI del mestiere (quaderno, pennino, forno, chiave…), silhouette diverse, leggibili a 24px.
-VIETATO: casetta Lucide, plus in cerchio, omino, hamburger, barre iPhone, lettera in un quadrato, emoji.
+VIETATO: casetta Lucide, plus in cerchio, omino, hamburger, lettera in un quadrato, emoji, coppia #f5f5f7+#0071e3, home a 4 riquadri+Ultimo/Stato, ledger Voci/Limite/Squadra imposto su ogni brief.
+Qualità da tasca: tipo system leggibile in coda al font del mestiere, controlli ≥44px con raggio da tasca, gerarchia mobile, palette dal brief.
 NON cancellare sezioni. NON lasciare main vuoto. NON fare un sito.
 Palette unica dal brief (carta e inchiostro del mestiere, mai clone grigio-sistema + blu-sistema). Date in italiano, non ISO.
 Tieni header.fk-top, main, nav.fk-tab, form, liste, Fenix.load/save.
@@ -37,7 +38,7 @@ export const APP_SHELL_HTML = `<!DOCTYPE html>
 <style>
 :root{--bg:#efe6d4;--surface:#f7f1e4;--fg:#1c1712;--muted:#5c5348;--accent:#3d4a1f;--line:#c4b49a}
 html,body{height:100%;margin:0}
-body{font:400 16px/1.4 "IBM Plex Sans",system-ui,sans-serif;background:var(--bg);color:var(--fg);display:flex;flex-direction:column;min-height:100dvh;overflow:hidden}
+body{font:400 16px/1.4 "IBM Plex Sans",system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--fg);display:flex;flex-direction:column;min-height:100dvh;overflow:hidden}
 </style>
 </head>
 <body>
@@ -67,7 +68,7 @@ body{font:400 16px/1.4 "IBM Plex Sans",system-ui,sans-serif;background:var(--bg)
   var current="home";
   var views={
     home:function(){
-      return '<section class="fk-sheet"><p class="fk-kicker">Oggi</p><dl class="fk-ledger"><div><dt>Voci</dt><dd>'+S.items.length+'</dd></div><div><dt>Limite</dt><dd>'+S.limit+'</dd></div><div><dt>Squadra</dt><dd>'+S.team.length+'</dd></div></dl><p class="fk-last">'+(S.items[0]?S.items[0].t+' · '+S.items[0].n:'Nessuna riga. Compila e salva.')+'</p><button type="button" class="fk-btn" data-go="new">Nuova riga</button></section>';
+      return '<section class="fk-sheet"><p class="fk-kicker">Oggi</p><h2>'+(S.items.length?S.items.length+' in lista':'Niente in lista')+'</h2><p class="fk-last">'+(S.items[0]?S.items[0].t+' · '+S.items[0].n:'Compila e salva la prima riga.')+'</p><button type="button" class="fk-btn" data-go="new">Nuova riga</button></section>';
     },
     new:function(){
       return '<label class="fk-lbl">Valore</label><form class="fk-field" id="fnew"><input name="v" placeholder="Es. 100" required/><button class="fk-btn" type="submit">Salva</button></form><div class="fk-chiprow"><button type="button" class="fk-chip" data-chip="50">+50</button><button type="button" class="fk-chip" data-chip="100">+100</button><button type="button" class="fk-chip" data-chip="250">+250</button></div>';

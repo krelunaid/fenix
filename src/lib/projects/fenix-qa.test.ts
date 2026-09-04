@@ -240,14 +240,19 @@ describe("focus-visible and worker model", () => {
     assert.equal(existsSync(join(root, "src/lib/projects/icon-build.ts")), true);
   });
 
-  it("drops iOS template fallbacks from look, shell, types and cards", () => {
+  it("drops Apple clone pair from look, shell, types and cards", () => {
     const look = readFileSync(join(root, "src/lib/ai/look.ts"), "utf8");
     assert.doesNotMatch(look, /Stile iOS/);
     assert.doesNotMatch(look, /#f5f5f7 #1d1d1f accento #0071e3/);
     const shell = readFileSync(join(root, "src/lib/ai/app-shell.ts"), "utf8");
-    assert.doesNotMatch(shell, /#f5f5f7/);
-    assert.doesNotMatch(shell, /#0071e3/);
-    assert.doesNotMatch(shell, /-apple-system/);
+    const shellHtml = shell.slice(shell.indexOf("export const APP_SHELL_HTML"));
+    assert.match(shell, /coppia #f5f5f7\+#0071e3/);
+    assert.doesNotMatch(shellHtml, /#f5f5f7/);
+    assert.doesNotMatch(shellHtml, /#0071e3/);
+    assert.doesNotMatch(shellHtml, /SF Pro|San Francisco/);
+    assert.match(shellHtml, /IBM Plex Sans.*,.*-apple-system/);
+    assert.match(shellHtml, /Niente in lista|in lista/);
+    assert.doesNotMatch(shellHtml, /class=\\"fk-ledger\\"|class="fk-ledger"/);
     const types = readFileSync(join(root, "src/lib/projects/types.ts"), "utf8");
     assert.doesNotMatch(types, /#f5f5f7/);
     assert.doesNotMatch(types, /#0071e3/);
@@ -264,6 +269,7 @@ describe("focus-visible and worker model", () => {
     assert.match(scheme, /nav\.bottom-tab,nav\.fk-tab\{display:none!important\}/);
     assert.match(scheme, /min-height:44px/);
     assert.match(scheme, /:focus-visible/);
+    assert.match(scheme, /\.fk-btn\{[^}]*border-radius:12px/);
     assert.doesNotMatch(scheme, /max-width:32vw/);
     assert.doesNotMatch(scheme, /\.logo,\.brand[^}]*text-overflow:ellipsis/);
     assert.doesNotMatch(scheme, /nav[^}]*flex-wrap:nowrap!important/);
@@ -391,7 +397,7 @@ describe("focus-visible and worker model", () => {
     assert.doesNotMatch(fiveBrief, /btn\.click\(\)/);
     assert.match(fiveBrief, /width: 320/);
     assert.match(fiveBrief, /getBoundingClientRect/);
-    assert.match(fiveBrief, /parent c8d23321/);
+    assert.match(fiveBrief, /parent 9bb9a3c/);
     const recorded = readFileSync(join(root, "src/lib/ai/repair.recorded.test.ts"), "utf8");
     assert.match(recorded, /POLISH_REPAIR_LIVE_VERIFIED = false/);
     assert.match(recorded, /from "\.\/parse\.ts"/);
@@ -399,11 +405,14 @@ describe("focus-visible and worker model", () => {
     assert.match(recorded, /gateBuildResult/);
     assert.match(recorded, /repairBuild/);
     assert.match(recorded, /CONTRACT_REPAIR_MAX/);
+    assert.match(recorded, /prepareSrcDoc/);
     assert.doesNotMatch(recorded, /stubFromRecorded/);
     assert.doesNotMatch(recorded, /XAI_CHAT_COMPLETIONS_URL/);
     assert.doesNotMatch(compose, /void window\.Fenix\.save/);
     assert.match(compose, /GRAPHIC_FIVE_PARENT_SHA/);
-    assert.match(compose, /c8d23321fa272536bbcd403ff891fc1eeda828e0/);
+    assert.match(compose, /9bb9a3c7829b956a9db8914928e3d5d85acf4982/);
+    assert.match(compose, /backdrop-filter:saturate\(1\.8\) blur\(20px\)/);
+    assert.match(compose, /ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI"/);
     assert.match(compose, /function artOf\(/);
     assert.doesNotMatch(compose, /content:" · in prova"/);
     assert.match(compose, /aria-label="Modifica"/);
@@ -422,7 +431,7 @@ describe("focus-visible and worker model", () => {
     assert.match(compose, /html\[data-family\]::before/);
     assert.match(compose, /function displayStack/);
     assert.match(compose, /function isOperationalApp/);
-    assert.match(compose, /ui-sans-serif,system-ui,"Segoe UI"/);
+    assert.match(compose, /ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI"/);
     assert.equal(existsSync(join(root, "src/lib/projects/agenda-runtime-browser.test.ts")), true);
     const runtime = readFileSync(join(root, "src/lib/projects/color-scheme.ts"), "utf8");
     assert.match(runtime, /function productOwnsList/);
@@ -437,6 +446,8 @@ describe("focus-visible and worker model", () => {
     const craft = readFileSync(join(root, "src/lib/projects/craft-icons.ts"), "utf8");
     assert.match(craft, /data-fenix-id="icon:\$\{t\.id\}"/);
     assert.match(craft, /data-icon-grid="24"/);
+    assert.match(craft, /FIRST_RUN_HOME/);
+    assert.doesNotMatch(craft, /LEDGER_HOME/);
     assert.match(craft, /pot: navIcon/);
     assert.match(craft, /M7\.2 7\.4h9\.6/);
     assert.match(craft, /M7\.2 10\.2H4\.6/);

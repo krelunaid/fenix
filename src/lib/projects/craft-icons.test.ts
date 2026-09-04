@@ -62,7 +62,7 @@ describe("craft icons vs Apple chrome", () => {
     assert.match(recovered.html, /M6 3\.5h11\.5v17H6z/);
   });
 
-  it("rewrites the 4-widget iPhone home into a ledger", () => {
+  it("rewrites the 4-widget iPhone home into a first-run product sheet", () => {
     const widget = `<!DOCTYPE html><html><body>
 <nav class="fk-tab" aria-label="Navigazione"><button data-view="home">Oggi</button><button data-view="new">Nuovo</button><button data-view="list">Elenco</button></nav>
 <script>
@@ -78,7 +78,8 @@ var views={
     assert.equal(looksLikeIosWidgetHome(widget), true);
     const next = rewriteIosWidgetHome(widget);
     assert.equal(looksLikeIosWidgetHome(next), false);
-    assert.match(next, /fk-ledger/);
+    assert.doesNotMatch(next, /fk-ledger/);
+    assert.match(next, /Niente in lista|in lista/);
     assert.doesNotMatch(next, /<span>Ultimo<\/span>/);
     const recovered = recoverPersistedProject({
       id: "taccuino-home",
@@ -87,7 +88,8 @@ var views={
       kind: "app",
       updatedAt: Date.now(),
     });
-    assert.match(recovered.html, /fk-ledger/);
+    assert.doesNotMatch(recovered.html, /fk-ledger/);
+    assert.match(recovered.html, /Niente in lista|in lista/);
     assert.equal(looksLikeIosWidgetHome(recovered.html), false);
   });
 
