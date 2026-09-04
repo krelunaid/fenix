@@ -365,7 +365,12 @@ export async function launchChromiumWith(
     if (!isTransientLaunchError(err)) throw err;
     await opts?.onTransient?.();
     const wait = Math.max(0, Math.min(opts?.backoffMs ?? RETRY_BACKOFF_MS, 200));
-    if (wait) await new Promise((r) => setTimeout(r, wait));
+    if (wait) {
+      const deadline = Date.now() + wait;
+      while (Date.now() < deadline) {
+        await new Promise((r) => setTimeout(r, Math.max(1, deadline - Date.now())));
+      }
+    }
     return launch();
   }
 }

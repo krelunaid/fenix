@@ -186,15 +186,24 @@ describe("domain imagery", () => {
     }
   });
 
-  it("fits perfume and food with meet, crops fashion with slice", () => {
+  it("fits perfume and food heroes with meet, thumbs and fashion with slice", () => {
     const perfume = domainIllustration("perfume", 0, "flacone", 0);
+    const perfumeThumb = domainIllustration("perfume", 0, "flacone", 1);
+    const perfumeWrap = domainIllustration("perfume", 0, "flacone", 4);
     const food = domainIllustration("food", 0, "piatto", 0);
+    const foodThumb = domainIllustration("food", 0, "piatto", 1);
     const fashion = domainIllustration("fashion", 0, "cappotto", 0);
     const hospitality = domainIllustration("hospitality", 0, "camera", 0);
     assert.match(perfume, /preserveAspectRatio="xMidYMid meet"/);
+    assert.match(perfume, /data-fit="meet"/);
+    assert.match(perfumeThumb, /preserveAspectRatio="xMidYMid slice"/);
+    assert.match(perfumeThumb, /data-fit="slice"/);
+    assert.match(perfumeWrap, /preserveAspectRatio="xMidYMid slice"/);
     assert.match(food, /preserveAspectRatio="xMidYMid meet"/);
+    assert.match(foodThumb, /preserveAspectRatio="xMidYMid slice"/);
     assert.match(fashion, /preserveAspectRatio="xMidYMid slice"/);
     assert.match(hospitality, /preserveAspectRatio="xMidYMid slice"/);
+    assert.doesNotMatch(fashion, /preserveAspectRatio="xMidYMid meet"/);
     assert.match(perfume, /width="640"/);
     assert.match(perfume, /height="420"/);
   });

@@ -978,6 +978,8 @@ describe("graphic pipeline visual QA D/T/M", () => {
               assert.doesNotMatch(after || "", /in prova/i);
               const fit = await frame.locator(".hero svg").first().getAttribute("preserveAspectRatio");
               assert.match(fit || "", /meet/);
+              const thumbFit = await frame.locator(".fragrance .thumb svg").first().getAttribute("preserveAspectRatio");
+              assert.match(thumbFit || "", /slice/);
             }
             if (row.id === "ristorazione") {
               assert.equal(bgVar, "#1a1210");
@@ -986,6 +988,8 @@ describe("graphic pipeline visual QA D/T/M", () => {
               assert.match(cap, /Plin al burro/);
               const fit = await frame.locator(".hero svg").first().getAttribute("preserveAspectRatio");
               assert.match(fit || "", /meet/);
+              const thumbFit = await frame.locator(".ticket .thumb svg").first().getAttribute("preserveAspectRatio");
+              assert.match(thumbFit || "", /slice/);
             }
             if (row.id === "agenda") {
               assert.equal(await frame.locator('button[data-view="home"]').count(), 0);
@@ -1014,6 +1018,34 @@ describe("graphic pipeline visual QA D/T/M", () => {
             );
             assert.ok(overflow <= 8, `${row.id}/${vp} overflow ${overflow}`);
             assert.equal(errors.length, 0, `${row.id}/${vp} ${errors.join(" | ")}`);
+            if ((row.id === "profumi" || row.id === "ristorazione") && vp === "D") {
+              const measure = await frame.locator("html").evaluate(() => {
+                const hero = document.querySelector(".hero");
+                const card = document.querySelector(".fragrance, .ticket");
+                const heroSvg = document.querySelector(".hero svg");
+                const thumbSvg = document.querySelector(".fragrance .thumb svg, .ticket .thumb svg");
+                const cap = document.querySelector(".hero .caption");
+                const heroBox = hero?.getBoundingClientRect();
+                const cardBox = card?.getBoundingClientRect();
+                const svgBox = heroSvg?.getBoundingClientRect();
+                const capBox = cap?.getBoundingClientRect();
+                return {
+                  heroH: heroBox?.height ?? 0,
+                  cardH: cardBox?.height ?? 0,
+                  heroFit: heroSvg?.getAttribute("preserveAspectRatio") || "",
+                  thumbFit: thumbSvg?.getAttribute("preserveAspectRatio") || "",
+                  svgBottom: svgBox?.bottom ?? 0,
+                  capTop: capBox?.top ?? 0,
+                  collection: Boolean(document.querySelector(".collection, .tickets")),
+                };
+              });
+              assert.ok(measure.cardH > 80 && measure.cardH < 240, `${row.id} D cardH ${measure.cardH}`);
+              assert.ok(measure.heroH > 0 && measure.cardH < measure.heroH, `${row.id} D hero/card ${measure.heroH}/${measure.cardH}`);
+              assert.match(measure.heroFit, /meet/);
+              assert.match(measure.thumbFit, /slice/);
+              assert.ok(measure.capTop + 0.5 >= measure.svgBottom, `${row.id} caption covers object ${measure.capTop}<${measure.svgBottom}`);
+              assert.equal(measure.collection, true, `${row.id} list wrapper`);
+            }
             const rendered = await frame.locator("html").evaluate(collectRenderedGraphic);
             assert.equal(rendered.leakedText, false, `${row.id} leaked`);
             assert.ok(rendered.headingCount >= 1, `${row.id} heading`);
@@ -1161,13 +1193,13 @@ describe("graphic pipeline visual QA D/T/M", () => {
           before,
           after: files,
           palettes,
-          note: "composeProduct+prepareSrcDoc five briefs D/T/M before/after on parent 4f7235e. Planner/polish LLM skipped (quota). Hash/ΔE are movement floors, not scores. Not a 9/10.",
+          note: "composeProduct+prepareSrcDoc five briefs D/T/M before/after on parent 6d78f612. Planner/polish LLM skipped (quota). Hash/ΔE are movement floors, not scores. Not a 9/10.",
         },
         null,
         2,
       )}\n`,
     );
-    assert.equal(GRAPHIC_FIVE_PARENT_SHA, "4f7235e56c57b92af791a9367c6482d74624de60");
+    assert.equal(GRAPHIC_FIVE_PARENT_SHA, "6d78f612958b1d7b8e3485a6f86eb0edd20b67fc");
     assert.equal(files.length, briefs.length * VIEWPORTS.length);
     assert.equal(new Set(files.map((f) => f.sha256)).size, files.length, "after shots must differ");
     assert.equal(new Set(mobileChrome).size, briefs.length, mobileChrome.join(" || "));
@@ -1176,12 +1208,12 @@ describe("graphic pipeline visual QA D/T/M", () => {
     assert.equal(agendaPalette?.display, "Figtree");
     assert.equal(agendaPalette?.bg.toLowerCase(), "#e8eef4");
     assert.equal(agendaPalette?.accent.toLowerCase(), "#1f6f68");
-    const mustMove = /^(agenda-[TM]|profumi-[DTM]|ristorazione-[DTM])\.png$/;
+    const mustMove = /^(profumi-[DTM]|ristorazione-[DTM])\.png$/;
     for (const file of files) {
       const prior = before.find((b) => b.name === file.name);
       assert.ok(prior, file.name);
       if (mustMove.test(file.name)) {
-        assert.notEqual(file.sha256, prior!.sha256, `${file.name} after must move from parent 4f7235e`);
+        assert.notEqual(file.sha256, prior!.sha256, `${file.name} after must move from parent 6d78f612`);
       }
       assert.equal(existsSync(join(BEFORE, file.name)), true);
     }

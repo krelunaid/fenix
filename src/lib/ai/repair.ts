@@ -1,17 +1,17 @@
-import { parseBuildOutput, type BuildResult } from "./parse";
-import { FENIX_MODEL, XAI_CHAT_COMPLETIONS_URL } from "./model";
-import { REPAIR_PROMPT } from "./prompts.shared";
-import { kindFromPrompt } from "@/lib/projects/infer";
+import { parseBuildOutput, type BuildResult } from "./parse.ts";
+import { FENIX_MODEL, XAI_CHAT_COMPLETIONS_URL } from "./model.ts";
+import { REPAIR_PROMPT } from "./prompts.shared.ts";
+import { kindFromPrompt } from "../projects/infer.ts";
 import {
   gateIncompleteHtml,
   type GateOutcome,
-} from "@/lib/projects/fenix-adapter";
-import type { BuildContract } from "./build-contract";
-import type { ProjectFile } from "@/lib/projects/files";
+} from "../projects/fenix-adapter.ts";
+import type { BuildContract } from "./build-contract.ts";
+import type { ProjectFile } from "../projects/files.ts";
 
-export { REPAIR_PROMPT } from "./prompts.shared";
+export { REPAIR_PROMPT } from "./prompts.shared.ts";
 
-export { ensureFenixAdapter, htmlHasFenixApi, FENIX_ADAPTER_SCRIPT } from "@/lib/projects/fenix-adapter";
+export { ensureFenixAdapter, htmlHasFenixApi, FENIX_ADAPTER_SCRIPT } from "../projects/fenix-adapter.ts";
 export type { GateOutcome };
 
 export async function repairBuild(input: {

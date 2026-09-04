@@ -316,13 +316,17 @@ describe("graphic pipeline prompt→plan→generate→visual→QA", () => {
     assert.equal(runs.find((r) => r.id === "abbigliamento")!.grammar.id, "lookbook");
     assert.equal(runs.find((r) => r.id === "repo")!.grammar.id, "source-timeline");
     assert.equal(runs.find((r) => r.id === "ristorazione")!.grammar.id, "service-board");
-    assert.equal(GRAPHIC_FIVE_PARENT_SHA, "4f7235e56c57b92af791a9367c6482d74624de60");
+    assert.equal(GRAPHIC_FIVE_PARENT_SHA, "6d78f612958b1d7b8e3485a6f86eb0edd20b67fc");
     const profumi = runs.find((r) => r.id === "profumi")!;
     const ristorazione = runs.find((r) => r.id === "ristorazione")!;
     const abbigliamento = runs.find((r) => r.id === "abbigliamento")!;
+    assert.match(profumi.html, /class="collection"/);
     assert.match(profumi.html, /preserveAspectRatio="xMidYMid meet"/);
+    assert.match(profumi.html, /xMidYMid slice/);
     assert.match(ristorazione.html, /preserveAspectRatio="xMidYMid meet"/);
+    assert.match(ristorazione.html, /xMidYMid slice/);
     assert.match(abbigliamento.html, /preserveAspectRatio="xMidYMid slice"/);
+    assert.doesNotMatch(abbigliamento.html, /preserveAspectRatio="xMidYMid meet"/);
     assert.doesNotMatch(profumi.html, /content:" · in prova"/);
     assert.doesNotMatch(ristorazione.html, /content:" · in prova"/);
     assert.match(profumi.html, /Bois de Nuit/);
@@ -363,7 +367,7 @@ describe("graphic pipeline prompt→plan→generate→visual→QA", () => {
     }
   });
 
-  it("freezes five-brief before shots at parent SHA 4f7235e", () => {
+  it("freezes five-brief before shots at parent SHA 6d78f612", () => {
     const here = dirname(fileURLToPath(import.meta.url));
     const before = join(here, "fixtures/graphic/five/before");
     const names = [
@@ -373,7 +377,7 @@ describe("graphic pipeline prompt→plan→generate→visual→QA", () => {
       "repo",
       "ristorazione",
     ].flatMap((id) => ["D", "T", "M"].map((vp) => `${id}-${vp}.png`));
-    assert.equal(GRAPHIC_FIVE_PARENT_SHA, "4f7235e56c57b92af791a9367c6482d74624de60");
+    assert.equal(GRAPHIC_FIVE_PARENT_SHA, "6d78f612958b1d7b8e3485a6f86eb0edd20b67fc");
     assert.equal(existsSync(before), true);
     const listed = readdirSync(before).filter((n) => n.endsWith(".png")).sort();
     assert.deepEqual(listed, [...names].sort());

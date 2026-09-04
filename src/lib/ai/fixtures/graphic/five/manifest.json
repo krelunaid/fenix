@@ -1,5 +1,5 @@
 {
-  "parentSHA": "4f7235e56c57b92af791a9367c6482d74624de60",
+  "parentSHA": "6d78f612958b1d7b8e3485a6f86eb0edd20b67fc",
   "before": [
     {
       "name": "agenda-D.png",
@@ -8,43 +8,43 @@
     },
     {
       "name": "agenda-T.png",
-      "sha256": "77c717ea832fb43b0bc3a0b96f555566184f893378429c854dc64f6d5780c96f",
-      "bytes": 62305
+      "sha256": "efdba8bf2858fab1ba26f0147735bd8c82e7e3f4e5fb10904e6a7cedb52ecd44",
+      "bytes": 59547
     },
     {
       "name": "agenda-M.png",
-      "sha256": "dbbdd4ca4ae7f8ceda55467375f5f623c7cf5936232c06660fb7e1fcfbb7426c",
-      "bytes": 57218
+      "sha256": "2f70c2a9f944cb3d6b53e982d8bafc6f834caeb9290f376aafb284241571702d",
+      "bytes": 54625
     },
     {
       "name": "profumi-D.png",
-      "sha256": "2ae510a185e3d63a72152a6446ed91ab2f0238b74e0c2ca71320ac738ceb286b",
-      "bytes": 214158
+      "sha256": "4fef757fcafcfd06f3b0d90bd186a43c4639c22a5dad093256b50acc69f55368",
+      "bytes": 124881
     },
     {
       "name": "profumi-T.png",
-      "sha256": "ab99ec87f89a483d640cb7875ddec5995acbcbdcb7e0c48eebe63c2728e3f462",
-      "bytes": 149677
+      "sha256": "71674add69ae3bc5969fe15eb2afed23c55bef82053b7af0353846de140b667e",
+      "bytes": 135296
     },
     {
       "name": "profumi-M.png",
-      "sha256": "76439f943512612ee33fd69506f2d16a5a5d082addb950d4d9a8206e1ce513b6",
-      "bytes": 92913
+      "sha256": "2387c16d339f390688ae42ea2bf2ccd684832ce0605af5c73a97d037b758d40d",
+      "bytes": 92294
     },
     {
       "name": "abbigliamento-D.png",
-      "sha256": "ce4b7aa5fe7a0575809b33ae92ec210d31dd995b08e7f2b32733f3955677df0a",
-      "bytes": 712266
+      "sha256": "843e2c29f7db7c0ed9151c25f772948491f4509d57b990e27da70c5e159dd6ad",
+      "bytes": 711014
     },
     {
       "name": "abbigliamento-T.png",
-      "sha256": "382e10f3f6a3ee01ccd67a8c0a9761fbf5d45bbf5be05dc25767f3a967943895",
-      "bytes": 576977
+      "sha256": "67f1a494d72bb0775f32ce203d833c8ee5551ff734f720515a8a934407db3cd6",
+      "bytes": 576295
     },
     {
       "name": "abbigliamento-M.png",
-      "sha256": "6e1d4ac4c3594dc77e52995834830e8f15414e9616ad11fe70949bfd945169d8",
-      "bytes": 253038
+      "sha256": "cf9b61310bab980edd9318f102b3a8409bf092df4845365277f931a6688f3d9e",
+      "bytes": 252412
     },
     {
       "name": "repo-D.png",
@@ -58,23 +58,23 @@
     },
     {
       "name": "repo-M.png",
-      "sha256": "35e3b2f72cc4108ec0fc06a10f9848f00f00b465f74ce7adb9ee26f752e6a1cf",
-      "bytes": 73326
+      "sha256": "cd42647f2f3df2ba0990cc92a90ecff1478e4ca5d9888e7f29b583e9bc92e5ac",
+      "bytes": 70987
     },
     {
       "name": "ristorazione-D.png",
-      "sha256": "2156ef489004c3bf29330be80f2b347acb59943f56660fd78896d137b28b8958",
-      "bytes": 312467
+      "sha256": "7263e1719b4a6b79e95ad487e2817518ffeaf25f3aa94103524ba518840c59f4",
+      "bytes": 219774
     },
     {
       "name": "ristorazione-T.png",
-      "sha256": "574e944be651a0edf4fb7c91819fba992bd1036e5cccf82c1ea619c398bf7411",
-      "bytes": 264058
+      "sha256": "2fdd5562edd26dae5f6ce4e51dc60bd6ec20dc05f2db6cd0f2db4ccac2a9167e",
+      "bytes": 138967
     },
     {
       "name": "ristorazione-M.png",
-      "sha256": "ef41c750cf826f06619c7ff97747e15fc4e6d5d17c3f9a6a9cc22b1c9015163f",
-      "bytes": 131435
+      "sha256": "1080026a942af91b798b3e40f8ea766a0d4e3b22af81a0043bd611f332fa630c",
+      "bytes": 119729
     }
   ],
   "after": [
@@ -88,27 +88,27 @@
     },
     {
       "name": "agenda-M.png",
-      "sha256": "2f70c2a9f944cb3d6b53e982d8bafc6f834caeb9290f376aafb284241571702d"
+      "sha256": "c6a367c65791b8fd074aaf2110273f08a883a59a9f2f2490c1103d03833857b9"
     },
     {
       "name": "profumi-D.png",
-      "sha256": "4fef757fcafcfd06f3b0d90bd186a43c4639c22a5dad093256b50acc69f55368"
+      "sha256": "fa9e959a5a00d383d970f1c1abf380172e1de1b689f8bddca8c15791068e0490"
     },
     {
       "name": "profumi-T.png",
-      "sha256": "71674add69ae3bc5969fe15eb2afed23c55bef82053b7af0353846de140b667e"
+      "sha256": "3c1e8792ea97ca4f312e2098643dda3332b888569455d5beb1e7a664f4fdd4e3"
     },
     {
       "name": "profumi-M.png",
-      "sha256": "2387c16d339f390688ae42ea2bf2ccd684832ce0605af5c73a97d037b758d40d"
+      "sha256": "0cfc0e96ff3c3279fd58f12276f8c47f93de8412a5505921d5fb8ebc84566dbe"
     },
     {
       "name": "abbigliamento-D.png",
-      "sha256": "843e2c29f7db7c0ed9151c25f772948491f4509d57b990e27da70c5e159dd6ad"
+      "sha256": "28844a4b71180670d27f0d8f1027455dc39cb2b9c804645362263539b8b37d77"
     },
     {
       "name": "abbigliamento-T.png",
-      "sha256": "67f1a494d72bb0775f32ce203d833c8ee5551ff734f720515a8a934407db3cd6"
+      "sha256": "e498d5f59e4ea7f916cf51026d60e9d98e6585f5d8d5b0393c42f36eb76c12a1"
     },
     {
       "name": "abbigliamento-M.png",
@@ -128,15 +128,15 @@
     },
     {
       "name": "ristorazione-D.png",
-      "sha256": "7263e1719b4a6b79e95ad487e2817518ffeaf25f3aa94103524ba518840c59f4"
+      "sha256": "4647b7762100e712b31379535be5fc748828e7230aac0f9e97772e8404343b3d"
     },
     {
       "name": "ristorazione-T.png",
-      "sha256": "2fdd5562edd26dae5f6ce4e51dc60bd6ec20dc05f2db6cd0f2db4ccac2a9167e"
+      "sha256": "e7b9a23396b8dc0a054dfb4bff5a2a024f177da0b20dbbba41b6cfed3037ed76"
     },
     {
       "name": "ristorazione-M.png",
-      "sha256": "1080026a942af91b798b3e40f8ea766a0d4e3b22af81a0043bd611f332fa630c"
+      "sha256": "e6e6b5852aaa6c8c575bdbb1f86e77bf8c0e362cd06654745aa5b0a88df60ec9"
     }
   ],
   "palettes": [
@@ -281,5 +281,5 @@
       ]
     }
   ],
-  "note": "composeProduct+prepareSrcDoc five briefs D/T/M before/after on parent 4f7235e. Planner/polish LLM skipped (quota). Hash/ΔE are movement floors, not scores. Not a 9/10."
+  "note": "composeProduct+prepareSrcDoc five briefs D/T/M before/after on parent 6d78f612. Planner/polish LLM skipped (quota). Hash/ΔE are movement floors, not scores. Not a 9/10."
 }

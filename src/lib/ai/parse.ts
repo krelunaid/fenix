@@ -1,8 +1,8 @@
-import { assembleHtml, dropPhoneScreenFiles, ensureScreenFiles, ingestProjectFiles, parseProjectFiles, seedFiveScreens, type ProjectFile } from "@/lib/projects/files";
-import { type Palette, type ProjectKind } from "@/lib/projects/types";
-import { fallbackPaletteFromBrief } from "@/lib/projects/design-tokens";
-import { isPhoneKind } from "@/lib/projects/infer";
-import { fenix2Files } from "@/lib/projects/fenix2";
+import { assembleHtml, dropPhoneScreenFiles, ensureScreenFiles, ingestProjectFiles, parseProjectFiles, seedFiveScreens, type ProjectFile } from "../projects/files.ts";
+import { type Palette, type ProjectKind } from "../projects/types.ts";
+import { fallbackPaletteFromBrief } from "../projects/design-tokens.ts";
+import { isPhoneKind } from "../projects/infer.ts";
+import { fenix2Files } from "../projects/fenix2.ts";
 
 export type BuildResult = {
   name: string;
