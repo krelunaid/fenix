@@ -385,7 +385,7 @@ describe("graphic pipeline prompt→plan→generate→visual→QA", () => {
     assert.match(html, /selectedDay/);
     assert.match(html, /AGENDA_CYCLE/);
     assert.match(html, /prenotato:"confermato"/);
-    assert.match(html, /item\.status=AGENDA_CYCLE/);
+    assert.match(html, /nextStatus=AGENDA_CYCLE/);
     assert.match(html, /e\.day===d\.iso/);
     assert.match(html, /name="ora"/);
     assert.match(html, /name="luogo"/);
@@ -440,9 +440,16 @@ describe("graphic pipeline prompt→plan→generate→visual→QA", () => {
     assert.match(html, /aria-labelledby="day-label"/);
     assert.match(html, /function persistThen/);
     assert.match(html, /data-fenix-persist/);
-    assert.match(html, /item\.status=AGENDA_CYCLE\[item\.status\]\|\|"confermato";\s*\} else \{/);
-    assert.match(html, /item\.kicker=cycle\[item\.kicker\]\|\|item\.kicker;\s*\}\s*render\(\);\s*persistThen\(null,/);
+    assert.match(html, /nextStatus=AGENDA_CYCLE\[item\.status\]\|\|"confermato"/);
+    assert.match(html, /nextKicker=cycle\[item\.kicker\]\|\|item\.kicker;/);
+    assert.match(html, /render\(\);\s*persistThen\(null,/);
     assert.match(html, /function saveOnce/);
+    assert.match(html, /Promise\.resolve\(\)\.then\(function\(\)\{/);
+    assert.match(html, /return window\.Fenix\.save\(COL, payload\)/);
+    assert.doesNotMatch(html, /data=snapAdv/);
+    assert.doesNotMatch(html, /data=snapDel/);
+    assert.doesNotMatch(html, /data=snapWear/);
+    assert.doesNotMatch(html, /if\(persistBusy\) return false/);
     assert.doesNotMatch(html, /void window\.Fenix\.save/);
     assert.doesNotMatch(html, /function save\(\)\{ if\(window\.Fenix\) void/);
   });

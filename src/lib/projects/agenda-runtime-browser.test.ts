@@ -723,3 +723,181 @@ describe("Agenda persist bridge reject/timeout", () => {
     }
   });
 });
+
+function persistHostQueue() {
+  return `<!DOCTYPE html><html><body>
+<iframe id="f" style="width:390px;height:844px;border:0"></iframe>
+<script>
+window.__db = {};
+window.__rejectsLeft = 0;
+window.__delay = 0;
+window.__saves = [];
+window.__okSaves = [];
+window.__seen = {};
+window.addEventListener("message", function(e){
+  var m=e.data;
+  if(!m || m.t!=="fenix-db" || !m.id) return;
+  if(window.__seen[m.id]) return;
+  window.__seen[m.id]=1;
+  var ack=function(){
+    if(m.op==="load"){
+      e.source.postMessage({t:"fenix-db",id:m.id,v:window.__db[m.col]||null},"*");
+      return;
+    }
+    var copy=m.data;
+    try { copy=JSON.parse(JSON.stringify(m.data)); } catch(err) {}
+    window.__saves.push(copy);
+    if(window.__rejectsLeft>0){
+      window.__rejectsLeft -= 1;
+      e.source.postMessage({t:"fenix-db",id:m.id,v:{ok:false,error:"bridge-reject",durable:0}},"*");
+      return;
+    }
+    window.__db[m.col]=m.data;
+    window.__okSaves.push(copy);
+    var n=Array.isArray(m.data&&m.data.items)?m.data.items.length:0;
+    e.source.postMessage({t:"fenix-db",id:m.id,v:{ok:true,v:m.data,durable:n}},"*");
+  };
+  if(m.op==="save" && window.__delay) setTimeout(ack, window.__delay);
+  else ack();
+});
+</script></body></html>`;
+}
+
+describe("Agenda persist queue rebase", () => {
+  it("keeps the second advance when the first persist double-rejects, and a sync throw clears busy", async () => {
+    const composed = composeProduct(BRIEF);
+    const html = withFenixNow(composed.html, 2026, 9, 4);
+    const browser = await launchChromium();
+    try {
+      const page = await isolatedPage(browser, { viewport: { width: 390, height: 844 } });
+      page.setDefaultTimeout(20000);
+      await page.setContent(persistHostQueue());
+      const src = prepareSrcDoc(html, composed.tokens.palette, "agenda-queue-rebase", "app");
+      const load = () =>
+        page.locator("#f").evaluate((el, srcDoc: string) => {
+          (el as HTMLIFrameElement).srcdoc = srcDoc;
+        }, src);
+      await load();
+      const frame = page.frameLocator("#f");
+      await frame.locator("[data-fenix-ready]").waitFor({ timeout: 8000 });
+
+      async function createSlot(title: string) {
+        await frame.locator("html:not([data-fenix-persist='busy'])").waitFor({ timeout: 8000 });
+        await frame.locator('nav button[data-view="nuovo"]').click();
+        await frame.locator("#n").fill(title);
+        await frame.locator("#ora").fill(title.startsWith("Alpha") ? "09:10" : "09:40");
+        await frame.locator("#data").fill("2026-09-04");
+        await frame.locator("#luogo").fill("Sala coda");
+        await frame.locator("#cliente").fill("Noa");
+        await frame.locator("#fnew [data-act='save']").click();
+        await frame.getByRole("heading", { name: title, exact: true }).waitFor({ timeout: 8000 });
+        await frame.locator("html:not([data-fenix-persist='busy'])").waitFor({ timeout: 8000 });
+      }
+
+      await createSlot("Alpha coda");
+      await createSlot("Beta coda");
+      assert.equal(await frame.locator('article.slot:has-text("Alpha coda")').getAttribute("data-status"), "prenotato");
+      assert.equal(await frame.locator('article.slot:has-text("Beta coda")').getAttribute("data-status"), "prenotato");
+      const okBefore = await page.evaluate(
+        () => (window as unknown as { __okSaves: unknown[] }).__okSaves.length,
+      );
+
+      await page.evaluate(() => {
+        const w = window as unknown as { __rejectsLeft: number; __delay: number };
+        w.__rejectsLeft = 2;
+        w.__delay = 600;
+      });
+      await frame.locator('article.slot:has-text("Alpha coda") [data-act="advance"]').click();
+      await frame.locator('article.slot:has-text("Beta coda") [data-act="advance"]').click();
+      await frame.locator('article.slot:has-text("Alpha coda")[data-status="confermato"]').waitFor({ timeout: 4000 });
+      await frame.locator('article.slot:has-text("Beta coda")[data-status="confermato"]').waitFor({ timeout: 4000 });
+      await frame.locator("#err:not([hidden])").waitFor({ timeout: 8000 });
+      await frame.locator("html:not([data-fenix-persist='busy'])").waitFor({ timeout: 8000 });
+      assert.equal(
+        await frame.locator('article.slot:has-text("Alpha coda")').getAttribute("data-status"),
+        "prenotato",
+        "first advance rolls back only Alpha",
+      );
+      assert.equal(
+        await frame.locator('article.slot:has-text("Beta coda")').getAttribute("data-status"),
+        "confermato",
+        "second advance is not wiped by the first rollback",
+      );
+      const toastOpen = await frame.locator("#toast:not([hidden])").count();
+      assert.equal(
+        await frame.locator('article.slot:has-text("Beta coda")').getAttribute("data-status"),
+        "confermato",
+      );
+      if (toastOpen) {
+        assert.equal(
+          await frame.locator('article.slot:has-text("Beta coda")').getAttribute("data-status"),
+          "confermato",
+          "toast is real Beta success, not a wipe of both rows",
+        );
+      }
+      await page.waitForFunction(() => {
+        const db = (window as unknown as { __db: Record<string, { items?: { title?: string; status?: string }[] }> }).__db;
+        const items = db && db.slot && Array.isArray(db.slot.items) ? db.slot.items : [];
+        const alpha = items.find((row) => row.title === "Alpha coda");
+        const beta = items.find((row) => row.title === "Beta coda");
+        return alpha && alpha.status === "prenotato" && beta && beta.status === "confermato";
+      });
+      const okSaves = await page.evaluate((skip: number) => {
+        const w = window as unknown as { __okSaves: { items?: { title?: string; status?: string }[] }[] };
+        return (w.__okSaves || []).slice(skip).map((pack) =>
+          (pack.items || [])
+            .filter((row) => row.title === "Alpha coda" || row.title === "Beta coda")
+            .map((row) => `${row.title}:${row.status}`),
+        );
+      }, okBefore);
+      assert.ok(okSaves.length >= 1, "Beta persist succeeded");
+      assert.ok(
+        okSaves.some((shot) => shot.includes("Beta coda:confermato")),
+        `ok payload missing Beta confermato: ${okSaves.map((s) => s.join(",")).join(" | ")}`,
+      );
+      for (const shot of okSaves) {
+        assert.equal(
+          shot.includes("Beta coda:prenotato") && !shot.includes("Beta coda:confermato"),
+          false,
+          `false success wiped Beta: ${shot.join(",")}`,
+        );
+      }
+
+      await load();
+      await frame.locator("[data-fenix-ready]").waitFor({ timeout: 8000 });
+      await frame.getByRole("heading", { name: "Alpha coda", exact: true }).waitFor({ timeout: 8000 });
+      await frame.getByRole("heading", { name: "Beta coda", exact: true }).waitFor({ timeout: 8000 });
+      assert.equal(await frame.locator('article.slot:has-text("Alpha coda")').getAttribute("data-status"), "prenotato");
+      assert.equal(
+        await frame.locator('article.slot:has-text("Beta coda")').getAttribute("data-status"),
+        "confermato",
+        "Beta status persisted across reload",
+      );
+
+      await page.evaluate(() => {
+        const w = window as unknown as { __delay: number; __rejectsLeft: number };
+        w.__delay = 0;
+        w.__rejectsLeft = 0;
+      });
+      await frame.locator("html").evaluate(() => {
+        const host = (window as unknown as { Fenix: { save: (c: string, d: unknown) => unknown } }).Fenix;
+        host.save = function () {
+          throw new Error("sync-save");
+        };
+      });
+      const beforeThrow = await frame.locator('article.slot:has-text("Beta coda")').getAttribute("data-status");
+      await frame.locator('article.slot:has-text("Beta coda") [data-act="advance"]').click();
+      await frame.locator("#err:not([hidden])").waitFor({ timeout: 8000 });
+      await frame.locator("html:not([data-fenix-persist='busy'])").waitFor({ timeout: 8000 });
+      assert.equal(await frame.locator("html").getAttribute("data-fenix-persist"), null, "sync throw does not stick busy");
+      assert.equal(
+        await frame.locator('article.slot:has-text("Beta coda")').getAttribute("data-status"),
+        beforeThrow,
+        "sync throw rolls back the thrown advance",
+      );
+      await page.close();
+    } finally {
+      await browser.close();
+    }
+  });
+});

@@ -1004,7 +1004,10 @@ var flashGen=0;
 function cloneData(){ try { return JSON.parse(JSON.stringify(data)); } catch(err) { return {items:(data.items||[]).slice()}; } }
 function saveOnce(){
   if(!window.Fenix || !window.Fenix.save) return Promise.resolve({ok:true});
-  return Promise.resolve(window.Fenix.save(COL, data)).then(function(res){
+  var payload=cloneData();
+  return Promise.resolve().then(function(){
+    return window.Fenix.save(COL, payload);
+  }).then(function(res){
     if(res && typeof res==="object" && "ok" in res && res.ok===false){
       var msg=res.error||res.message||(res.timeout?"Tempo scaduto.":"Salvataggio non riuscito.");
       var err=new Error(msg);
@@ -1051,13 +1054,17 @@ function persistThen(afterOk, afterFail){
   persistDepth+=1;
   markPersist(true);
   persistTail=persistTail.catch(function(){ return true; }).then(function(){
-    return save().then(function(){
+    return Promise.resolve().then(function(){
+      return save();
+    }).then(function(){
       ping(true);
-      if(afterOk) afterOk();
-      else render();
+      try {
+        if(afterOk) afterOk();
+        else render();
+      } catch (e) {}
       return true;
     }).catch(function(err){
-      if(afterFail) afterFail();
+      try { if(afterFail) afterFail(); } catch (e2) {}
       flashErr(err && err.message ? err.message : "Salvataggio non riuscito.");
       ping(false);
       return false;
@@ -1071,7 +1078,6 @@ function persistThen(afterOk, afterFail){
 }
 function commitForm(f){
   if(!f || f.id!=="fnew") return false;
-  if(persistBusy) return false;
   if(typeof f.checkValidity==="function" && !f.checkValidity()){
     if(typeof f.reportValidity==="function") f.reportValidity();
     var bad=f.querySelector(":invalid");
@@ -1086,11 +1092,12 @@ function commitForm(f){
     ping(false); return false;
   }
   var wasEdit=!!editId;
-  var snap=cloneData();
   var snapView=view, snapEdit=editId, snapDay=selectedDay;
   var keep={n:nome,ora:"",data:"",luogo:"",cliente:"",k:(f.k&&f.k.value||""),note:(f.note&&f.note.value||"")};
   var nextView=tabDefs[0].id;
   var nextDay=selectedDay;
+  var createdId=null;
+  var prevRow=null;
   if(grammarId==="agenda"){
     hydrateAgenda();
     var ora=(f.ora&&f.ora.value||"").trim();
@@ -1107,7 +1114,9 @@ function commitForm(f){
     var cliente=(f.cliente&&f.cliente.value||"").trim()||"—";
     keep.ora=ora; keep.data=giorno; keep.luogo=luogo; keep.cliente=cliente;
     var prev=wasEdit?data.items.find(function(x){return x.id===editId;}):null;
+    prevRow=prev?JSON.parse(JSON.stringify(prev)):null;
     var row={id:wasEdit?editId:("n"+Date.now()),title:nome,kicker:ora,note:luogo+" · "+cliente,meta:(prev&&prev.meta)||"30 min",status:(prev&&prev.status)||"prenotato",day:giorno};
+    createdId=row.id;
     if(wasEdit){
       var idx=data.items.findIndex(function(x){return x.id===editId;});
       if(idx>=0) data.items[idx]=row;
@@ -1117,7 +1126,17 @@ function commitForm(f){
     nextDay=giorno;
     nextView=giorno===todayIso()?tabDefs[0].id:tabDefs[2].id;
   } else {
-    data.items.unshift({id:"n"+Date.now(),title:nome,kicker:(f.k&&f.k.value||"").trim()||census,note:(f.note&&f.note.value||"").trim()||"—",meta:"nuovo"});
+    var prevGeneric=wasEdit?data.items.find(function(x){return x.id===editId;}):null;
+    prevRow=prevGeneric?JSON.parse(JSON.stringify(prevGeneric)):null;
+    var genericRow={id:wasEdit?editId:("n"+Date.now()),title:nome,kicker:(f.k&&f.k.value||"").trim()||census,note:(f.note&&f.note.value||"").trim()||"—",meta:(prevGeneric&&prevGeneric.meta)||"nuovo"};
+    createdId=genericRow.id;
+    if(wasEdit){
+      var gidx=data.items.findIndex(function(x){return x.id===editId;});
+      if(gidx>=0) data.items[gidx]=genericRow;
+      else data.items.unshift(genericRow);
+    } else {
+      data.items.unshift(genericRow);
+    }
     nextView=tabDefs[0].id;
   }
   return persistThen(function(){
@@ -1127,10 +1146,19 @@ function commitForm(f){
     try { f.reset(); } catch(err) {}
     render();
   }, function(){
-    data=snap;
+    if(wasEdit){
+      var i=data.items.findIndex(function(x){return x.id===createdId;});
+      if(prevRow){
+        if(i>=0) data.items[i]=prevRow;
+        else data.items.unshift(prevRow);
+      }
+    } else {
+      data.items=data.items.filter(function(x){return x.id!==createdId;});
+    }
     view=snapView;
     editId=snapEdit;
     selectedDay=snapDay;
+    render();
     restoreForm(keep);
   });
 }
@@ -1282,14 +1310,18 @@ ${
     cliente=parts.slice(1).join(" · ");
   }
   return '<section class="card span" data-fenix-crud data-agenda-form="'+(editing?"edit":"create")+'"><p class="kicker">'+(editing?"Modifica":"Nuovo")+'</p><h2>'+(editing?"Aggiorna slot":formTitle)+'</h2><form id="fnew"><label for="n">Prestazione</label><input class="field" id="n" name="n" required placeholder="Es. Taglio e piega" value="'+title+'"><label for="ora">Ora</label><input class="field" id="ora" name="ora" type="time" required placeholder="09:30" value="'+(ora||"09:00")+'"><label for="data">Data</label><input class="field" id="data" name="data" type="date" required value="'+giorno+'"><label for="luogo">Luogo</label><input class="field" id="luogo" name="luogo" placeholder="Sala 1" value="'+luogo+'"><label for="cliente">Cliente</label><input class="field" id="cliente" name="cliente" placeholder="Nome del cliente" value="'+cliente+'"><p class="notes" data-fenix-form-error role="alert" hidden>Controlla i campi obbligatori.</p><button class="btn" type="button" data-act="save" style="margin-top:14px;width:100%">'+(editing?"Salva modifiche":cta)+'</button></form></section>';`
-    : `  return '<section class="card span" data-fenix-crud><p class="kicker">Nuovo</p><h2>'+formTitle+'</h2><form id="fnew"><label for="n">Nome</label><input class="field" id="n" name="n" required placeholder="Nome"><label for="k">Dettaglio</label><input class="field" id="k" name="k" placeholder="stato, taglia, ora"><label for="note">Nota</label><input class="field" id="note" name="note" placeholder="materia"><button class="btn" type="button" data-act="save" style="margin-top:14px;width:100%">'+cta+"</button></form></section>";`
+    : `  var editing=editId?data.items.find(function(x){return x.id===editId;}):null;
+  var title=editing?editing.title:"";
+  var det=editing?editing.kicker:"";
+  var nota=editing?editing.note:"";
+  return '<section class="card span" data-fenix-crud><p class="kicker">'+(editing?"Modifica":"Nuovo")+'</p><h2>'+(editing?"Aggiorna voce":formTitle)+'</h2><form id="fnew"><label for="n">Nome</label><input class="field" id="n" name="n" required placeholder="Nome" value="'+title+'"><label for="k">Dettaglio</label><input class="field" id="k" name="k" placeholder="stato, taglia, ora" value="'+det+'"><label for="note">Nota</label><input class="field" id="note" name="note" placeholder="materia" value="'+nota+'"><p class="notes" data-fenix-form-error role="alert" hidden>Controlla i campi obbligatori.</p><button class="btn" type="button" data-act="save" style="margin-top:14px;width:100%">'+(editing?"Salva modifiche":cta)+'</button></form></section>';`
 }
 }
 function renderList(){
   var html='<div class="card span"><p class="kicker">Archivio</p><h2>'+data.items.length+" voci</h2></div>";
   if(!data.items.length) html+=emptyBox();
   data.items.forEach(function(e){
-    html+='<div class="card" data-id="'+e.id+'"><div style="display:flex;justify-content:space-between;gap:8px"><h2>'+e.title+'</h2><button class="btn sm ghost" data-act="del" data-id="'+e.id+'">Archivia</button></div><p class="notes">'+(e.status?chip(e.status)+" · ":"")+e.note+" · "+e.meta+(e.kicker?" · "+e.kicker:"")+(e.day?" · "+e.day:"")+"</p></div>";
+    html+='<div class="card" data-id="'+e.id+'"><div style="display:flex;justify-content:space-between;gap:8px"><h2>'+e.title+'</h2><div class="slot-actions"><button class="btn sm ghost" data-act="edit" data-id="'+e.id+'">Modifica</button><button class="btn sm ghost" data-act="del" data-id="'+e.id+'">Archivia</button></div></div><p class="notes">'+(e.status?chip(e.status)+" · ":"")+e.note+" · "+e.meta+(e.kicker?" · "+e.kicker:"")+(e.day?" · "+e.day:"")+"</p></div>";
   });
   return html;
 }
@@ -1341,7 +1373,7 @@ function renderSource(mode){
     html+='<div class="timeline"><div class="timeline-art">'+(mode==="branches"?arts[1]||hero:hero)+'</div>';
     if(!data.items.length) html+=emptyBox();
     data.items.forEach(function(e,i){
-      html+='<article class="commit" data-id="'+e.id+'" data-hash="'+shaOf(e)+'" data-act="wear" data-state="'+(i===0?"on":"idle")+'"><span class="sha">'+shaOf(e)+'</span><div><h2>'+e.title+'</h2><p class="notes">'+e.note+' · '+e.kicker+'</p></div>'+chip(e.meta||e.kicker)+"</article>";
+      html+='<article class="commit" data-id="'+e.id+'" data-hash="'+shaOf(e)+'" data-act="wear" data-state="'+(i===0?"on":"idle")+'"><span class="sha">'+shaOf(e)+'</span><div><h2>'+e.title+'</h2><p class="notes">'+e.note+' · '+e.kicker+'</p><div class="slot-actions"><button class="btn sm ghost" data-act="edit" data-id="'+e.id+'">Modifica</button><button class="btn sm ghost" data-act="del" data-id="'+e.id+'">Archivia</button></div></div>'+chip(e.meta||e.kicker)+"</article>";
     });
     html+="</div>";
     var branches={};
@@ -1439,37 +1471,69 @@ document.getElementById("root").addEventListener("click",function(e){
   }
   if(act==="save"){ commitForm(b.closest("form") || document.getElementById("fnew")); return; }
   if(act==="del"){
-    var snapDel=cloneData();
+    var idxDel=data.items.findIndex(function(x){return x.id===id;});
+    var removed=idxDel>=0?data.items[idxDel]:null;
     data.items=data.items.filter(function(x){return x.id!==id;});
     render();
-    persistThen(null, function(){ data=snapDel; render(); });
+    persistThen(null, function(){
+      if(!removed || data.items.some(function(x){return x.id===id;})) return;
+      data.items.splice(Math.min(idxDel, data.items.length), 0, removed);
+      render();
+    });
     return;
   }
-  if(act==="edit"){ editId=id; view=tabDefs[1].id; render(); return; }
+  if(act==="edit"){
+    editId=id;
+    view=grammarId==="source-timeline"?tabDefs[2].id:tabDefs[1].id;
+    render();
+    return;
+  }
   if(act==="wear"){
     var row=data.items.find(function(x){return x.id===id;});
     if(!row) return;
-    var snapWear=cloneData();
+    var prevIds=data.items.map(function(x){return x.id;});
     data.items=[row].concat(data.items.filter(function(x){return x.id!==id;}));
     render();
     persistThen(function(){
       if(grammarId!=="source-timeline") view=tabDefs[2].id;
       render();
-    }, function(){ data=snapWear; render(); });
+    }, function(){
+      var map={};
+      data.items.forEach(function(x){ map[x.id]=x; });
+      var next=[];
+      prevIds.forEach(function(pid){ if(map[pid]) next.push(map[pid]); });
+      data.items.forEach(function(x){ if(prevIds.indexOf(x.id)<0) next.push(x); });
+      data.items=next;
+      render();
+    });
     return;
   }
   if(act==="advance"){
     var item=data.items.find(function(x){return x.id===id;});
     if(!item) return;
-    var snapAdv=cloneData();
+    var prevStatus=item.status;
+    var prevKicker=item.kicker;
+    var nextStatus=item.status;
+    var nextKicker=item.kicker;
     if(grammarId==="agenda"){
-      item.status=AGENDA_CYCLE[item.status]||"confermato";
+      nextStatus=AGENDA_CYCLE[item.status]||"confermato";
+      item.status=nextStatus;
     } else {
       var cycle={scouting:"trattativa",trattativa:"firma",firma:"chiuso",chiuso:"scouting","in-forno":"al-passo","al-passo":"in-sala","in-sala":"in-forno",arrivo:"in-house","in-house":"partenza",partenza:"arrivo"};
-      item.kicker=cycle[item.kicker]||item.kicker;
+      nextKicker=cycle[item.kicker]||item.kicker;
+      item.kicker=nextKicker;
     }
     render();
-    persistThen(null, function(){ data=snapAdv; render(); });
+    persistThen(null, function(){
+      var cur=data.items.find(function(x){return x.id===id;});
+      if(!cur) return;
+      if(grammarId==="agenda"){
+        if(cur.status===nextStatus) cur.status=prevStatus;
+      } else if(cur.kicker===nextKicker){
+        cur.kicker=prevKicker;
+      }
+      render();
+    });
   }
 });
 document.getElementById("root").addEventListener("keydown",function(e){

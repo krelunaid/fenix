@@ -348,9 +348,13 @@ describe("focus-visible and worker model", () => {
     assert.match(compose, /id="day-label"/);
     assert.match(compose, /function persistThen/);
     assert.match(compose, /data-fenix-persist/);
-    assert.match(compose, /item\.status=AGENDA_CYCLE\[item\.status\]\|\|"confermato";/);
+    assert.match(compose, /nextStatus=AGENDA_CYCLE\[item\.status\]\|\|"confermato"/);
     assert.match(compose, /render\(\);\s*persistThen\(null,/);
+    assert.match(compose, /return window\.Fenix\.save\(COL, payload\)/);
+    assert.match(compose, /if\(cur\.status===nextStatus\) cur\.status=prevStatus/);
+    assert.doesNotMatch(compose, /data=snapAdv/);
     assert.doesNotMatch(compose, /if\(persistBusy\) return;/);
+    assert.doesNotMatch(compose, /if\(persistBusy\) return false/);
     assert.doesNotMatch(compose, /home universale grigia/);
     assert.doesNotMatch(compose, /due riquadri vuoti/);
     assert.doesNotMatch(compose, /"label":"Scarto"/);
@@ -361,6 +365,8 @@ describe("focus-visible and worker model", () => {
     assert.match(agendaRuntime, /setTimeout\(ack, 600\)/);
     assert.match(agendaRuntime, /\[data-status="confermato"\]/);
     assert.match(agendaRuntime, /data-fenix-persist='busy'/);
+    assert.match(agendaRuntime, /Alpha coda/);
+    assert.match(agendaRuntime, /__rejectsLeft/);
     assert.doesNotMatch(compose, /void window\.Fenix\.save/);
     assert.match(compose, /GRAPHIC_FIVE_PARENT_SHA/);
     assert.match(compose, /data-family=/);

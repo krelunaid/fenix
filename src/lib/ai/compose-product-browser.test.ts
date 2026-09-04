@@ -52,6 +52,44 @@ window.addEventListener("message", function(e){
 });
 </script></body></html>`;
 
+async function iframeHeadingCount(page: Page, title: string): Promise<number> {
+  return page.locator("#f").evaluate((el, t) => {
+    const doc = (el as HTMLIFrameElement).contentDocument;
+    if (!doc) return 0;
+    return [...doc.querySelectorAll("h2")].filter((node) => (node.textContent || "").trim() === t).length;
+  }, title);
+}
+
+async function waitIframeHeading(page: Page, title: string, timeout = 8000) {
+  await page.waitForFunction(
+    (t) => {
+      const el = document.querySelector("#f") as HTMLIFrameElement | null;
+      const doc = el && el.contentDocument;
+      if (!doc) return false;
+      return [...doc.querySelectorAll("h2")].some((node) => (node.textContent || "").trim() === t);
+    },
+    title,
+    { timeout },
+  );
+}
+
+async function clickActOnHeading(page: Page, title: string, act: "edit" | "del") {
+  const ok = await page.locator("#f").evaluate(
+    (el, payload: { t: string; act: string }) => {
+      const doc = (el as HTMLIFrameElement).contentDocument;
+      if (!doc) return false;
+      const heading = [...doc.querySelectorAll("h2")].find((node) => (node.textContent || "").trim() === payload.t);
+      const root = heading && heading.closest("article, div.card");
+      const btn = root && (root.querySelector(`[data-act="${payload.act}"]`) as HTMLElement | null);
+      if (!btn) return false;
+      btn.click();
+      return true;
+    },
+    { t: title, act },
+  );
+  assert.equal(ok, true, `${act} control for ${title}`);
+}
+
 async function shot(page: Page, name: string, dir = SHOTS) {
   mkdirSync(dir, { recursive: true });
   const dest = join(dir, name);
@@ -986,7 +1024,7 @@ describe("graphic pipeline visual QA D/T/M", () => {
             assert.equal(await submit.count(), 1, `${row.id} form submit`);
             await frame.locator("html:not([data-fenix-persist='busy'])").waitFor({ timeout: 8000 });
             await submit.click();
-            await frame.locator("h2").filter({ hasText: created }).waitFor({ timeout: 8000 });
+            await waitIframeHeading(page, created);
             await frame.locator("html:not([data-fenix-persist='busy'])").waitFor({ timeout: 8000 });
             await page.waitForFunction(
               (title) => {
@@ -1006,7 +1044,62 @@ describe("graphic pipeline visual QA D/T/M", () => {
             assert.doesNotMatch(body, /due riquadri vuoti/);
             await load();
             await frame.locator("[data-fenix-ready]").waitFor({ timeout: 8000 });
-            await frame.locator("h2").filter({ hasText: created }).waitFor({ timeout: 8000 });
+            await waitIframeHeading(page, created);
+
+            const updated = `${created} edit`;
+            if (row.id !== "agenda" && row.id !== "repo") {
+              await frame.locator("nav button[data-view]").nth(2).click();
+            }
+            await clickActOnHeading(page, created, "edit");
+            await frame.locator("#n").waitFor({ timeout: 4000 });
+            await frame.locator("#n").fill(updated);
+            if ((await frame.locator("#ora").count()) === 1) {
+              await frame.locator("#ora").fill("10:15");
+            }
+            await frame.locator("html:not([data-fenix-persist='busy'])").waitFor({ timeout: 8000 });
+            await frame.locator("#fnew button[type='submit'], #fnew [data-act='save']").click();
+            await waitIframeHeading(page, updated);
+            assert.equal(await iframeHeadingCount(page, created), 0, `${row.id}/${vp} update`);
+            await frame.locator("html:not([data-fenix-persist='busy'])").waitFor({ timeout: 8000 });
+            await page.waitForFunction(
+              (title) => {
+                const db = (window as unknown as { __db?: Record<string, { items?: { title?: string }[] }> }).__db;
+                if (!db) return false;
+                return Object.keys(db).some((key) => {
+                  const items = db[key] && Array.isArray(db[key]!.items) ? db[key]!.items : [];
+                  return items.some((item) => item.title === title);
+                });
+              },
+              updated,
+              { timeout: 8000 },
+            );
+            await load();
+            await frame.locator("[data-fenix-ready]").waitFor({ timeout: 8000 });
+            await waitIframeHeading(page, updated);
+            assert.equal(await iframeHeadingCount(page, created), 0, `${row.id}/${vp} update reload`);
+
+            if (row.id !== "agenda" && row.id !== "repo") {
+              await frame.locator("nav button[data-view]").nth(2).click();
+            }
+            await clickActOnHeading(page, updated, "del");
+            await frame.locator("html:not([data-fenix-persist='busy'])").waitFor({ timeout: 8000 });
+            assert.equal(await iframeHeadingCount(page, updated), 0, `${row.id}/${vp} delete`);
+            await page.waitForFunction(
+              (title) => {
+                const db = (window as unknown as { __db?: Record<string, { items?: { title?: string }[] }> }).__db;
+                if (!db) return true;
+                return Object.keys(db).every((key) => {
+                  const items = db[key] && Array.isArray(db[key]!.items) ? db[key]!.items : [];
+                  return items.every((item) => item.title !== title);
+                });
+              },
+              updated,
+              { timeout: 8000 },
+            );
+            await load();
+            await frame.locator("[data-fenix-ready]").waitFor({ timeout: 8000 });
+            assert.equal(await iframeHeadingCount(page, updated), 0, `${row.id}/${vp} delete reload`);
+            assert.equal(errors.length, 0, `${row.id}/${vp} console after CRUD: ${errors.join(" | ")}`);
             void dest;
           } finally {
             await page.close();
