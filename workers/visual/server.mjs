@@ -673,7 +673,7 @@ async function polish(prompt, html, instruction, kind) {
   if (looksLikeIconInstruction(instruction)) {
     const verdict = applyIconRevision({ html, files: [], instruction });
     if (verdict.status !== "ok") {
-      return { html, meta: {}, log: verdict.log.length ? verdict.log : [verdict.reason], files: [] };
+      throw new Error(verdict.reason || "Modifica icona non applicata. La versione precedente resta invariata.");
     }
     return {
       html: verdict.html,
@@ -1029,19 +1029,10 @@ const server = createServer(async (req, res) => {
         : await polish(prompt, html, instruction, kind);
       const broken = scriptsSyntax(result.html);
       if (broken) {
-        if (isBuild) {
-          job.status = "err";
-          job.error = `HTML non valido: ${broken}`;
-          job.log = [...result.log, job.error];
-          if (projectId && activeByProject.get(projectId) === id) activeByProject.delete(projectId);
-          return;
-        }
-        job.status = "ok";
-        job.html = html;
-        job.meta = result.meta;
-        job.log = [...result.log, `Rifinitura scartata (${broken}). Resta la bozza.`];
-        job.files = [];
-        return;
+        job.log = result.log || [];
+        // A rejected artifact is not a completed edit. The common error path
+        // leaves html unset and still schedules cleanup for this terminal job.
+        throw new Error(`HTML non valido: ${broken}`);
       }
       job.status = "ok";
       job.html = result.html;
