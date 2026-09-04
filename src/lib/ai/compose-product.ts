@@ -57,8 +57,8 @@ export type ComposedProduct = {
   files: { path: string; content: string }[];
 };
 
-/** Parent SHA of the five-brief before/after. Frozen 8d98b42 baseline, not a quality score. */
-export const GRAPHIC_FIVE_PARENT_SHA = "8d98b427620f75b460433c0de8882d89b4573730";
+/** Parent SHA of the five-brief before/after. Frozen 4f7235e baseline, not a quality score. */
+export const GRAPHIC_FIVE_PARENT_SHA = "4f7235e56c57b92af791a9367c6482d74624de60";
 
 export type GraphicPipelineRun = {
   brief: string;
@@ -404,12 +404,21 @@ function synthesizeSpec(brief: string): PipelineSpec {
   };
 }
 
+const AGENDA_EDIT_GLYPH =
+  '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13.6 6.2 18.2 10.8 10.4 18.6H6.4v-4z"/><path d="M12.8 7.2l4.2 4.2"/></svg>';
+const AGENDA_DEL_GLYPH =
+  '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6.2 8.2h11.6v10.2H6.2z"/><path d="M5.6 5.8h12.8v2.4H5.6z"/><path d="M10.2 12.4h3.6"/></svg>';
+
+function agendaActs(id: string, status: string): string {
+  return `<div class="slot-actions"><button class="btn sm ghost" data-act="advance" data-id="${id}" aria-label="Avanza stato ${status}">Avanti</button><button class="btn sm ghost" data-act="edit" data-id="${id}" aria-label="Modifica">${AGENDA_EDIT_GLYPH}</button><button class="btn sm ghost" data-act="del" data-id="${id}" aria-label="Archivia">${AGENDA_DEL_GLYPH}</button></div>`;
+}
+
 function agendaRailMarkup(spec: PipelineSpec, grammar: LayoutGrammar): string {
   const slots = spec.rows
     .map((e, i) => {
       const state = i === 0 ? "on" : "idle";
       const status = e.status || "prenotato";
-      return `<article class="slot" data-id="${e.id}" data-state="${state}" data-status="${status}"><time class="time" datetime="${e.kicker}">${e.kicker}</time><div class="slot-body"><h2>${e.title}</h2><p class="notes"><span class="chip ${status}">${status}</span> · ${e.note} · ${e.meta}</p><div class="slot-actions"><button class="btn sm ghost" data-act="advance" data-id="${e.id}" aria-label="Avanza stato ${status}">Avanti</button><button class="btn sm ghost" data-act="edit" data-id="${e.id}">Modifica</button><button class="btn sm ghost" data-act="del" data-id="${e.id}">Archivia</button></div></div></article>`;
+      return `<article class="slot" data-id="${e.id}" data-state="${state}" data-status="${status}"><time class="time" datetime="${e.kicker}">${e.kicker}</time><div class="slot-body"><h2>${e.title}</h2><p class="notes"><span class="chip ${status}">${status}</span> · ${e.note} · ${e.meta}</p>${agendaActs(e.id, status)}</div></article>`;
     })
     .join("");
   return `<div class="day-head"><p class="kicker">${spec.kicker}</p><h2 id="day-label">${spec.rows.length} ${grammar.voice.census}</h2></div><div class="day-rail" data-fenix-rail="day" id="day-rail" role="tabpanel" aria-labelledby="day-label">${slots}</div>`;
@@ -522,7 +531,11 @@ ${matter}`;
 function phoneCss(id: GrammarId): string {
   const stage =
     id === "split-stage"
-      ? `.hero{min-height:38vh}.hero svg{height:38vh;min-height:220px}.fragrance{display:grid;grid-template-columns:88px 1fr;gap:14px}.thumb{width:88px;height:112px;border-radius:calc(var(--r) * .5);overflow:hidden}.thumb svg{width:88px;height:112px}`
+      ? `.hero{min-height:0;max-height:min(32vh,260px)}
+  .hero svg{width:100%;height:auto;max-height:min(28vh,220px);min-height:148px;display:block}
+  .fragrance{display:grid;grid-template-columns:88px 1fr;gap:14px}
+  .thumb{width:88px;height:112px;border-radius:calc(var(--r) * .5);overflow:hidden}
+  .thumb svg{width:88px;height:112px}`
       : id === "lookbook"
         ? `.lookbook{display:grid;gap:12px}.look{overflow:hidden;padding:0;display:flex;flex-direction:column;margin:0}
   .look .sil{position:relative;height:min(54vh,460px);min-height:280px;margin:0}
@@ -531,7 +544,8 @@ function phoneCss(id: GrammarId): string {
         : id === "hospitality"
           ? `.rooms{display:grid;gap:14px}.room{display:grid;grid-template-columns:120px 1fr;gap:14px}.room .thumb{width:120px;height:96px}.room .thumb svg{width:120px;height:96px}.hero{min-height:24vh;max-height:28vh}.hero svg{height:24vh;min-height:140px}`
           : id === "service-board"
-            ? `.hero,.hero.plate{min-height:42vh}.hero svg,.plate.hero svg{height:42vh;min-height:260px;width:100%}
+            ? `.hero,.hero.plate{min-height:0;max-height:min(30vh,240px)}
+  .hero svg,.plate.hero svg{width:100%;height:auto;max-height:min(26vh,200px);min-height:140px;display:block}
   .tickets{display:grid;gap:10px}.ticket{display:grid;grid-template-columns:96px 1fr auto;gap:12px;align-items:center;min-height:88px}
   .ticket .thumb{width:96px;height:80px;overflow:hidden;position:relative;border-radius:calc(var(--r) * .4)}
   .ticket .thumb svg{width:96px;height:80px;display:block}`
@@ -549,8 +563,10 @@ function phoneCss(id: GrammarId): string {
   .slot[data-state="on"]{border-color:var(--accent)}
   .slot .time{font-variant-numeric:tabular-nums;font-feature-settings:"tnum";font-size:var(--t-footnote);font-weight:700;color:var(--accent);padding-top:3px;letter-spacing:-.01em}
   .slot-body h2{font-family:var(--body),ui-sans-serif,system-ui,sans-serif;font-size:var(--t-headline);font-weight:650;letter-spacing:-.022em;margin:0 0 4px;line-height:1.2;color:var(--ink-loud)}
-  .slot-actions{display:flex;flex-wrap:nowrap;gap:4px;margin-top:8px;overflow:auto}
-  .slot .btn{margin-top:0;flex:0 0 auto;white-space:nowrap}
+  .slot-actions{display:flex;flex-wrap:nowrap;gap:4px;margin-top:8px;align-items:center;overflow:visible}
+  .slot .btn{margin-top:0;flex:0 0 auto;white-space:nowrap;min-height:44px}
+  .slot-actions [data-act="edit"],.slot-actions [data-act="del"]{min-width:44px;min-height:44px;padding:8px}
+  .slot-actions .btn svg{display:block;margin:0 auto}
   .week-strip{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;margin:0 0 14px}
   .week-day{appearance:none;border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:calc(var(--r) * .55);min-height:64px;min-width:0;padding:6px 2px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font:650 11px/1.1 var(--body),ui-sans-serif,system-ui,sans-serif;touch-action:manipulation}
   .week-day.on{border-color:var(--accent);color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
@@ -594,9 +610,12 @@ main{grid-area:main;min-height:0;overflow:auto;padding:8px 16px 20px}
   ${
     id === "service-board"
       ? `main{display:grid;grid-template-columns:minmax(240px,.9fr) minmax(280px,1.1fr);gap:16px;align-content:start}
-  .hero,.hero.plate,.plate{grid-column:1;grid-row:1 / span 8;min-height:0;height:calc(100vh - 140px);max-height:calc(100vh - 140px);margin:0}
-  .hero svg,.plate svg,.hero.plate svg,.plate.hero svg{height:100%;min-height:0;max-height:100%}
+  .hero,.hero.plate,.plate{grid-column:1;grid-row:1;align-self:start;min-height:0;height:auto;max-height:min(42vh,320px);margin:0}
+  .hero svg,.plate svg,.hero.plate svg,.plate.hero svg{height:auto;min-height:0;max-height:min(38vh,280px);width:100%;display:block}
   .tickets,.span,.card{grid-column:2}`
+      : id === "split-stage"
+        ? `.hero{min-height:0;max-height:min(36vh,280px)}
+  .hero svg{height:auto;max-height:min(32vh,240px);width:100%}`
       : id === "agenda"
         ? `.hero{display:none;min-height:0;height:0}
   .day-head{padding-bottom:8px}
@@ -611,8 +630,8 @@ main{grid-area:main;min-height:0;overflow:auto;padding:8px 16px 20px}
   ${
     id === "split-stage"
       ? `main{display:grid;grid-template-columns:minmax(280px,.85fr) minmax(360px,1.15fr);gap:24px;align-content:start}
-  .hero{grid-column:1;grid-row:1 / span 6;min-height:0;height:calc(100vh - 128px);max-height:calc(100vh - 128px);margin:0;position:sticky;top:16px}
-  .hero svg{height:100%;min-height:0;max-height:100%}
+  .hero{grid-column:1;grid-row:1;align-self:start;min-height:0;height:auto;max-height:calc(100vh - 128px);margin:0;position:sticky;top:16px}
+  .hero svg{height:auto;min-height:0;max-height:min(52vh,420px);width:100%;display:block}
   .span,.card,.fragrance{grid-column:2}`
       : id === "lookbook"
         ? `.lookbook{grid-template-columns:minmax(0,1.28fr) minmax(0,1fr);grid-template-rows:1fr 1fr;gap:16px;align-items:stretch;min-height:calc(100vh - 132px)}
@@ -633,8 +652,8 @@ main{grid-area:main;min-height:0;overflow:auto;padding:8px 16px 20px}
   .room:nth-child(4) .thumb{height:140px;flex:none}`
           : id === "service-board"
             ? `main{display:grid;grid-template-columns:minmax(280px,.85fr) minmax(340px,1.15fr);gap:24px;align-content:start}
-  .hero,.plate,.hero.plate{grid-column:1;grid-row:1 / span 8;min-height:0;height:calc(100vh - 128px);max-height:calc(100vh - 128px);margin:0;position:sticky;top:16px}
-  .hero svg,.plate svg,.hero.plate svg,.plate.hero svg{height:100%;min-height:0;max-height:100%}
+  .hero,.plate,.hero.plate{grid-column:1;grid-row:1;align-self:start;min-height:0;height:auto;max-height:calc(100vh - 128px);margin:0;position:sticky;top:16px}
+  .hero svg,.plate svg,.hero.plate svg,.plate.hero svg{height:auto;min-height:0;max-height:min(52vh,420px);width:100%;display:block}
   .span,.tickets,.card{grid-column:2}
   .ticket{grid-template-columns:148px 1fr auto;min-height:118px;gap:14px}
   .ticket .thumb{width:148px;height:112px}
@@ -660,6 +679,7 @@ nav.rail{grid-area:nav;display:flex;gap:4px;overflow:auto;padding:6px 16px;borde
 nav.rail button{border:0;background:none;color:var(--muted);min-height:44px;padding:8px 10px;font:650 13px/1 var(--body),system-ui,sans-serif;white-space:nowrap;display:inline-flex;align-items:center;gap:8px;border-radius:0}
 nav.rail button.on{color:var(--accent);box-shadow:inset 0 -2px 0 var(--accent)}
 nav.rail svg{width:16px;height:16px;flex:0 0 16px;overflow:visible;display:block}
+@media(max-width:390px){nav.rail{flex-wrap:wrap;overflow:visible}nav.rail button{flex:1 1 calc(50% - 8px);justify-content:center;min-width:44px}}
 main{grid-area:main;padding:0;min-width:0;display:flex;flex-direction:column}
 .repo-stage{display:grid;grid-template-columns:1fr;min-height:0;flex:1}
 .timeline{padding:12px 16px 20px;border-right:0}
@@ -700,6 +720,7 @@ nav.rail{grid-area:nav;display:flex;gap:8px;flex-wrap:wrap;padding:10px 20px 14p
 nav.rail button{border:1px solid var(--line);background:var(--surface);color:var(--fg);min-height:44px;padding:10px 16px;border-radius:0;font:650 13px/1 var(--body),sans-serif;display:inline-flex;align-items:center;gap:8px}
 nav.rail button.on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
 nav.rail svg{width:18px;height:18px;flex:0 0 18px;overflow:visible;display:block}
+@media(max-width:390px){nav.rail{flex-wrap:wrap;overflow:visible}nav.rail button{flex:1 1 calc(50% - 8px);justify-content:center;min-width:44px}}
 main{grid-area:main;padding:16px 20px}
 .lastre{display:grid;grid-template-columns:1fr;gap:16px}
 .plate{min-height:200px;overflow:hidden;display:flex;flex-direction:column}
@@ -731,6 +752,7 @@ nav.rail{grid-area:nav;display:flex;gap:6px;overflow:auto;padding:8px 16px;borde
 nav.rail button{border:0;background:none;color:var(--muted);min-height:44px;padding:8px 12px;font:650 13px/1 var(--body),sans-serif;white-space:nowrap;display:inline-flex;align-items:center;gap:8px}
 nav.rail button.on{color:var(--accent);box-shadow:inset 0 -2px 0 var(--accent)}
 nav.rail svg{width:18px;height:18px;flex:0 0 18px;overflow:visible;display:block}
+@media(max-width:390px){nav.rail{flex-wrap:wrap;overflow:visible}nav.rail button{flex:1 1 calc(50% - 8px);justify-content:center;min-width:44px}}
 main{grid-area:main;padding:16px;min-width:0}
 .kpis{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:0 0 14px}
 .kpi{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;min-height:84px;min-width:0}
@@ -782,7 +804,6 @@ ${kickerCss(t)}
 .btn:hover,.deal:hover,.look:hover,.ticket:hover,.room:hover,.fragrance:hover,.plate:hover,.commit:hover,.slot:hover{filter:brightness(1.06);box-shadow:0 10px 28px color-mix(in srgb,var(--fg) 16%,transparent);border-color:var(--accent)}
 .btn:active,.deal:active,.look:active,.ticket:active,.room:active,.fragrance:active{transform:translateY(1px) scale(.98);filter:brightness(.94)}
 .look[data-state=on],.fragrance[data-state=on],.room[data-state=on],.deal[data-state=on],.ticket[data-state=on],.plate[data-state=on]{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent),0 14px 32px color-mix(in srgb,var(--fg) 14%,transparent)}
-.look[data-state=on] h2:after,.fragrance[data-state=on] h2:after{content:" · in prova";color:var(--accent);font-size:.62em;letter-spacing:.04em}
 label{display:block;font-size:11px;letter-spacing:.08em;color:var(--muted);margin:12px 0 6px}
 input,select,textarea{width:100%;font:inherit;padding:12px 14px;border-radius:calc(var(--r) * .55);border:1px solid var(--line);background:var(--elevated);color:var(--fg);min-height:44px}
 button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
@@ -928,6 +949,8 @@ const cta=${JSON.stringify(spec.cta)};
 const kicker=${JSON.stringify(spec.kicker)};
 const place=${JSON.stringify(spec.place)};
 const AGENDA_CYCLE={prenotato:"confermato",confermato:"in-corso","in-corso":"concluso",concluso:"prenotato"};
+const AGENDA_EDIT_GLYPH=${JSON.stringify(AGENDA_EDIT_GLYPH)};
+const AGENDA_DEL_GLYPH=${JSON.stringify(AGENDA_DEL_GLYPH)};
 const KICKER_CYCLE={scouting:"trattativa",trattativa:"firma",firma:"chiuso",chiuso:"scouting","in-forno":"al-passo","al-passo":"in-sala","in-sala":"in-forno",arrivo:"in-house","in-house":"partenza",partenza:"arrivo"};
 function isoDay(d){
   var y=d.getFullYear();
@@ -1265,7 +1288,8 @@ function emptyBox(){ return '<div class="state-empty" data-state="empty"><p>'+em
 function chip(k){ return '<span class="chip '+k+'">'+k+"</span>"; }
 function renderPerfume(){
   var plates=[hero].concat(arts);
-  var html='<div class="hero">'+hero+'<div class="caption"><p class="kicker">'+kicker+"</p><h2>"+data.items.length+" "+census+"</h2></div></div>";
+  var featured=data.items[0];
+  var html='<div class="hero">'+hero+'<div class="caption"><p class="kicker">'+kicker+'</p><h2>'+(featured?featured.title:specName())+'</h2><p class="notes">'+(featured?featured.kicker+(featured.meta?" · "+featured.meta:""):data.items.length+" "+census)+"</p></div></div>";
   if(!data.items.length) return html+emptyBox();
   data.items.forEach(function(e,i){
     html+='<article class="card fragrance" data-id="'+e.id+'" data-state="'+(i===0?"on":"idle")+'"><div class="thumb">'+(plates[i%plates.length]||hero)+'</div><div><p class="kicker">'+e.kicker+"</p><h2>"+e.title+'</h2><p class="notes">'+e.note+'</p><div class="row" style="display:flex;justify-content:space-between;gap:8px;margin-top:8px"><span>'+e.meta+'</span><button class="btn sm ghost" data-act="wear" data-id="'+e.id+'">Tieni a portata</button></div></div></article>';
@@ -1293,7 +1317,8 @@ function renderRooms(){
 }
 function renderTickets(){
   var plates=[hero].concat(arts);
-  var html='<div class="hero plate">'+hero+'<div class="caption"><p class="kicker">'+kicker+"</p><h2>"+data.items.length+" "+census+"</h2></div></div>";
+  var featured=data.items[0];
+  var html='<div class="hero plate">'+hero+'<div class="caption"><p class="kicker">'+kicker+'</p><h2>'+(featured?featured.title:specName())+'</h2><p class="notes">'+(featured?featured.note+(featured.meta?" · "+featured.meta:""):data.items.length+" "+census)+"</p></div></div>";
   if(!data.items.length) return html+emptyBox();
   html+='<div class="tickets">';
   data.items.forEach(function(e,i){
@@ -1401,7 +1426,7 @@ function renderStats(){
 }
 function slotMarkup(e,i){
   var st=e.status||"prenotato";
-  return '<article class="slot" data-id="'+e.id+'" data-day="'+(e.day||"")+'" data-state="'+(i===0?"on":"idle")+'" data-status="'+st+'"><time class="time" datetime="'+e.kicker+'">'+e.kicker+'</time><div class="slot-body"><h2>'+e.title+'</h2><p class="notes">'+chip(st)+" · "+e.note+" · "+e.meta+'</p><div class="slot-actions"><button class="btn sm ghost" data-act="advance" data-id="'+e.id+'" aria-label="Avanza stato '+st+'">Avanti</button><button class="btn sm ghost" data-act="edit" data-id="'+e.id+'">Modifica</button><button class="btn sm ghost" data-act="del" data-id="'+e.id+'">Archivia</button></div></div></article>';
+  return '<article class="slot" data-id="'+e.id+'" data-day="'+(e.day||"")+'" data-state="'+(i===0?"on":"idle")+'" data-status="'+st+'"><time class="time" datetime="'+e.kicker+'">'+e.kicker+'</time><div class="slot-body"><h2>'+e.title+'</h2><p class="notes">'+chip(st)+" · "+e.note+" · "+e.meta+'</p><div class="slot-actions"><button class="btn sm ghost" data-act="advance" data-id="'+e.id+'" aria-label="Avanza stato '+st+'">Avanti</button><button class="btn sm ghost" data-act="edit" data-id="'+e.id+'" aria-label="Modifica">'+AGENDA_EDIT_GLYPH+'</button><button class="btn sm ghost" data-act="del" data-id="'+e.id+'" aria-label="Archivia">'+AGENDA_DEL_GLYPH+'</button></div></div></article>';
 }
 function renderAgenda(){
   hydrateAgenda();

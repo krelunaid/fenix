@@ -316,7 +316,21 @@ describe("graphic pipeline prompt→plan→generate→visual→QA", () => {
     assert.equal(runs.find((r) => r.id === "abbigliamento")!.grammar.id, "lookbook");
     assert.equal(runs.find((r) => r.id === "repo")!.grammar.id, "source-timeline");
     assert.equal(runs.find((r) => r.id === "ristorazione")!.grammar.id, "service-board");
-    assert.equal(GRAPHIC_FIVE_PARENT_SHA, "8d98b427620f75b460433c0de8882d89b4573730");
+    assert.equal(GRAPHIC_FIVE_PARENT_SHA, "4f7235e56c57b92af791a9367c6482d74624de60");
+    const profumi = runs.find((r) => r.id === "profumi")!;
+    const ristorazione = runs.find((r) => r.id === "ristorazione")!;
+    const abbigliamento = runs.find((r) => r.id === "abbigliamento")!;
+    assert.match(profumi.html, /preserveAspectRatio="xMidYMid meet"/);
+    assert.match(ristorazione.html, /preserveAspectRatio="xMidYMid meet"/);
+    assert.match(abbigliamento.html, /preserveAspectRatio="xMidYMid slice"/);
+    assert.doesNotMatch(profumi.html, /content:" · in prova"/);
+    assert.doesNotMatch(ristorazione.html, /content:" · in prova"/);
+    assert.match(profumi.html, /Bois de Nuit/);
+    assert.match(ristorazione.html, /Plin al burro/);
+    assert.match(abbigliamento.html, /Metti in passerella/);
+    assert.match(agenda.html, /aria-label="Modifica"/);
+    assert.match(agenda.html, /aria-label="Archivia"/);
+    assert.doesNotMatch(agenda.html, /\.slot-actions\{[^}]*overflow:\s*auto/);
     assert.equal(runs.find((r) => r.id === "repo")!.tokens.fonts.display, "IBM Plex Mono");
     const repo = runs.find((r) => r.id === "repo")!;
     assert.match(repo.html, /"id":"diff","label":"Diff"/);
@@ -349,7 +363,7 @@ describe("graphic pipeline prompt→plan→generate→visual→QA", () => {
     }
   });
 
-  it("freezes five-brief before shots at parent SHA 8d98b42", () => {
+  it("freezes five-brief before shots at parent SHA 4f7235e", () => {
     const here = dirname(fileURLToPath(import.meta.url));
     const before = join(here, "fixtures/graphic/five/before");
     const names = [
@@ -359,7 +373,7 @@ describe("graphic pipeline prompt→plan→generate→visual→QA", () => {
       "repo",
       "ristorazione",
     ].flatMap((id) => ["D", "T", "M"].map((vp) => `${id}-${vp}.png`));
-    assert.equal(GRAPHIC_FIVE_PARENT_SHA, "8d98b427620f75b460433c0de8882d89b4573730");
+    assert.equal(GRAPHIC_FIVE_PARENT_SHA, "4f7235e56c57b92af791a9367c6482d74624de60");
     assert.equal(existsSync(before), true);
     const listed = readdirSync(before).filter((n) => n.endsWith(".png")).sort();
     assert.deepEqual(listed, [...names].sort());
@@ -395,6 +409,11 @@ describe("graphic pipeline prompt→plan→generate→visual→QA", () => {
     assert.match(html, /data-act="edit"/);
     assert.match(html, />Avanti</);
     assert.doesNotMatch(html, /Avanza slot/);
+    assert.match(html, /aria-label="Modifica"/);
+    assert.match(html, /aria-label="Archivia"/);
+    assert.match(html, /const AGENDA_EDIT_GLYPH=/);
+    assert.match(html, /'\+AGENDA_EDIT_GLYPH\+'/);
+    assert.doesNotMatch(html, /\.slot-actions\{[^}]*overflow:\s*auto/);
     assert.match(html, /nav\.tabs svg\{[^}]*overflow:visible/);
     assert.match(html, /flex-wrap:nowrap/);
     assert.match(html, /aria-selected/);

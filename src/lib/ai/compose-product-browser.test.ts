@@ -971,10 +971,21 @@ describe("graphic pipeline visual QA D/T/M", () => {
             if (row.id === "profumi") {
               assert.equal(bgVar, "#120e0c");
               assert.equal(accentVar, "#c4a15a");
+              const cap = await frame.locator(".hero .caption h2").first().innerText();
+              assert.match(cap, /Bois de Nuit/);
+              assert.doesNotMatch(cap, /in prova/i);
+              const after = await frame.locator(".fragrance h2").first().evaluate((el) => getComputedStyle(el, ":after").content);
+              assert.doesNotMatch(after || "", /in prova/i);
+              const fit = await frame.locator(".hero svg").first().getAttribute("preserveAspectRatio");
+              assert.match(fit || "", /meet/);
             }
             if (row.id === "ristorazione") {
               assert.equal(bgVar, "#1a1210");
               assert.equal(accentVar, "#c43c2c");
+              const cap = await frame.locator(".hero .caption h2").first().innerText();
+              assert.match(cap, /Plin al burro/);
+              const fit = await frame.locator(".hero svg").first().getAttribute("preserveAspectRatio");
+              assert.match(fit || "", /meet/);
             }
             if (row.id === "agenda") {
               assert.equal(await frame.locator('button[data-view="home"]').count(), 0);
@@ -991,8 +1002,12 @@ describe("graphic pipeline visual QA D/T/M", () => {
               const wrap = await frame
                 .locator(".slot-actions")
                 .first()
-                .evaluate((el) => getComputedStyle(el).flexWrap);
-              assert.equal(wrap, "nowrap", `${row.id}/${vp} slot actions nowrap`);
+                .evaluate((el) => {
+                  const s = getComputedStyle(el);
+                  return { flexWrap: s.flexWrap, overflow: s.overflow };
+                });
+              assert.equal(wrap.flexWrap, "nowrap", `${row.id}/${vp} slot actions nowrap`);
+              assert.notEqual(wrap.overflow, "auto", `${row.id}/${vp} slot-actions overflow auto hides clip`);
             }
             const overflow = await frame.locator("html").evaluate(
               () => document.documentElement.scrollWidth - window.innerWidth,
@@ -1146,13 +1161,13 @@ describe("graphic pipeline visual QA D/T/M", () => {
           before,
           after: files,
           palettes,
-          note: "composeProduct+prepareSrcDoc five briefs D/T/M before/after on parent 8d98b42. Planner/polish LLM skipped (quota). Hash/ΔE are movement floors, not scores. Not a 9/10.",
+          note: "composeProduct+prepareSrcDoc five briefs D/T/M before/after on parent 4f7235e. Planner/polish LLM skipped (quota). Hash/ΔE are movement floors, not scores. Not a 9/10.",
         },
         null,
         2,
       )}\n`,
     );
-    assert.equal(GRAPHIC_FIVE_PARENT_SHA, "8d98b427620f75b460433c0de8882d89b4573730");
+    assert.equal(GRAPHIC_FIVE_PARENT_SHA, "4f7235e56c57b92af791a9367c6482d74624de60");
     assert.equal(files.length, briefs.length * VIEWPORTS.length);
     assert.equal(new Set(files.map((f) => f.sha256)).size, files.length, "after shots must differ");
     assert.equal(new Set(mobileChrome).size, briefs.length, mobileChrome.join(" || "));
@@ -1161,12 +1176,12 @@ describe("graphic pipeline visual QA D/T/M", () => {
     assert.equal(agendaPalette?.display, "Figtree");
     assert.equal(agendaPalette?.bg.toLowerCase(), "#e8eef4");
     assert.equal(agendaPalette?.accent.toLowerCase(), "#1f6f68");
-    const mustMove = /^(agenda|profumi|abbigliamento|repo|ristorazione)-[DTM]\.png$/;
+    const mustMove = /^(agenda-[TM]|profumi-[DTM]|ristorazione-[DTM])\.png$/;
     for (const file of files) {
       const prior = before.find((b) => b.name === file.name);
       assert.ok(prior, file.name);
       if (mustMove.test(file.name)) {
-        assert.notEqual(file.sha256, prior!.sha256, `${file.name} after must move from parent 8d98b42`);
+        assert.notEqual(file.sha256, prior!.sha256, `${file.name} after must move from parent 4f7235e`);
       }
       assert.equal(existsSync(join(BEFORE, file.name)), true);
     }
@@ -1176,6 +1191,104 @@ describe("graphic pipeline visual QA D/T/M", () => {
         assert.equal(paint.bgVar, row.bg.toLowerCase(), `${row.id}/${paint.vp} painted bg`);
         assert.equal(paint.accentVar, row.accent.toLowerCase(), `${row.id}/${paint.vp} painted accent`);
       }
+    }
+  });
+
+  it("keeps nav and Agenda actions on-canvas at 320 and 390 with real clicks", async () => {
+    const { composeProduct } = await import("./compose-product.ts");
+    const { formatPrefix } = await import("../projects/infer.ts");
+    const briefs: { id: string; brief: string }[] = [
+      { id: "agenda", brief: `${formatPrefix("app")}Agenda: appuntamenti, calendario giornaliero, trattamenti e studio.` },
+      { id: "profumi", brief: `${formatPrefix("app")}Essenza: gestione profumi premium, flaconi, note olfattive e guardaroba.` },
+      { id: "abbigliamento", brief: `${formatPrefix("app")}Vesti: moda e vendite, lookbook, capi in passerella e cassa.` },
+      { id: "repo", brief: `${formatPrefix("app")}Taccuino: note e repository, commit, rami, sync e scarto del repo.` },
+      { id: "ristorazione", brief: `${formatPrefix("app")}Osteria del Passo: ristorazione, menu degustazione, comande al passo cucina e sala da pranzo.` },
+    ];
+    const narrow = [
+      { name: "320", viewport: { width: 320, height: 568 } },
+      { name: "390", viewport: { width: 390, height: 844 } },
+    ] as const;
+    const browser = await launchChromium();
+    try {
+      for (const row of briefs) {
+        const composed = composeProduct(row.brief);
+        const src = prepareSrcDoc(composed.html, composed.tokens.palette, `${row.id}-hit`, composed.grammar.kind);
+        for (const vp of narrow) {
+          const page = await isolatedPage(browser, { viewport: vp.viewport });
+          const errors: string[] = [];
+          page.on("pageerror", (err) => {
+            if (!isBlockedPublicNetworkError(String(err))) errors.push(String(err));
+          });
+          try {
+            await page.setContent(FIVE_PERSIST_HOST, { waitUntil: "domcontentloaded", timeout: 15000 });
+            await page.locator("#f").evaluate((el, srcDoc: string) => {
+              (el as HTMLIFrameElement).srcdoc = srcDoc;
+            }, src);
+            const frame = page.frameLocator("#f");
+            await frame.locator("[data-fenix-ready]").waitFor({ timeout: 8000 });
+            const navs = frame.locator("nav button[data-view]");
+            const nNav = await navs.count();
+            assert.ok(nNav >= 3, `${row.id}/${vp.name} nav count ${nNav}`);
+            for (let i = 0; i < nNav; i++) {
+              const box = await navs.nth(i).evaluate((el) => {
+                const r = el.getBoundingClientRect();
+                return { x: r.x, y: r.y, w: r.width, h: r.height, vw: innerWidth, vh: innerHeight };
+              });
+              assert.ok(box.x >= -1, `${row.id}/${vp.name} nav ${i} x ${box.x}`);
+              assert.ok(box.x + box.w <= box.vw + 1, `${row.id}/${vp.name} nav ${i} right ${box.x + box.w}/${box.vw}`);
+              assert.ok(box.y >= -1, `${row.id}/${vp.name} nav ${i} y ${box.y}`);
+              assert.ok(box.y + box.h <= box.vh + 1, `${row.id}/${vp.name} nav ${i} bottom ${box.y + box.h}/${box.vh}`);
+              assert.ok(box.w >= 44 && box.h >= 44, `${row.id}/${vp.name} nav ${i} ${box.w}x${box.h}`);
+              await navs.nth(i).click();
+              await frame.locator("[data-fenix-ready]").waitFor({ timeout: 8000 });
+            }
+            await navs.first().click();
+            if (row.id === "agenda") {
+              const slot = frame.locator("article.slot").first();
+              assert.ok((await slot.count()) >= 1, `${vp.name} slot`);
+              for (const act of ["advance", "edit", "del"] as const) {
+                const btn = slot.locator(`[data-act="${act}"]`);
+                const hit = await btn.evaluate((el) => {
+                  const r = el.getBoundingClientRect();
+                  const slotEl = el.closest("article.slot");
+                  const sr = slotEl ? slotEl.getBoundingClientRect() : r;
+                  const wrap = el.parentElement ? getComputedStyle(el.parentElement) : null;
+                  return {
+                    x: r.x,
+                    y: r.y,
+                    w: r.width,
+                    h: r.height,
+                    vw: innerWidth,
+                    vh: innerHeight,
+                    sx: sr.x,
+                    sw: sr.width,
+                    overflow: wrap?.overflow || "",
+                    flexWrap: wrap?.flexWrap || "",
+                  };
+                });
+                assert.notEqual(hit.overflow, "auto", `${vp.name} ${act} overflow auto hides clip`);
+                assert.equal(hit.flexWrap, "nowrap", `${vp.name} ${act} wrap`);
+                assert.ok(hit.x >= hit.sx - 1, `${vp.name} ${act} left of slot`);
+                assert.ok(hit.x + hit.w <= hit.sx + hit.sw + 1, `${vp.name} ${act} right of slot ${hit.x + hit.w}/${hit.sx + hit.sw}`);
+                assert.ok(hit.x >= -1 && hit.x + hit.w <= hit.vw + 1, `${vp.name} ${act} x clip ${hit.x}+${hit.w}/${hit.vw}`);
+                assert.ok(hit.w >= 44 && hit.h >= 44, `${vp.name} ${act} ${hit.w}x${hit.h}`);
+              }
+              await slot.locator('[data-act="advance"]').click();
+              await frame.locator("html:not([data-fenix-persist='busy'])").waitFor({ timeout: 8000 });
+              await slot.locator('[data-act="edit"]').click();
+              await frame.locator("#n").waitFor({ timeout: 4000 });
+              await navs.first().click();
+              await frame.locator("article.slot").first().locator('[data-act="del"]').click();
+              await frame.locator("html:not([data-fenix-persist='busy'])").waitFor({ timeout: 8000 });
+            }
+            assert.equal(errors.length, 0, `${row.id}/${vp.name} ${errors.join(" | ")}`);
+          } finally {
+            await page.close();
+          }
+        }
+      }
+    } finally {
+      await browser.close();
     }
   });
 });
