@@ -503,14 +503,26 @@ export function fenixRuntimeScript(projectId: string, kind?: string) {
       setTimeout(function(){
         if (done) return;
         if (op === "load") finish(fallbackLoad(col));
-        else finish({ ok: false, v: null, durable: 0 });
+        else finish({ ok: false, v: null, durable: 0, timeout: true });
       }, 2500);
     });
   }
   var api = {
     projectId: pid,
     load: function(col){ return call("load", col); },
-    save: function(col, data){ fallbackSave(col, data); return call("save", col, data); },
+    save: function(col, data){
+      var prev = fallbackLoad(col);
+      fallbackSave(col, data);
+      return call("save", col, data).then(function(res){
+        if (res && typeof res === "object" && "ok" in res && res.ok === false) {
+          try {
+            if (prev == null) ls.removeItem(localKey(col));
+            else fallbackSave(col, prev);
+          } catch (e) {}
+        }
+        return res;
+      });
+    },
     ready: function(){ document.documentElement.setAttribute("data-fenix-ready","1"); }
   };
   ${FENIX_DATA_API_RUNTIME}
@@ -607,8 +619,19 @@ export function fenixRuntimeScript(projectId: string, kind?: string) {
   });
   if (desk) return;
   var items = [];
+  function productOwnsList(){
+    if (window.__fenixCrud) return true;
+    if (document.querySelector("table thead") && document.querySelector("table tbody")) return true;
+    if (document.querySelector("[data-fenix-rail], [data-fenix-week], article.slot, [data-agenda-form]")) return true;
+    if (document.querySelector("#root article[data-id], #root .state-empty, [data-state=empty]")) return true;
+    return false;
+  }
   function listEl(){
-    if (document.querySelector("table thead") && document.querySelector("table tbody")) return null;
+    if (productOwnsList()) {
+      var stray = document.getElementById("fk-saved");
+      if (stray && stray.getAttribute("data-fenix-kit-list") === "1") stray.remove();
+      return null;
+    }
     if (window.__fenixCrud) return null;
     var ul = document.getElementById("fk-saved")
       || document.querySelector("[data-list], .fk-list, #elenco, #lista");
@@ -616,6 +639,7 @@ export function fenixRuntimeScript(projectId: string, kind?: string) {
     var main = document.querySelector('[data-view="list"], #view-list, main') || document.body;
     ul = document.createElement("ul");
     ul.id = "fk-saved";
+    ul.setAttribute("data-fenix-kit-list", "1");
     ul.style.cssText = "list-style:none;margin:14px 0 0;padding:0;display:flex;flex-direction:column;gap:8px";
     main.appendChild(ul);
     return ul;

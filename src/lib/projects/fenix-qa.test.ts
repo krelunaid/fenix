@@ -342,7 +342,18 @@ describe("focus-visible and worker model", () => {
     assert.doesNotMatch(compose, /idx%5/);    assert.doesNotMatch(compose, /\.slot\{[^}]*padding:18px 0/);
     assert.match(compose, /padding:18px 20px/);
     assert.match(compose, /closest\("\.week-day\[data-day\]"\)/);
+    assert.match(compose, /function mondayOf/);
+    assert.match(compose, /data-act="week-prev"/);
+    assert.match(compose, /data-act="week-today"/);
+    assert.match(compose, /id="day-label"/);
+    assert.match(compose, /function persistThen/);
+    assert.doesNotMatch(compose, /void window\.Fenix\.save/);
     assert.equal(existsSync(join(root, "src/lib/projects/agenda-runtime-browser.test.ts")), true);
+    const runtime = readFileSync(join(root, "src/lib/projects/color-scheme.ts"), "utf8");
+    assert.match(runtime, /function productOwnsList/);
+    assert.match(runtime, /data-fenix-rail/);
+    assert.match(runtime, /timeout: true/);
+    assert.match(runtime, /res\.ok === false/);
     const craft = readFileSync(join(root, "src/lib/projects/craft-icons.ts"), "utf8");
     assert.match(craft, /data-fenix-id="icon:\$\{t\.id\}"/);
     assert.match(craft, /data-icon-grid="24"/);

@@ -8,33 +8,33 @@
   "files": [
     {
       "name": "agenda-runtime-week-d.png",
-      "sha256": "18970283bbcb00a530999cf25ed23c78ab9b4d00bf0d1452550e4b605be2a20d",
-      "bytes": 44949
+      "sha256": "629fc7e4b2444eeb6dc8a97feeb4737d6374020953a095d23c85811e3c702221",
+      "bytes": 46560
     },
     {
       "name": "agenda-runtime-d.png",
-      "sha256": "383081604521c567c5b5e1ace90a079ed55343133627746568b2cfe2a6313749",
-      "bytes": 44972
+      "sha256": "f3a1c06b99563993dc51fa52821d52f1305b198ecde4dff779c4932b3a3bcb33",
+      "bytes": 46485
     },
     {
       "name": "agenda-runtime-week-t.png",
-      "sha256": "eff91005f89143ee8dcbd61566b2969c7a3d78535dead1ffe53faa89bbe2e3c7",
-      "bytes": 36252
+      "sha256": "6fd2f79d0ff12855c288b47febe2367a74fbcb960e5cd67c4f9b46ed94b67498",
+      "bytes": 41075
     },
     {
       "name": "agenda-runtime-t.png",
-      "sha256": "c918f7cb81470e3d901e5eba6f1bb95af1a908a5736dbf57d333451ac662baab",
-      "bytes": 36193
+      "sha256": "0d29822de9d23c7aefccad9290c69493ac9ff79adba8361f35a06f94e426a283",
+      "bytes": 41019
     },
     {
       "name": "agenda-runtime-week-m.png",
-      "sha256": "bb5d24d6c8063d4261996382c2fb27792404f62a6ef92e9c3289d2a87e9bbf7c",
-      "bytes": 31396
+      "sha256": "f58260370512b6a7cddcf7bedd37fa50eac200f2ee66916a7ee497e00db72009",
+      "bytes": 36071
     },
     {
       "name": "agenda-runtime-m.png",
-      "sha256": "453827880c56d6f9e88a60c68f9d9d3c62e00736a3895c473484f73f4294f12c",
-      "bytes": 31354
+      "sha256": "770dda50e44990d1342a654ff310ea57b2d4b2a9c38dec28e9f91b5f041f85c8",
+      "bytes": 36057
     }
   ],
   "credits": 0,

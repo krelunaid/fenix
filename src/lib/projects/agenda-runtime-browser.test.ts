@@ -46,6 +46,32 @@ async function settleVisual(page: Page) {
   await page.evaluate(() => window.scrollTo(0, 0));
 }
 
+async function waitKitSweep(page: Page) {
+  await page.evaluate(() => new Promise((r) => setTimeout(r, 400)));
+}
+
+async function assertLabelledBy(page: Page, vp: string) {
+  const labelled = await page.locator("#day-rail").getAttribute("aria-labelledby");
+  assert.equal(labelled, "day-label", `${vp} day-rail aria-labelledby`);
+  assert.equal(await page.locator("#day-label").count(), 1, `${vp} aria-labelledby target exists`);
+}
+
+async function assertEmptyContract(page: Page, kind: "data" | "empty", vp: string) {
+  const kit = await page.locator("#fk-saved").count();
+  const empty = await page.locator(".state-empty, [data-state='empty']").count();
+  const nessun = await page.getByText("Nessun elemento").count();
+  const slots = await page.locator("article.slot").count();
+  assert.equal(kit, 0, `${vp} no kit #fk-saved`);
+  assert.equal(nessun, 0, `${vp} no kit Nessun elemento`);
+  if (kind === "data") {
+    assert.ok(slots >= 1, `${vp} slots present`);
+    assert.equal(empty, 0, `${vp} no empty-state when data is visible`);
+  } else {
+    assert.equal(slots, 0, `${vp} no slots`);
+    assert.equal(empty, 1, `${vp} exactly one empty-state`);
+  }
+}
+
 async function recordShot(
   page: Page,
   name: string,
@@ -99,6 +125,7 @@ describe("Agenda generated runtime D/T/M", () => {
           assert.equal(await page.locator('nav button[data-view="oggi"]').count(), 1);
           assert.equal(await page.locator('nav button[data-view="settimana"]').count(), 1);
           assert.equal(await page.locator('header .place').innerText(), "Sala");
+          await assertLabelledBy(page, `${vp}-oggi`);
 
           await page.locator('nav button[data-view="settimana"]').click();
           const days = page.locator(".week-day[data-day]");
@@ -125,6 +152,9 @@ describe("Agenda generated runtime D/T/M", () => {
           const expected = Number(await days.nth(2).locator("[data-count]").getAttribute("data-count"));
           assert.equal(slotCount, expected, `${vp} slot count matches day`);
           assert.match(await page.locator(".day-head .kicker").innerText(), new RegExp(String(thirdIso)));
+          await assertLabelledBy(page, `${vp}-week`);
+          await waitKitSweep(page);
+          await assertEmptyContract(page, slotCount > 0 ? "data" : "empty", `${vp}-week`);
           await settleVisual(page);
           const weekShot = await shot(page, `agenda-runtime-week-${vp.toLowerCase()}.png`);          const weekBuf = await page.screenshot({ type: "png" });
           manifest.files.push({
@@ -331,6 +361,9 @@ describe("Agenda calendar edges Fri/Sat/Sun, validation, date keep", () => {
           assert.equal(await page.locator("#day-rail").getAttribute("role"), "tabpanel");
           assert.equal(await page.locator(`article.slot[data-day="${sundayIso}"]`).count(), 0);
           assert.equal(await page.locator("#day-rail [data-state='empty']").count(), 1);
+          await waitKitSweep(page);
+          await assertEmptyContract(page, "empty", `${vp}-sun`);
+          await assertLabelledBy(page, `${vp}-sun`);
           await settleVisual(page);
           await recordShot(page, `agenda-runtime-empty-${vp.toLowerCase()}.png`, files);
 
@@ -360,8 +393,40 @@ describe("Agenda calendar edges Fri/Sat/Sun, validation, date keep", () => {
           const futureSlot = page.locator(`article.slot:has-text("Futuro ${vp}")`);
           assert.equal(await futureSlot.count(), 1);
           assert.equal(await futureSlot.getAttribute("data-day"), futureIso);
+          const weekIsos = await page.locator(".week-day[data-day]").evaluateAll((nodes) =>
+            nodes.map((n) => (n as HTMLElement).getAttribute("data-day")),
+          );
+          assert.ok(weekIsos.includes(futureIso), `${vp} week aligned to 15 ottobre, got ${weekIsos.join(",")}`);
+          assert.equal(await page.locator('.week-day[aria-selected="true"]').getAttribute("data-day"), futureIso);
+          assert.match(await page.locator("[data-week-range]").innerText(), /ottobre/i);
+          await waitKitSweep(page);
+          await assertEmptyContract(page, "data", `${vp}-future`);
+          await assertLabelledBy(page, `${vp}-future`);
           await settleVisual(page);
           await recordShot(page, `agenda-runtime-clean-${vp.toLowerCase()}.png`, files);
+
+          const rangeBefore = await page.locator("[data-week-range]").getAttribute("data-week-range");
+          await page.locator('[data-act="week-next"]').click();
+          const afterNext = await page.locator('.week-day[aria-selected="true"]').getAttribute("data-day");
+          assert.equal(afterNext, isoOf(2026, 10, 22), `${vp} next week keeps weekday`);
+          assert.notEqual(await page.locator("[data-week-range]").getAttribute("data-week-range"), rangeBefore);
+          await page.locator('[data-act="week-prev"]').click();
+          assert.equal(await page.locator('.week-day[aria-selected="true"]').getAttribute("data-day"), futureIso);
+          assert.equal(await page.locator(`article.slot:has-text("Futuro ${vp}")`).count(), 1);
+          await page.locator('[data-act="week-today"]').click();
+          assert.equal(await page.locator('.week-day[aria-selected="true"]').getAttribute("data-day"), fridayIso);
+          assert.equal(await page.locator(`article.slot:has-text("Futuro ${vp}")`).count(), 0);
+          const keptDay = await page.evaluate(async () => {
+            const fenix = (window as unknown as { Fenix: { load: (c: string) => Promise<{ items?: { title?: string; day?: string }[] }> } }).Fenix;
+            const packed = await fenix.load("slot");
+            const items = packed && Array.isArray(packed.items) ? packed.items : [];
+            const row = items.find((it) => String(it.title || "").startsWith("Futuro"));
+            return row ? row.day : "";
+          });
+          assert.equal(keptDay, futureIso, `${vp} saved ISO does not move on week-today`);
+
+          await page.locator('nav button[data-view="oggi"]').click();
+          await assertLabelledBy(page, `${vp}-oggi-after`);
           assert.equal(errors.length, 0, `${vp} console after calendar edges: ${errors.join(" | ")}`);
         } finally {
           await page.close();
@@ -381,9 +446,11 @@ describe("Agenda calendar edges Fri/Sat/Sun, validation, date keep", () => {
       try {
         await satPage.locator('nav button[data-view="oggi"]').click();
         assert.match(await satPage.locator(".day-head .kicker").innerText(), /2026-09-05/);
+        await assertLabelledBy(satPage, "sat-oggi");
         await satPage.locator('nav button[data-view="settimana"]').click();
         assert.equal(await satPage.locator('.week-day[aria-selected="true"]').getAttribute("data-day"), saturdayIso);
         assert.equal(await satPage.locator(".week-day[data-day]").count(), 7);
+        await assertLabelledBy(satPage, "sat-week");
       } finally {
         await satPage.close();
       }
@@ -521,6 +588,127 @@ describe("Agenda calendar edges Fri/Sat/Sun, validation, date keep", () => {
     for (const file of files) {
       assert.equal(existsSync(join(SHOTS, file.name)), true);
       assert.ok(statSync(join(SHOTS, file.name)).size > 1000);
+    }
+  });
+});
+
+function persistHost(mode: "ok" | "reject" | "timeout") {
+  return `<!DOCTYPE html><html><body>
+<iframe id="f" style="width:390px;height:844px;border:0"></iframe>
+<script>
+window.__db = {};
+window.__mode = ${JSON.stringify(mode)};
+window.__saves = 0;
+window.addEventListener("message", function(e){
+  var m=e.data;
+  if(!m || m.t!=="fenix-db" || !m.id) return;
+  if(m.op==="load"){
+    e.source.postMessage({t:"fenix-db",id:m.id,v:window.__db[m.col]||null},"*");
+    return;
+  }
+  window.__saves += 1;
+  if(window.__mode==="timeout") return;
+  if(window.__mode==="reject"){
+    e.source.postMessage({t:"fenix-db",id:m.id,v:{ok:false,error:"bridge-reject",durable:0}},"*");
+    return;
+  }
+  window.__db[m.col]=m.data;
+  var n=Array.isArray(m.data&&m.data.items)?m.data.items.length:0;
+  e.source.postMessage({t:"fenix-db",id:m.id,v:{ok:true,v:m.data,durable:n}},"*");
+});
+</script></body></html>`;
+}
+
+describe("Agenda persist bridge reject/timeout", () => {
+  it("rejects valid save, keeps form, no false success, retries once, timeout is not success", async () => {
+    const composed = composeProduct(BRIEF);
+    const html = withFenixNow(composed.html, 2026, 9, 4);
+    const browser = await launchChromium();
+    try {
+      const page = await isolatedPage(browser, { viewport: { width: 390, height: 844 } });
+      page.setDefaultTimeout(20000);
+      await page.setContent(persistHost("reject"));
+      const src = prepareSrcDoc(html, composed.tokens.palette, "agenda-bridge-reject", "app");
+      await page.locator("#f").evaluate((el, srcDoc: string) => {
+        (el as HTMLIFrameElement).srcdoc = srcDoc;
+      }, src);
+      const frame = page.frameLocator("#f");
+      await frame.locator("[data-fenix-ready]").waitFor({ timeout: 8000 });
+      await frame.locator('nav button[data-view="nuovo"]').click();
+      await frame.locator("#n").fill("Rifiutato bridge");
+      await frame.locator("#ora").fill("10:15");
+      await frame.locator("#data").fill("2026-09-04");
+      await frame.locator("#luogo").fill("Sala reject");
+      await frame.locator("#cliente").fill("Ivo");
+      await frame.locator("#fnew [data-act='save']").click();
+      await frame.locator("[data-fenix-form-error]:not([hidden])").waitFor({ timeout: 8000 });
+      assert.equal(await frame.getByRole("heading", { name: "Rifiutato bridge", exact: true }).count(), 0);
+      assert.equal(await frame.locator("#n").inputValue(), "Rifiutato bridge");
+      assert.equal(await frame.locator("#ora").inputValue(), "10:15");
+      assert.equal(await frame.locator("#data").inputValue(), "2026-09-04");
+      assert.equal(await frame.locator("#luogo").inputValue(), "Sala reject");
+      assert.equal(await frame.locator("html").getAttribute("data-fenix-flash"), "err");
+      const savedReject = await page.evaluate(() => {
+        const db = (window as unknown as { __db: Record<string, { items?: { title?: string }[] }> }).__db;
+        const items = db && db.slot && Array.isArray(db.slot.items) ? db.slot.items : [];
+        return items.some((row) => row.title === "Rifiutato bridge");
+      });
+      assert.equal(savedReject, false, "rejected save does not persist");
+      const savesAfterReject = await page.evaluate(() => (window as unknown as { __saves: number }).__saves);
+      assert.ok(savesAfterReject >= 2, "idempotent retry hit the bridge more than once");
+
+      await page.evaluate(() => {
+        (window as unknown as { __mode: string }).__mode = "ok";
+      });
+      await frame.locator("#fnew [data-act='save']").click();
+      await frame.getByRole("heading", { name: "Rifiutato bridge", exact: true }).waitFor({ timeout: 8000 });
+      const savedOk = await page.evaluate(() => {
+        const db = (window as unknown as { __db: Record<string, { items?: { title?: string }[] }> }).__db;
+        const items = db && db.slot && Array.isArray(db.slot.items) ? db.slot.items : [];
+        return items.some((row) => row.title === "Rifiutato bridge");
+      });
+      assert.equal(savedOk, true, "retry after allow persists once");
+
+      await page.evaluate(() => {
+        (window as unknown as { __mode: string }).__mode = "reject";
+      });
+      const beforeStatus = await frame.locator('article.slot:has-text("Rifiutato bridge")').getAttribute("data-status");
+      await frame.locator('article.slot:has-text("Rifiutato bridge") [data-act="advance"]').click();
+      await frame.locator("#err:not([hidden])").waitFor({ timeout: 8000 });
+      assert.equal(
+        await frame.locator('article.slot:has-text("Rifiutato bridge")').getAttribute("data-status"),
+        beforeStatus,
+        "advance rolls back on reject",
+      );
+      await page.close();
+
+      const timeoutPage = await isolatedPage(browser, { viewport: { width: 390, height: 844 } });
+      timeoutPage.setDefaultTimeout(20000);
+      await timeoutPage.setContent(persistHost("timeout"));
+      await timeoutPage.locator("#f").evaluate((el, srcDoc: string) => {
+        (el as HTMLIFrameElement).srcdoc = srcDoc;
+      }, src);
+      const timeoutFrame = timeoutPage.frameLocator("#f");
+      await timeoutFrame.locator("[data-fenix-ready]").waitFor({ timeout: 8000 });
+      await timeoutFrame.locator('nav button[data-view="nuovo"]').click();
+      await timeoutFrame.locator("#n").fill("Timeout bridge");
+      await timeoutFrame.locator("#ora").fill("11:20");
+      await timeoutFrame.locator("#data").fill("2026-09-04");
+      await timeoutFrame.locator("#luogo").fill("Sala timeout");
+      await timeoutFrame.locator("#cliente").fill("Noa");
+      await timeoutFrame.locator("#fnew [data-act='save']").click();
+      await timeoutFrame.locator("[data-fenix-form-error]:not([hidden])").waitFor({ timeout: 12000 });
+      assert.equal(await timeoutFrame.getByRole("heading", { name: "Timeout bridge", exact: true }).count(), 0);
+      assert.equal(await timeoutFrame.locator("#n").inputValue(), "Timeout bridge");
+      const savedTimeout = await timeoutPage.evaluate(() => {
+        const db = (window as unknown as { __db: Record<string, { items?: { title?: string }[] }> }).__db;
+        const items = db && db.slot && Array.isArray(db.slot.items) ? db.slot.items : [];
+        return items.some((row) => row.title === "Timeout bridge");
+      });
+      assert.equal(savedTimeout, false, "timeout is not success and does not persist");
+      await timeoutPage.close();
+    } finally {
+      await browser.close();
     }
   });
 });

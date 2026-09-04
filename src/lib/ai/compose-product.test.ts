@@ -371,5 +371,16 @@ describe("graphic pipeline prompt→plan→generate→visual→QA", () => {
     assert.match(html, /id="day-rail"/);
     assert.match(html, /aria-invalid/);
     assert.match(html, /selectedDay\|\|todayIso\(\)/);
+    assert.match(html, /function mondayOf/);
+    assert.match(html, /function weekRangeLabel/);
+    assert.match(html, /data-act="week-prev"/);
+    assert.match(html, /data-act="week-next"/);
+    assert.match(html, /data-act="week-today"/);
+    assert.match(html, /id="day-label"/);
+    assert.match(html, /aria-labelledby="day-label"/);
+    assert.match(html, /function persistThen/);
+    assert.match(html, /function saveOnce/);
+    assert.doesNotMatch(html, /void window\.Fenix\.save/);
+    assert.doesNotMatch(html, /function save\(\)\{ if\(window\.Fenix\) void/);
   });
 });
