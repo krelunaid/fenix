@@ -129,7 +129,7 @@ describe("graphic pipeline prompt→plan→generate→visual→QA", () => {
     assert.match(vesti.html, /data-part="shoulder"/);
     assert.match(vesti.html, /data-garment=\\"trousers\\"/);
     assert.match(vesti.html, /data-part=\\"crease\\"/);
-    assert.match(vesti.html, /var plates=\[hero\]/);
+    assert.match(vesti.html, /function artOf\(/);
     assert.match(vesti.html, /grid-row:1 \/ span 2/);
     assert.match(vesti.html, /min\(54vh,460px\)/);
     const coat = materialSignature(domainIllustration("fashion", 0, "c", 0));
@@ -143,13 +143,13 @@ describe("graphic pipeline prompt→plan→generate→visual→QA", () => {
     assert.match(crudo.html, /data-dish=\\"tonno\\"/);
     assert.match(crudo.html, /ticket \.thumb/);
     assert.match(crudo.html, /width:96px;height:80px/);
-    assert.match(crudo.html, /var plates=\[hero\]/);
+    assert.match(crudo.html, /function artOf\(/);
     assert.match(atelier.html, /data-scene="pozzo"/);
     assert.match(atelier.html, /data-scene=\\"olivo\\"/);
     assert.match(atelier.html, /data-scene=\\"fienile\\"/);
     assert.match(atelier.html, /data-part="type"/);
     assert.match(atelier.html, /#copertina\{grid-column:1/);
-    assert.match(atelier.html, /var plates=\[hero\]/);
+    assert.match(atelier.html, /function artOf\(/);
     const osso = composeProduct(
       `${formatPrefix("app")}Vesti Osso: moda e vendite, lookbook in avorio, capi in osso e cassa.`,
     );
@@ -163,8 +163,15 @@ describe("graphic pipeline prompt→plan→generate→visual→QA", () => {
     assert.match(locanda.html, /grid-row:1 \/ span 2/);
     const essenza = composeProduct(HARD[0]!);
     assert.match(essenza.html, /data-bottle="nuit"/);
+    assert.match(essenza.html, /data-bottle=\\"nuit\\"/);
     assert.match(essenza.html, /data-bottle=\\"acqua\\"/);
-    assert.match(essenza.html, /var plates=\[hero\]/);
+    assert.match(essenza.html, /function artOf\(/);
+    assert.match(essenza.html, /slot:0/);
+    const osteria = composeProduct(HARD[3]!);
+    assert.match(osteria.html, /data-dish="plin"/);
+    assert.match(osteria.html, /data-dish=\\"brasato\\"/);
+    assert.match(osteria.html, /data-dish=\\"bonet\\"/);
+    assert.match(osteria.html, /data-dish=\\"tajarin\\"/);
     const nord = composeProduct(HARD[4]!);
     assert.match(nord.html, /data-lane=/);
     assert.match(nord.html, /function spark\(seed/);
@@ -316,7 +323,7 @@ describe("graphic pipeline prompt→plan→generate→visual→QA", () => {
     assert.equal(runs.find((r) => r.id === "abbigliamento")!.grammar.id, "lookbook");
     assert.equal(runs.find((r) => r.id === "repo")!.grammar.id, "source-timeline");
     assert.equal(runs.find((r) => r.id === "ristorazione")!.grammar.id, "service-board");
-    assert.equal(GRAPHIC_FIVE_PARENT_SHA, "6d78f612958b1d7b8e3485a6f86eb0edd20b67fc");
+    assert.equal(GRAPHIC_FIVE_PARENT_SHA, "c8d23321fa272536bbcd403ff891fc1eeda828e0");
     const profumi = runs.find((r) => r.id === "profumi")!;
     const ristorazione = runs.find((r) => r.id === "ristorazione")!;
     const abbigliamento = runs.find((r) => r.id === "abbigliamento")!;
@@ -330,7 +337,12 @@ describe("graphic pipeline prompt→plan→generate→visual→QA", () => {
     assert.doesNotMatch(profumi.html, /content:" · in prova"/);
     assert.doesNotMatch(ristorazione.html, /content:" · in prova"/);
     assert.match(profumi.html, /Bois de Nuit/);
+    assert.match(profumi.html, /function artOf\(/);
+    assert.match(profumi.html, /data-bottle="nuit"/);
+    assert.match(profumi.html, /data-bottle=\\"nuit\\"/);
     assert.match(ristorazione.html, /Plin al burro/);
+    assert.match(ristorazione.html, /data-dish="plin"/);
+    assert.match(ristorazione.html, /data-dish=\\"brasato\\"/);
     assert.match(abbigliamento.html, /Metti in passerella/);
     assert.match(agenda.html, /aria-label="Modifica"/);
     assert.match(agenda.html, /aria-label="Archivia"/);
@@ -367,7 +379,7 @@ describe("graphic pipeline prompt→plan→generate→visual→QA", () => {
     }
   });
 
-  it("freezes five-brief before shots at parent SHA 6d78f612", () => {
+  it("freezes five-brief before shots at parent SHA c8d23321", () => {
     const here = dirname(fileURLToPath(import.meta.url));
     const before = join(here, "fixtures/graphic/five/before");
     const names = [
@@ -377,7 +389,7 @@ describe("graphic pipeline prompt→plan→generate→visual→QA", () => {
       "repo",
       "ristorazione",
     ].flatMap((id) => ["D", "T", "M"].map((vp) => `${id}-${vp}.png`));
-    assert.equal(GRAPHIC_FIVE_PARENT_SHA, "6d78f612958b1d7b8e3485a6f86eb0edd20b67fc");
+    assert.equal(GRAPHIC_FIVE_PARENT_SHA, "c8d23321fa272536bbcd403ff891fc1eeda828e0");
     assert.equal(existsSync(before), true);
     const listed = readdirSync(before).filter((n) => n.endsWith(".png")).sort();
     assert.deepEqual(listed, [...names].sort());

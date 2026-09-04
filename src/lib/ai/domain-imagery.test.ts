@@ -206,5 +206,16 @@ describe("domain imagery", () => {
     assert.doesNotMatch(fashion, /preserveAspectRatio="xMidYMid meet"/);
     assert.match(perfume, /width="640"/);
     assert.match(perfume, /height="420"/);
+    const meet0 = domainIllustration("perfume", 0, "flacone", 0, "meet");
+    const slice0 = domainIllustration("perfume", 0, "flacone", 0, "slice");
+    assert.equal(materialSignature(meet0).bottle, "nuit");
+    assert.equal(materialSignature(slice0).bottle, "nuit");
+    assert.match(meet0, /data-fit="meet"/);
+    assert.match(slice0, /data-fit="slice"/);
+    const meetGid = meet0.match(/filter id="([^"]+)"/)?.[1];
+    const sliceGid = slice0.match(/filter id="([^"]+)"/)?.[1];
+    assert.ok(meetGid && sliceGid && meetGid !== sliceGid, `gid collide ${meetGid} ${sliceGid}`);
+    const osteria = [0, 1, 2, 3].map((s) => materialSignature(domainIllustration("food", 0, "piatto", s)).dish);
+    assert.deepEqual(osteria, ["plin", "brasato", "bonet", "tajarin"]);
   });
 });

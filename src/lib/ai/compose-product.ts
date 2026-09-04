@@ -57,8 +57,8 @@ export type ComposedProduct = {
   files: { path: string; content: string }[];
 };
 
-/** Parent SHA of the five-brief before/after. Frozen 6d78f612 baseline, not a quality score. */
-export const GRAPHIC_FIVE_PARENT_SHA = "6d78f612958b1d7b8e3485a6f86eb0edd20b67fc";
+/** Parent SHA of the five-brief before/after. Frozen c8d23321 baseline, not a quality score. */
+export const GRAPHIC_FIVE_PARENT_SHA = "c8d23321fa272536bbcd403ff891fc1eeda828e0";
 
 export type GraphicPipelineRun = {
   brief: string;
@@ -531,10 +531,11 @@ ${matter}`;
 function phoneCss(id: GrammarId): string {
   const stage =
     id === "split-stage"
-      ? `.hero{min-height:0;height:auto;overflow:visible}
-  .hero svg{width:100%;height:auto;max-height:min(28vh,220px);min-height:148px;display:block}
+      ? `.hero{min-height:0;height:auto;overflow:visible;background:transparent}
+  .hero .stage{width:100%;line-height:0;display:block}
+  .hero svg{width:100%;height:auto;aspect-ratio:640/420;min-height:0;display:block}
   .hero .caption,.plate.hero .caption{position:static;padding:12px 8px 8px;background:none}
-  .collection{display:grid;gap:12px;align-content:start}
+  .collection{display:grid;gap:12px;align-content:start;align-items:start}
   .fragrance{display:grid;grid-template-columns:88px 1fr;gap:14px}
   .thumb{width:88px;height:112px;border-radius:calc(var(--r) * .5);overflow:hidden}
   .thumb svg{width:88px;height:112px}`
@@ -546,8 +547,9 @@ function phoneCss(id: GrammarId): string {
         : id === "hospitality"
           ? `.rooms{display:grid;gap:14px}.room{display:grid;grid-template-columns:120px 1fr;gap:14px}.room .thumb{width:120px;height:96px}.room .thumb svg{width:120px;height:96px}.hero{min-height:24vh;max-height:28vh}.hero svg{height:24vh;min-height:140px}`
           : id === "service-board"
-            ? `.hero,.hero.plate{min-height:0;height:auto;overflow:visible}
-  .hero svg,.plate.hero svg{width:100%;height:auto;max-height:min(26vh,200px);min-height:140px;display:block}
+            ? `.hero,.hero.plate{min-height:0;height:auto;overflow:visible;background:transparent}
+  .hero .stage,.hero.plate .stage{width:100%;line-height:0;display:block}
+  .hero svg,.plate.hero svg{width:100%;height:auto;aspect-ratio:640/420;min-height:0;display:block}
   .hero .caption,.plate.hero .caption{position:static;padding:12px 8px 8px;background:none}
   .tickets{display:grid;gap:10px;align-content:start}.ticket{display:grid;grid-template-columns:96px 1fr auto;gap:12px;align-items:center;min-height:88px}
   .ticket .thumb{width:96px;height:80px;overflow:hidden;position:relative;border-radius:calc(var(--r) * .4)}
@@ -618,8 +620,8 @@ main{grid-area:main;min-height:0;overflow:auto;padding:8px 16px 20px}
   .hero .caption,.plate.hero .caption{position:static;background:none;padding:12px 4px 0}
   .tickets,.span{grid-column:2}`
       : id === "split-stage"
-        ? `.hero{min-height:0;height:auto;overflow:visible}
-  .hero svg{height:auto;max-height:min(32vh,240px);width:100%}
+        ? `.hero{min-height:0;height:auto;overflow:visible;background:transparent}
+  .hero svg{height:auto;aspect-ratio:640/420;width:100%;min-height:0}
   .hero .caption{position:static;background:none;padding:12px 8px 8px}`
       : id === "agenda"
         ? `.hero{display:none;min-height:0;height:0}
@@ -635,8 +637,8 @@ main{grid-area:main;min-height:0;overflow:auto;padding:8px 16px 20px}
   ${
     id === "split-stage"
       ? `main{display:grid;grid-template-columns:minmax(280px,.85fr) minmax(360px,1.15fr);gap:24px;align-content:start;align-items:start}
-  .hero{grid-column:1;grid-row:1;align-self:start;min-height:0;height:auto;overflow:visible;margin:0;position:sticky;top:16px}
-  .hero svg{height:auto;min-height:0;max-height:min(52vh,420px);width:100%;display:block}
+  .hero{grid-column:1;grid-row:1;align-self:start;min-height:0;height:auto;overflow:visible;margin:0;position:sticky;top:16px;background:transparent}
+  .hero svg{height:auto;min-height:0;aspect-ratio:640/420;width:100%;display:block}
   .hero .caption{position:static;background:none;padding:12px 4px 0}
   .collection,.span{grid-column:2}`
       : id === "lookbook"
@@ -841,10 +843,11 @@ ${familyChromeCss(t, grammar)}
 
 function jsRows(rows: PipelineRow[]): string {
   return rows
-    .map((r) => {
+    .map((r, i) => {
       const extra =
         (r.status ? `,status:${JSON.stringify(r.status)}` : "") +
-        (r.dayOffset != null ? `,dayOffset:${r.dayOffset}` : "");
+        (r.dayOffset != null ? `,dayOffset:${r.dayOffset}` : "") +
+        `,slot:${i}`;
       return `{id:${JSON.stringify(r.id)},title:${JSON.stringify(r.title)},kicker:${JSON.stringify(r.kicker)},note:${JSON.stringify(r.note)},meta:${JSON.stringify(r.meta)}${extra}}`;
     })
     .join(",");
@@ -854,8 +857,12 @@ function productHtml(spec: PipelineSpec, tokens: DesignTokens, grammar: LayoutGr
   const p = tokens.palette;
   const scheme = Number.parseInt(p.bg.slice(1, 3), 16) < 80 ? "dark" : "light";
   const alt = altForBrief(spec.brief);
-  const hero = domainIllustration(tokens.family, tokens.variant, alt, 0);
-  const cards = spec.rows.map((_, i) => domainIllustration(tokens.family, tokens.variant, alt, i + 1));
+  const slices = spec.rows.map((_, i) => domainIllustration(tokens.family, tokens.variant, alt, i, "slice"));
+  const meets =
+    tokens.family === "perfume" || tokens.family === "food"
+      ? spec.rows.map((_, i) => domainIllustration(tokens.family, tokens.variant, alt, i, "meet"))
+      : [];
+  const hero = meets[0] || slices[0] || domainIllustration(tokens.family, tokens.variant, alt, 0);
   const desk = grammar.chrome !== "tabs";
   const homeView = spec.tabs[0]!.id;
   const deskAttr = desk ? ` data-fenix-craft-desk${grammar.kind === "dashboard" ? " data-fenix-crud" : ""}` : "";
@@ -942,7 +949,8 @@ let data=structuredClone(defaultData);
 let view=${JSON.stringify(homeView)};
 let selectedDay="";
 let editId=null;
-const arts=${JSON.stringify(cards)};
+const arts=${JSON.stringify(slices)};
+const meets=${JSON.stringify(meets)};
 const hero=${JSON.stringify(hero)};
 const tabDefs=${JSON.stringify(spec.tabs)};
 const glyphs=${JSON.stringify(spec.tabs.map((t, i) => tabSvg(t, i)))};
@@ -959,6 +967,15 @@ const AGENDA_CYCLE={prenotato:"confermato",confermato:"in-corso","in-corso":"con
 const AGENDA_EDIT_GLYPH=${JSON.stringify(AGENDA_EDIT_GLYPH)};
 const AGENDA_DEL_GLYPH=${JSON.stringify(AGENDA_DEL_GLYPH)};
 const KICKER_CYCLE={scouting:"trattativa",trattativa:"firma",firma:"chiuso",chiuso:"scouting","in-forno":"al-passo","al-passo":"in-sala","in-sala":"in-forno",arrivo:"in-house","in-house":"partenza",partenza:"arrivo"};
+function artOf(item, fit){
+  var slot=0;
+  if(item && item.slot!=null && isFinite(Number(item.slot))) slot=((Number(item.slot)%4)+4)%4;
+  if(fit==="meet" && meets.length) return meets[slot]||hero;
+  return arts[slot]||hero;
+}
+function ensureSlots(){
+  data.items.forEach(function(e,i){ if(e.slot==null || !isFinite(Number(e.slot))) e.slot=i%4; });
+}
 function isoDay(d){
   var y=d.getFullYear();
   var m=("0"+(d.getMonth()+1)).slice(-2);
@@ -1230,14 +1247,14 @@ function commitForm(f){
     if(wasEdit){
       row=null;
     } else {
-      row={id:createdId,title:nome,kicker:ora,note:luogo+" · "+cliente,meta:"30 min",status:"prenotato",day:giorno};
+      row={id:createdId,title:nome,kicker:ora,note:luogo+" · "+cliente,meta:"30 min",status:"prenotato",day:giorno,slot:confirmed.items.length%4};
     }
     nextDay=giorno;
     nextView=giorno===todayIso()?tabDefs[0].id:tabDefs[2].id;
   } else {
     createdId=wasEdit?editId:("n"+Date.now());
     if(!wasEdit){
-      row={id:createdId,title:nome,kicker:(f.k&&f.k.value||"").trim()||census,note:(f.note&&f.note.value||"").trim()||"—",meta:"nuovo"};
+      row={id:createdId,title:nome,kicker:(f.k&&f.k.value||"").trim()||census,note:(f.note&&f.note.value||"").trim()||"—",meta:"nuovo",slot:confirmed.items.length%4};
     }
     nextView=tabDefs[0].id;
   }
@@ -1295,40 +1312,38 @@ function emptyBox(){ return '<div class="state-empty" data-state="empty"><p>'+em
 function chip(k){ return '<span class="chip '+k+'">'+k+"</span>"; }
 function renderPerfume(){
   var featured=data.items[0];
-  var html='<div class="hero">'+hero+'<div class="caption"><p class="kicker">'+kicker+'</p><h2>'+(featured?featured.title:specName())+'</h2><p class="notes">'+(featured?featured.kicker+(featured.meta?" · "+featured.meta:""):data.items.length+" "+census)+"</p></div></div>";
+  var html='<div class="hero"><div class="stage">'+artOf(featured,"meet")+'</div><div class="caption"><p class="kicker">'+kicker+'</p><h2>'+(featured?featured.title:specName())+'</h2><p class="notes">'+(featured?featured.kicker+(featured.meta?" · "+featured.meta:""):data.items.length+" "+census)+"</p></div></div>";
   if(!data.items.length) return html+emptyBox();
   html+='<div class="collection">';
   data.items.forEach(function(e,i){
-    html+='<article class="card fragrance" data-id="'+e.id+'" data-state="'+(i===0?"on":"idle")+'"><div class="thumb">'+(arts[i%arts.length]||hero)+'</div><div><p class="kicker">'+e.kicker+"</p><h2>"+e.title+'</h2><p class="notes">'+e.note+'</p><div class="row" style="display:flex;justify-content:space-between;gap:8px;margin-top:8px"><span>'+e.meta+'</span><button class="btn sm ghost" data-act="wear" data-id="'+e.id+'">Tieni a portata</button></div></div></article>';
+    html+='<article class="card fragrance" data-id="'+e.id+'" data-state="'+(i===0?"on":"idle")+'"><div class="thumb">'+artOf(e,"slice")+'</div><div><p class="kicker">'+e.kicker+"</p><h2>"+e.title+'</h2><p class="notes">'+e.note+'</p><div class="row" style="display:flex;justify-content:space-between;gap:8px;margin-top:8px"><span>'+e.meta+'</span><button class="btn sm ghost" data-act="wear" data-id="'+e.id+'">Tieni a portata</button></div></div></article>';
   });
   return html+"</div>";
 }
 function renderLookbook(){
   if(!data.items.length) return emptyBox();
-  var plates=[hero].concat(arts);
   var html='<div class="lookbook">';
   data.items.forEach(function(e,i){
-    html+='<article class="look" data-id="'+e.id+'" data-act="wear" data-state="'+(i===0?"on":"idle")+'"><div class="sil">'+(plates[i%plates.length]||hero)+"</div><h2>"+e.title+"</h2><p>"+e.kicker+" · "+e.note+" · "+e.meta+"</p></article>";
+    html+='<article class="look" data-id="'+e.id+'" data-act="wear" data-state="'+(i===0?"on":"idle")+'"><div class="sil">'+artOf(e,"slice")+"</div><h2>"+e.title+"</h2><p>"+e.kicker+" · "+e.note+" · "+e.meta+"</p></article>";
   });
   return html+"</div>";
 }
 function renderRooms(){
-  var plates=[hero].concat(arts);
   var html='<div class="hero">'+hero+'<div class="caption"><p class="kicker">'+kicker+"</p><h2>"+data.items.length+" "+census+"</h2></div></div>";
   if(!data.items.length) return html+emptyBox();
   html+='<div class="rooms">';
   data.items.forEach(function(e,i){
-    html+='<article class="room" data-id="'+e.id+'" data-state="'+(i===0?"on":"idle")+'"><div class="thumb">'+(plates[i%plates.length]||hero)+'</div><div><p>'+chip(e.kicker)+'</p><h2>'+e.title+'</h2><p class="notes">'+e.note+" · "+e.meta+'</p><button class="btn sm ghost" data-act="advance" data-id="'+e.id+'">Avanza soggiorno</button></div></article>';
+    html+='<article class="room" data-id="'+e.id+'" data-state="'+(i===0?"on":"idle")+'"><div class="thumb">'+artOf(e,"slice")+'</div><div><p>'+chip(e.kicker)+'</p><h2>'+e.title+'</h2><p class="notes">'+e.note+" · "+e.meta+'</p><button class="btn sm ghost" data-act="advance" data-id="'+e.id+'">Avanza soggiorno</button></div></article>';
   });
   return html+"</div>";
 }
 function renderTickets(){
   var featured=data.items[0];
-  var html='<div class="hero plate">'+hero+'<div class="caption"><p class="kicker">'+kicker+'</p><h2>'+(featured?featured.title:specName())+'</h2><p class="notes">'+(featured?featured.note+(featured.meta?" · "+featured.meta:""):data.items.length+" "+census)+"</p></div></div>";
+  var html='<div class="hero plate"><div class="stage">'+artOf(featured,"meet")+'</div><div class="caption"><p class="kicker">'+kicker+'</p><h2>'+(featured?featured.title:specName())+'</h2><p class="notes">'+(featured?featured.note+(featured.meta?" · "+featured.meta:""):data.items.length+" "+census)+"</p></div></div>";
   if(!data.items.length) return html+emptyBox();
   html+='<div class="tickets">';
   data.items.forEach(function(e,i){
-    html+='<article class="ticket" data-id="'+e.id+'" data-act="advance" data-state="'+(i===0?"on":"idle")+'"><div class="thumb">'+(arts[i%arts.length]||hero)+'</div><div><h2>'+e.title+'</h2><p class="notes">'+e.note+" · "+e.meta+"</p></div>"+chip(e.kicker)+"</article>";
+    html+='<article class="ticket" data-id="'+e.id+'" data-act="advance" data-state="'+(i===0?"on":"idle")+'"><div class="thumb">'+artOf(e,"slice")+'</div><div><h2>'+e.title+'</h2><p class="notes">'+e.note+" · "+e.meta+"</p></div>"+chip(e.kicker)+"</article>";
   });
   return html+"</div>";
 }
@@ -1384,11 +1399,10 @@ function renderDesk(){
   return html;
 }
 function renderMagazine(){
-  var plates=[hero].concat(arts);
   var html='<section id="copertina"><div class="hero">'+hero+'</div><div class="card span"><p class="kicker">'+kicker+"</p><h2>"+specName()+" in lastre</h2><p class=\\"notes\\">Rivista di lastre fotografiche. Niente stock, niente telefono boxed.</p></div></section>";
   html+='<section id="lastre" class="lastre">';
   data.items.forEach(function(e,i){
-    html+='<article class="plate card" data-id="'+e.id+'" data-act="wear" data-state="'+(i===0?"on":"idle")+'">'+(plates[i%plates.length]||hero)+"<h2>"+e.title+'</h2><p class="notes">'+e.note+" · "+e.meta+"</p></article>";
+    html+='<article class="plate card" data-id="'+e.id+'" data-act="wear" data-state="'+(i===0?"on":"idle")+'">'+artOf(e,"slice")+"<h2>"+e.title+'</h2><p class="notes">'+e.note+" · "+e.meta+"</p></article>";
   });
   html+="</section>";
   html+='<section id="studio" class="card span"><p class="kicker">Studio</p><h2>'+data.items.length+" lastre in fascicolo</h2><p class=\\"notes\\">"+place+"</p></section>";
@@ -1523,12 +1537,13 @@ function renderTool(){
   var html='<div class="hero">'+hero+'<div class="caption"><p class="kicker">'+kicker+"</p><h2>"+data.items.length+" "+census+"</h2></div></div>";
   if(!data.items.length) return html+emptyBox();
   data.items.forEach(function(e,i){
-    html+='<article class="ticket" data-id="'+e.id+'" data-state="'+(i===0?"on":"idle")+'"><div class="thumb">'+(arts[i%arts.length]||hero)+'</div><div><h2>'+e.title+'</h2><p class="notes">'+e.note+" · "+e.meta+"</p></div>"+chip(e.kicker)+"</article>";
+    html+='<article class="ticket" data-id="'+e.id+'" data-state="'+(i===0?"on":"idle")+'"><div class="thumb">'+artOf(e,"slice")+'</div><div><h2>'+e.title+'</h2><p class="notes">'+e.note+" · "+e.meta+"</p></div>"+chip(e.kicker)+"</article>";
   });
   return html;
 }
 function render(){
   if(grammarId==="agenda") hydrateAgenda();
+  ensureSlots();
   renderTabs();
   var root=document.getElementById("root");
   var id=view;

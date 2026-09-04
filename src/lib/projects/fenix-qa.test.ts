@@ -391,7 +391,7 @@ describe("focus-visible and worker model", () => {
     assert.doesNotMatch(fiveBrief, /btn\.click\(\)/);
     assert.match(fiveBrief, /width: 320/);
     assert.match(fiveBrief, /getBoundingClientRect/);
-    assert.match(fiveBrief, /parent 6d78f612/);
+    assert.match(fiveBrief, /parent c8d23321/);
     const recorded = readFileSync(join(root, "src/lib/ai/repair.recorded.test.ts"), "utf8");
     assert.match(recorded, /POLISH_REPAIR_LIVE_VERIFIED = false/);
     assert.match(recorded, /from "\.\/parse\.ts"/);
@@ -403,7 +403,8 @@ describe("focus-visible and worker model", () => {
     assert.doesNotMatch(recorded, /XAI_CHAT_COMPLETIONS_URL/);
     assert.doesNotMatch(compose, /void window\.Fenix\.save/);
     assert.match(compose, /GRAPHIC_FIVE_PARENT_SHA/);
-    assert.match(compose, /6d78f612958b1d7b8e3485a6f86eb0edd20b67fc/);
+    assert.match(compose, /c8d23321fa272536bbcd403ff891fc1eeda828e0/);
+    assert.match(compose, /function artOf\(/);
     assert.doesNotMatch(compose, /content:" · in prova"/);
     assert.match(compose, /aria-label="Modifica"/);
     assert.match(compose, /const AGENDA_EDIT_GLYPH=/);

@@ -671,6 +671,49 @@ describe("graphic pipeline visual QA D/T/M", () => {
                 if (expected) assert.equal(f.bottle, expected, `${fix.id}/${vp} ${f.title} -> ${f.bottle}`);
               }
               assert.ok(new Set(frags.map((f) => f.bottle).filter(Boolean)).size >= 4, `${fix.id}/${vp} bottle diversity`);
+              const heroBottle = await page.evaluate(
+                () => document.querySelector(".hero [data-bottle]")?.getAttribute("data-bottle") || "",
+              );
+              assert.equal(heroBottle, frags[0]?.bottle, `${fix.id}/${vp} hero ${heroBottle} vs first ${frags[0]?.bottle}`);
+              const capBox = await page.evaluate(() => {
+                const thumb = document.querySelector(".fragrance .thumb");
+                const cap = thumb?.querySelector("[data-part='cap']");
+                if (!thumb || !cap) return null;
+                const t = thumb.getBoundingClientRect();
+                const c = cap.getBoundingClientRect();
+                return {
+                  bottle: thumb.querySelector("[data-bottle]")?.getAttribute("data-bottle") || "",
+                  capH: c.height,
+                  top: c.top - t.top,
+                  bottom: t.bottom - c.bottom,
+                };
+              });
+              assert.ok(capBox, `${fix.id}/${vp} cap node`);
+              assert.equal(capBox!.bottle, frags[0]?.bottle, `${fix.id}/${vp} first thumb bottle`);
+              assert.ok(capBox!.capH > 2, `${fix.id}/${vp} cap cut ${JSON.stringify(capBox)}`);
+              assert.ok(capBox!.top >= -1, `${fix.id}/${vp} cap top ${capBox!.top}`);
+              assert.ok(capBox!.bottom >= -2, `${fix.id}/${vp} cap bottom ${capBox!.bottom}`);
+            }
+            if (fix.id === "osteria-passo") {
+              const tickets = await page.evaluate(() =>
+                [...document.querySelectorAll(".ticket")].map((el) => ({
+                  title: el.querySelector("h2")?.textContent || "",
+                  dish: el.querySelector("[data-dish]")?.getAttribute("data-dish") || "",
+                })),
+              );
+              assert.ok(tickets.length >= 4, `${fix.id}/${vp} dishes ${tickets.length}`);
+              for (const t of tickets) {
+                let expected = "";
+                if (/plin/i.test(t.title)) expected = "plin";
+                else if (/brasato/i.test(t.title)) expected = "brasato";
+                else if (/bonet/i.test(t.title)) expected = "bonet";
+                else if (/tajarin/i.test(t.title)) expected = "tajarin";
+                if (expected) assert.equal(t.dish, expected, `${fix.id}/${vp} ${t.title} -> ${t.dish}`);
+              }
+              const heroDish = await page.evaluate(
+                () => document.querySelector(".hero [data-dish]")?.getAttribute("data-dish") || "",
+              );
+              assert.equal(heroDish, tickets[0]?.dish, `${fix.id}/${vp} hero ${heroDish} vs first ${tickets[0]?.dish}`);
             }
             if (fix.id === "nord-desk") {
               const desk = await page.evaluate(() => {
@@ -980,6 +1023,35 @@ describe("graphic pipeline visual QA D/T/M", () => {
               assert.match(fit || "", /meet/);
               const thumbFit = await frame.locator(".fragrance .thumb svg").first().getAttribute("preserveAspectRatio");
               assert.match(thumbFit || "", /slice/);
+              const idn = await frame.locator("html").evaluate(() => {
+                const cards = [...document.querySelectorAll(".fragrance")].map((el) => ({
+                  title: el.querySelector("h2")?.textContent || "",
+                  bottle: el.querySelector("[data-bottle]")?.getAttribute("data-bottle") || "",
+                }));
+                const hero = document.querySelector(".hero [data-bottle]")?.getAttribute("data-bottle") || "";
+                const thumb = document.querySelector(".fragrance .thumb");
+                const capEl = thumb?.querySelector("[data-part='cap']");
+                const t = thumb?.getBoundingClientRect();
+                const c = capEl?.getBoundingClientRect();
+                return {
+                  cards,
+                  hero,
+                  capH: c?.height || 0,
+                  capTop: c && t ? c.top - t.top : -99,
+                  capBottom: c && t ? t.bottom - c.bottom : -99,
+                };
+              });
+              assert.equal(idn.hero, idn.cards[0]?.bottle, `${row.id}/${vp} hero ${idn.hero} vs ${idn.cards[0]?.bottle}`);
+              for (const f of idn.cards) {
+                let expected = "";
+                if (/nuit/i.test(f.title)) expected = "nuit";
+                else if (/acqua/i.test(f.title)) expected = "acqua";
+                else if (/fleur/i.test(f.title)) expected = "fleur";
+                else if (/pelle/i.test(f.title)) expected = "pelle";
+                if (expected) assert.equal(f.bottle, expected, `${row.id}/${vp} ${f.title} -> ${f.bottle}`);
+              }
+              assert.ok(idn.capH > 2, `${row.id}/${vp} first thumb cap cut h=${idn.capH}`);
+              assert.ok(idn.capTop >= -1 && idn.capBottom >= -2, `${row.id}/${vp} cap box ${idn.capTop}/${idn.capBottom}`);
             }
             if (row.id === "ristorazione") {
               assert.equal(bgVar, "#1a1210");
@@ -990,6 +1062,23 @@ describe("graphic pipeline visual QA D/T/M", () => {
               assert.match(fit || "", /meet/);
               const thumbFit = await frame.locator(".ticket .thumb svg").first().getAttribute("preserveAspectRatio");
               assert.match(thumbFit || "", /slice/);
+              const idn = await frame.locator("html").evaluate(() => {
+                const cards = [...document.querySelectorAll(".ticket")].map((el) => ({
+                  title: el.querySelector("h2")?.textContent || "",
+                  dish: el.querySelector("[data-dish]")?.getAttribute("data-dish") || "",
+                }));
+                const hero = document.querySelector(".hero [data-dish]")?.getAttribute("data-dish") || "";
+                return { cards, hero };
+              });
+              assert.equal(idn.hero, idn.cards[0]?.dish, `${row.id}/${vp} hero ${idn.hero} vs ${idn.cards[0]?.dish}`);
+              for (const t of idn.cards) {
+                let expected = "";
+                if (/plin/i.test(t.title)) expected = "plin";
+                else if (/brasato/i.test(t.title)) expected = "brasato";
+                else if (/bonet/i.test(t.title)) expected = "bonet";
+                else if (/tajarin/i.test(t.title)) expected = "tajarin";
+                if (expected) assert.equal(t.dish, expected, `${row.id}/${vp} ${t.title} -> ${t.dish}`);
+              }
             }
             if (row.id === "agenda") {
               assert.equal(await frame.locator('button[data-view="home"]').count(), 0);
@@ -1046,6 +1135,24 @@ describe("graphic pipeline visual QA D/T/M", () => {
               assert.ok(measure.capTop + 0.5 >= measure.svgBottom, `${row.id} caption covers object ${measure.capTop}<${measure.svgBottom}`);
               assert.equal(measure.collection, true, `${row.id} list wrapper`);
             }
+            if ((row.id === "profumi" || row.id === "ristorazione") && vp === "M") {
+              const band = await frame.locator("html").evaluate(() => {
+                const hero = document.querySelector(".hero");
+                const svg = document.querySelector(".hero svg");
+                if (!hero || !svg) return null;
+                const hb = hero.getBoundingClientRect();
+                const sb = svg.getBoundingClientRect();
+                return {
+                  left: sb.left - hb.left,
+                  right: hb.right - sb.right,
+                  ratio: sb.height ? sb.width / sb.height : 0,
+                  want: 640 / 420,
+                };
+              });
+              assert.ok(band, `${row.id}/M hero svg`);
+              assert.ok(band!.left < 8 && band!.right < 8, `${row.id}/M hero side ${band!.left}/${band!.right}`);
+              assert.ok(Math.abs(band!.ratio - band!.want) < 0.08, `${row.id}/M hero ratio ${band!.ratio}`);
+            }
             const rendered = await frame.locator("html").evaluate(collectRenderedGraphic);
             assert.equal(rendered.leakedText, false, `${row.id} leaked`);
             assert.ok(rendered.headingCount >= 1, `${row.id} heading`);
@@ -1080,6 +1187,29 @@ describe("graphic pipeline visual QA D/T/M", () => {
             }
             const buf = readFileSync(dest);
             files.push({ name: `${row.id}-${vp}.png`, sha256: createHash("sha256").update(buf).digest("hex") });
+            if (row.id === "profumi") {
+              await frame.locator('.fragrance [data-act="wear"]').last().click();
+              await frame.locator("html:not([data-fenix-persist='busy'])").waitFor({ timeout: 8000 });
+              await frame.locator("nav button[data-view]").first().click();
+              const worn = await frame.locator("html").evaluate(() => {
+                const cards = [...document.querySelectorAll(".fragrance")].map((el) => ({
+                  title: el.querySelector("h2")?.textContent || "",
+                  bottle: el.querySelector("[data-bottle]")?.getAttribute("data-bottle") || "",
+                }));
+                const hero = document.querySelector(".hero [data-bottle]")?.getAttribute("data-bottle") || "";
+                return { cards, hero };
+              });
+              assert.ok(worn.cards.length >= 4, `${row.id}/${vp} wear cards`);
+              assert.equal(worn.hero, worn.cards[0]?.bottle, `${row.id}/${vp} wear hero ${worn.hero} vs ${worn.cards[0]?.bottle}`);
+              for (const f of worn.cards) {
+                let expected = "";
+                if (/nuit/i.test(f.title)) expected = "nuit";
+                else if (/acqua/i.test(f.title)) expected = "acqua";
+                else if (/fleur/i.test(f.title)) expected = "fleur";
+                else if (/pelle/i.test(f.title)) expected = "pelle";
+                if (expected) assert.equal(f.bottle, expected, `${row.id}/${vp} wear ${f.title} -> ${f.bottle}`);
+              }
+            }
             const tabIndex = row.id === "repo" ? 2 : 1;
             const tabs = frame.locator("button[data-view]");
             assert.ok((await tabs.count()) > tabIndex, `${row.id} form tab`);
@@ -1193,13 +1323,13 @@ describe("graphic pipeline visual QA D/T/M", () => {
           before,
           after: files,
           palettes,
-          note: "composeProduct+prepareSrcDoc five briefs D/T/M before/after on parent 6d78f612. Planner/polish LLM skipped (quota). Hash/ΔE are movement floors, not scores. Not a 9/10.",
+          note: "composeProduct+prepareSrcDoc five briefs D/T/M before/after on parent c8d23321. Identity (slot) is independent of meet/slice. Planner/polish LLM skipped (quota). Hash/ΔE are movement floors, not scores. Not a 9/10.",
         },
         null,
         2,
       )}\n`,
     );
-    assert.equal(GRAPHIC_FIVE_PARENT_SHA, "6d78f612958b1d7b8e3485a6f86eb0edd20b67fc");
+    assert.equal(GRAPHIC_FIVE_PARENT_SHA, "c8d23321fa272536bbcd403ff891fc1eeda828e0");
     assert.equal(files.length, briefs.length * VIEWPORTS.length);
     assert.equal(new Set(files.map((f) => f.sha256)).size, files.length, "after shots must differ");
     assert.equal(new Set(mobileChrome).size, briefs.length, mobileChrome.join(" || "));
@@ -1213,7 +1343,7 @@ describe("graphic pipeline visual QA D/T/M", () => {
       const prior = before.find((b) => b.name === file.name);
       assert.ok(prior, file.name);
       if (mustMove.test(file.name)) {
-        assert.notEqual(file.sha256, prior!.sha256, `${file.name} after must move from parent 6d78f612`);
+        assert.notEqual(file.sha256, prior!.sha256, `${file.name} after must move from parent c8d23321`);
       }
       assert.equal(existsSync(join(BEFORE, file.name)), true);
     }

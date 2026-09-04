@@ -107,18 +107,18 @@ function esc(value: string): string {
 }
 
 function wrap(id: string, alt: string, inner: string, slot = 0, extraDefs = "", fit: "meet" | "slice" = "slice"): string {
-  const gid = `${id.replace(/[^a-z0-9]/gi, "")}s${slot}n${inner.length}`;
   const bits = id.split("-");
   const family = bits[1] || "";
   const variant = bits[2] || "0";
   const resolved = fit === "meet" ? "meet" : "slice";
+  const gid = `${id.replace(/[^a-z0-9]/gi, "")}s${slot}${resolved === "meet" ? "m" : "k"}n${inner.length}`;
   return `<svg class="domain-art" data-imagery="domain" data-family="${esc(family)}" data-variant="${esc(variant)}" data-provenance="${esc(id)}" data-slot="${slot}" data-fit="${resolved}" viewBox="0 0 640 420" width="640" height="420" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${esc(alt)}" preserveAspectRatio="xMidYMid ${resolved}"><defs><filter id="${gid}" x="-10%" y="-10%" width="120%" height="120%"><feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="4" seed="${11 + slot * 5}" result="n"/><feColorMatrix in="n" type="saturate" values="0" result="g"/><feComponentTransfer in="g" result="g2"><feFuncA type="table" tableValues="0 0.26"/></feComponentTransfer><feBlend in="SourceGraphic" in2="g2" mode="multiply"/></filter><filter id="${gid}sh"><feDropShadow dx="0" dy="12" stdDeviation="14" flood-opacity=".34"/></filter><radialGradient id="${gid}vg" cx=".48" cy=".42" r=".78"><stop offset=".5" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".32"/></radialGradient>${extraDefs}</defs><g filter="url(#${gid})">${inner}</g>${family === "editorial" ? `<rect width="640" height="420" fill="#6a5a48" opacity=".07" pointer-events="none"/><rect width="640" height="420" fill="#f4ead8" opacity=".05" pointer-events="none"/>` : family === "repo" ? `<g pointer-events="none" opacity=".12">${Array.from({ length: 14 }, (_, i) => `<path d="M0 ${28 * i}h640" stroke="#9ec8d4" stroke-width="1"/>`).join("")}</g>` : ""}<rect width="640" height="420" fill="url(#${gid}vg)" pointer-events="none"/></svg>`;
 }
 
-function perfumeArt(variant: 0 | 1, slot: number, alt: string): string {
+function perfumeArt(variant: 0 | 1, slot: number, alt: string, fitArg?: "meet" | "slice"): string {
   const id = `svg-perfume-${variant}`;
   const s = slot % 4;
-  const fit: "meet" | "slice" = slot === 0 ? "meet" : "slice";
+  const fit: "meet" | "slice" = fitArg ?? (slot === 0 ? "meet" : "slice");
   const bottles = variant === 1 ? (["sale", "nebbia", "pino", "vetro"] as const) : (["nuit", "acqua", "fleur", "pelle"] as const);
   const bottle = bottles[s]!;
   if (variant === 1) {
@@ -678,10 +678,10 @@ function crudoStill(s: number, kind: "ricciola" | "gambero" | "ostrica" | "tonno
   return `<g data-dish="${kind}">${marbleVeins()}${kind === "ricciola" ? `<g transform="translate(320 220) scale(1.12) translate(-320 -220)">${food}</g>` : `${extra}<g transform="translate(320 220) scale(1.08) translate(-320 -220)">${food}</g>`}</g>`;
 }
 
-function foodArt(variant: 0 | 1, slot: number, alt: string): string {
+function foodArt(variant: 0 | 1, slot: number, alt: string, fitArg?: "meet" | "slice"): string {
   const id = `svg-food-${variant}`;
   const s = slot % 4;
-  const fit: "meet" | "slice" = slot === 0 ? "meet" : "slice";
+  const fit: "meet" | "slice" = fitArg ?? (slot === 0 ? "meet" : "slice");
   if (variant === 1) {
     const kinds = ["ricciola", "gambero", "ostrica", "tonno"] as const;
     const kind = kinds[s]!;
@@ -700,16 +700,19 @@ function foodArt(variant: 0 | 1, slot: number, alt: string): string {
   const defs = `<radialGradient id="dk${s}" cx=".5" cy=".38" r=".55"><stop offset="0" stop-color="#e25c2a"/><stop offset=".45" stop-color="#c43c2c"/><stop offset="1" stop-color="#3a2420"/></radialGradient><linearGradient id="plin${s}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f6ead8"/><stop offset="1" stop-color="#d4b896"/></linearGradient>`;
   const sage = `<g data-part="herb" fill="#7d9a6a"><ellipse cx="292" cy="200" rx="10" ry="5" transform="rotate(-20 292 200)"/><ellipse cx="312" cy="194" rx="11" ry="5" transform="rotate(18 312 194)"/><ellipse cx="328" cy="204" rx="9" ry="4.5" transform="rotate(-12 328 204)"/></g>`;
   const wine = `<g data-part="glass"><ellipse cx="470" cy="210" rx="36" ry="58" fill="#f6ead8" opacity=".12" stroke="#c4a890"/><path d="M456 160c14 0 26 12 26 32" fill="none" stroke="#c4a890" stroke-width="1.6"/><path d="M470 268v40M452 308h36" stroke="#c4a890" stroke-width="2"/><path d="M448 200c8 28 36 28 44 0" fill="#c43c2c" opacity=".35"/></g>`;
+  const dishes = ["plin", "brasato", "bonet", "tajarin"] as const;
+  const dish = dishes[s]!;
+  const plated = (inner: string) => `<g data-dish="${dish}">${inner}</g>`;
   if (s === 1) {
-    return wrap(id, alt, `<rect width="640" height="420" fill="#1a1210"/><ellipse cx="330" cy="280" rx="220" ry="96" fill="#000" opacity=".45"/><g data-part="plate"><ellipse cx="328" cy="246" rx="156" ry="66" fill="url(#dk${s})"/></g><g data-part="flesh">${Array.from({ length: 7 }, (_, i) => `<ellipse cx="${270 + i * 16}" cy="${228 + (i % 2) * 6}" rx="14" ry="9" fill="url(#plin${s})"/>`).join("")}</g>${sage}${wine}<path d="M250 228c40-22 96-18 128 12-22 32-86 44-128 20z" fill="#f6ead8" opacity=".35"/><rect x="56" y="48" width="8" height="240" fill="#c43c2c"/>`, slot, defs, fit);
+    return wrap(id, alt, plated(`<rect width="640" height="420" fill="#1a1210"/><ellipse cx="330" cy="280" rx="220" ry="96" fill="#000" opacity=".45"/><g data-part="plate"><ellipse cx="328" cy="246" rx="156" ry="66" fill="url(#dk${s})"/></g><g data-part="flesh">${Array.from({ length: 7 }, (_, i) => `<ellipse cx="${270 + i * 16}" cy="${228 + (i % 2) * 6}" rx="14" ry="9" fill="url(#plin${s})"/>`).join("")}</g>${sage}${wine}<path d="M250 228c40-22 96-18 128 12-22 32-86 44-128 20z" fill="#f6ead8" opacity=".35"/><rect x="56" y="48" width="8" height="240" fill="#c43c2c"/>`), slot, defs, fit);
   }
   if (s === 2) {
-    return wrap(id, alt, `<rect width="640" height="420" fill="#140e0c"/><g data-part="plate"><ellipse cx="250" cy="250" rx="150" ry="80" fill="#3a2420"/><ellipse cx="250" cy="236" rx="110" ry="50" fill="url(#dk${s})"/></g><g data-part="flesh"><path d="M200 226c28-14 70-10 90 10-14 22-60 30-90 14z" fill="#f6ead8"/><ellipse cx="230" cy="230" rx="16" ry="10" fill="url(#plin${s})"/><ellipse cx="258" cy="226" rx="15" ry="9" fill="url(#plin${s})"/></g>${wine}<rect x="56" y="48" width="8" height="250" fill="#c43c2c"/><path d="M80 64h140" stroke="#f6ead8" stroke-width="3"/>`, slot, defs, fit);
+    return wrap(id, alt, plated(`<rect width="640" height="420" fill="#140e0c"/><g data-part="plate"><ellipse cx="250" cy="250" rx="150" ry="80" fill="#3a2420"/><ellipse cx="250" cy="236" rx="110" ry="50" fill="url(#dk${s})"/></g><g data-part="flesh"><path d="M200 226c28-14 70-10 90 10-14 22-60 30-90 14z" fill="#f6ead8"/><ellipse cx="230" cy="230" rx="16" ry="10" fill="url(#plin${s})"/><ellipse cx="258" cy="226" rx="15" ry="9" fill="url(#plin${s})"/></g>${wine}<rect x="56" y="48" width="8" height="250" fill="#c43c2c"/><path d="M80 64h140" stroke="#f6ead8" stroke-width="3"/>`), slot, defs, fit);
   }
   if (s === 3) {
-    return wrap(id, alt, `<rect width="640" height="420" fill="#1a1210"/><rect x="70" y="60" width="500" height="300" fill="#241816"/><g data-part="plate"><ellipse cx="260" cy="230" rx="130" ry="70" fill="url(#dk${s})"/></g><g data-part="flesh"><path d="M210 220c30-16 70-12 90 10" fill="#f6ead8"/><ellipse cx="236" cy="224" rx="14" ry="9" fill="url(#plin${s})"/><ellipse cx="264" cy="220" rx="14" ry="9" fill="url(#plin${s})"/><ellipse cx="290" cy="226" rx="13" ry="8" fill="url(#plin${s})"/></g><rect x="420" y="100" width="120" height="200" fill="#321f1b"/><rect x="436" y="120" width="88" height="14" fill="#f6ead8" opacity=".4"/><rect x="436" y="148" width="64" height="8" fill="#c43c2c"/><rect x="70" y="60" width="8" height="300" fill="#c43c2c"/>`, slot, defs, fit);
+    return wrap(id, alt, plated(`<rect width="640" height="420" fill="#1a1210"/><rect x="70" y="60" width="500" height="300" fill="#241816"/><g data-part="plate"><ellipse cx="260" cy="230" rx="130" ry="70" fill="url(#dk${s})"/></g><g data-part="flesh"><path d="M210 220c30-16 70-12 90 10" fill="#f6ead8"/><ellipse cx="236" cy="224" rx="14" ry="9" fill="url(#plin${s})"/><ellipse cx="264" cy="220" rx="14" ry="9" fill="url(#plin${s})"/><ellipse cx="290" cy="226" rx="13" ry="8" fill="url(#plin${s})"/></g><rect x="420" y="100" width="120" height="200" fill="#321f1b"/><rect x="436" y="120" width="88" height="14" fill="#f6ead8" opacity=".4"/><rect x="436" y="148" width="64" height="8" fill="#c43c2c"/><rect x="70" y="60" width="8" height="300" fill="#c43c2c"/>`), slot, defs, fit);
   }
-  return wrap(id, alt, `<rect width="640" height="420" fill="#1a1210"/><ellipse cx="330" cy="272" rx="206" ry="100" fill="#000" opacity=".5"/><g data-part="plate"><ellipse cx="328" cy="250" rx="170" ry="80" fill="#3a2420"/><ellipse cx="328" cy="236" rx="128" ry="56" fill="url(#dk${s})"/><path d="M210 220c30-24 80-36 118-20" fill="none" stroke="#f6ead8" stroke-width="2" opacity=".2"/></g><g data-part="flesh">${Array.from({ length: 6 }, (_, i) => `<ellipse cx="${276 + i * 15}" cy="${222 + (i % 3) * 5}" rx="13" ry="8" fill="url(#plin${s})"/>`).join("")}<path d="M248 220c36-22 84-18 112 10-18 30-72 44-112 24z" fill="#f6ead8" opacity=".4"/><path d="M260 218c20-6 48-4 70 8" fill="none" stroke="#d4b896" stroke-width="1.2"/></g>${sage}<path d="M300 188c-8 6-6 16 4 14 8 10 20 2 14-8 6-12-10-18-18-6z" fill="#7d9a6a"/><circle cx="${300 + s * 8}" cy="214" r="7" fill="#7d9a6a"/><path d="M290 176c6-26 16-38 12-6M318 168c8-30 20-40 12-4M344 174c6-24 16-34 10-2" fill="none" stroke="#f6ead8" stroke-width="1.8" opacity=".4"/>${wine}<rect x="64" y="56" width="8" height="240" fill="#c43c2c"/><path d="M92 72h170M92 98h100" stroke="#f6ead8" stroke-width="3"/>`, slot, defs, fit);
+  return wrap(id, alt, plated(`<rect width="640" height="420" fill="#1a1210"/><ellipse cx="330" cy="272" rx="206" ry="100" fill="#000" opacity=".5"/><g data-part="plate"><ellipse cx="328" cy="250" rx="170" ry="80" fill="#3a2420"/><ellipse cx="328" cy="236" rx="128" ry="56" fill="url(#dk${s})"/><path d="M210 220c30-24 80-36 118-20" fill="none" stroke="#f6ead8" stroke-width="2" opacity=".2"/></g><g data-part="flesh">${Array.from({ length: 6 }, (_, i) => `<ellipse cx="${276 + i * 15}" cy="${222 + (i % 3) * 5}" rx="13" ry="8" fill="url(#plin${s})"/>`).join("")}<path d="M248 220c36-22 84-18 112 10-18 30-72 44-112 24z" fill="#f6ead8" opacity=".4"/><path d="M260 218c20-6 48-4 70 8" fill="none" stroke="#d4b896" stroke-width="1.2"/></g>${sage}<path d="M300 188c-8 6-6 16 4 14 8 10 20 2 14-8 6-12-10-18-18-6z" fill="#7d9a6a"/><circle cx="${300 + s * 8}" cy="214" r="7" fill="#7d9a6a"/><path d="M290 176c6-26 16-38 12-6M318 168c8-30 20-40 12-4M344 174c6-24 16-34 10-2" fill="none" stroke="#f6ead8" stroke-width="1.8" opacity=".4"/>${wine}<rect x="64" y="56" width="8" height="240" fill="#c43c2c"/><path d="M92 72h170M92 98h100" stroke="#f6ead8" stroke-width="3"/>`), slot, defs, fit);
 }
 
 function sprockets(): string {
@@ -935,13 +938,14 @@ export function domainIllustration(
   variant: 0 | 1 = 0,
   alt?: string,
   slot = 0,
+  fit?: "meet" | "slice",
 ): string {
   const label = alt || altForBrief(`${family} ${variant}`);
-  if (family === "perfume") return perfumeArt(variant, slot, label);
+  if (family === "perfume") return perfumeArt(variant, slot, label, fit);
   if (family === "fashion") return fashionArt(variant, slot, label);
   if (family === "booking") return bookingArt(variant, slot, label);
   if (family === "hospitality") return hospitalityArt(variant, slot, label);
-  if (family === "food") return foodArt(variant, slot, label);
+  if (family === "food") return foodArt(variant, slot, label, fit);
   if (family === "editorial") return editorialArt(variant, slot, label);
   if (family === "ops") return opsArt(variant, slot, label);
   if (family === "utility") return utilityArt(variant, slot, label);

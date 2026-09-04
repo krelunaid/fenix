@@ -106,7 +106,7 @@
           {
             "id": "imagery",
             "label": "Imagery di dominio",
-            "score": 9,
+            "score": 10,
             "motivation": "Imagery di dominio con parti semantiche (garment/dish/scene/room/bottle)."
           },
           {
@@ -146,7 +146,7 @@
             "motivation": "Focus visibile e etichette aria sul mestiere."
           }
         ],
-        "total": 97
+        "total": 98
       }
     }
   },
