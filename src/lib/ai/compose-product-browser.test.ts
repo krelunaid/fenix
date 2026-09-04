@@ -955,6 +955,19 @@ describe("graphic pipeline visual QA D/T/M", () => {
             assert.equal(bgPaint, tokenBg, `${row.id}/${vp} body paint`);
             assert.notEqual(bgVar, "#111827", `${row.id}/${vp} navy swap`);
             assert.notEqual(accentVar, "#2dd4bf", `${row.id}/${vp} teal swap`);
+            const navIcon = frame.locator("nav button svg").first();
+            assert.ok((await navIcon.count()) >= 1, `${row.id}/${vp} nav svg`);
+            const iconCss = await navIcon.evaluate((el) => {
+              const s = getComputedStyle(el);
+              return { display: s.display, overflow: s.overflow };
+            });
+            assert.notEqual(iconCss.display, "none", `${row.id}/${vp} nav icon painted`);
+            assert.equal(iconCss.overflow, "visible", `${row.id}/${vp} nav icon overflow`);
+            const navMin = await frame
+              .locator("nav button")
+              .first()
+              .evaluate((el) => parseFloat(getComputedStyle(el).minHeight));
+            assert.ok(navMin >= 44, `${row.id}/${vp} tab touch ${navMin}`);
             if (row.id === "profumi") {
               assert.equal(bgVar, "#120e0c");
               assert.equal(accentVar, "#c4a15a");
@@ -975,6 +988,11 @@ describe("graphic pipeline visual QA D/T/M", () => {
                 dayCounts.reduce((a, b) => a + b, 0) >= 3,
                 `${row.id} week slots ${dayCounts.join(",")}`,
               );
+              const wrap = await frame
+                .locator(".slot-actions")
+                .first()
+                .evaluate((el) => getComputedStyle(el).flexWrap);
+              assert.equal(wrap, "nowrap", `${row.id}/${vp} slot actions nowrap`);
             }
             const overflow = await frame.locator("html").evaluate(
               () => document.documentElement.scrollWidth - window.innerWidth,
@@ -1128,13 +1146,13 @@ describe("graphic pipeline visual QA D/T/M", () => {
           before,
           after: files,
           palettes,
-          note: "composeProduct five briefs D/T/M before/after on parent a930493. Painted CSS after prepareSrcDoc. Hash/ΔE are movement floors, not scores. Not a 9/10.",
+          note: "composeProduct+prepareSrcDoc five briefs D/T/M before/after on parent 8d98b42. Planner/polish LLM skipped (quota). Hash/ΔE are movement floors, not scores. Not a 9/10.",
         },
         null,
         2,
       )}\n`,
     );
-    assert.equal(GRAPHIC_FIVE_PARENT_SHA, "a9304931bfb8fd1711aa932fa80f090463c7b59a");
+    assert.equal(GRAPHIC_FIVE_PARENT_SHA, "8d98b427620f75b460433c0de8882d89b4573730");
     assert.equal(files.length, briefs.length * VIEWPORTS.length);
     assert.equal(new Set(files.map((f) => f.sha256)).size, files.length, "after shots must differ");
     assert.equal(new Set(mobileChrome).size, briefs.length, mobileChrome.join(" || "));
@@ -1143,12 +1161,12 @@ describe("graphic pipeline visual QA D/T/M", () => {
     assert.equal(agendaPalette?.display, "Figtree");
     assert.equal(agendaPalette?.bg.toLowerCase(), "#e8eef4");
     assert.equal(agendaPalette?.accent.toLowerCase(), "#1f6f68");
-    const mustMove = /^(profumi|ristorazione|repo)-[DTM]\.png$/;
+    const mustMove = /^(agenda|profumi|abbigliamento|repo|ristorazione)-[DTM]\.png$/;
     for (const file of files) {
       const prior = before.find((b) => b.name === file.name);
       assert.ok(prior, file.name);
       if (mustMove.test(file.name)) {
-        assert.notEqual(file.sha256, prior!.sha256, `${file.name} after must move from parent a930493`);
+        assert.notEqual(file.sha256, prior!.sha256, `${file.name} after must move from parent 8d98b42`);
       }
       assert.equal(existsSync(join(BEFORE, file.name)), true);
     }

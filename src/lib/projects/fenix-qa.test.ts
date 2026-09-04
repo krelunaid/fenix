@@ -391,6 +391,11 @@ describe("focus-visible and worker model", () => {
     assert.doesNotMatch(fiveBrief, /btn\.click\(\)/);
     assert.doesNotMatch(compose, /void window\.Fenix\.save/);
     assert.match(compose, /GRAPHIC_FIVE_PARENT_SHA/);
+    assert.match(compose, /8d98b427620f75b460433c0de8882d89b4573730/);
+    assert.match(compose, /nav\.tabs svg\{[^}]*overflow:visible/);
+    assert.match(compose, />Avanti</);
+    assert.doesNotMatch(compose, /Avanza slot/);
+    assert.match(compose, /flex-wrap:nowrap/);
     assert.match(compose, /data-family=/);
     assert.match(compose, /family-chrome /);
     assert.match(compose, /html\[data-family\]::before/);

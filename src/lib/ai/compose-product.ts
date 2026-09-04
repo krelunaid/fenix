@@ -57,8 +57,8 @@ export type ComposedProduct = {
   files: { path: string; content: string }[];
 };
 
-/** Parent SHA of the five-brief before/after. Frozen a930493 baseline, not a quality score. */
-export const GRAPHIC_FIVE_PARENT_SHA = "a9304931bfb8fd1711aa932fa80f090463c7b59a";
+/** Parent SHA of the five-brief before/after. Frozen 8d98b42 baseline, not a quality score. */
+export const GRAPHIC_FIVE_PARENT_SHA = "8d98b427620f75b460433c0de8882d89b4573730";
 
 export type GraphicPipelineRun = {
   brief: string;
@@ -409,7 +409,7 @@ function agendaRailMarkup(spec: PipelineSpec, grammar: LayoutGrammar): string {
     .map((e, i) => {
       const state = i === 0 ? "on" : "idle";
       const status = e.status || "prenotato";
-      return `<article class="slot" data-id="${e.id}" data-state="${state}" data-status="${status}"><time class="time" datetime="${e.kicker}">${e.kicker}</time><div class="slot-body"><h2>${e.title}</h2><p class="notes"><span class="chip ${status}">${status}</span> · ${e.note} · ${e.meta}</p><div class="slot-actions"><button class="btn sm ghost" data-act="advance" data-id="${e.id}" aria-label="Avanza stato ${status}">Avanza slot</button><button class="btn sm ghost" data-act="edit" data-id="${e.id}">Modifica</button><button class="btn sm ghost" data-act="del" data-id="${e.id}">Archivia</button></div></div></article>`;
+      return `<article class="slot" data-id="${e.id}" data-state="${state}" data-status="${status}"><time class="time" datetime="${e.kicker}">${e.kicker}</time><div class="slot-body"><h2>${e.title}</h2><p class="notes"><span class="chip ${status}">${status}</span> · ${e.note} · ${e.meta}</p><div class="slot-actions"><button class="btn sm ghost" data-act="advance" data-id="${e.id}" aria-label="Avanza stato ${status}">Avanti</button><button class="btn sm ghost" data-act="edit" data-id="${e.id}">Modifica</button><button class="btn sm ghost" data-act="del" data-id="${e.id}">Archivia</button></div></div></article>`;
     })
     .join("");
   return `<div class="day-head"><p class="kicker">${spec.kicker}</p><h2 id="day-label">${spec.rows.length} ${grammar.voice.census}</h2></div><div class="day-rail" data-fenix-rail="day" id="day-rail" role="tabpanel" aria-labelledby="day-label">${slots}</div>`;
@@ -476,7 +476,8 @@ function displayStack(t: DesignTokens): string {
 function familyChromeCss(t: DesignTokens, grammar: LayoutGrammar): string {
   const operational = isOperationalApp(t);
   const brand = operational
-    ? `.brand{font-weight:700;letter-spacing:-.028em}`
+    ? `.brand{font-weight:700;letter-spacing:-.028em;line-height:1.15}
+header{align-items:center}`
     : t.family === "perfume"
       ? `.brand{font-style:italic;font-weight:600;letter-spacing:-.035em}`
       : t.family === "fashion"
@@ -541,15 +542,15 @@ function phoneCss(id: GrammarId): string {
   .ticket .thumb svg{width:72px;height:56px;display:block}`
             : id === "agenda"
               ? `.hero{display:none;min-height:0;height:0;margin:0;border:0}
-  .day-head{padding:2px 0 10px}
+  .day-head{padding:2px 0 8px}
   .day-head h2{font-family:var(--body),ui-sans-serif,system-ui,sans-serif;font-size:var(--t-large);font-weight:700;letter-spacing:-.03em;line-height:1.12;color:var(--ink-loud)}
   .day-rail{display:flex;flex-direction:column;gap:8px}
-  .slot{display:grid;grid-template-columns:72px minmax(0,1fr);gap:12px;align-items:start;padding:14px 16px;margin:0;border:1px solid var(--line);border-radius:calc(var(--r) * .45);background:var(--surface);min-height:72px;box-shadow:inset 3px 0 0 var(--accent)}
+  .slot{display:grid;grid-template-columns:56px minmax(0,1fr);gap:10px;align-items:start;padding:12px 14px;margin:0;border:1px solid var(--line);border-radius:calc(var(--r) * .45);background:var(--surface);min-height:64px;box-shadow:inset 3px 0 0 var(--accent)}
   .slot[data-state="on"]{border-color:var(--accent)}
   .slot .time{font-variant-numeric:tabular-nums;font-feature-settings:"tnum";font-size:var(--t-footnote);font-weight:700;color:var(--accent);padding-top:3px;letter-spacing:-.01em}
   .slot-body h2{font-family:var(--body),ui-sans-serif,system-ui,sans-serif;font-size:var(--t-headline);font-weight:650;letter-spacing:-.022em;margin:0 0 4px;line-height:1.2;color:var(--ink-loud)}
-  .slot-actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
-  .slot .btn{margin-top:0}
+  .slot-actions{display:flex;flex-wrap:nowrap;gap:4px;margin-top:8px;overflow:auto}
+  .slot .btn{margin-top:0;flex:0 0 auto;white-space:nowrap}
   .week-strip{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;margin:0 0 14px}
   .week-day{appearance:none;border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:calc(var(--r) * .55);min-height:64px;min-width:0;padding:6px 2px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font:650 11px/1.1 var(--body),ui-sans-serif,system-ui,sans-serif;touch-action:manipulation}
   .week-day.on{border-color:var(--accent);color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
@@ -565,16 +566,16 @@ function phoneCss(id: GrammarId): string {
 .app{display:grid;grid-template-rows:auto 1fr auto;grid-template-areas:"head" "main" "nav";width:100%;min-height:100dvh}
 header{grid-area:head;padding:14px 16px 10px}
 nav.tabs{grid-area:nav;display:grid;grid-template-columns:repeat(4,1fr);height:calc(64px + env(safe-area-inset-bottom));padding:6px 6px calc(6px + env(safe-area-inset-bottom));border-top:1px solid var(--line);background:color-mix(in srgb,var(--surface) 94%,transparent);position:sticky;bottom:0;z-index:8}
-nav.tabs button{border:0;background:none;color:var(--muted);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font:600 10px/1.1 var(--body),sans-serif;padding:4px;min-height:44px;min-width:44px;touch-action:manipulation}
+nav.tabs button{border:0;background:none;color:var(--muted);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font:600 10px/1.1 var(--body),sans-serif;padding:4px 2px;min-height:44px;min-width:44px;touch-action:manipulation}
 nav.tabs button.on{color:var(--accent)}
-nav.tabs svg{width:24px;height:24px;flex:0 0 24px;overflow:hidden;display:block}
+nav.tabs svg{width:24px;height:24px;flex:0 0 24px;overflow:visible;display:block;margin-inline:auto}
 main{grid-area:main;min-height:0;overflow:auto;padding:8px 16px 20px}
 @media(min-width:768px){
   .app{grid-template-rows:auto 1fr;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"head nav" "main main"}
   header{padding:14px 22px;border-bottom:1px solid var(--line);align-items:center}
   nav.tabs{position:static;display:flex;flex-direction:row;flex-wrap:wrap;height:auto;min-height:56px;border:0;border-bottom:1px solid var(--line);padding:8px 18px;justify-content:flex-end;align-items:center;background:transparent}
   nav.tabs button{flex-direction:row;font:650 13px/1 var(--body),sans-serif;min-height:44px;padding:8px 12px;gap:8px}
-  nav.tabs svg{display:${id === "agenda" ? "block" : "none"}}
+  nav.tabs svg{display:block;margin-inline:0}
   main{padding:20px 22px 28px}
   .lookbook{grid-template-columns:minmax(0,1.32fr) minmax(0,1fr);grid-template-rows:1fr 1fr;gap:14px;align-items:stretch;min-height:calc(100vh - 124px)}
   .look{margin:0;min-height:0}
@@ -654,16 +655,18 @@ function deskCss(id: GrammarId): string {
   if (id === "source-timeline") {
     return `.app[data-fenix-craft-desk]{display:grid;grid-template-rows:auto auto 1fr;grid-template-areas:"head" "nav" "main";min-height:100dvh;width:100%}
 header{grid-area:head;padding:12px 16px;border-bottom:1px solid var(--line);align-items:center;gap:16px;overflow:visible}
-header .place{max-width:46%;overflow:visible;white-space:normal;text-align:right}
+header .place{max-width:46%;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;text-align:right}
 nav.rail{grid-area:nav;display:flex;gap:4px;overflow:auto;padding:6px 16px;border-bottom:1px solid var(--line)}
-nav.rail button{border:0;background:none;color:var(--muted);min-height:40px;padding:8px 10px;font:650 13px/1 var(--body),system-ui,sans-serif;white-space:nowrap;display:inline-flex;align-items:center;gap:8px;border-radius:0}
+nav.rail button{border:0;background:none;color:var(--muted);min-height:44px;padding:8px 10px;font:650 13px/1 var(--body),system-ui,sans-serif;white-space:nowrap;display:inline-flex;align-items:center;gap:8px;border-radius:0}
 nav.rail button.on{color:var(--accent);box-shadow:inset 0 -2px 0 var(--accent)}
-nav.rail svg{width:16px;height:16px;flex:0 0 16px;overflow:hidden;display:block}
+nav.rail svg{width:16px;height:16px;flex:0 0 16px;overflow:visible;display:block}
 main{grid-area:main;padding:0;min-width:0;display:flex;flex-direction:column}
 .repo-stage{display:grid;grid-template-columns:1fr;min-height:0;flex:1}
 .timeline{padding:12px 16px 20px;border-right:0}
 .commit{display:grid;grid-template-columns:72px 1fr auto;gap:10px;align-items:start;padding:12px 0;border-bottom:1px solid var(--line);margin:0;background:transparent;border-radius:0;cursor:pointer}
 .commit h2{font-family:var(--body);font-size:15px;font-weight:650;letter-spacing:-.02em;margin:0 0 4px}
+.commit .slot-actions{display:flex;flex-wrap:nowrap;gap:4px}
+.commit .slot-actions .btn{white-space:nowrap;margin-top:0}
 .sha{font-variant-numeric:tabular-nums;font-size:12px;color:var(--accent);letter-spacing:.04em}
 .branches{padding:12px 16px 20px;background:var(--surface);border-top:1px solid var(--line)}
 .branch{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}
@@ -696,7 +699,7 @@ header.mast{grid-area:head;display:flex;justify-content:space-between;align-item
 nav.rail{grid-area:nav;display:flex;gap:8px;flex-wrap:wrap;padding:10px 20px 14px}
 nav.rail button{border:1px solid var(--line);background:var(--surface);color:var(--fg);min-height:44px;padding:10px 16px;border-radius:0;font:650 13px/1 var(--body),sans-serif;display:inline-flex;align-items:center;gap:8px}
 nav.rail button.on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
-nav.rail svg{width:18px;height:18px;flex:0 0 18px;overflow:hidden;display:block}
+nav.rail svg{width:18px;height:18px;flex:0 0 18px;overflow:visible;display:block}
 main{grid-area:main;padding:16px 20px}
 .lastre{display:grid;grid-template-columns:1fr;gap:16px}
 .plate{min-height:200px;overflow:hidden;display:flex;flex-direction:column}
@@ -727,7 +730,7 @@ header{grid-area:head;padding:14px 16px;border-bottom:1px solid var(--line);alig
 nav.rail{grid-area:nav;display:flex;gap:6px;overflow:auto;padding:8px 16px;border-bottom:1px solid var(--line)}
 nav.rail button{border:0;background:none;color:var(--muted);min-height:44px;padding:8px 12px;font:650 13px/1 var(--body),sans-serif;white-space:nowrap;display:inline-flex;align-items:center;gap:8px}
 nav.rail button.on{color:var(--accent);box-shadow:inset 0 -2px 0 var(--accent)}
-nav.rail svg{width:18px;height:18px;flex:0 0 18px;overflow:hidden;display:block}
+nav.rail svg{width:18px;height:18px;flex:0 0 18px;overflow:visible;display:block}
 main{grid-area:main;padding:16px;min-width:0}
 .kpis{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:0 0 14px}
 .kpi{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;min-height:84px;min-width:0}
@@ -1398,7 +1401,7 @@ function renderStats(){
 }
 function slotMarkup(e,i){
   var st=e.status||"prenotato";
-  return '<article class="slot" data-id="'+e.id+'" data-day="'+(e.day||"")+'" data-state="'+(i===0?"on":"idle")+'" data-status="'+st+'"><time class="time" datetime="'+e.kicker+'">'+e.kicker+'</time><div class="slot-body"><h2>'+e.title+'</h2><p class="notes">'+chip(st)+" · "+e.note+" · "+e.meta+'</p><div class="slot-actions"><button class="btn sm ghost" data-act="advance" data-id="'+e.id+'" aria-label="Avanza stato '+st+'">Avanza slot</button><button class="btn sm ghost" data-act="edit" data-id="'+e.id+'">Modifica</button><button class="btn sm ghost" data-act="del" data-id="'+e.id+'">Archivia</button></div></div></article>';
+  return '<article class="slot" data-id="'+e.id+'" data-day="'+(e.day||"")+'" data-state="'+(i===0?"on":"idle")+'" data-status="'+st+'"><time class="time" datetime="'+e.kicker+'">'+e.kicker+'</time><div class="slot-body"><h2>'+e.title+'</h2><p class="notes">'+chip(st)+" · "+e.note+" · "+e.meta+'</p><div class="slot-actions"><button class="btn sm ghost" data-act="advance" data-id="'+e.id+'" aria-label="Avanza stato '+st+'">Avanti</button><button class="btn sm ghost" data-act="edit" data-id="'+e.id+'">Modifica</button><button class="btn sm ghost" data-act="del" data-id="'+e.id+'">Archivia</button></div></div></article>';
 }
 function renderAgenda(){
   hydrateAgenda();

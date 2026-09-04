@@ -75,7 +75,7 @@ describe("graphic pipeline prompt→plan→generate→visual→QA", () => {
         assert.equal(isLetterAIcon(svg), false, svg.slice(0, 80));
         assert.match(svg, /width="24"/);
         assert.match(svg, /height="24"/);
-        assert.match(svg, /overflow="hidden"/);
+        assert.match(svg, /overflow="visible"/);
       }
       assert.doesNotMatch(run.generated.html, /Ciao/);
       assert.doesNotMatch(run.generated.html, /localStorage/);
@@ -316,7 +316,7 @@ describe("graphic pipeline prompt→plan→generate→visual→QA", () => {
     assert.equal(runs.find((r) => r.id === "abbigliamento")!.grammar.id, "lookbook");
     assert.equal(runs.find((r) => r.id === "repo")!.grammar.id, "source-timeline");
     assert.equal(runs.find((r) => r.id === "ristorazione")!.grammar.id, "service-board");
-    assert.equal(GRAPHIC_FIVE_PARENT_SHA, "a9304931bfb8fd1711aa932fa80f090463c7b59a");
+    assert.equal(GRAPHIC_FIVE_PARENT_SHA, "8d98b427620f75b460433c0de8882d89b4573730");
     assert.equal(runs.find((r) => r.id === "repo")!.tokens.fonts.display, "IBM Plex Mono");
     const repo = runs.find((r) => r.id === "repo")!;
     assert.match(repo.html, /"id":"diff","label":"Diff"/);
@@ -349,7 +349,7 @@ describe("graphic pipeline prompt→plan→generate→visual→QA", () => {
     }
   });
 
-  it("freezes five-brief before shots at parent SHA a930493", () => {
+  it("freezes five-brief before shots at parent SHA 8d98b42", () => {
     const here = dirname(fileURLToPath(import.meta.url));
     const before = join(here, "fixtures/graphic/five/before");
     const names = [
@@ -359,7 +359,7 @@ describe("graphic pipeline prompt→plan→generate→visual→QA", () => {
       "repo",
       "ristorazione",
     ].flatMap((id) => ["D", "T", "M"].map((vp) => `${id}-${vp}.png`));
-    assert.equal(GRAPHIC_FIVE_PARENT_SHA, "a9304931bfb8fd1711aa932fa80f090463c7b59a");
+    assert.equal(GRAPHIC_FIVE_PARENT_SHA, "8d98b427620f75b460433c0de8882d89b4573730");
     assert.equal(existsSync(before), true);
     const listed = readdirSync(before).filter((n) => n.endsWith(".png")).sort();
     assert.deepEqual(listed, [...names].sort());
@@ -393,6 +393,10 @@ describe("graphic pipeline prompt→plan→generate→visual→QA", () => {
     assert.match(html, /placeholder="Es\. Taglio e piega"/);
     assert.match(html, /type="time"/);
     assert.match(html, /data-act="edit"/);
+    assert.match(html, />Avanti</);
+    assert.doesNotMatch(html, /Avanza slot/);
+    assert.match(html, /nav\.tabs svg\{[^}]*overflow:visible/);
+    assert.match(html, /flex-wrap:nowrap/);
     assert.match(html, /aria-selected/);
     assert.match(html, /role="tab"/);
     assert.match(html, /closest\("\.week-day\[data-day\]"\)/);

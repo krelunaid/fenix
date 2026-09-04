@@ -37,7 +37,7 @@ export const CRAFT_APP_ICON = `<svg ${ATTR}><path d="M6 3.5h11.5v17H6z"/><path d
 
 /** Nav icons: viewBox 24, content in ~5–19, round joins, no miter spike, no letter-A. */
 const NAV_ATTR =
-  'viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" overflow="hidden" aria-hidden="true" data-craft-nav="1" data-icon-grid="24"';
+  'viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" overflow="visible" aria-hidden="true" data-craft-nav="1" data-icon-grid="24"';
 
 function navIcon(paths: string): string {
   return `<svg ${NAV_ATTR}>${paths}</svg>`;
