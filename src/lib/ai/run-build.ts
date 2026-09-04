@@ -8,8 +8,8 @@ import {
 } from "@/lib/projects/store";
 import { parseBuildOutput, type BuildResult } from "./parse";
 import { isWeakPreview, lookInstruction, resetAudit, waitPreviewAudit, waitPreviewShot, waitPreviewBoot, getPreviewBootError, getPreviewBootOk, rememberBootError } from "./look";
-import { APP_SHELL_HTML, DASHBOARD_POLISH_INSTRUCTION, SITE_POLISH_INSTRUCTION } from "./app-shell";
-import { composeProduct } from "./compose-product";
+import { DASHBOARD_POLISH_INSTRUCTION, SITE_POLISH_INSTRUCTION } from "./app-shell";
+import { createBuildRequest } from "./build-request";
 import { CREATE_COST, ITERATE_COST } from "@/lib/projects/credits";
 import { isPhoneKind, resolveProjectKind } from "@/lib/projects/infer";
 import { formatHtmlErrors, validateProductHtml } from "@/lib/projects/validate-html";
@@ -842,19 +842,13 @@ export async function runBuild(projectId: string, instruction?: string) {
     });
     const phone = isPhoneKind(kind);
     const desk = kind === "site" || kind === "landing" || kind === "dashboard";
-    const composed = composeProduct(project.prompt);
-    const payload = {
+    const payload = createBuildRequest({
       prompt: project.prompt,
-      html: instruction
-        ? project.html
-        : composed.spec
-          ? composed.html
-          : phone
-            ? APP_SHELL_HTML
-            : project.html || "",
+      html: project.html,
       kind,
-      instruction: instruction || composed.polish,
-    };
+      instruction,
+      recentPalettes: store.recentPalettes ?? [],
+    });
     try {
       streamed = isIOS() || desk
         ? await consumeViaWorker(projectId, payload, true, epoch)

@@ -1,4 +1,5 @@
 import { createServer } from "node:http";
+import { artifactContext, completeResponseText, MAX_ARTIFACT_CHARS } from "./artifact-context.mjs";
 import {
   TAB_IDS,
   applyScreenPatch,
@@ -370,7 +371,7 @@ async function generate(prompt, html, instruction, kind) {
   const site = looksSite(prompt, instruction, kind, html);
   const user = [
     `BRIEF:\n${prompt}`,
-    html ? `HTML ATTUALE:\n${html.slice(0, 20000)}` : "",
+    html ? `HTML ATTUALE:\n${artifactContext(html)}` : "",
     instruction ? `MODIFICA:\n${instruction}` : "",
     dashboard
       ? "META kind=dashboard + HTML gestionale desktop completo ora. Niente nav.fk-tab."
@@ -399,7 +400,7 @@ async function generate(prompt, html, instruction, kind) {
   });
   if (!res.ok) throw new Error(`xAI ${res.status}`);
   const payload = await res.json();
-  const text = payload.choices?.[0]?.message?.content ?? "";
+  const text = completeResponseText(payload);
   const parsed = parseHtml(text);
   if (!parsed?.html) throw new Error("HTML non valido");
   let out = parsed.html;
@@ -460,7 +461,7 @@ async function grok(apiKey, prompt, html, shotB64, pass, instruction, tabId) {
         `GIRO ${pass}/${PASSES}. BRIEF:\n${prompt}`,
         instruction ? `MODIFICA DA TENERE:\n${instruction}\nNon disfare questa modifica.` : "",
         `TAB DA RIFARE: ${tabId || TAB_IDS[pass - 1] || "home"} (è quella nello screenshot).`,
-        `HTML (solo per contesto, NON riscriverlo):\n${html.slice(0, 12000)}`,
+        `HTML (solo per contesto, NON riscriverlo):\n${artifactContext(html)}`,
         `Rispondi con <<<SCREEN id="${tabId || TAB_IDS[pass - 1]}">>> contenuto main di QUESTA tab <<<END>>>. Niente documento intero. Se la tab è vuota, riempila (form / lista / numeri).`,
       ]
         .filter(Boolean)
@@ -489,7 +490,7 @@ async function grok(apiKey, prompt, html, shotB64, pass, instruction, tabId) {
   });
   if (!res.ok) throw new Error(`xAI ${res.status} ${await res.text().then((t) => t.slice(0, 180))}`);
   const json = await res.json();
-  return json.choices?.[0]?.message?.content ?? "";
+  return completeResponseText(json);
 }
 
 const CRAFT_TAB_ICONS = [
@@ -1010,7 +1011,11 @@ const server = createServer(async (req, res) => {
     return;
   }
   const prompt = String(body.prompt || "").slice(0, 2500);
-  const html = String(body.html || "").slice(0, 120000);
+  const html = String(body.html || "");
+  if (html.length > MAX_ARTIFACT_CHARS) {
+    json(res, 413, { error: "Documento troppo grande per una modifica sicura. La versione precedente resta invariata." });
+    return;
+  }
   const instruction = String(body.instruction || "").slice(0, 2500);
   const kind = String(body.kind || "").slice(0, 32).toLowerCase();
   const projectId = String(body.projectId || "").slice(0, 80);

@@ -8,6 +8,7 @@ import {
 } from "../projects/fenix-adapter.ts";
 import type { BuildContract } from "./build-contract.ts";
 import type { ProjectFile } from "../projects/files.ts";
+import { artifactContext, completeResponseText, MAX_ARTIFACT_CHARS } from "../../../workers/visual/artifact-context.mjs";
 
 export { REPAIR_PROMPT } from "./prompts.shared.ts";
 
@@ -21,6 +22,7 @@ export async function repairBuild(input: {
   error: string;
   signal?: AbortSignal;
 }): Promise<BuildResult | null> {
+  if (input.html.length > MAX_ARTIFACT_CHARS) return null;
   const res = await fetch(XAI_CHAT_COMPLETIONS_URL, {
     method: "POST",
     headers: {
@@ -37,16 +39,17 @@ export async function repairBuild(input: {
         { role: "system", content: REPAIR_PROMPT },
         {
           role: "user",
-          content: `BRIEF:\n${input.prompt}\n\nERRORI DI VALIDAZIONE:\n${input.error}\n\nHTML DA RIPARARE:\n${input.html.slice(0, 40000)}\n\nRestituisci META + eventuali <<<FILE path="...">>> + <<<HTML>>> + <<<END>>>. Niente server inventato.`,
+          content: `BRIEF:\n${input.prompt}\n\nERRORI DI VALIDAZIONE:\n${input.error}\n\nHTML DA RIPARARE:\n${artifactContext(input.html)}\n\nRestituisci META + eventuali <<<FILE path="...">>> + <<<HTML>>> + <<<END>>>. Niente server inventato.`,
         },
       ],
     }),
   });
   if (!res.ok) return null;
   const payload = (await res.json()) as {
-    choices?: { message?: { content?: string } }[];
+    choices?: { finish_reason?: string | null; message?: { content?: string } }[];
   };
-  const text = payload.choices?.[0]?.message?.content ?? "";
+  let text: string;
+  try { text = completeResponseText(payload); } catch { return null; }
   return parseBuildOutput(text, kindFromPrompt(input.prompt), input.prompt);
 }
 

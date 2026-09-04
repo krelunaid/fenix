@@ -8,6 +8,7 @@ import { gateBuildResult, repairBuild } from "./repair.ts";
 import { CONTRACT_REPAIR_MAX } from "./build-contract.ts";
 import { prepareSrcDoc } from "../projects/color-scheme.ts";
 import { looksLikeIosWidgetHome } from "../projects/craft-icons.ts";
+import { artifactContext, completeResponseText, MAX_ARTIFACT_CHARS } from "../../../workers/visual/artifact-context.mjs";
 
 /** Recorded polish/repair path. Not live-verified against xAI. */
 export const POLISH_REPAIR_LIVE_VERIFIED = false as const;
@@ -28,6 +29,38 @@ function mockCompletion(content: string): Response {
 }
 
 describe("polish/repair recorded responses (not live-verified)", () => {
+  it("preserves full context at old truncation boundaries and refuses oversize artifacts", () => {
+    for (const size of [12000, 20000, 40000, 90000, MAX_ARTIFACT_CHARS]) {
+      const html = '<html>' + 'x'.repeat(size - 13) + '</html>';
+      assert.equal(html.length, size);
+      assert.equal(artifactContext(html), html);
+    }
+    assert.throws(() => artifactContext('x'.repeat(MAX_ARTIFACT_CHARS + 1)), RangeError);
+    for (const reason of ['length', 'content_filter', 'tool_calls']) {
+      assert.throws(() => completeResponseText({choices:[{finish_reason:reason,message:{content:'partial'}}]}), /incompleta/);
+    }
+    assert.equal(completeResponseText({choices:[{finish_reason:'stop',message:{content:'whole'}}]}), 'whole');
+  });
+
+  it("sends repair the complete 45k document and rejects explicit incomplete responses", async () => {
+    const html = '<html><body>' + ' '.repeat(45000) + '<button id="tail">Save</button><script>window.tail=true</script></body></html>';
+    const prev = globalThis.fetch;
+    let calls = 0;
+    globalThis.fetch = (async (_url, init) => {
+      calls++;
+      const body = JSON.parse(String(init?.body));
+      const user = body.messages.find((m: {role:string}) => m.role === 'user');
+      assert.ok(user.content.includes(html), 'complete document must reach repair');
+      return {ok:true,json:async () => ({choices:[{finish_reason:'length',message:{content:loadRecorded('complete-site.txt')}}]})} as Response;
+    }) as typeof fetch;
+    try {
+      assert.equal(await repairBuild({apiKey:'fixture-unused',prompt:SITE_BRIEF,html,error:'fixture'}), null);
+      assert.equal(calls, 1);
+      assert.equal(await repairBuild({apiKey:'fixture-unused',prompt:SITE_BRIEF,html:'x'.repeat(MAX_ARTIFACT_CHARS + 1),error:'fixture'}), null);
+      assert.equal(calls, 1, 'oversize must not spend a model call');
+    } finally { globalThis.fetch = prev; }
+  });
+
   it("parses a declared worker-shaped payload through parseBuildOutput and gates it without fetching xAI", async () => {
     assert.equal(POLISH_REPAIR_LIVE_VERIFIED, false);
     const manifest = JSON.parse(loadRecorded("manifest.json")) as {

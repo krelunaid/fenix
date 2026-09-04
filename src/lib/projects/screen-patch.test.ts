@@ -19,6 +19,21 @@ const PRODUCTION = readFileSync(join(here, "fixtures/vesti-production.html"), "u
 const WORKER = readFileSync(join(here, "../../../workers/visual/server.mjs"), "utf8");
 
 describe("visual worker screen patches", () => {
+  it("preserves replacement metacharacters literally and leaves other views untouched", () => {
+    const original = '<header>Keep</header><template id="t-home"><p>Old</p></template><template id="t-list"><p>Saved</p></template><script>window.keep=true</script>';
+    for (const token of ["$&", "$1", "$2", "$3", "$'", "$`", "$$", "$100"]) {
+      const inner = `<p>Literal ${token}</p>`;
+      const expected = `<header>Keep</header><template id="t-home">${inner}</template><template id="t-list"><p>Saved</p></template><script>window.keep=true</script>`;
+      const patched = applyScreenPatch(original, "home", inner);
+      assert.equal(patched.html, expected, token);
+      assert.equal(patched.applied, true);
+      const again = applyScreenPatch(patched.html, "home", inner);
+      assert.equal(again.html, expected);
+      assert.equal(again.applied, false);
+      assert.equal(again.reason, "unchanged");
+    }
+  });
+
   it("refuses structurally impossible patches on the truncated Vesti fixture", () => {
     assert.equal(hasScreenTarget(INVALID, "home"), true);
     assert.equal(hasScreenTarget(INVALID, "list"), true);

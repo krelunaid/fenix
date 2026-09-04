@@ -20,6 +20,52 @@ import { PALETTE_CORPUS, paletteDistance, CLOSE_DELTA_E } from "../projects/pale
 import { domainIllustration, GEOMETRIC_REGRESSIONS, materialSignature } from "./domain-imagery.ts";
 import { isLetterAIcon, looksLikeIosWidgetHome } from "../projects/craft-icons.ts";
 import { prepareSrcDoc } from "../projects/color-scheme.ts";
+import { createBuildRequest } from "./build-request.ts";
+
+describe("controller build request preserves generated artifacts", () => {
+  const briefs = [
+    "Agenda studio: appuntamenti e prenotazioni, stile iPhone.",
+    "Essenza: gestione profumi da vendere, stile iPhone.",
+    "Vesti: abbigliamento e capi da vendere, stile iPhone.",
+    "RepoVoci: note e repository GitHub, stile iPhone.",
+    "Ristorazione: menu e prenotazioni, stile iPhone.",
+    "Un diario per escursioni e sentieri, stile iPhone.",
+  ];
+  for (const brief of briefs) {
+    it(`retains the entire seed for ${brief}`, () => {
+      const prompt = formatPrefix("app") + brief;
+      const composed = composeProduct(prompt);
+      const payload = createBuildRequest({prompt, kind: "app"});
+      assert.equal(payload.html, composed.html);
+      assert.notEqual(payload.html, APP_SHELL_HTML);
+      assert.equal(payload.instruction, composed.polish);
+      assert.equal(payload.kind, "app");
+      // Both transports serialize this same request; no hidden seed replacement.
+      assert.equal(JSON.parse(JSON.stringify({...payload, projectId:"fixture"})).html, composed.html);
+    });
+  }
+  it("uses the same history for composition and the outgoing payload", () => {
+    const prompt = formatPrefix("app") + briefs[0];
+    const recentPalettes = [composeProduct(prompt).tokens.palette];
+    const expected = composeProduct(prompt, {recent:recentPalettes});
+    const payload = createBuildRequest({prompt, kind:"app", recentPalettes});
+    assert.equal(payload.html, expected.html);
+    assert.equal(payload.instruction, expected.polish);
+    assert.deepEqual(payload.recentPalettes, recentPalettes);
+  });
+  it("keeps edits byte-identical before transport, including script/data at the end", () => {
+    const html = '<html><body>' + ' '.repeat(45000) + '<script>window.saved="literal $&"</script></body></html>';
+    const request = createBuildRequest({prompt:briefs[0], html, instruction:"Cambia solo icona", kind:"app"});
+    assert.equal(request.html, html);
+    assert.equal(request.instruction, "Cambia solo icona");
+  });
+  it("does not expand this fix into a change of unmatched desktop fallback", () => {
+    const prompt = "FORMATO: sito web. kind=site. atlante delle maree";
+    const c = composeProduct(prompt);
+    const request = createBuildRequest({prompt, html:"existing", kind:"site"});
+    assert.equal(request.html, c.spec ? c.html : "existing");
+  });
+});
 
 const HARD = [
   `${formatPrefix("app")}Essenza: gestione profumi premium, flaconi, note olfattive e guardaroba.`,
