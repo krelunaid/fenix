@@ -20,6 +20,7 @@ import {
   type PaletteFamily,
   type PaletteRecord,
 } from "./palette-engine.ts";
+import { applyGraphicIntent, graphicIntentFromBrief } from "./graphic-intent.ts";
 
 export type TokenFamily =
   | "perfume"
@@ -634,7 +635,7 @@ export function tokensFromBrief(brief: string, opts?: TokenOptions): DesignToken
     const type = family === "repo" && repoSrc ? repoSrc.type : recipe.type;
     const dont = family === "repo" && repoSrc ? repoSrc.dont : recipe.dont;
     const dna = `${srcFamily}${variant ? `/v${variant}` : ""} · ${adaptive.family} · ${fonts.display}/${fonts.body} · anti-clone`;
-    return {
+    return applyGraphicIntent({
       family: srcFamily,
       variant,
       mood,
@@ -645,7 +646,7 @@ export function tokensFromBrief(brief: string, opts?: TokenOptions): DesignToken
       dna: dna.slice(0, 80),
       dont: [...dont],
       chroma: adaptive.family,
-    };
+    }, brief);
   }
   const src = variant === 1 && VARIANTS[family] ? VARIANTS[family]! : FAMILIES[family];
   const applied = applyUserColors(asEngine(src.palette), brief);
@@ -665,7 +666,7 @@ export function tokensFromBrief(brief: string, opts?: TokenOptions): DesignToken
   }
   const chroma = classifyPalette(palette);
   const dna = `${family}${variant ? `/v${variant}` : ""} · ${src.fonts.display}/${src.fonts.body} · anti-clone`;
-  return {
+  return applyGraphicIntent({
     family,
     variant,
     mood: src.mood,
@@ -676,7 +677,7 @@ export function tokensFromBrief(brief: string, opts?: TokenOptions): DesignToken
     dna: dna.slice(0, 80),
     dont: [...src.dont],
     chroma,
-  };
+  }, brief);
 }
 
 export function fallbackPaletteFromBrief(brief: string): Palette {
@@ -684,9 +685,20 @@ export function fallbackPaletteFromBrief(brief: string): Palette {
   return { bg: p.bg, surface: p.surface, fg: p.fg, muted: p.muted, accent: p.accent, line: p.line };
 }
 
-export function tokensInstruction(tokens: DesignTokens): string {
+export function tokensInstruction(tokens: DesignTokens, brief = ""): string {
   const p = tokens.palette;
   const axes = extractBriefAxes(tokens.dna);
+  const intent = graphicIntentFromBrief(brief);
+  const typeLaw =
+    intent.type === "system"
+      ? "Tipo: system-ui/-apple-system/Segoe UI è il PRIMARIO (non in coda). Non nominare SF Pro. Non clonare la coppia #f5f5f7+#0071e3."
+      : intent.type === "serif"
+        ? `Tipo: display serif ${tokens.fonts.display} è legge. Non sostituirlo con system-ui, Inter o Manrope.`
+        : "Tipo: font del mestiere, system (-apple-system, BlinkMacSystemFont, Segoe UI) solo in coda. Vietato SF Pro/Inter come primario se il brief non li chiede. Vietato clonare schermate, marchi, SF Symbols o la coppia #f5f5f7+#0071e3.";
+  const chromeLaw =
+    intent.chrome === "semantic"
+      ? "Icone: se il brief chiede Home/Aggiungi/Persona, usale (path originali). Non sostituirle solo perché comuni."
+      : "Icone: pittogrammi del mestiere. Qualità nativa da tasca consentita (tipo, ritmo 8px, profondità, materiali, motion ridotto).";
   return [
     `DIREZIONE PREMIUM (legge, dal brief, famiglia ${tokens.family}${tokens.variant ? ` variante ${tokens.variant}` : ""} · chroma ${tokens.chroma}):`,
     `mood: ${tokens.mood}`,
@@ -695,10 +707,11 @@ export function tokensInstruction(tokens: DesignTokens): string {
     `token: --bg ${p.bg} --surface ${p.surface} --elevated ${p.elevated} --fg ${p.fg} --muted ${p.muted} --accent ${p.accent} --line ${p.line} --accent-ink ${p.accentInk}`,
     "Copia questi hex in :root. Non sostituirli con beige/terracotta se la famiglia non è ceramic. Vietato cadere su #101114/#191b20/#e1693f.",
     `Vietato per questo brief: ${tokens.dont.join("; ")}.`,
-    "Qualità nativa da tasca consentita (tipo, ritmo 8px, profondità, materiali, motion ridotto). Vietato clonare schermate, marchi, SF Symbols o la coppia #f5f5f7+#0071e3.",
+    typeLaw,
+    chromeLaw,
     tokens.family === "repo"
       ? "Dominio repository: attività commit, rami, stato sync, timeline/diff. Vietato home universale con hero grigio + due KPI + CTA + empty card. Non copiare GitHub."
-      : tokens.family === "booking"
+      : tokens.family === "booking" && intent.type !== "system"
         ? "Dominio agenda: binario orario, tab Oggi/Nuovo/Settimana/Archivio, tipo 17/headline da tasca (sans operativa, non serif da rivista), icone griglia 24, target 44px. Vietato hero KPI e tab Home/Elenco."
         : `Asse dominio=${axes.domain}.`,
     "Desktop/tablet: grammatica editoriale a tutta larghezza (split-stage, lookbook, agenda, passo cucina, magazine, ops-desk, source-timeline). Niente canvas boxed 1080px, niente dead zone, niente telefono al centro. Imagery di dominio originale (data-imagery=domain), alt/aria-label, niente placeholder geometrici o hotlink.",

@@ -12,6 +12,11 @@ import {
   type TokenOptions,
 } from "../projects/design-tokens.ts";
 import {
+  graphicIntentFromBrief,
+  enforceGraphicIntent,
+  SYSTEM_FONT_STACK,
+} from "../projects/graphic-intent.ts";
+import {
   grammarFromBrief,
   grammarInstruction,
   type LayoutGrammar,
@@ -318,12 +323,36 @@ function specForBrief(brief: string): PipelineSpec | undefined {
 function synthesizeSpec(brief: string): PipelineSpec {
   const tokens = tokensFromBrief(brief);
   const grammar = grammarFromBrief(brief);
+  const intent = graphicIntentFromBrief(brief);
   const name = brief
     .replace(/^FORMATO:[^\n]*\n+/i, "")
     .split(/[:.]/)[0]!
     .replace(/\bkind\s*=\s*\w+/gi, "")
     .trim()
     .slice(0, 28) || "Atelier";
+  if (intent.chrome === "semantic") {
+    return {
+      id: `${tokens.family}-seed`,
+      name,
+      kicker: grammar.voice.census,
+      place: tokens.mood.split(",")[0] || "studio",
+      collection: "voci",
+      brief,
+      tabs: [
+        { id: "home", label: "Home" },
+        { id: "nuovo", label: "Aggiungi" },
+        { id: "elenco", label: "Elenco" },
+        { id: "persona", label: "Persona" },
+      ],
+      rows: [
+        { id: "v1", title: `${name} uno`, kicker: grammar.voice.census, note: tokens.mood, meta: "01" },
+        { id: "v2", title: `${name} due`, kicker: "in prova", note: tokens.dna, meta: "02" },
+        { id: "v3", title: `${name} tre`, kicker: "aperto", note: tokens.fonts.display, meta: "03" },
+      ],
+      formTitle: "Nuova riga",
+      cta: "Salva nel mestiere",
+    };
+  }
   if (tokens.family === "repo" || grammar.id === "source-timeline") {
     return {
       id: `${tokens.family}-seed`,
@@ -461,6 +490,12 @@ function isOperationalApp(t: DesignTokens): boolean {
 }
 
 function displayStack(t: DesignTokens): string {
+  if (t.fonts.display === "system-ui" || t.fonts.body === "system-ui") {
+    return SYSTEM_FONT_STACK;
+  }
+  const serifFace = /Literata|Newsreader|Fraunces|Garamond|Playfair|Source Serif|Georgia/i.test(
+    t.fonts.display,
+  );
   if (t.family === "repo" || t.family === "ops") {
     return `"${t.fonts.display}",ui-monospace,"IBM Plex Mono",Menlo,monospace`;
   }
@@ -468,6 +503,7 @@ function displayStack(t: DesignTokens): string {
     return `"${t.fonts.display}",ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif`;
   }
   if (
+    serifFace ||
     t.family === "perfume" ||
     t.family === "fashion" ||
     t.family === "food" ||
@@ -480,6 +516,16 @@ function displayStack(t: DesignTokens): string {
     return `"${t.fonts.display}",ui-serif,Georgia,"Times New Roman",serif`;
   }
   return `"${t.fonts.display}",ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif`;
+}
+
+function bodyStack(t: DesignTokens): string {
+  if (t.fonts.body === "system-ui" || t.fonts.display === "system-ui") {
+    return SYSTEM_FONT_STACK;
+  }
+  if (/Literata|Newsreader|Fraunces|Garamond|Playfair|Source Serif|Georgia/i.test(t.fonts.body)) {
+    return `"${t.fonts.body}",ui-serif,Georgia,"Times New Roman",serif`;
+  }
+  return `"${t.fonts.body}",ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif`;
 }
 
 function familyChromeCss(t: DesignTokens, grammar: LayoutGrammar): string {
@@ -893,18 +939,18 @@ function productHtml(spec: PipelineSpec, tokens: DesignTokens, grammar: LayoutGr
             : "clamp(1.18rem, 2.2vw, 1.55rem)";
   const large = isOperationalApp(tokens) ? "2.125rem" : "1.75rem";
   return `<!DOCTYPE html>
-<html lang="it" data-family="${tokens.family}" data-grammar="${grammar.id}"${desk ? " data-fenix-craft-desk" : ""}>
+<html lang="it" data-family="${tokens.family}" data-grammar="${grammar.id}" data-intent-type="${graphicIntentFromBrief(spec.brief).type}" data-intent-chrome="${graphicIntentFromBrief(spec.brief).chrome}"${desk ? " data-fenix-craft-desk" : ""}>
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
 <meta name="color-scheme" content="${scheme}"/>
 <title>${spec.name}</title>
-<link rel="preconnect" href="https://fonts.googleapis.com"/>
-<link href="${tokens.fonts.href}" rel="stylesheet"/>
+${tokens.fonts.href ? `<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="${tokens.fonts.href}" rel="stylesheet"/>` : "<!-- system stack: no Google Fonts -->"}
 <style data-fenix-phone data-fenix-site data-fenix-craft>
-:root{color-scheme:${scheme};--bg:${p.bg};--surface:${p.surface};--elevated:${p.elevated};--fg:${p.fg};--muted:${p.muted};--accent:${p.accent};--line:${p.line};--accent-ink:${p.accentInk};--success:${p.success};--warning:${p.warning};--r:${tokens.radius};--display:${displayStack(tokens)};--body:"${tokens.fonts.body}",ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;--t-h1:${tokens.type.h1};--t-h2:${h2};--t-body:${tokens.type.body};--t-large:${large};--t-headline:1.0625rem;--t-footnote:.8125rem;--t-caption:.6875rem;--ink-loud:${p.fg};--ink-quiet:${p.muted}}
+:root{color-scheme:${scheme};--bg:${p.bg};--surface:${p.surface};--elevated:${p.elevated};--fg:${p.fg};--muted:${p.muted};--accent:${p.accent};--line:${p.line};--accent-ink:${p.accentInk};--success:${p.success};--warning:${p.warning};--r:${tokens.radius};--display:${displayStack(tokens)};--body:${bodyStack(tokens)};--t-h1:${tokens.type.h1};--t-h2:${h2};--t-body:${tokens.type.body};--t-large:${large};--t-headline:1.0625rem;--t-footnote:.8125rem;--t-caption:.6875rem;--ink-loud:${p.fg};--ink-quiet:${p.muted}}
 *{box-sizing:border-box;margin:0;padding:0}
-html,body{height:100%;background:var(--bg);color:var(--fg);font:400 ${tokens.type.body}/1.29 var(--body),ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}
+html,body{height:100%;background:var(--bg);color:var(--fg);font:400 ${tokens.type.body}/1.29 var(--body);-webkit-font-smoothing:antialiased}
 body{min-height:100dvh}
 .app{min-height:100dvh;display:flex;flex-direction:column;width:100%}
 header{padding:16px 18px 10px;display:flex;align-items:flex-end;justify-content:space-between;gap:12px}
@@ -1686,9 +1732,12 @@ setTimeout(function(){ if(bootDone) return; finishBoot(false); }, 500);
 </html>`;
 }
 
-function polishFor(tokens: DesignTokens, grammar: LayoutGrammar): string {
+function polishFor(tokens: DesignTokens, grammar: LayoutGrammar, brief = ""): string {
+  const intent = graphicIntentFromBrief(brief);
   const chrome =
-    grammar.id === "source-timeline"
+    intent.chrome === "semantic"
+      ? "Mantieni tab Home/Aggiungi/Persona e icone semantiche richieste (path originali). Vietato Ciao/Operatore. Non sostituirle solo perché comuni."
+      : grammar.id === "source-timeline"
       ? "Chrome da registro di repository: testata + rail, timeline commit, rami, stato sync, diff. Vietato hero grigio, due KPI, empty card, clone GitHub."
       : grammar.id === "agenda"
         ? "Chrome da agenda: binario orario, tab Oggi/Nuovo/Settimana/Archivio, tipo 17/headline, target 44px. Vietato hero KPI, tab Home/Elenco, riquadri vuoti."
@@ -1698,7 +1747,7 @@ function polishFor(tokens: DesignTokens, grammar: LayoutGrammar): string {
           ? SITE_POLISH_INSTRUCTION
           : "Mantieni chrome di mestiere e tab dal brief. Vietato Ciao/Operatore e tab Home/Nuovo/Elenco.";
   return [
-    tokensInstruction(tokens),
+    tokensInstruction(tokens, brief),
     grammarInstruction(grammar),
     chrome,
     "Il seed HTML è già il prodotto. Rifinisci copy se serve, non riciclare lo scheletro telefono, non boxed 1080, non placeholder geometrici.",
@@ -1711,14 +1760,14 @@ export function composeProduct(brief: string, opts?: TokenOptions): ComposedProd
   const grammar = grammarFromBrief(brief);
   const spec = specForBrief(brief);
   const used = spec || synthesizeSpec(brief);
-  const html = productHtml(used, tokens, grammar);
+  const html = enforceGraphicIntent(productHtml(used, tokens, grammar), brief);
   return {
     brief,
     tokens,
     grammar,
     spec,
     html,
-    polish: polishFor(tokens, grammar),
+    polish: polishFor(tokens, grammar, brief),
     files: [{ path: "index.html", content: html }],
   };
 }

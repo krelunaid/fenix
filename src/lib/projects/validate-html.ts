@@ -173,7 +173,11 @@ export function validateProductHtml(html: string, opts?: { kind?: string }): Htm
     errors.push("Il pulsante Nuovo non apre un form. Annulla/Salva devono cambiare il DOM.");
   }
 
-  if ((kind === "app" || kind === "tool" || kind === "game") && looksLikeAppleTabIcons(text)) {
+  if (
+    (kind === "app" || kind === "tool" || kind === "game") &&
+    looksLikeAppleTabIcons(text) &&
+    !/data-intent-chrome="semantic"/.test(text)
+  ) {
     errors.push("Le tab usano icone iPhone (casa, plus, omino). Servono pittogrammi del mestiere.");
   }
   if ((kind === "app" || kind === "tool" || kind === "game") && looksLikeIosWidgetHome(text)) {

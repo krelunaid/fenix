@@ -4,7 +4,7 @@ import {
   discoverAppCollection,
   shouldRepairDashboard,
 } from "./dashboard-crud.ts";
-import { replaceAppleTabIcons, rewriteIosWidgetHome } from "./craft-icons.ts";
+import { applyChromeGuards } from "./craft-icons.ts";
 import { scrubCraftMedia } from "../ai/hero-image.ts";
 import { accentButtonPair, contrastRatio } from "./visual-quality.ts";
 import { FENIX_DATA_API_RUNTIME } from "./fenix-data-api.ts";
@@ -184,7 +184,7 @@ const VISIBLE_PHONE_CSS_GUARD = `<script data-fenix-css-guard>
 
 const PHONE_KIT = `<style data-fenix-phone>
 *,*::before,*::after{box-sizing:border-box}
-html,body{height:100%!important;margin:0;max-width:100%;overflow:hidden;color:var(--fg,#1c1712);background:var(--bg,#efe6d4);font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+html,body{height:100%!important;margin:0;max-width:100%;overflow:hidden;color:var(--fg,#1c1712);background:var(--bg,#efe6d4);font-family:var(--body, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif)}
 body{display:flex!important;flex-direction:column!important;min-height:100dvh;max-height:100dvh;padding-bottom:calc(64px + env(safe-area-inset-bottom));font-size:16px;-webkit-font-smoothing:antialiased;touch-action:pan-y}
 body>:is(.app,.fk-app,#app,#root):has(.fk-tab,.tabbar,nav[aria-label]){display:flex!important;flex-direction:column!important;width:100%;height:100%!important;min-height:0!important;overflow:hidden!important}
 .fk-top,body>header{flex-shrink:0;padding:14px 16px 10px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
@@ -280,14 +280,14 @@ main,.fk-main,main p,main li,main b,.fk-tile,.fk-tile b,.fk-hello,.fk-lbl{color:
 </style>`;
 
 const SITE_KIT = `<style data-fenix-site data-fenix-desk>
-html,body{height:auto!important;min-height:100%;width:100%!important;margin:0;max-width:none!important;overflow:auto!important;overflow-x:hidden!important;-webkit-overflow-scrolling:touch;color:var(--fg,#1c1712);background:var(--bg,#efe6d4);font:400 16px/1.5 system-ui,sans-serif}
+html,body{height:auto!important;min-height:100%;width:100%!important;margin:0;max-width:none!important;overflow:auto!important;overflow-x:hidden!important;-webkit-overflow-scrolling:touch;color:var(--fg,#1c1712);background:var(--bg,#efe6d4);font:400 16px/1.5 var(--body, system-ui, sans-serif)}
 body{display:block!important;padding:0;overflow:visible!important;overflow-x:hidden!important}
 header,body>header,.site-top{padding:8px 12px;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 12px;position:sticky;top:0;z-index:5;background:var(--surface,#f7f1e4);border-bottom:1px solid var(--line,#c4b49a);max-width:100%;min-height:52px;overflow:visible}
 header>*,.site-top>*{min-width:0}
 nav,header nav{display:flex!important;flex-wrap:wrap;align-items:center;gap:4px 8px;padding:0;position:static!important;height:auto!important;max-height:none!important;grid-template-columns:none!important;border-top:0!important;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:none;min-width:0;flex:1 1 auto}
 nav::-webkit-scrollbar{display:none}
 nav ul{display:flex;flex-wrap:nowrap;align-items:center;gap:4px 8px;margin:0;padding:0;list-style:none}
-nav a,nav button{border:0;background:none;color:var(--fg,#1c1712);font:650 13px/1.2 system-ui,sans-serif;padding:10px 6px;white-space:nowrap;flex:0 0 auto;min-height:44px;display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box}
+nav a,nav button{border:0;background:none;color:var(--fg,#1c1712);font:650 13px/1.2 var(--body, inherit);padding:10px 6px;white-space:nowrap;flex:0 0 auto;min-height:44px;display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box}
 nav a:focus-visible,nav button:focus-visible,.btn:focus-visible,a.btn:focus-visible,button[type=submit]:focus-visible{outline:2px solid var(--accent,#b85c38);outline-offset:2px}
 .logo,.brand,header .logo,nav .logo,.brand-full,.brand-short,.logo span{flex:0 0 auto;white-space:nowrap;overflow:visible;max-width:none;text-overflow:clip}
 nav a.logo,.logo{min-width:0;justify-content:flex-start;padding-left:0}
@@ -1020,7 +1020,7 @@ export function prepareSrcDoc(
   next = repairLeakedCss(next);
   next = rewriteFenixCollections(next);
   next = scrubCraftMedia(next);
-  next = rewriteIosWidgetHome(replaceAppleTabIcons(next));
+  next = applyChromeGuards(next);
   if (!/color-scheme/i.test(next)) {
     const meta = `<meta name="color-scheme" content="${scheme}"/>`;
     next = /<head[^>]*>/i.test(next)

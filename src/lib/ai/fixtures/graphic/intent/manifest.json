@@ -1,0 +1,62 @@
+{
+  "parent": "76414c75ce4dc1b2f66343fc0ed1160be0c1b45b",
+  "before": [
+    {
+      "name": "system-D.png",
+      "sha256": "069403df7ace5f55bd6ed7910e4ccdb30b8e4a99c10caf2a124baac46edf78f7",
+      "bytes": 51098
+    },
+    {
+      "name": "system-T.png",
+      "sha256": "d929b0ed8205a874b798a579253c9937142834947ddfb08431416b98977c13c5",
+      "bytes": 46210
+    },
+    {
+      "name": "system-M.png",
+      "sha256": "e1e6ce2e0cf2bb259b7042b69dbb136f946272b5c59eeda44fe613bc1caa6d4e",
+      "bytes": 41307
+    },
+    {
+      "name": "serif-D.png",
+      "sha256": "494ce48774f2aab9fdec73b72082a6c7487b1b8eb5f04f5d843918f0ae7f4edf",
+      "bytes": 664375
+    },
+    {
+      "name": "serif-T.png",
+      "sha256": "8951430d09a34d9ede5ce8a8d73a53fd0c727b3542d7ae8aeafdb5d77ee8dd3d",
+      "bytes": 500301
+    },
+    {
+      "name": "serif-M.png",
+      "sha256": "f08299ab4002b0cfe141ddde50325a42139fa619b7ace2cda2af7710882e4084",
+      "bytes": 202071
+    }
+  ],
+  "after": [
+    {
+      "name": "system-D.png",
+      "sha256": "cfcf5999a844cb55e30153f10c473ad10f1a057c143970dcfb1374a6e4044452"
+    },
+    {
+      "name": "system-T.png",
+      "sha256": "18caf92ac2fa9637db065fe268ea173fe6101ec67a919c8f363c259cfb4ed660"
+    },
+    {
+      "name": "system-M.png",
+      "sha256": "6e1df32b7f9cf20f4f393f5767e0dc2ab9cd1cf48092f5f1c0a9252a3fb81d51"
+    },
+    {
+      "name": "serif-D.png",
+      "sha256": "e81a569ffe6107d3bad6f00be75027c6a3d85dba3127fad998cecf2908c264aa"
+    },
+    {
+      "name": "serif-T.png",
+      "sha256": "98da9bc372a7d84a4c8d8f48f2c24cd5dc1b21a6e7bead3374c6a49303a37429"
+    },
+    {
+      "name": "serif-M.png",
+      "sha256": "0b6885b9f69504e2dd31a28e78719749b0050dd319967f57181cd3ad97a520d2"
+    }
+  ],
+  "note": "composeProduct+prepareSrcDoc intent system/serif D/T/M. Hash is a movement floor, not a score. Not 9/10. Planner/polish LLM skipped (quota). LiveVerified false."
+}

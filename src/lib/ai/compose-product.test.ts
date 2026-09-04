@@ -523,4 +523,27 @@ describe("graphic pipeline prompt→plan→generate→visual→QA", () => {
     assert.doesNotMatch(html, /void window\.Fenix\.save/);
     assert.doesNotMatch(html, /function save\(\)\{ if\(window\.Fenix\) void/);
   });
+
+  it("preserves explicit system and serif intent on the real generator without a single look", async () => {
+    const { INTENT_SYSTEM_PROMPT, INTENT_SERIF_PROMPT, GRAPHIC_INTENT_PARENT_SHA } = await import(
+      "../projects/graphic-intent.ts"
+    );
+    assert.equal(GRAPHIC_INTENT_PARENT_SHA, "76414c75ce4dc1b2f66343fc0ed1160be0c1b45b");
+    const system = composeProduct(`${formatPrefix("app")}${INTENT_SYSTEM_PROMPT}`);
+    const serif = composeProduct(`${formatPrefix("app")}${INTENT_SERIF_PROMPT}`);
+    const perfume = composeProduct(HARD[0]!);
+    assert.equal(system.tokens.fonts.display, "system-ui");
+    assert.match(system.html, /<span>Home<\/span>/);
+    assert.match(system.html, /<span>Aggiungi<\/span>/);
+    assert.match(system.polish, /Home\/Aggiungi\/Persona/);
+    assert.equal(serif.tokens.fonts.display, "Literata");
+    assert.equal(serif.tokens.fonts.body, "Literata");
+    assert.match(serif.html, /data-intent-type="serif"/);
+    assert.notEqual(system.tokens.fonts.display, serif.tokens.fonts.display);
+    assert.notEqual(perfume.tokens.fonts.display, "system-ui");
+    assert.match(perfume.html, /Cormorant Garamond/);
+    const sysQa = auditGraphicQuality(system.html, { brief: system.brief, kind: "app" });
+    assert.equal(sysQa.findings.some((f) => f.code === "apple-clone"), false);
+    assert.doesNotMatch(system.html, /#f5f5f7|#0071e3|SF Pro/);
+  });
 });

@@ -36,7 +36,7 @@ COLORE — già al primo HTML, DAL BRIEF:
 - Token cromatici del mestiere: --bg --surface --elevated --fg --muted --accent --line --accent-ink. Mai la stessa beige/terracotta su ogni progetto. Mai cadere su #101114/#191b20/#e1693f.
 - Famiglie distinte (anche fredde, luminose, monocromatiche, pastello, alta croma). Terre solo se il brief è ceramica/fornace.
 - Colori espliciti dell'utente: vincolo, correggi solo per AA.
-- Qualità nativa da tasca consentita: tipo ottico, ritmo 8px, profondità, materiali, motion ridotto. Tipo system (-apple-system, BlinkMacSystemFont, Segoe UI) solo in coda al font del mestiere. Vietato SF Pro/Inter come primario. Vietato clonare schermate, marchi, SF Symbols o la coppia #f5f5f7+#0071e3.
+- Qualità nativa da tasca consentita: tipo ottico, ritmo 8px, profondità, materiali, motion ridotto. Se il brief chiede tipo system/iPhone-like, system-ui/-apple-system/Segoe UI è il PRIMARIO (non in coda). Se chiede serif/editoriale, il display serif è legge. Altrimenti: font del mestiere, system solo in coda. Vietato nominare SF Pro. Vietato clonare schermate, marchi, SF Symbols o la coppia #f5f5f7+#0071e3. Inter/Manrope da template solo se il brief non li chiede.
 - Testo --fg su --bg almeno 4.5:1. --muted non sotto contrasto 3:1.
 
 ICONE — il pezzo che fa la differenza:
@@ -51,7 +51,7 @@ App — chrome da prodotto in tasca (non admin, non landing):
 - Se il contratto dà una grammatica (split-stage, lookbook, agenda, hospitality, service-board, magazine, ops-desk, source-timeline) esegui QUELLA: non riciclare header.fk-top + nav.fk-tab + 4 stat. Altrimenti (app generica) usa header.fk-top, main.fk-main, nav.fk-tab.
 - Home: oggetto del mestiere + registro a righe o vetrina + CTA. VIETATO home fatta solo di 4 riquadri .fk-stat + «Ultimo» + «Stato». VIETATO imporre un ledger Voci/Limite/Squadra su ogni brief. VIETATO main vuoto, dead zone, pagina bianca, Ciao/Operatore. VIETATO hero grigio + due KPI + CTA + empty card su un brief di repository.
 - Un'app profumi deve sembrare un prodotto profumi, non un registro generico. Stesso per moda, prenotazioni, ristorazione, ospitalità. Un registro di repository mostra commit, rami, sync, timeline/diff — non copiare GitHub.
-- Tab: 4–5 button in .fk-tab, SVG 24 + span dal mestiere (niente Home/Nuovo/Elenco su un brief di prodotto), data-view, .on sull'attivo.
+- Tab: 4–5 button in .fk-tab, SVG 24 + span dal mestiere (niente Home/Nuovo/Elenco su un brief di prodotto, salvo richiesta esplicita di tab Home/Aggiungi/Persona), data-view, .on sull'attivo.
 - Tutte le viste conservano la stessa geometria della .fk-tab; nessun contenuto può spingerla verso l'alto o lasciarle vuoto sotto.
 - Schermate OBLIGATORIE in file separati. Ogni file è una vista vera, non un titolo.
 - Form in screens/new.html: .fk-lbl + .fk-field, .fk-chiprow, button.fk-btn. Controlli stilizzati, niente widget browser nudi.
@@ -67,7 +67,7 @@ Sito: nav, almeno 4 sezioni, form che conferma, testi veri (città, prezzi, orar
 
 Funzione prima della decorazione, ma la decorazione nasce dal mestiere. CSS in <style>, JS in <script>, Google Fonts consentiti. Niente altri JS e niente commenti. Lingua uguale al brief. Non citare Fenix, Grok, xAI, Emergent o Kreluna. Non firmare il prodotto come Apple.
 
-Vietato: Inter, viola AI, aurora, neon, emoji, glass, 12 card clone, lorem, "immagine qui", max-width 430px con bande, canvas boxed 1080px su desktop, icone tutte uguali, lettere-in-quadrato, palette unica beige su ogni brief, dead zone, empty state contraddittorio, hero di soli rect/ellipse.
+Vietato: viola AI, aurora, neon, emoji, glass, 12 card clone, lorem, "immagine qui", max-width 430px con bande, canvas boxed 1080px su desktop, icone tutte uguali, lettere-in-quadrato, palette unica beige su ogni brief, dead zone, empty state contraddittorio, hero di soli rect/ellipse. Inter/Manrope da template se il brief non li chiede. Non imporre un unico look a tutti i brief.
 
 Desktop/tablet: griglia editoriale a tutta larghezza, densità utile, sidebar non sproporzionata, CTA e stati pieni. Telefono: colonna 100dvh, ritmo 8px, materiali, reduced-motion.
 
@@ -80,7 +80,8 @@ JS in <script> classico. Mai \${espressione} nel markup. Dati: window.Fenix.load
 Italiano. Palette dal mestiere, mai la coppia clone #f5f5f7+#0071e3. Testo --fg su --bg contrasto 4.5:1.
 Nav in alto con link alle sezioni, almeno 4 sezioni, footer con via/orari. Hero 16:9 a tutta larghezza.
 Desktop-first: h1 clamp(2.5rem, 6vw, 4.6rem), max-width 1120px, niente 100dvh colonna, niente overflow:hidden sul body.
-VIETATO: nav.fk-tab, nav.bottom-tab, header.fk-top, template t-home, src/screens/*.tsx, 5 tab, fk-appicon, max-width 430px, Inter, Manrope, clone di schermate o marchi, Fenix, Grok.
+Se il brief chiede serif, il display serif è legge. Se chiede system, system è primario. Altrimenti font del mestiere.
+VIETATO: nav.fk-tab, nav.bottom-tab, header.fk-top, template t-home, src/screens/*.tsx, 5 tab, fk-appicon, max-width 430px, clone di schermate o marchi, Fenix, Grok. Inter/Manrope da template se il brief non li chiede.
 Foto: 1 hero originale (fk-hero, alt del mestiere) o SVG data-imagery=domain. Vietati Unsplash hotlink, asset Apple/Emergent. Form che conferma e salva i messaggi.
 CSS in <style>, Google Fonts del mestiere. Niente commenti.
 File extra solo se il contratto li elenca. Se elenca css/theme.css o js/app.js, collegali da index.html; i dati locali si leggono con fetch. Fenix assembla i riferimenti locali per anteprima, pubblicazione e app. Niente server inventato.
@@ -100,9 +101,9 @@ export const VISUAL_PROMPT = `Sei l'art director di Fenix. Inventi un sistema vi
 Regole dure:
 - App: chrome telefono (tab, aria) di qualità nativa, ma palette, font e icona DAL BRIEF. Sito: materiale del mestiere. Dashboard: denso, tabellare, non landing.
 - Palette: gerarchia professionale, superfici distinguibili, un accento intenzionale e stati coerenti. Vietato fondo/surface/line tutti nello stesso marrone fangoso o quasi indistinguibili anche se il contrasto testo passa. Vietato riusare beige/terracotta se il brief non è ceramica.
-- Vietato: viola AI, Inter, Manrope, neon, emoji, icone copiate tutte uguali, coppia clone #f5f5f7+#0071e3, SF Symbols copiati.
-- Font: coppia rara dal mestiere (serif da manifesto + sans/mono da bottega). System-ui solo se il brief è “nudo”.
-- Icona = oggetto del brief, path originali, leggibile a 16px.
+- Vietato: viola AI, neon, emoji, icone copiate tutte uguali, coppia clone #f5f5f7+#0071e3, SF Symbols copiati. Inter/Manrope da template se il brief non li chiede.
+- Font: se il brief chiede system/iPhone-like, system-ui è il primario. Se chiede serif, coppia serif dal mestiere. Altrimenti coppia rara dal mestiere (serif da manifesto + sans/mono da bottega); system-ui solo in coda.
+- Icona = oggetto del brief, path originali, leggibile a 16px. Se chiede Home/Aggiungi/Persona, usale: non sostituirle solo perché comuni.
 - Qualità nativa da tasca consentita (tipo, ritmo, profondità, materiali, reduced-motion). Originalità obbligatoria: niente clone di schermate o marchi.`;
 
 export const QA_PROMPT = `Sei il secondo agente di Fenix. Guardi l'HTML come uno screenshot di app telefono.
@@ -137,6 +138,6 @@ Obbligo:
 8) Contrasto --fg su --bg ≥ 4.5. Niente eval, localStorage, secret.
 9) Se Fenix.data usa un nome collection invalido (spazi, slash, accenti, titoli), rinominalo in un token [A-Za-z0-9._-]{1,80} del contratto (es. capi) e usalo in tutte le query/insert. Non inventare altre tabelle.
 10) Se ERRORI citano abstract-imagery, card-clone o boxed-canvas: sostituisci hero/.sil geometrici con SVG di dominio (data-imagery=domain, aria-label), togli width:min(1080px) da .app, riempi le card. Repair massimo 2.
-11) Non imporre ledger Voci/Limite/Squadra. Non reintrodurre home a 4 riquadri + Ultimo/Stato. Conserva tipo system in coda al font del mestiere e raggio controlli da tasca. Niente coppia clone #f5f5f7+#0071e3.
+11) Non imporre ledger Voci/Limite/Squadra. Non reintrodurre home a 4 riquadri + Ultimo/Stato. Se il brief chiede tipo system, conservalo come primario; se chiede serif, conserva il display serif. Altrimenti tipo system in coda al font del mestiere e raggio controlli da tasca. Niente coppia clone #f5f5f7+#0071e3. Non sostituire icone Home/Aggiungi/Persona richieste con un set generico.
 
 Rispondi SOLO META + eventuali <<<FILE path="...">>> + <<<HTML>>> + <<<END>>>.`;

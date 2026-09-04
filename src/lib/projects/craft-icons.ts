@@ -151,6 +151,13 @@ const NAV_ICONS = {
   pot: navIcon(
     '<path d="M12 4.6v1.6"/><path d="M6.8 7.4h10.4"/><path d="M7.2 7.4h9.6v8.2a2.2 2.2 0 0 1-2.2 2.2H9.4a2.2 2.2 0 0 1-2.2-2.2z"/><path d="M7.2 10.2H4.6c-.8 0-1.4.6-1.4 1.4s.6 1.4 1.4 1.4H7.2"/><path d="M16.8 10.2h2.6c.8 0 1.4.6 1.4 1.4s-.6 1.4-1.4 1.4H16.8"/>',
   ),
+  home: navIcon(
+    '<path d="M5 10.8 12 5.2 19 10.8V19.2H5z"/><path d="M10.2 19.2v-6.2h3.6v6.2"/>',
+  ),
+  add: navIcon('<path d="M12 7.2v9.6M7.2 12h9.6"/>'),
+  person: navIcon(
+    '<circle cx="12" cy="8.2" r="2.4"/><path d="M7.2 19.2c.6-3.4 9-3.4 9.6 0"/>',
+  ),
 } as const;
 
 const NAV_FALLBACKS = [NAV_ICONS.book, NAV_ICONS.pencil, NAV_ICONS.atelier, NAV_ICONS.kanban] as const;
@@ -167,8 +174,12 @@ export function isLetterAIcon(svg: string): boolean {
 
 export function craftNavIcon(tab: { id: string; label: string }, index = 0): string {
   const key = `${tab.id} ${tab.label}`.toLowerCase();
+  const label = String(tab.label || "").toLowerCase().trim();
   let svg = NAV_FALLBACKS[index % NAV_FALLBACKS.length];
-  if (/piramide|accordi/.test(key)) svg = NAV_ICONS.pyramid;
+  if (/^home$/.test(label)) svg = NAV_ICONS.home;
+  else if (/^aggiungi$/.test(label)) svg = NAV_ICONS.add;
+  else if (/^persona$|^profilo$/.test(label)) svg = NAV_ICONS.person;
+  else if (/piramide|accordi/.test(key)) svg = NAV_ICONS.pyramid;
   else if (/collezione|vetrina|essenz|profum/.test(key)) svg = NAV_ICONS.bottle;
   else if (/pelle|polso/.test(key)) svg = NAV_ICONS.wrist;
   else if (/lookbook|look|tela/.test(key)) svg = NAV_ICONS.hanger;
@@ -250,6 +261,14 @@ export function replaceAppleTabIcons(html: string): string {
       return `${open}${next}${close}`;
     },
   );
+}
+
+/** Rewrite dumped iPhone chrome unless the brief stamped semantic Home/Aggiungi/Persona. */
+export function applyChromeGuards(html: string): string {
+  if (!html) return html;
+  const preserve = /data-intent-chrome="semantic"/.test(html);
+  const next = preserve ? html : replaceAppleTabIcons(html);
+  return rewriteIosWidgetHome(next);
 }
 
 export function craftTabNavHtml(): string {

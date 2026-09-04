@@ -195,4 +195,76 @@ ${widget}
       globalThis.fetch = prev;
     }
   });
+
+  it("keeps explicit system and serif type after mock repairBuild and prepareSrcDoc", async () => {
+    assert.equal(POLISH_REPAIR_LIVE_VERIFIED, false);
+    const { composeProduct } = await import("./compose-product.ts");
+    const { INTENT_SYSTEM_PROMPT, INTENT_SERIF_PROMPT } = await import("../projects/graphic-intent.ts");
+    const { formatPrefix } = await import("../projects/infer.ts");
+    const systemBrief = `${formatPrefix("app")}${INTENT_SYSTEM_PROMPT}`;
+    const serifBrief = `${formatPrefix("app")}${INTENT_SERIF_PROMPT}`;
+    const wrap = (name: string, html: string, kind: string) => `<<<META>>>
+{"name":"${name}","tagline":"intent","kind":"${kind}","summary":"recorded","direction":"intent","palette":{"bg":"#efe6d4","surface":"#f7f1e4","fg":"#1c1712","muted":"#5c5348","accent":"#3d4a1f"}}
+<<<HTML>>>
+${html}
+<<<END>>>`;
+    const systemDropped = composeProduct(systemBrief)
+      .html.replace(/--display:[^;]+;/g, '--display:"Karla",sans-serif;')
+      .replace(/--body:[^;]+;/g, '--body:"Karla",sans-serif;');
+    const serifDropped = composeProduct(serifBrief)
+      .html.replace(/--display:[^;]+;/g, '--display:"Figtree",sans-serif;')
+      .replace(/--body:[^;]+;/g, '--body:"Figtree",sans-serif;');
+    const prev = globalThis.fetch;
+    let fetchHits = 0;
+    const payloads = [wrap("Lista", systemDropped, "app"), wrap("Atelier", serifDropped, "site")];
+    globalThis.fetch = (async () => {
+      const content = payloads[Math.min(fetchHits, payloads.length - 1)]!;
+      fetchHits += 1;
+      return mockCompletion(content);
+    }) as typeof fetch;
+    try {
+      const systemRepaired = await repairBuild({
+        apiKey: "unused",
+        prompt: systemBrief,
+        html: "<p>vuoto</p>",
+        error: "Tipo system perso.",
+      });
+      assert.ok(systemRepaired);
+      assert.match(systemRepaired.html, /data-intent-type="system"/);
+      assert.match(systemRepaired.html, /--body:ui-sans-serif,system-ui,-apple-system/);
+      assert.doesNotMatch(systemRepaired.html, /--body:"Karla"/);
+      const systemSrc = prepareSrcDoc(
+        systemRepaired.html,
+        systemRepaired.palette,
+        "intent-system-repair",
+        "app",
+      );
+      assert.match(systemSrc, /<span>Home<\/span>/);
+      assert.match(systemSrc, /--body:ui-sans-serif,system-ui,-apple-system/);
+      assert.doesNotMatch(systemSrc, /fonts\.googleapis\.com/);
+
+      const serifRepaired = await repairBuild({
+        apiKey: "unused",
+        prompt: serifBrief,
+        html: "<p>vuoto</p>",
+        error: "Display serif perso.",
+      });
+      assert.ok(serifRepaired);
+      assert.match(serifRepaired.html, /data-intent-type="serif"/);
+      assert.match(serifRepaired.html, /--display:"Literata",ui-serif,Georgia/);
+      assert.match(serifRepaired.html, /--body:"Literata",ui-serif,Georgia/);
+      assert.doesNotMatch(serifRepaired.html, /--body:"Figtree"/);
+      const serifSrc = prepareSrcDoc(
+        serifRepaired.html,
+        serifRepaired.palette,
+        "intent-serif-repair",
+        serifRepaired.kind,
+      );
+      assert.match(serifSrc, /--display:"Literata"/);
+      assert.doesNotMatch(serifSrc, /font:400 16px\/1\.5 system-ui,sans-serif/);
+      assert.equal(fetchHits, 2, "declared mock transport only");
+    } finally {
+      globalThis.fetch = prev;
+    }
+  });
 });

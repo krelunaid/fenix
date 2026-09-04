@@ -29,7 +29,7 @@ export async function designVisual(input: {
         { role: "system", content: VISUAL_PROMPT },
         {
           role: "user",
-          content: `BRIEF:\n${input.prompt}\n\n${tokensInstruction(tokens)}\n\n${grammarInstruction(grammar)}\n\nJSON unico, nient'altro. Palette, font e layout nati da QUESTO brief, non da un altro prodotto.`,
+          content: `BRIEF:\n${input.prompt}\n\n${tokensInstruction(tokens, input.prompt)}\n\n${grammarInstruction(grammar)}\n\nJSON unico, nient'altro. Palette, font e layout nati da QUESTO brief, non da un altro prodotto.`,
         },
       ],
     }),

@@ -11,7 +11,7 @@ import {
 } from "./visual-job.ts";
 import { restoreStablePatch } from "./studio-lock.ts";
 import { polishDashboardHtml, shouldRepairDashboard } from "./dashboard-crud.ts";
-import { replaceAppleTabIcons, rewriteIosWidgetHome, stripPhoneChromeFromSite, ensureMainElementId } from "./craft-icons.ts";
+import { applyChromeGuards, stripPhoneChromeFromSite, ensureMainElementId } from "./craft-icons.ts";
 import { repairLeakedCss } from "./color-scheme.ts";
 import { migrateProjectTree, type ProjectFile } from "./files.ts";
 import { blocksPublish } from "../ai/build-contract.ts";
@@ -69,7 +69,7 @@ export function recoverPersistedProject<T extends Recoverable>(p: T, now = Date.
     html = repairLeakedCss(
       ensureMainElementId(
         isPhoneKind(kind)
-          ? rewriteIosWidgetHome(replaceAppleTabIcons(p.html))
+          ? applyChromeGuards(p.html)
           : shouldRepairDashboard(p.html, kind)
             ? polishDashboardHtml(p.html, kind)
             : kind === "site" || kind === "landing"

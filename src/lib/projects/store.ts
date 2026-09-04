@@ -11,8 +11,7 @@ import { blocksPublish } from "../ai/build-contract";
 import { recoverPersistedProject, STALE_BUILD_MS, RESUME_ERROR } from "./recover";
 import { polishDashboardHtml, scrubTechMessages, shouldRepairDashboard } from "./dashboard-crud";
 import {
-  replaceAppleTabIcons,
-  rewriteIosWidgetHome,
+  applyChromeGuards,
   stripPhoneChromeFromSite,
   ensureMainElementId,
 } from "./craft-icons";
@@ -864,7 +863,7 @@ export function applyBuildResult(
     ensureMainElementId(
       rewriteFenixCollections(
         isPhoneKind(kind)
-          ? rewriteIosWidgetHome(replaceAppleTabIcons(result.html))
+          ? applyChromeGuards(result.html)
           : shouldRepairDashboard(result.html, kind)
             ? polishDashboardHtml(result.html, kind)
             : kind === "site" || kind === "landing"

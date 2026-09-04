@@ -252,4 +252,19 @@ document.getElementById('main').innerHTML = 'x';
       assert.equal(isAppleChromeSvg(svg), false);
     }
   });
+
+  it("keeps original Home/Aggiungi/Persona glyphs distinct from the dumped Apple set", () => {
+    const home = craftNavIcon({ id: "home", label: "Home" });
+    const add = craftNavIcon({ id: "nuovo", label: "Aggiungi" });
+    const person = craftNavIcon({ id: "persona", label: "Persona" });
+    const tavolo = craftNavIcon({ id: "home", label: "Tavolo" });
+    assert.equal(isAppleChromeSvg(home), false);
+    assert.equal(isAppleChromeSvg(add), false);
+    assert.equal(isAppleChromeSvg(person), false);
+    assert.match(home, /M5 10\.8 12 5\.2 19 10\.8V19\.2H5z/);
+    assert.doesNotMatch(home, /M4 10\.5 12 4l8 6\.5V20H4z/);
+    assert.match(add, /M12 7\.2v9\.6M7\.2 12h9\.6/);
+    assert.match(person, /cy="8\.2" r="2\.4"/);
+    assert.doesNotMatch(tavolo, /M5 10\.8 12 5\.2/);
+  });
 });

@@ -1,6 +1,7 @@
 import { assembleHtml, dropPhoneScreenFiles, ensureScreenFiles, ingestProjectFiles, parseProjectFiles, seedFiveScreens, type ProjectFile } from "../projects/files.ts";
 import { type Palette, type ProjectKind } from "../projects/types.ts";
 import { fallbackPaletteFromBrief } from "../projects/design-tokens.ts";
+import { enforceGraphicIntent } from "../projects/graphic-intent.ts";
 import { isPhoneKind } from "../projects/infer.ts";
 import { fenix2Files } from "../projects/fenix2.ts";
 
@@ -119,6 +120,11 @@ export function parseBuildOutput(text: string, lockKind?: ProjectKind, brief?: s
   } else {
     files = ingestProjectFiles(dropPhoneScreenFiles(files), { html }).files;
   }
+
+  html = enforceGraphicIntent(html, brief || "");
+  files = files.map((f) =>
+    f.path === "index.html" ? { ...f, content: enforceGraphicIntent(f.content, brief || "") } : f,
+  );
 
   return { ...meta, html, files };
 }

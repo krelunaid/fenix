@@ -191,6 +191,14 @@ export const QUALITY_LEDGER: LedgerRow[] = [
     ok: true,
   },
   {
+    id: "intent-preservation",
+    claim:
+      "La direzione grafica esplicita del brief sopravvive a tokensFromBrief, composeProduct, repair (mock dichiarato, liveVerified:false) e prepareSrcDoc. System/iPhone-like: system-ui primario (non in coda, non Karla/Literata), tab Home/Aggiungi/Persona e icone originali non riscritte solo perché comuni. Serif da rivista: Literata (o Georgia di fallback) su display e body, non Figtree come primario. Dominio (profumi, agenda) invariato se il brief non chiede. Clone Apple resta il SET #f5f5f7+#0071e3+SF Pro. D/T/M computed styles, locator.click CREATE+UPDATE+DELETE+reload, console pulita. Before/after su parent 76414c7. Hash è soglia di movimento, non voto. Nessun 9/10.",
+    evidence:
+      "graphic-intent.ts GRAPHIC_INTENT_PARENT_SHA 76414c7 + graphic-intent.test.ts + compose-product.test.ts intent + repair.recorded.test.ts mock system/serif + intent-preservation-browser.test.ts D/T/M computed+CRUD+fixtures/graphic/intent",
+    ok: true,
+  },
+  {
     id: "github-verified-roundtrip",
     claim:
       "Un albero esportato da Fenix può tornare da un repo/branch GitHub solo dopo un click esplicito. L'installation token resta server-only; tree troncati, repo estranei, blob non UTF-8/100644, limiti, secret e mismatch manifest/checksum fermano l'import. Il risultato è un progetto nuovo senza stato operativo ereditato.",
