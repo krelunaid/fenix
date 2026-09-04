@@ -69,40 +69,44 @@ function hueDistance(a: string, b: string) {
   return Math.min(d, 360 - d);
 }
 
+function liftToward(color: string, toward: string, bg: string, min: number): string {
+  let cur = color;
+  for (let i = 0; i < 12; i += 1) {
+    if (contrastRatio(bg, cur) >= min) return cur;
+    cur = mixHex(cur, toward, 0.14);
+  }
+  return contrastRatio(bg, toward) >= min ? toward : cur;
+}
+
+/** Close warm-on-warm dark hue. Signal only — never swap to a generic navy/teal. */
+export function paletteHueConflict(p: Required<SrcPalette>): boolean {
+  if (isLightHex(p.bg)) return false;
+  const bgHue = hueOf(p.bg);
+  const accentHue = hueOf(p.accent);
+  if (bgHue == null || accentHue == null) return false;
+  const warmBg = bgHue <= 55 || bgHue >= 330;
+  const warmAccent = accentHue <= 75 || accentHue >= 335;
+  return warmBg && warmAccent && hueDistance(p.bg, p.accent) < 42;
+}
+
 /** Fill missing tokens from bg luminance so PHONE_KIT never paints dark ink on dark paper. */
 export function resolvePalette(input?: string | SrcPalette): Required<SrcPalette> {
   const raw: SrcPalette =
     typeof input === "string" || !input
       ? { bg: typeof input === "string" && input ? input : "#efe6d4" }
       : { ...input };
-  let bg = raw.bg || "#efe6d4";
+  const bg = raw.bg || "#efe6d4";
   const light = isLightHex(bg);
+  const toward = light ? "#1c1712" : "#f8f4ec";
   let fg = raw.fg || (light ? "#1c1712" : "#efe6d4");
   let surface = raw.surface || (light ? mixHex(bg, "#ffffff", 0.4) : mixHex(bg, "#ffffff", 0.08));
   let muted = raw.muted || (light ? "#5c5348" : "#9a8f7a");
-  if (!light && contrastRatio(bg, surface) < 1.18) surface = mixHex(bg, "#ffffff", 0.15);
-  let accent = raw.accent || "#c45c26";
-  const bgHue = hueOf(bg);
-  const accentHue = hueOf(accent);
-  const muddyWarmDark =
-    !light &&
-    bgHue != null &&
-    accentHue != null &&
-    (bgHue <= 55 || bgHue >= 330) &&
-    (accentHue <= 75 || accentHue >= 335) &&
-    hueDistance(bg, accent) < 42;
-  if (muddyWarmDark) {
-    bg = "#111827";
-    surface = "#1f2937";
-    fg = "#f8fafc";
-    muted = "#cbd5e1";
-    accent = "#2dd4bf";
-  }
-  const line = muddyWarmDark
-    ? "#475569"
-    : raw.line && contrastRatio(bg, raw.line) >= 1.35
-      ? raw.line
-      : mixHex(bg, fg, 0.26);
+  if (!raw.surface && !light && contrastRatio(bg, surface) < 1.18) surface = mixHex(bg, "#ffffff", 0.15);
+  const accent = raw.accent || "#c45c26";
+  if (contrastRatio(bg, fg) < 4.5) fg = liftToward(fg, toward, bg, 4.5);
+  if (contrastRatio(bg, muted) < 3) muted = liftToward(muted, toward, bg, 3);
+  const line =
+    raw.line && contrastRatio(bg, raw.line) >= 1.35 ? raw.line : mixHex(bg, fg, 0.26);
   return { bg, surface, fg, muted, accent, line };
 }
 
@@ -696,6 +700,7 @@ export function fenixRuntimeScript(projectId: string, kind?: string) {
   }, true);
   document.addEventListener("submit", function(e){
     if (window.__fenixCrud) return;
+    if (productOwnsList()) return;
     e.preventDefault();
     e.stopPropagation();
     var f = e.target;
@@ -1006,6 +1011,11 @@ export function prepareSrcDoc(
   const bg = palette.bg;
   const scheme = isLightHex(bg) ? "light" : "dark";
   let next = sanitizePreviewHtml(html);
+  if (paletteHueConflict(palette)) {
+    next = next.replace(/<html\b([^>]*)>/i, (all, attrs: string) =>
+      /data-fenix-hue-conflict/.test(attrs) ? all : `<html${attrs} data-fenix-hue-conflict="warm">`,
+    );
+  }
   next = repairLeakedCss(next);
   next = rewriteFenixCollections(next);
   next = scrubCraftMedia(next);

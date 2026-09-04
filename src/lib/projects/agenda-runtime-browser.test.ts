@@ -105,7 +105,7 @@ describe("Agenda generated runtime D/T/M", () => {
       files: [],
       credits: 0,
       residual:
-        "Five-brief graphic residual moved to fixtures/graphic/five before/after on parent 6a3dd1c. This file proves Agenda function, not 9/10 craft.",
+        "Five-brief graphic residual moved to fixtures/graphic/five before/after on parent a930493. This file proves Agenda function, not 9/10 craft.",
     };
     try {
       for (const [vp, viewport] of VIEWPORTS) {
@@ -232,9 +232,13 @@ window.__db = {};
 window.addEventListener("message", function(e){
   var m=e.data;
   if(!m || m.t!=="fenix-db" || !m.id) return;
-  if(m.op==="save") window.__db[m.col]=m.data;
-  var value=m.op==="load" ? (window.__db[m.col] || null) : {ok:true,v:m.data,durable:Array.isArray(m.data&&m.data.items)?m.data.items.length:0};
-  e.source.postMessage({t:"fenix-db",id:m.id,v:value},"*");
+  var ack=function(){
+    if(m.op==="save") window.__db[m.col]=m.data;
+    var value=m.op==="load" ? (window.__db[m.col] || null) : {ok:true,v:m.data,durable:Array.isArray(m.data&&m.data.items)?m.data.items.length:0};
+    e.source.postMessage({t:"fenix-db",id:m.id,v:value},"*");
+  };
+  if(m.op==="save") setTimeout(ack, 600);
+  else ack();
 });
 </script></body></html>`);
       const src = prepareSrcDoc(composed.html, composed.tokens.palette, "agenda-runtime-persist", "app");
@@ -253,10 +257,14 @@ window.addEventListener("message", function(e){
       await frame.locator("#fnew [data-act='save']").click();
       await frame.getByRole("heading", { name: "Persistito runtime", exact: true }).waitFor({ timeout: 8000 });
       await frame.locator('article.slot:has-text("Persistito runtime") [data-act="advance"]').click();
+      await frame.locator('article.slot:has-text("Persistito runtime")[data-status="confermato"]').waitFor({
+        timeout: 4000,
+      });
       assert.equal(
         await frame.locator('article.slot:has-text("Persistito runtime")').getAttribute("data-status"),
         "confermato",
       );
+      await frame.locator("html:not([data-fenix-persist='busy'])").waitFor({ timeout: 8000 });
       assert.equal(await frame.locator('article.slot:has-text("Persistito runtime") time.time').innerText(), "18:10");
       await persist.waitForFunction(() => {
         const db = (window as unknown as { __db: Record<string, { items?: { title?: string; status?: string; kicker?: string }[] }> }).__db;
@@ -581,7 +589,7 @@ describe("Agenda calendar edges Fri/Sat/Sun, validation, date keep", () => {
       files,
       credits: 0,
       residual:
-        "Five-brief graphic residual moved to fixtures/graphic/five before/after on parent 6a3dd1c. Calendar edges prove function, not 9/10 craft.",
+        "Five-brief graphic residual moved to fixtures/graphic/five before/after on parent a930493. Calendar edges prove function, not 9/10 craft.",
     };
     writeFileSync(join(SHOTS, "edges.json"), `${JSON.stringify(extra, null, 2)}\n`);
     assert.equal(files.length, 12);
@@ -675,6 +683,9 @@ describe("Agenda persist bridge reject/timeout", () => {
       const beforeStatus = await frame.locator('article.slot:has-text("Rifiutato bridge")').getAttribute("data-status");
       await frame.locator('article.slot:has-text("Rifiutato bridge") [data-act="advance"]').click();
       await frame.locator("#err:not([hidden])").waitFor({ timeout: 8000 });
+      await frame
+        .locator(`article.slot:has-text("Rifiutato bridge")[data-status="${beforeStatus}"]`)
+        .waitFor({ timeout: 8000 });
       assert.equal(
         await frame.locator('article.slot:has-text("Rifiutato bridge")').getAttribute("data-status"),
         beforeStatus,

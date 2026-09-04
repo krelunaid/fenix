@@ -26,18 +26,18 @@
   "files": [
     {
       "name": "gestionale-crud-D.png",
-      "sha256": "89f994f2a0a077746c977ae9590bd3f9b471e05e87a82a4081d2998c6ca3edfe",
-      "bytes": 51384
+      "sha256": "8b900f822ba19e065fc0a0c4902dff77e254690eba1a9fdd8654b7be75f71c05",
+      "bytes": 52518
     },
     {
       "name": "gestionale-crud-T.png",
-      "sha256": "d45e62a3817763f03317754c65d54e5943c53ad93c91963300bd9579ae7096eb",
-      "bytes": 48972
+      "sha256": "84d8d01a256e796955c4e76a4540f6eab39068bc923bf387d1a3baebda83b065",
+      "bytes": 50100
     },
     {
       "name": "gestionale-crud-M.png",
-      "sha256": "97f31cd2eafcf1a3a8c1d9556af5da1fceb9a424ec41c062f4e617d09945a461",
-      "bytes": 45349
+      "sha256": "deaf17330f177e42c1f0a05f3c28f2d1b3bd2d3a94450fc457c0bf6fef3d9955",
+      "bytes": 46305
     },
     {
       "name": "consumer-mobile-D.png",
@@ -56,18 +56,18 @@
     },
     {
       "name": "dashboard-multifile-D.png",
-      "sha256": "89f994f2a0a077746c977ae9590bd3f9b471e05e87a82a4081d2998c6ca3edfe",
-      "bytes": 51384
+      "sha256": "8b900f822ba19e065fc0a0c4902dff77e254690eba1a9fdd8654b7be75f71c05",
+      "bytes": 52518
     },
     {
       "name": "dashboard-multifile-T.png",
-      "sha256": "d45e62a3817763f03317754c65d54e5943c53ad93c91963300bd9579ae7096eb",
-      "bytes": 48972
+      "sha256": "84d8d01a256e796955c4e76a4540f6eab39068bc923bf387d1a3baebda83b065",
+      "bytes": 50100
     },
     {
       "name": "dashboard-multifile-M.png",
-      "sha256": "97f31cd2eafcf1a3a8c1d9556af5da1fceb9a424ec41c062f4e617d09945a461",
-      "bytes": 45349
+      "sha256": "deaf17330f177e42c1f0a05f3c28f2d1b3bd2d3a94450fc457c0bf6fef3d9955",
+      "bytes": 46305
     },
     {
       "name": "utility-calculator-D.png",
@@ -86,23 +86,23 @@
     },
     {
       "name": "interactive-game-D.png",
-      "sha256": "02a635f379e214d4586f79027db506fb0c38c7a358b55b88d418ed4264aa6e14",
-      "bytes": 16401
+      "sha256": "9582c787cccc4c0a4f0e2ba868465ba574a87dbbd23e2f48113e47ed6cc809f7",
+      "bytes": 15577
     },
     {
       "name": "interactive-game-T.png",
-      "sha256": "af383b0bb0c0a59ed43baa663220e31144a2b9c5a4d5ab9e9b0cfef81caaf47d",
-      "bytes": 16097
+      "sha256": "b436e70713e765680e4cf242c44c06218677e0fbafcb0120e56c1b1a248f5b09",
+      "bytes": 15974
     },
     {
       "name": "interactive-game-M.png",
-      "sha256": "af60d7112a407338815beb7d498940e3b0ec190e89c32b70887c4d98a62f52e7",
-      "bytes": 13285
+      "sha256": "d37507dd9e78c0c55a2f86dfd254496d703b407b579b5bd65c971f8a8040dbad",
+      "bytes": 12996
     },
     {
       "name": "portfolio-contact-D.png",
-      "sha256": "39a3ce2836fbff801a757128bdfeb800c7aa8014d0f63f9932b8b4710390bd5b",
-      "bytes": 30362
+      "sha256": "e886a2f58491ef03d4acfdc752ce9e3108e060e67914888ffb89ffdee05e1bb3",
+      "bytes": 30347
     },
     {
       "name": "portfolio-contact-T.png",
@@ -111,8 +111,8 @@
     },
     {
       "name": "portfolio-contact-M.png",
-      "sha256": "0dfc9514cabdd88887ed1277eea86b05cd1245e834663baa3a2b1a54589ab90a",
-      "bytes": 24661
+      "sha256": "68143e2a5168a37acd25a2cd976bd203f4ae9690aab28465ee11c76e65469fea",
+      "bytes": 24858
     }
   ]
 }

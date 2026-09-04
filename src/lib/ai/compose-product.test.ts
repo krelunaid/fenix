@@ -316,8 +316,14 @@ describe("graphic pipeline prompt→plan→generate→visual→QA", () => {
     assert.equal(runs.find((r) => r.id === "abbigliamento")!.grammar.id, "lookbook");
     assert.equal(runs.find((r) => r.id === "repo")!.grammar.id, "source-timeline");
     assert.equal(runs.find((r) => r.id === "ristorazione")!.grammar.id, "service-board");
-    assert.equal(GRAPHIC_FIVE_PARENT_SHA, "6a3dd1c135de83345e7ae77ec170767cf16988a5");
+    assert.equal(GRAPHIC_FIVE_PARENT_SHA, "a9304931bfb8fd1711aa932fa80f090463c7b59a");
     assert.equal(runs.find((r) => r.id === "repo")!.tokens.fonts.display, "IBM Plex Mono");
+    const repo = runs.find((r) => r.id === "repo")!;
+    assert.match(repo.html, /"id":"diff","label":"Diff"/);
+    assert.doesNotMatch(repo.html, /"label":"Scarto"/);
+    assert.doesNotMatch(repo.html, /home universale grigia/);
+    assert.doesNotMatch(repo.html, /due riquadri vuoti/);
+    assert.match(repo.html, /Diff · /);
     for (const run of runs) {
       assert.match(run.html, new RegExp(`data-family="${run.tokens.family}"`));
       assert.match(run.html, new RegExp(`data-grammar="${run.grammar.id}"`));
@@ -343,7 +349,7 @@ describe("graphic pipeline prompt→plan→generate→visual→QA", () => {
     }
   });
 
-  it("freezes five-brief before shots at parent SHA 6a3dd1c", () => {
+  it("freezes five-brief before shots at parent SHA a930493", () => {
     const here = dirname(fileURLToPath(import.meta.url));
     const before = join(here, "fixtures/graphic/five/before");
     const names = [
@@ -353,7 +359,7 @@ describe("graphic pipeline prompt→plan→generate→visual→QA", () => {
       "repo",
       "ristorazione",
     ].flatMap((id) => ["D", "T", "M"].map((vp) => `${id}-${vp}.png`));
-    assert.equal(GRAPHIC_FIVE_PARENT_SHA, "6a3dd1c135de83345e7ae77ec170767cf16988a5");
+    assert.equal(GRAPHIC_FIVE_PARENT_SHA, "a9304931bfb8fd1711aa932fa80f090463c7b59a");
     assert.equal(existsSync(before), true);
     const listed = readdirSync(before).filter((n) => n.endsWith(".png")).sort();
     assert.deepEqual(listed, [...names].sort());
@@ -433,6 +439,9 @@ describe("graphic pipeline prompt→plan→generate→visual→QA", () => {
     assert.match(html, /id="day-label"/);
     assert.match(html, /aria-labelledby="day-label"/);
     assert.match(html, /function persistThen/);
+    assert.match(html, /data-fenix-persist/);
+    assert.match(html, /item\.status=AGENDA_CYCLE\[item\.status\]\|\|"confermato";\s*\} else \{/);
+    assert.match(html, /item\.kicker=cycle\[item\.kicker\]\|\|item\.kicker;\s*\}\s*render\(\);\s*persistThen\(null,/);
     assert.match(html, /function saveOnce/);
     assert.doesNotMatch(html, /void window\.Fenix\.save/);
     assert.doesNotMatch(html, /function save\(\)\{ if\(window\.Fenix\) void/);

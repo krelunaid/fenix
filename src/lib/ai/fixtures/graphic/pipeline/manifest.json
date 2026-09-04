@@ -3,39 +3,39 @@
   "files": [
     {
       "name": "essenza-or-D.png",
-      "sha256": "83f0bf0098d47a29224fd2df6f3cfa779943861c3b529b6afe39a4b4e5ce0c74",
-      "bytes": 212986,
+      "sha256": "0c27cf5f445f523b71ca5a331297fcbaf1f6eb13e049ebe5b7dbce8337e81f09",
+      "bytes": 212707,
       "score": 100,
       "ok": true,
       "grammar": "split-stage"
     },
     {
       "name": "essenza-or-T.png",
-      "sha256": "4dd6c1d29e068bf42649b803a0ecbd6c434cd5f03a227a8aa9773b3ebf6435c7",
-      "bytes": 150015,
+      "sha256": "890fafd175cba91fa732512b4d0559d9e1be57bdcf1041ec30dcb279e8b91ab2",
+      "bytes": 149441,
       "score": 100,
       "ok": true,
       "grammar": "split-stage"
     },
     {
       "name": "essenza-or-M.png",
-      "sha256": "eb70e523ee4108c526da4e66646e9bccb2d1e3bdefb8067765cf8d89850ebe9a",
-      "bytes": 93068,
+      "sha256": "5a01a56f6bfbc6a0bd4f0e64d2cd8ceee5c2f042469afceb63513f41c603af48",
+      "bytes": 92932,
       "score": 100,
       "ok": true,
       "grammar": "split-stage"
     },
     {
       "name": "essenza-ice-D.png",
-      "sha256": "5a7844771a14905254e915725391168c9f87470e786dfe6b923179511d6309ce",
-      "bytes": 462179,
+      "sha256": "08bd7860697eae9a92ccb50a464a220d2c6bfd41cf3e6c8ee0dd337ffcce836c",
+      "bytes": 462147,
       "score": 100,
       "ok": true,
       "grammar": "split-stage"
     },
     {
       "name": "essenza-ice-T.png",
-      "sha256": "3d2a55c5c65865a664bda2f8ec0393cc2cfb954f456bffee09786e9e7ecabc2e",
+      "sha256": "0f9c3e1d56ea06299602cb7528ce63d3c03c694feab5672ca5e7ad1a091bf56a",
       "bytes": 360741,
       "score": 100,
       "ok": true,
@@ -43,7 +43,7 @@
     },
     {
       "name": "essenza-ice-M.png",
-      "sha256": "1ce5494ea2a4d12d0a3711b2c2b91a60d28951024adcdc662c2314163862d88e",
+      "sha256": "18564fae3951e6d89c56dbd5d2afdd5a4b8231c5000c376ac81287c22f81439e",
       "bytes": 182254,
       "score": 100,
       "ok": true,
@@ -51,7 +51,7 @@
     },
     {
       "name": "vesti-inchiostro-D.png",
-      "sha256": "5a39de28a11cc3247d3b2052df09e665d5f9ad982a8c60f9e56535b6cda73b13",
+      "sha256": "2e8b707da281fc2f6e13f1e7f611dca12736aeb33936f4d6f28f51b6db83b9a1",
       "bytes": 710514,
       "score": 100,
       "ok": true,
@@ -67,7 +67,7 @@
     },
     {
       "name": "vesti-inchiostro-M.png",
-      "sha256": "f1b0b66df5d862db8b2bf84e8a73df43a0443f95ff9c3d1e0e72c6d5101130c7",
+      "sha256": "e2b88926c616b81270194a9d94ff701206f2d0ee011a24fc2df52910f8c84420",
       "bytes": 253055,
       "score": 100,
       "ok": true,
@@ -75,24 +75,24 @@
     },
     {
       "name": "vesti-osso-D.png",
-      "sha256": "f95d5e0896403cbd4941d27d9d82879b963aac6a431317ad9c9c88ed3cd2c50b",
-      "bytes": 286392,
+      "sha256": "ce548053bca06048e12b950de103616268f94d01a4b9a70c2c7cdfa9eee418e6",
+      "bytes": 286391,
       "score": 100,
       "ok": true,
       "grammar": "lookbook"
     },
     {
       "name": "vesti-osso-T.png",
-      "sha256": "ff89492a003d7744c039d6e8bbbae6c36539127bf1bee05f2417bb3ce3eab2c3",
-      "bytes": 328497,
+      "sha256": "a0ca0c1cd957cb023ea5f33c54d43b8d93ffb76cbb6bea8b35ce139470012009",
+      "bytes": 329061,
       "score": 100,
       "ok": true,
       "grammar": "lookbook"
     },
     {
       "name": "vesti-osso-M.png",
-      "sha256": "9878b10d143c45d8d9a086b1c08802d0f85acef921e743b962bd5122216eed8b",
-      "bytes": 114155,
+      "sha256": "9ebefb9d781682aed0bf6f9bf73a633ed53b50126bb916928a0e24e89cf61711",
+      "bytes": 114329,
       "score": 100,
       "ok": true,
       "grammar": "lookbook"
@@ -107,7 +107,7 @@
     },
     {
       "name": "locanda-pietra-T.png",
-      "sha256": "64582576f0ba633df1fdb5f72dc317329d727db0fad46cedc18c9068af05c22c",
+      "sha256": "b5c938ccd76b8258c3da7da38de3fc3a83e613ad26c4e0fce2e574c42a928f1b",
       "bytes": 284626,
       "score": 100,
       "ok": true,
@@ -116,7 +116,7 @@
     {
       "name": "locanda-pietra-M.png",
       "sha256": "1c82612f52b94223840278cd9c1542a60c2ce3b3232868fa9e7b70f6d3eb4912",
-      "bytes": 163781,
+      "bytes": 163788,
       "score": 100,
       "ok": true,
       "grammar": "hospitality"
@@ -147,24 +147,24 @@
     },
     {
       "name": "osteria-passo-D.png",
-      "sha256": "deb07efc8ae59f07df7ecdbb4f3bf6a9d2f6909bcae4ef884d065d9308fd051a",
-      "bytes": 311194,
+      "sha256": "a9e6ce21d623fe6d457760760555e424ceed4381a098f2f3d55c75b54f1fd345",
+      "bytes": 311176,
       "score": 100,
       "ok": true,
       "grammar": "service-board"
     },
     {
       "name": "osteria-passo-T.png",
-      "sha256": "0766885bcc95e2c4675e8364186db82281743eed016bf303273f3f876e4d9b28",
-      "bytes": 262222,
+      "sha256": "5871194cda15bb4847440bbb8864d62e779150818a8e33eec2921f99a3d46fd9",
+      "bytes": 262174,
       "score": 100,
       "ok": true,
       "grammar": "service-board"
     },
     {
       "name": "osteria-passo-M.png",
-      "sha256": "1b16573d88b0c34592677c68d7d63c7755c524e99eb0ddae6e1567a35a0ff57c",
-      "bytes": 131376,
+      "sha256": "dd9d2cccf509e9253d3c8f3a859d9e9d4f3e4decec2a90fec3a5612410981802",
+      "bytes": 131443,
       "score": 100,
       "ok": true,
       "grammar": "service-board"
@@ -219,7 +219,7 @@
     },
     {
       "name": "atelier-carta-D.png",
-      "sha256": "f2090ba1d77fa2be80c762cef0075146cfac14d48c09900f20d63d9d308fae74",
+      "sha256": "4a0f1835dc27e54cb62e9b222aeaee6b6a3dbd764d7c49a6ef864ecbf53fa08a",
       "bytes": 664428,
       "score": 100,
       "ok": true,
@@ -228,7 +228,7 @@
     {
       "name": "atelier-carta-T.png",
       "sha256": "0fb803161bf48bb65466ec7f6f32e2d3c38dd37d88212fdb4cbc5fd5b2f67b1c",
-      "bytes": 499778,
+      "bytes": 499789,
       "score": 100,
       "ok": true,
       "grammar": "magazine"

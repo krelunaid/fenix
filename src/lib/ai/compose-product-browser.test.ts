@@ -28,6 +28,30 @@ const VIEWPORTS = [
   ["M", { width: 390, height: 844 }],
 ] as const;
 
+function cssToHex(value: string): string {
+  const v = value.trim().toLowerCase();
+  if (v.startsWith("#")) {
+    if (v.length === 4) return `#${v[1]}${v[1]}${v[2]}${v[2]}${v[3]}${v[3]}`;
+    return v.slice(0, 7);
+  }
+  const m = v.match(/^rgba?\(\s*(\d+)[,\s/]+(\d+)[,\s/]+(\d+)/);
+  if (!m) return v;
+  return `#${[m[1], m[2], m[3]].map((n) => Number(n).toString(16).padStart(2, "0")).join("")}`;
+}
+
+const FIVE_PERSIST_HOST = `<!DOCTYPE html><html><head><style>html,body,#f{margin:0;width:100%;height:100%;border:0;display:block;background:transparent}</style></head><body>
+<iframe id="f"></iframe>
+<script>
+window.__db = {};
+window.addEventListener("message", function(e){
+  var m=e.data;
+  if(!m || m.t!=="fenix-db" || !m.id) return;
+  if(m.op==="save") window.__db[m.col]=m.data;
+  var value=m.op==="load" ? (window.__db[m.col] || null) : {ok:true,v:m.data,durable:Array.isArray(m.data&&m.data.items)?m.data.items.length:0};
+  e.source.postMessage({t:"fenix-db",id:m.id,v:value},"*");
+});
+</script></body></html>`;
+
 async function shot(page: Page, name: string, dir = SHOTS) {
   mkdirSync(dir, { recursive: true });
   const dest = join(dir, name);
@@ -816,11 +840,21 @@ describe("graphic pipeline visual QA D/T/M", () => {
     assert.equal(before.length, 15);
     const browser = await launchChromium();
     const files: { name: string; sha256: string }[] = [];
-    const palettes: { id: string; bg: string; accent: string; family: string; grammar: string; display: string }[] = [];
+    const palettes: {
+      id: string;
+      bg: string;
+      accent: string;
+      family: string;
+      grammar: string;
+      display: string;
+      painted: { vp: string; bgVar: string; accentVar: string; bgPaint: string }[];
+    }[] = [];
     const mobileChrome: string[] = [];
     try {
       for (const row of briefs) {
         const composed = composeProduct(row.brief);
+        const tokenBg = composed.tokens.palette.bg.toLowerCase();
+        const tokenAccent = composed.tokens.palette.accent.toLowerCase();
         palettes.push({
           id: row.id,
           bg: composed.tokens.palette.bg,
@@ -828,8 +862,14 @@ describe("graphic pipeline visual QA D/T/M", () => {
           family: composed.tokens.family,
           grammar: composed.grammar.id,
           display: composed.tokens.fonts.display,
+          painted: [],
         });
         assert.equal(composed.html.includes(`data-family="${composed.tokens.family}"`), true);
+        if (row.id === "repo") {
+          assert.doesNotMatch(composed.html, /home universale grigia/);
+          assert.doesNotMatch(composed.html, /due riquadri vuoti/);
+          assert.doesNotMatch(composed.html, /"label":"Scarto"/);
+        }
         for (const [vp, viewport] of VIEWPORTS) {
           const page = await isolatedPage(browser, { viewport });
           const errors: string[] = [];
@@ -840,14 +880,50 @@ describe("graphic pipeline visual QA D/T/M", () => {
             if (msg.type() === "error" && !isBlockedPublicNetworkError(msg.text())) errors.push(msg.text());
           });
           try {
-            const src = prepareSrcDoc(composed.html, composed.tokens.palette, row.id, composed.grammar.kind);
-            await page.setContent(src, { waitUntil: "domcontentloaded", timeout: 15000 });
-            await waitForFenixReady(page, 8000);
+            const src = prepareSrcDoc(composed.html, composed.tokens.palette, `${row.id}-${vp}`, composed.grammar.kind);
+            await page.setContent(FIVE_PERSIST_HOST, { waitUntil: "domcontentloaded", timeout: 15000 });
+            const load = () =>
+              page.locator("#f").evaluate((el, srcDoc: string) => {
+                (el as HTMLIFrameElement).srcdoc = srcDoc;
+              }, src);
+            await load();
+            const frame = page.frameLocator("#f");
+            await frame.locator("[data-fenix-ready]").waitFor({ timeout: 8000 });
+            const painted = await frame.locator("html").evaluate(() => {
+              const css = getComputedStyle(document.documentElement);
+              return {
+                bgVar: css.getPropertyValue("--bg").trim(),
+                accentVar: css.getPropertyValue("--accent").trim(),
+                bgPaint: getComputedStyle(document.body).backgroundColor,
+              };
+            });
+            const bgVar = cssToHex(painted.bgVar);
+            const accentVar = cssToHex(painted.accentVar);
+            const bgPaint = cssToHex(painted.bgPaint);
+            palettes[palettes.length - 1]!.painted.push({
+              vp,
+              bgVar,
+              accentVar,
+              bgPaint,
+            });
+            assert.equal(bgVar, tokenBg, `${row.id}/${vp} --bg token`);
+            assert.equal(accentVar, tokenAccent, `${row.id}/${vp} --accent token`);
+            assert.equal(bgPaint, tokenBg, `${row.id}/${vp} body paint`);
+            assert.notEqual(bgVar, "#111827", `${row.id}/${vp} navy swap`);
+            assert.notEqual(accentVar, "#2dd4bf", `${row.id}/${vp} teal swap`);
+            if (row.id === "profumi") {
+              assert.equal(bgVar, "#120e0c");
+              assert.equal(accentVar, "#c4a15a");
+            }
+            if (row.id === "ristorazione") {
+              assert.equal(bgVar, "#1a1210");
+              assert.equal(accentVar, "#c43c2c");
+            }
             if (row.id === "agenda") {
-              assert.equal(await page.locator('button[data-view="home"]').count(), 0);
-              await page.locator('nav button[data-view="settimana"]').click();
-              assert.equal(await page.locator(".week-day[data-day]").count(), 7, `${row.id} days`);
-              const dayCounts = await page.locator(".week-day [data-count]").evaluateAll((els) =>
+              assert.equal(await frame.locator('button[data-view="home"]').count(), 0);
+              await frame.locator('nav button[data-view="settimana"]').click();
+              assert.equal(await frame.locator(".week-day[data-day]").count(), 7, `${row.id} days`);
+              const dayCounts = await frame.locator(".week-day [data-count]").evaluateAll((els) =>
                 els.map((el) => Number(el.getAttribute("data-count") || 0)),
               );
               assert.equal(dayCounts.length, 7, `${row.id} day counts`);
@@ -856,16 +932,16 @@ describe("graphic pipeline visual QA D/T/M", () => {
                 `${row.id} week slots ${dayCounts.join(",")}`,
               );
             }
-            const overflow = await page.evaluate(
+            const overflow = await frame.locator("html").evaluate(
               () => document.documentElement.scrollWidth - window.innerWidth,
             );
             assert.ok(overflow <= 8, `${row.id}/${vp} overflow ${overflow}`);
             assert.equal(errors.length, 0, `${row.id}/${vp} ${errors.join(" | ")}`);
-            const rendered = await page.evaluate(collectRenderedGraphic);
+            const rendered = await frame.locator("html").evaluate(collectRenderedGraphic);
             assert.equal(rendered.leakedText, false, `${row.id} leaked`);
             assert.ok(rendered.headingCount >= 1, `${row.id} heading`);
             if (vp === "M") {
-              const chrome = await page.evaluate(() => {
+              const chrome = await frame.locator("html").evaluate(() => {
                 const brand = document.querySelector(".brand");
                 const nav = document.querySelector("nav");
                 const on = document.querySelector("nav button.on");
@@ -884,30 +960,53 @@ describe("graphic pipeline visual QA D/T/M", () => {
               });
               mobileChrome.push(chrome);
             }
-            const dest = await shot(page, `${row.id}-${vp}.png`, FIVE_SHOTS);
+            const dest = join(FIVE_SHOTS, `${row.id}-${vp}.png`);
+            mkdirSync(FIVE_SHOTS, { recursive: true });
+            await page.locator("#f").screenshot({ path: dest });
             try {
               mkdirSync(AFTER, { recursive: true });
-              await page.screenshot({ path: join(AFTER, `${row.id}-${vp}.png`), fullPage: false });
+              await page.locator("#f").screenshot({ path: join(AFTER, `${row.id}-${vp}.png`) });
             } catch {
               /* CI without scorecard dir */
             }
-            const buf = await page.screenshot({ type: "png" });
+            const buf = readFileSync(dest);
             files.push({ name: `${row.id}-${vp}.png`, sha256: createHash("sha256").update(buf).digest("hex") });
-            if (vp === "D") {
-              const tabIndex = row.id === "repo" ? 2 : 1;
-              const tabs = page.locator("button[data-view]");
-              assert.ok((await tabs.count()) > tabIndex, `${row.id} form tab`);
-              await tabs.nth(tabIndex).click();
-              const name = page.locator("#n");
-              assert.equal(await name.count(), 1, `${row.id} name field`);
-              await name.fill(`Prova ${row.id}`);
-              const submit = page.locator("#fnew button[type='submit'], #fnew [data-act='save']");
-              assert.equal(await submit.count(), 1, `${row.id} form submit`);
-              await submit.click();
-              await page.getByText(`Prova ${row.id}`).waitFor({ timeout: 4000 });
-              const body = await page.locator("body").innerText();
-              assert.doesNotMatch(body, /\bundefined\b|\bNaN\b/);
+            const tabIndex = row.id === "repo" ? 2 : 1;
+            const tabs = frame.locator("button[data-view]");
+            assert.ok((await tabs.count()) > tabIndex, `${row.id} form tab`);
+            await tabs.nth(tabIndex).click();
+            const name = frame.locator("#n");
+            assert.equal(await name.count(), 1, `${row.id} name field`);
+            const created = `Prova ${row.id} ${vp}`;
+            await name.fill(created);
+            if ((await frame.locator("#ora").count()) === 1) {
+              await frame.locator("#ora").fill("10:15");
             }
+            const submit = frame.locator("#fnew button[type='submit'], #fnew [data-act='save']");
+            assert.equal(await submit.count(), 1, `${row.id} form submit`);
+            await frame.locator("html:not([data-fenix-persist='busy'])").waitFor({ timeout: 8000 });
+            await submit.click();
+            await frame.locator("h2").filter({ hasText: created }).waitFor({ timeout: 8000 });
+            await frame.locator("html:not([data-fenix-persist='busy'])").waitFor({ timeout: 8000 });
+            await page.waitForFunction(
+              (title) => {
+                const db = (window as unknown as { __db?: Record<string, { items?: { title?: string }[] }> }).__db;
+                if (!db) return false;
+                return Object.keys(db).some((key) => {
+                  const items = db[key] && Array.isArray(db[key]!.items) ? db[key]!.items : [];
+                  return items.some((item) => item.title === title);
+                });
+              },
+              created,
+              { timeout: 8000 },
+            );
+            const body = await frame.locator("body").innerText();
+            assert.doesNotMatch(body, /\bundefined\b|\bNaN\b/);
+            assert.doesNotMatch(body, /home universale grigia/);
+            assert.doesNotMatch(body, /due riquadri vuoti/);
+            await load();
+            await frame.locator("[data-fenix-ready]").waitFor({ timeout: 8000 });
+            await frame.locator("h2").filter({ hasText: created }).waitFor({ timeout: 8000 });
             void dest;
           } finally {
             await page.close();
@@ -926,13 +1025,13 @@ describe("graphic pipeline visual QA D/T/M", () => {
           before,
           after: files,
           palettes,
-          note: "composeProduct five briefs D/T/M before/after on parent 6a3dd1c. Hash/ΔE are movement floors, not scores. Agenda and ristorazione must move; other briefs may stay if the generator did not restyle them.",
+          note: "composeProduct five briefs D/T/M before/after on parent a930493. Painted CSS after prepareSrcDoc. Hash/ΔE are movement floors, not scores. Not a 9/10.",
         },
         null,
         2,
       )}\n`,
     );
-    assert.equal(GRAPHIC_FIVE_PARENT_SHA, "6a3dd1c135de83345e7ae77ec170767cf16988a5");
+    assert.equal(GRAPHIC_FIVE_PARENT_SHA, "a9304931bfb8fd1711aa932fa80f090463c7b59a");
     assert.equal(files.length, briefs.length * VIEWPORTS.length);
     assert.equal(new Set(files.map((f) => f.sha256)).size, files.length, "after shots must differ");
     assert.equal(new Set(mobileChrome).size, briefs.length, mobileChrome.join(" || "));
@@ -941,14 +1040,21 @@ describe("graphic pipeline visual QA D/T/M", () => {
     assert.equal(agendaPalette?.display, "Figtree");
     assert.equal(agendaPalette?.bg.toLowerCase(), "#e8eef4");
     assert.equal(agendaPalette?.accent.toLowerCase(), "#1f6f68");
-    const mustMove = /^(agenda|ristorazione)-[DTM]\.png$/;
+    const mustMove = /^(profumi|ristorazione|repo)-[DTM]\.png$/;
     for (const file of files) {
       const prior = before.find((b) => b.name === file.name);
       assert.ok(prior, file.name);
       if (mustMove.test(file.name)) {
-        assert.notEqual(file.sha256, prior!.sha256, `${file.name} after must move from parent 6a3dd1c`);
+        assert.notEqual(file.sha256, prior!.sha256, `${file.name} after must move from parent a930493`);
       }
       assert.equal(existsSync(join(BEFORE, file.name)), true);
+    }
+    for (const row of palettes) {
+      assert.equal(row.painted.length, 3, `${row.id} painted D/T/M`);
+      for (const paint of row.painted) {
+        assert.equal(paint.bgVar, row.bg.toLowerCase(), `${row.id}/${paint.vp} painted bg`);
+        assert.equal(paint.accentVar, row.accent.toLowerCase(), `${row.id}/${paint.vp} painted accent`);
+      }
     }
   });
 });

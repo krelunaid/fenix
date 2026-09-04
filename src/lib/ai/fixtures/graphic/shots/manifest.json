@@ -3,43 +3,43 @@
   "files": [
     {
       "name": "essenza-fail-D.png",
-      "sha256": "889df18c1b009f31e4bd0267b97dfeab1768beca664982b589b2c036e2e3fd9e",
-      "bytes": 23068,
+      "sha256": "e2becb497aa11912fbf354aa021ecaa6dd32f2789dd8daf31b08208ea70a538b",
+      "bytes": 23158,
       "score": 0,
       "ok": false
     },
     {
       "name": "essenza-fail-T.png",
-      "sha256": "012eae7be21aa81e17980cd603ed0dd73c897e57e59da1eef21b59adbd148f80",
-      "bytes": 22761,
+      "sha256": "71d1d8076859f47ca864a5f4cc6144ae358d11c275c284b07e485dc6e1a67656",
+      "bytes": 22857,
       "score": 0,
       "ok": false
     },
     {
       "name": "essenza-fail-M.png",
-      "sha256": "495bd1811965aedd27faf281967860138e3d1ad55ed757cd9fbe189c30074e75",
-      "bytes": 21051,
+      "sha256": "680cc15a51b5c1b5cf6deca7d929dbef19affc00e47bb24f6bbec9b5762c6115",
+      "bytes": 21197,
       "score": 0,
       "ok": false
     },
     {
       "name": "maison-lumiere-D.png",
-      "sha256": "7e4d1c31572f3310dd7ab241ac6943579ac69aadd52494f0ffb933580f7f03f6",
-      "bytes": 65662,
+      "sha256": "ae869613d075236248b765bb7a6d7d683c1cdfe4c8163fd215faef5fa77c780a",
+      "bytes": 61841,
       "score": 68,
       "ok": false
     },
     {
       "name": "maison-lumiere-T.png",
-      "sha256": "00417847119b12c995933605f4c7af4a92c79ef0a32edfa346fad88db46142a9",
-      "bytes": 65223,
+      "sha256": "3756e60bbad3d202f95d41b617442737b6b77596f05823b3d0f7f483d4263267",
+      "bytes": 61455,
       "score": 68,
       "ok": false
     },
     {
       "name": "maison-lumiere-M.png",
-      "sha256": "598855914746842606bd2c92b959a08ec69d561f2ad92e1dc4898970af243930",
-      "bytes": 47894,
+      "sha256": "f485669e6622dd466fa9ee68a11f0487c76a6dbee65e55b4e26229355b51d8db",
+      "bytes": 45867,
       "score": 68,
       "ok": false
     },
@@ -87,22 +87,22 @@
     },
     {
       "name": "lumiere-or-D.png",
-      "sha256": "80c5fb993842d08a36093796ba75295ddc50307d3368828aea7cb8caa43ddc76",
-      "bytes": 147543,
+      "sha256": "334e563e839e357da2d08eba35c841bf473d36a1ecf2d7b3ac0b7d04bdeb9902",
+      "bytes": 146363,
       "score": 100,
       "ok": true
     },
     {
       "name": "lumiere-or-T.png",
-      "sha256": "8f3d8a35fb120be85e96e1491606c5fd72952eafc45c178551767bb74d64f121",
-      "bytes": 68924,
+      "sha256": "98f46c005c3370d2c9afd2b7738a65cd8bbc3010dca7406aefcf3b00bd91d056",
+      "bytes": 68440,
       "score": 100,
       "ok": true
     },
     {
       "name": "lumiere-or-M.png",
-      "sha256": "f523506fc60aea6e9389d423649e97e959a8459dfc0f238ffb0ff60a23ad3e3c",
-      "bytes": 66264,
+      "sha256": "9901d3dc8abd2fa804d415701d9b203b43799d650c6df72800e09d195deb4de5",
+      "bytes": 65315,
       "score": 100,
       "ok": true
     },
@@ -150,22 +150,22 @@
     },
     {
       "name": "atelier-osso-D.png",
-      "sha256": "70afe4937153f8098f8dd796d38281025cd79c44dbdf373cc336f4ca08ab5b8a",
-      "bytes": 257276,
+      "sha256": "1e5d129b5ab4c1c482d4d8b882554d33267dd3e6a81fa3ae131202b7bfc7c92d",
+      "bytes": 256553,
       "score": 100,
       "ok": true
     },
     {
       "name": "atelier-osso-T.png",
-      "sha256": "0621e027f2a5e0a5216385389aa5f115350a0b337b1b745c851d094a3ae5250c",
-      "bytes": 165097,
+      "sha256": "188f28e7806433fe0f9166dd60fcaad5448aa3d245c6859f11a3cabe6740c9ed",
+      "bytes": 164955,
       "score": 100,
       "ok": true
     },
     {
       "name": "atelier-osso-M.png",
-      "sha256": "04d99d02e8e43818794cdc55b35a1c7b72a2187df3d742dd1a235f29850d4933",
-      "bytes": 99589,
+      "sha256": "1043e1269d0510d5aa42287f44d449a03a428b9912a51448707771b04bc59b41",
+      "bytes": 99536,
       "score": 100,
       "ok": true
     },

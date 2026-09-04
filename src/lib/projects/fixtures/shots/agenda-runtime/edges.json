@@ -13,8 +13,8 @@
     },
     {
       "name": "agenda-runtime-valid-d.png",
-      "sha256": "4c2b0fbe8d529ebca98adec72d07f59cb22a6cc4085b78079d0515cf46a49551",
-      "bytes": 45338
+      "sha256": "9ffe7ee0d11ed3a14b777dbf3d0e8b47e1ed52a8fcf5743a7d2d0ae4f8ab413f",
+      "bytes": 45336
     },
     {
       "name": "agenda-runtime-clean-d.png",
@@ -33,8 +33,8 @@
     },
     {
       "name": "agenda-runtime-valid-t.png",
-      "sha256": "3164f48a7400ba135126c8f2bcde0ca521e6b560371d009c763317356c9d8e7a",
-      "bytes": 44625
+      "sha256": "ea5ec5d27220d7ee6e2da632206ec75cd3d30c806cc90b0a6c018097c606752d",
+      "bytes": 43660
     },
     {
       "name": "agenda-runtime-clean-t.png",
@@ -53,8 +53,8 @@
     },
     {
       "name": "agenda-runtime-valid-m.png",
-      "sha256": "baabfaf0d7ecb060cd77c8c616e88e71667abd5576a51c9723c56a4adb07617d",
-      "bytes": 40512
+      "sha256": "17386c91368bfdd766dfa58776ce30609a5a2b60421b51461d3291bcabb76c66",
+      "bytes": 40508
     },
     {
       "name": "agenda-runtime-clean-m.png",
@@ -63,5 +63,5 @@
     }
   ],
   "credits": 0,
-  "residual": "Five-brief graphic residual moved to fixtures/graphic/five before/after on parent 6a3dd1c. Calendar edges prove function, not 9/10 craft."
+  "residual": "Five-brief graphic residual moved to fixtures/graphic/five before/after on parent a930493. Calendar edges prove function, not 9/10 craft."
 }

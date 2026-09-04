@@ -485,7 +485,7 @@ describe("phone chrome is workshop, not iPhone", () => {
           const css = getComputedStyle(document.documentElement);
           return { bg: css.getPropertyValue("--bg").trim(), accent: css.getPropertyValue("--accent").trim() };
         });
-        assert.deepEqual(palette, { bg: "#111827", accent: "#2dd4bf" });
+        assert.deepEqual(palette, { bg: "#18120d", accent: "#c95d25" });
         await page.close();
       }
     } finally {

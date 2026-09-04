@@ -57,8 +57,8 @@ export type ComposedProduct = {
   files: { path: string; content: string }[];
 };
 
-/** Parent SHA of the five-brief before/after. Frozen 6a3dd1c baseline, not a quality score. */
-export const GRAPHIC_FIVE_PARENT_SHA = "6a3dd1c135de83345e7ae77ec170767cf16988a5";
+/** Parent SHA of the five-brief before/after. Frozen a930493 baseline, not a quality score. */
+export const GRAPHIC_FIVE_PARENT_SHA = "a9304931bfb8fd1711aa932fa80f090463c7b59a";
 
 export type GraphicPipelineRun = {
   brief: string;
@@ -336,11 +336,11 @@ function synthesizeSpec(brief: string): PipelineSpec {
         { id: "attivita", label: "Attività" },
         { id: "rami", label: "Rami" },
         { id: "sync", label: "Sync" },
-        { id: "scarto", label: "Scarto" },
+        { id: "diff", label: "Diff" },
       ],
       rows: [
         { id: "v1", title: "Allinea il nastro delle voci", kicker: "main", note: "a3f1c2 · Marta", meta: "allineato" },
-        { id: "v2", title: "Chiude lo scarto sul parser", kicker: "feat/sync", note: "9b2e18 · Leo", meta: "in-volo" },
+        { id: "v2", title: "Chiude il parser sul nastro", kicker: "feat/sync", note: "9b2e18 · Leo", meta: "in-volo" },
         { id: "v3", title: "Riduce il rumore sul diff", kicker: "fix/nastro", note: "c8d044 · Noa", meta: "in-attesa" },
         { id: "v4", title: `${name} in linea`, kicker: "main", note: "11ae90 · voce", meta: "allineato" },
       ],
@@ -998,6 +998,9 @@ function hydrateAgenda(){
   });
 }
 var persistBusy=false;
+var persistDepth=0;
+var persistTail=Promise.resolve(true);
+var flashGen=0;
 function cloneData(){ try { return JSON.parse(JSON.stringify(data)); } catch(err) { return {items:(data.items||[]).slice()}; } }
 function saveOnce(){
   if(!window.Fenix || !window.Fenix.save) return Promise.resolve({ok:true});
@@ -1017,7 +1020,10 @@ function save(){
   });
 }
 function flashErr(msg){
+  flashGen+=1;
   var n=document.getElementById("err");
+  var toast=document.getElementById("toast");
+  if(toast) toast.hidden=true;
   if(n){ n.hidden=false; if(msg) n.textContent=msg; }
   document.documentElement.setAttribute("data-fenix-flash","err");
   var ferr=document.querySelector("[data-fenix-form-error]");
@@ -1034,21 +1040,34 @@ function restoreForm(keep){
   if(f.k) f.k.value=keep.k||"";
   if(f.note) f.note.value=keep.note||"";
 }
-function persistThen(afterOk){
-  if(persistBusy) return Promise.resolve(false);
-  persistBusy=true;
-  return save().then(function(){
-    persistBusy=false;
-    ping(true);
-    if(afterOk) afterOk();
-    else render();
-    return true;
-  }).catch(function(err){
-    persistBusy=false;
-    flashErr(err && err.message ? err.message : "Salvataggio non riuscito.");
-    ping(false);
-    return false;
+function markPersist(on){
+  persistBusy=!!on;
+  try{
+    if(on) document.documentElement.setAttribute("data-fenix-persist","busy");
+    else document.documentElement.removeAttribute("data-fenix-persist");
+  }catch(err){}
+}
+function persistThen(afterOk, afterFail){
+  persistDepth+=1;
+  markPersist(true);
+  persistTail=persistTail.catch(function(){ return true; }).then(function(){
+    return save().then(function(){
+      ping(true);
+      if(afterOk) afterOk();
+      else render();
+      return true;
+    }).catch(function(err){
+      if(afterFail) afterFail();
+      flashErr(err && err.message ? err.message : "Salvataggio non riuscito.");
+      ping(false);
+      return false;
+    }).then(function(ok){
+      persistDepth-=1;
+      if(persistDepth<=0){ persistDepth=0; markPersist(false); }
+      return ok;
+    });
   });
+  return persistTail;
 }
 function commitForm(f){
   if(!f || f.id!=="fnew") return false;
@@ -1107,22 +1126,35 @@ function commitForm(f){
     view=nextView;
     try { f.reset(); } catch(err) {}
     render();
-  }).then(function(ok){
-    if(ok) return true;
+  }, function(){
     data=snap;
     view=snapView;
     editId=snapEdit;
     selectedDay=snapDay;
     restoreForm(keep);
-    return false;
   });
 }
 function ping(ok){
-  var n=document.getElementById(ok?"toast":"err");
-  if(!n) return;
-  n.hidden=false;
+  flashGen+=1;
+  var gen=flashGen;
+  var toast=document.getElementById("toast");
+  var err=document.getElementById("err");
+  var ferr=document.querySelector("[data-fenix-form-error]");
+  if(ok){
+    if(err) err.hidden=true;
+    if(ferr) ferr.hidden=true;
+    if(toast) toast.hidden=false;
+  } else {
+    if(toast) toast.hidden=true;
+    if(err) err.hidden=false;
+  }
   document.documentElement.setAttribute("data-fenix-flash", ok?"ok":"err");
-  setTimeout(function(){ n.hidden=true; document.documentElement.removeAttribute("data-fenix-flash"); }, 1600);
+  setTimeout(function(){
+    if(gen!==flashGen) return;
+    if(toast) toast.hidden=true;
+    if(err) err.hidden=true;
+    document.documentElement.removeAttribute("data-fenix-flash");
+  }, 1600);
 }
 function renderTabs(){
   var nav=document.getElementById("tabs");
@@ -1250,7 +1282,7 @@ ${
     cliente=parts.slice(1).join(" · ");
   }
   return '<section class="card span" data-fenix-crud data-agenda-form="'+(editing?"edit":"create")+'"><p class="kicker">'+(editing?"Modifica":"Nuovo")+'</p><h2>'+(editing?"Aggiorna slot":formTitle)+'</h2><form id="fnew"><label for="n">Prestazione</label><input class="field" id="n" name="n" required placeholder="Es. Taglio e piega" value="'+title+'"><label for="ora">Ora</label><input class="field" id="ora" name="ora" type="time" required placeholder="09:30" value="'+(ora||"09:00")+'"><label for="data">Data</label><input class="field" id="data" name="data" type="date" required value="'+giorno+'"><label for="luogo">Luogo</label><input class="field" id="luogo" name="luogo" placeholder="Sala 1" value="'+luogo+'"><label for="cliente">Cliente</label><input class="field" id="cliente" name="cliente" placeholder="Nome del cliente" value="'+cliente+'"><p class="notes" data-fenix-form-error role="alert" hidden>Controlla i campi obbligatori.</p><button class="btn" type="button" data-act="save" style="margin-top:14px;width:100%">'+(editing?"Salva modifiche":cta)+'</button></form></section>';`
-    : `  return '<section class="card span" data-fenix-crud><p class="kicker">Nuovo</p><h2>'+formTitle+'</h2><form id="fnew"><label for="n">Nome</label><input class="field" id="n" name="n" required placeholder="Nome"><label for="k">Dettaglio</label><input class="field" id="k" name="k" placeholder="stato, taglia, ora"><label for="note">Nota</label><input class="field" id="note" name="note" placeholder="materia"><button class="btn" type="submit" style="margin-top:14px;width:100%">'+cta+"</button></form></section>";`
+    : `  return '<section class="card span" data-fenix-crud><p class="kicker">Nuovo</p><h2>'+formTitle+'</h2><form id="fnew"><label for="n">Nome</label><input class="field" id="n" name="n" required placeholder="Nome"><label for="k">Dettaglio</label><input class="field" id="k" name="k" placeholder="stato, taglia, ora"><label for="note">Nota</label><input class="field" id="note" name="note" placeholder="materia"><button class="btn" type="button" data-act="save" style="margin-top:14px;width:100%">'+cta+"</button></form></section>";`
 }
 }
 function renderList(){
@@ -1332,11 +1364,12 @@ function renderSource(mode){
     html+="</section>"+renderForm();
   }
   if(mode==="diff" || mode==="activity"){
-    html+='<section class="diff-pane" data-repo-stage="diff"><p class="kicker">Scarto</p>';
-    html+='<div class="add">+ nastro delle voci, niente hero KPI</div>';
-    html+='<div class="add">+ rami in colonna, stato sync visibile</div>';
-    html+='<div class="del">- home universale grigia</div>';
-    html+='<div class="del">- due riquadri vuoti</div></section>';
+    var head=data.items[0]||{id:"000000",title:"nastro"};
+    html+='<section class="diff-pane" data-repo-stage="diff"><p class="kicker">Diff · '+shaOf(head)+'</p>';
+    html+='<div class="add">+ allineaNastro(voci)</div>';
+    html+='<div class="add">+ statoSync in colonna rami</div>';
+    html+='<div class="del">- parser.rumore(linea)</div>';
+    html+='<div class="del">- nastro vuoto in attesa</div></section>';
   }
   return html;
 }
@@ -1405,11 +1438,11 @@ document.getElementById("root").addEventListener("click",function(e){
     return;
   }
   if(act==="save"){ commitForm(b.closest("form") || document.getElementById("fnew")); return; }
-  if(persistBusy) return;
   if(act==="del"){
     var snapDel=cloneData();
     data.items=data.items.filter(function(x){return x.id!==id;});
-    persistThen().then(function(ok){ if(!ok){ data=snapDel; render(); } });
+    render();
+    persistThen(null, function(){ data=snapDel; render(); });
     return;
   }
   if(act==="edit"){ editId=id; view=tabDefs[1].id; render(); return; }
@@ -1418,10 +1451,11 @@ document.getElementById("root").addEventListener("click",function(e){
     if(!row) return;
     var snapWear=cloneData();
     data.items=[row].concat(data.items.filter(function(x){return x.id!==id;}));
+    render();
     persistThen(function(){
       if(grammarId!=="source-timeline") view=tabDefs[2].id;
       render();
-    }).then(function(ok){ if(!ok){ data=snapWear; render(); } });
+    }, function(){ data=snapWear; render(); });
     return;
   }
   if(act==="advance"){
@@ -1434,7 +1468,8 @@ document.getElementById("root").addEventListener("click",function(e){
       var cycle={scouting:"trattativa",trattativa:"firma",firma:"chiuso",chiuso:"scouting","in-forno":"al-passo","al-passo":"in-sala","in-sala":"in-forno",arrivo:"in-house","in-house":"partenza",partenza:"arrivo"};
       item.kicker=cycle[item.kicker]||item.kicker;
     }
-    persistThen().then(function(ok){ if(!ok){ data=snapAdv; render(); } });
+    render();
+    persistThen(null, function(){ data=snapAdv; render(); });
   }
 });
 document.getElementById("root").addEventListener("keydown",function(e){
@@ -1490,7 +1525,7 @@ setTimeout(function(){ if(!document.documentElement.getAttribute("data-fenix-rea
 function polishFor(tokens: DesignTokens, grammar: LayoutGrammar): string {
   const chrome =
     grammar.id === "source-timeline"
-      ? "Chrome da registro di repository: testata + rail, timeline commit, rami, stato sync, scarto/diff. Vietato hero grigio, due KPI, empty card, clone GitHub."
+      ? "Chrome da registro di repository: testata + rail, timeline commit, rami, stato sync, diff. Vietato hero grigio, due KPI, empty card, clone GitHub."
       : grammar.id === "agenda"
         ? "Chrome da agenda: binario orario, tab Oggi/Nuovo/Settimana/Archivio, tipo 17/headline, target 44px. Vietato hero KPI, tab Home/Elenco, riquadri vuoti."
         : grammar.chrome === "desk"

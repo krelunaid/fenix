@@ -11,7 +11,7 @@ import {
   validateProductHtml,
   validatePublishable,
 } from "./validate-html.ts";
-import { fenixRuntimeScript, looksLikeSite, prepareSrcDoc, sanitizePreviewHtml, escapeEmbeddedScriptEnds, looksLikeLeakedCss, repairLeakedCss } from "./color-scheme.ts";
+import { fenixRuntimeScript, looksLikeSite, prepareSrcDoc, sanitizePreviewHtml, escapeEmbeddedScriptEnds, looksLikeLeakedCss, repairLeakedCss, resolvePalette, paletteHueConflict } from "./color-scheme.ts";
 import { DEMOS } from "./demos.ts";
 import { APP_SHELL_HTML } from "../ai/app-shell.ts";
 
@@ -241,16 +241,18 @@ describe("looksLikeSite kind lock", () => {
       DEMOS.catenaria.kind,
     );
     assert.match(src, /data-fenix-palette/);
-    assert.match(src, /--bg:#111827/);
-    assert.match(src, /--surface:#1f2937/);
-    assert.match(src, /--fg:#f8fafc/);
-    assert.match(src, /--muted:#cbd5e1/);
-    assert.match(src, /--accent:#2dd4bf/);
+    assert.match(src, /--bg:#1a1612/);
+    assert.match(src, /--surface:#2a241c/);
+    assert.match(src, /--fg:#e6dcc8/);
+    assert.match(src, /--muted:#9a8f7a/);
+    assert.match(src, /--accent:#c45c26/);
+    assert.doesNotMatch(src, /--bg:#111827/);
+    assert.doesNotMatch(src, /--accent:#2dd4bf/);
     assert.match(src, /--line:/);
     assert.match(src, /--btn:/);
     assert.match(src, /--btn-ink:/);
     const lastRoot = [...src.matchAll(/:root\{([^}]+)\}/g)].at(-1)?.[1] ?? "";
-    assert.match(lastRoot, /--fg:#f8fafc/);
+    assert.match(lastRoot, /--fg:#e6dcc8/);
   });
 
   it("infers light ink when only a dark bg is passed", () => {
@@ -261,8 +263,44 @@ describe("looksLikeSite kind lock", () => {
       "app",
     );
     assert.match(src, /data-fenix-palette/);
-    assert.match(src, /--fg:#f8fafc/);
-    assert.match(src, /--bg:#111827/);
+    assert.match(src, /--bg:#1a1612/);
+    assert.match(src, /--fg:#efe6d4/);
+    assert.doesNotMatch(src, /--bg:#111827/);
+  });
+
+  it("keeps explicit warm-dark palettes instead of swapping navy/teal", () => {
+    const perfume = resolvePalette({
+      bg: "#120e0c",
+      surface: "#1d1714",
+      fg: "#f4ead8",
+      muted: "#b7a48c",
+      accent: "#c4a15a",
+      line: "#3a3028",
+    });
+    assert.equal(perfume.bg.toLowerCase(), "#120e0c");
+    assert.equal(perfume.accent.toLowerCase(), "#c4a15a");
+    assert.equal(paletteHueConflict(perfume), true);
+    const kitchen = resolvePalette({
+      bg: "#1a1210",
+      surface: "#241816",
+      fg: "#f6ead8",
+      muted: "#c4a890",
+      accent: "#c43c2c",
+      line: "#4a3028",
+    });
+    assert.equal(kitchen.bg.toLowerCase(), "#1a1210");
+    assert.equal(kitchen.accent.toLowerCase(), "#c43c2c");
+    const src = prepareSrcDoc(
+      `<!DOCTYPE html><html data-family="perfume"><head></head><body><main><p>oro</p></main></body></html>`,
+      perfume,
+      "essenza-keep",
+      "app",
+    );
+    assert.match(src, /--bg:#120e0c/);
+    assert.match(src, /--accent:#c4a15a/);
+    assert.match(src, /data-fenix-hue-conflict="warm"/);
+    assert.doesNotMatch(src, /--bg:#111827/);
+    assert.doesNotMatch(src, /--accent:#2dd4bf/);
   });
 });
 
