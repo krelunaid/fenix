@@ -3,6 +3,7 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, it } from "node:test";
+import { restoreHome } from "../../../workers/visual/artifact-restore.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "../../..");
 
@@ -815,7 +816,10 @@ describe("focus-visible and worker model", () => {
     const screenPatch = readFileSync(join(root, "workers/visual/screen-patch.mjs"), "utf8");
     assert.match(screenPatch, /export function looksLikeCssDump/);
     assert.match(screenPatch, /if \(looksLikeCssDump\(inner\)\)/);
-    assert.match(worker, /if \(looksLikeCssDump\(m\[1\]\)\) return html/);
+    assert.match(worker, /import \{ restoreHome, keepScripts \} from "\.\/artifact-restore\.mjs"/);
+    assert.match(worker, /current = restoreHome\(current\)/);
+    const dumped = '<main class="fk-main"><p>Stable</p></main><template id="t-home">.fk-tab { color: red }</template>';
+    assert.equal(restoreHome(dumped), dumped, "restoration must not render CSS as home content");
     assert.equal(existsSync(join(root, "src/lib/projects/fixtures/leaked-phone-css.html")), true);
     const leaked = readFileSync(join(root, "src/lib/projects/fixtures/leaked-phone-css.html"), "utf8");
     assert.match(leaked, /\.fk-hello\{/);
