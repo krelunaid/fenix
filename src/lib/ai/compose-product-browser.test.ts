@@ -4,7 +4,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync, statSync } from "no
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, it } from "node:test";
-import { type Page } from "playwright";
+import { type FrameLocator, type Page } from "playwright";
 import { isolatedPage, isBlockedPublicNetworkError, launchChromium } from "../projects/playwright-harness.ts";
 import { prepareSrcDoc } from "../projects/color-scheme.ts";
 import { waitForFenixReady } from "../../../scripts/fenix-ready.mjs";
@@ -27,6 +27,113 @@ const VIEWPORTS = [
   ["T", { width: 768, height: 1024 }],
   ["M", { width: 390, height: 844 }],
 ] as const;
+
+type PerfumeThumbPaint = {
+  title: string;
+  bottle: string;
+  slot: string;
+  focus: string;
+  fit: string;
+  viewBox: string;
+  tw: number;
+  th: number;
+  ml: number;
+  mr: number;
+  mt: number;
+  mb: number;
+  dx: number;
+  dy: number;
+  capH: number;
+  glassH: number;
+};
+
+function expectedPerfumeBottle(title: string, ice: boolean): string {
+  if (/nuit|sale adriatico/i.test(title)) return ice ? "sale" : "nuit";
+  if (/acqua|nebbia/i.test(title)) return ice ? "nebbia" : "acqua";
+  if (/fleur|pino/i.test(title)) return ice ? "pino" : "fleur";
+  if (/pelle|vetro/i.test(title)) return ice ? "vetro" : "pelle";
+  return "";
+}
+
+async function paintPerfumeThumbs(frame: FrameLocator): Promise<PerfumeThumbPaint[]> {
+  return frame.locator("html").evaluate(() => {
+    return [...document.querySelectorAll(".fragrance")].map((card) => {
+      const thumb = card.querySelector(".thumb");
+      const cap = thumb?.querySelector("[data-part='cap']");
+      const glass = thumb?.querySelector("[data-part='glass']");
+      const svg = thumb?.querySelector("svg");
+      const title = card.querySelector("h2")?.textContent || "";
+      if (!thumb || !cap || !glass) {
+        return {
+          title,
+          bottle: "",
+          slot: "",
+          focus: "",
+          fit: "",
+          viewBox: "",
+          tw: 0,
+          th: 0,
+          ml: -99,
+          mr: -99,
+          mt: -99,
+          mb: -99,
+          dx: 1,
+          dy: 1,
+          capH: 0,
+          glassH: 0,
+        };
+      }
+      const t = thumb.getBoundingClientRect();
+      const rs = [cap.getBoundingClientRect(), glass.getBoundingClientRect()];
+      const left = Math.min(rs[0]!.left, rs[1]!.left);
+      const right = Math.max(rs[0]!.right, rs[1]!.right);
+      const top = Math.min(rs[0]!.top, rs[1]!.top);
+      const bottom = Math.max(rs[0]!.bottom, rs[1]!.bottom);
+      return {
+        title,
+        bottle: thumb.querySelector("[data-bottle]")?.getAttribute("data-bottle") || "",
+        slot: svg?.getAttribute("data-slot") || "",
+        focus: svg?.getAttribute("data-focus") || "",
+        fit: svg?.getAttribute("data-fit") || "",
+        viewBox: svg?.getAttribute("viewBox") || "",
+        tw: t.width,
+        th: t.height,
+        ml: left - t.left,
+        mr: t.right - right,
+        mt: top - t.top,
+        mb: t.bottom - bottom,
+        dx: t.width ? Math.abs((left + right) / 2 - (t.left + t.right) / 2) / t.width : 1,
+        dy: t.height ? Math.abs((top + bottom) / 2 - (t.top + t.bottom) / 2) / t.height : 1,
+        capH: rs[0]!.height,
+        glassH: rs[1]!.height,
+      };
+    });
+  });
+}
+
+function assertPerfumeThumbsFramed(rows: PerfumeThumbPaint[], label: string, ice = false) {
+  assert.ok(rows.length >= 4, `${label} thumbs ${rows.length}`);
+  const bottles = new Set<string>();
+  for (const row of rows) {
+    const tag = `${label} ${row.title || row.bottle}`;
+    const expected = expectedPerfumeBottle(row.title, ice);
+    if (expected) assert.equal(row.bottle, expected, `${tag} bottle`);
+    bottles.add(row.bottle);
+    assert.match(row.focus, /^-?\d/, `${tag} focus`);
+    assert.notEqual(row.viewBox, "0 0 640 420", `${tag} still hero viewBox`);
+    assert.equal(row.fit, "slice", `${tag} fit`);
+    assert.ok(row.tw >= 48 && row.th >= 48, `${tag} thumb ${row.tw}x${row.th}`);
+    assert.ok(row.ml >= 4, `${tag} left ${row.ml.toFixed(1)}`);
+    assert.ok(row.mr >= 4, `${tag} right ${row.mr.toFixed(1)}`);
+    assert.ok(row.mt >= 4, `${tag} top ${row.mt.toFixed(1)}`);
+    assert.ok(row.mb >= 4, `${tag} bottom ${row.mb.toFixed(1)}`);
+    assert.ok(row.dx <= 0.22, `${tag} optical x ${row.dx.toFixed(3)}`);
+    assert.ok(row.dy <= 0.22, `${tag} optical y ${row.dy.toFixed(3)}`);
+    assert.ok(row.capH >= 6, `${tag} capH ${row.capH}`);
+    assert.ok(row.glassH >= 24, `${tag} glassH ${row.glassH}`);
+  }
+  assert.ok(bottles.size >= 4, `${label} bottle diversity ${[...bottles]}`);
+}
 
 function cssToHex(value: string): string {
   const v = value.trim().toLowerCase();
@@ -675,24 +782,42 @@ describe("graphic pipeline visual QA D/T/M", () => {
                 () => document.querySelector(".hero [data-bottle]")?.getAttribute("data-bottle") || "",
               );
               assert.equal(heroBottle, frags[0]?.bottle, `${fix.id}/${vp} hero ${heroBottle} vs first ${frags[0]?.bottle}`);
-              const capBox = await page.evaluate(() => {
-                const thumb = document.querySelector(".fragrance .thumb");
-                const cap = thumb?.querySelector("[data-part='cap']");
-                if (!thumb || !cap) return null;
-                const t = thumb.getBoundingClientRect();
-                const c = cap.getBoundingClientRect();
-                return {
-                  bottle: thumb.querySelector("[data-bottle]")?.getAttribute("data-bottle") || "",
-                  capH: c.height,
-                  top: c.top - t.top,
-                  bottom: t.bottom - c.bottom,
-                };
+              const painted = await page.evaluate(() => {
+                return [...document.querySelectorAll(".fragrance")].map((card) => {
+                  const thumb = card.querySelector(".thumb");
+                  const cap = thumb?.querySelector("[data-part='cap']");
+                  const glass = thumb?.querySelector("[data-part='glass']");
+                  const svg = thumb?.querySelector("svg");
+                  if (!thumb || !cap || !glass) return null;
+                  const t = thumb.getBoundingClientRect();
+                  const a = cap.getBoundingClientRect();
+                  const g = glass.getBoundingClientRect();
+                  const left = Math.min(a.left, g.left);
+                  const right = Math.max(a.right, g.right);
+                  const top = Math.min(a.top, g.top);
+                  const bottom = Math.max(a.bottom, g.bottom);
+                  return {
+                    title: card.querySelector("h2")?.textContent || "",
+                    bottle: thumb.querySelector("[data-bottle]")?.getAttribute("data-bottle") || "",
+                    viewBox: svg?.getAttribute("viewBox") || "",
+                    ml: left - t.left,
+                    mr: t.right - right,
+                    mt: top - t.top,
+                    mb: t.bottom - bottom,
+                    capH: a.height,
+                  };
+                });
               });
-              assert.ok(capBox, `${fix.id}/${vp} cap node`);
-              assert.equal(capBox!.bottle, frags[0]?.bottle, `${fix.id}/${vp} first thumb bottle`);
-              assert.ok(capBox!.capH > 2, `${fix.id}/${vp} cap cut ${JSON.stringify(capBox)}`);
-              assert.ok(capBox!.top >= -1, `${fix.id}/${vp} cap top ${capBox!.top}`);
-              assert.ok(capBox!.bottom >= -2, `${fix.id}/${vp} cap bottom ${capBox!.bottom}`);
+              const ice = fix.id === "essenza-ice";
+              for (const row of painted) {
+                assert.ok(row, `${fix.id}/${vp} thumb`);
+                const expected = expectedPerfumeBottle(row!.title, ice);
+                if (expected) assert.equal(row!.bottle, expected, `${fix.id}/${vp} ${row!.title}`);
+                assert.notEqual(row!.viewBox, "0 0 640 420", `${fix.id}/${vp} ${row!.title} hero viewBox`);
+                assert.ok(row!.ml >= 4 && row!.mr >= 4, `${fix.id}/${vp} ${row!.title} x ${row!.ml}/${row!.mr}`);
+                assert.ok(row!.mt >= 4 && row!.mb >= 4, `${fix.id}/${vp} ${row!.title} y ${row!.mt}/${row!.mb}`);
+                assert.ok(row!.capH >= 6, `${fix.id}/${vp} ${row!.title} cap ${row!.capH}`);
+              }
             }
             if (fix.id === "osteria-passo") {
               const tickets = await page.evaluate(() =>
@@ -1029,29 +1154,14 @@ describe("graphic pipeline visual QA D/T/M", () => {
                   bottle: el.querySelector("[data-bottle]")?.getAttribute("data-bottle") || "",
                 }));
                 const hero = document.querySelector(".hero [data-bottle]")?.getAttribute("data-bottle") || "";
-                const thumb = document.querySelector(".fragrance .thumb");
-                const capEl = thumb?.querySelector("[data-part='cap']");
-                const t = thumb?.getBoundingClientRect();
-                const c = capEl?.getBoundingClientRect();
-                return {
-                  cards,
-                  hero,
-                  capH: c?.height || 0,
-                  capTop: c && t ? c.top - t.top : -99,
-                  capBottom: c && t ? t.bottom - c.bottom : -99,
-                };
+                return { cards, hero };
               });
               assert.equal(idn.hero, idn.cards[0]?.bottle, `${row.id}/${vp} hero ${idn.hero} vs ${idn.cards[0]?.bottle}`);
               for (const f of idn.cards) {
-                let expected = "";
-                if (/nuit/i.test(f.title)) expected = "nuit";
-                else if (/acqua/i.test(f.title)) expected = "acqua";
-                else if (/fleur/i.test(f.title)) expected = "fleur";
-                else if (/pelle/i.test(f.title)) expected = "pelle";
+                const expected = expectedPerfumeBottle(f.title, false);
                 if (expected) assert.equal(f.bottle, expected, `${row.id}/${vp} ${f.title} -> ${f.bottle}`);
               }
-              assert.ok(idn.capH > 2, `${row.id}/${vp} first thumb cap cut h=${idn.capH}`);
-              assert.ok(idn.capTop >= -1 && idn.capBottom >= -2, `${row.id}/${vp} cap box ${idn.capTop}/${idn.capBottom}`);
+              assertPerfumeThumbsFramed(await paintPerfumeThumbs(frame), `${row.id}/${vp}`);
             }
             if (row.id === "ristorazione") {
               assert.equal(bgVar, "#1a1210");
@@ -1202,13 +1312,10 @@ describe("graphic pipeline visual QA D/T/M", () => {
               assert.ok(worn.cards.length >= 4, `${row.id}/${vp} wear cards`);
               assert.equal(worn.hero, worn.cards[0]?.bottle, `${row.id}/${vp} wear hero ${worn.hero} vs ${worn.cards[0]?.bottle}`);
               for (const f of worn.cards) {
-                let expected = "";
-                if (/nuit/i.test(f.title)) expected = "nuit";
-                else if (/acqua/i.test(f.title)) expected = "acqua";
-                else if (/fleur/i.test(f.title)) expected = "fleur";
-                else if (/pelle/i.test(f.title)) expected = "pelle";
+                const expected = expectedPerfumeBottle(f.title, false);
                 if (expected) assert.equal(f.bottle, expected, `${row.id}/${vp} wear ${f.title} -> ${f.bottle}`);
               }
+              assertPerfumeThumbsFramed(await paintPerfumeThumbs(frame), `${row.id}/${vp} wear`);
             }
             const tabIndex = row.id === "repo" ? 2 : 1;
             const tabs = frame.locator("button[data-view]");
@@ -1217,6 +1324,7 @@ describe("graphic pipeline visual QA D/T/M", () => {
             const name = frame.locator("#n");
             assert.equal(await name.count(), 1, `${row.id} name field`);
             const created = `Prova ${row.id} ${vp}`;
+            let createdBottle = "";
             await name.fill(created);
             if ((await frame.locator("#ora").count()) === 1) {
               await frame.locator("#ora").fill("10:15");
@@ -1246,6 +1354,19 @@ describe("graphic pipeline visual QA D/T/M", () => {
             await load();
             await frame.locator("[data-fenix-ready]").waitFor({ timeout: 8000 });
             await waitIframeHeading(page, created);
+            if (row.id === "profumi") {
+              await frame.locator("nav button[data-view]").first().click();
+              const afterCreate = await paintPerfumeThumbs(frame);
+              const mine = afterCreate.find((t) => t.title === created);
+              assert.ok(mine, `${row.id}/${vp} created thumb`);
+              createdBottle = mine!.bottle;
+              assert.ok(createdBottle, `${row.id}/${vp} created bottle`);
+              for (const f of afterCreate) {
+                const expected = expectedPerfumeBottle(f.title, false);
+                if (expected) assert.equal(f.bottle, expected, `${row.id}/${vp} create ${f.title} -> ${f.bottle}`);
+              }
+              assertPerfumeThumbsFramed(afterCreate, `${row.id}/${vp} create`);
+            }
 
             const updated = `${created} edit`;
             if (row.id !== "agenda" && row.id !== "repo") {
@@ -1282,6 +1403,17 @@ describe("graphic pipeline visual QA D/T/M", () => {
             await frame.locator("[data-fenix-ready]").waitFor({ timeout: 8000 });
             await waitIframeHeading(page, updated);
             assert.equal(await iframeHeadingCount(page, created), 0, `${row.id}/${vp} update reload`);
+            if (row.id === "profumi") {
+              await frame.locator("nav button[data-view]").first().click();
+              const afterEdit = await paintPerfumeThumbs(frame);
+              const mine = afterEdit.find((t) => t.title === updated);
+              assert.equal(mine?.bottle, createdBottle, `${row.id}/${vp} update kept bottle ${mine?.bottle} vs ${createdBottle}`);
+              for (const f of afterEdit) {
+                const expected = expectedPerfumeBottle(f.title, false);
+                if (expected) assert.equal(f.bottle, expected, `${row.id}/${vp} update ${f.title} -> ${f.bottle}`);
+              }
+              assertPerfumeThumbsFramed(afterEdit, `${row.id}/${vp} update`);
+            }
 
             if (row.id !== "agenda" && row.id !== "repo") {
               await frame.locator("nav button[data-view]").nth(2).click();
@@ -1323,13 +1455,13 @@ describe("graphic pipeline visual QA D/T/M", () => {
           before,
           after: files,
           palettes,
-          note: "composeProduct+prepareSrcDoc five briefs D/T/M before/after on parent 9bb9a3c. Pocket chrome (system type in coda, tabbar blur) vs workshop/ledger. Identity (slot) is independent of meet/slice. Bottle/dish thumbs remain backlog. Planner/polish LLM skipped (quota). Hash/ΔE are movement floors, not scores. Not a 9/10.",
+          note: "composeProduct+prepareSrcDoc five briefs D/T/M before/after on parent bffc58f. Perfume thumb viewBox frames cap+body of every slot; hero stay 640/420 meet. Dishes remain backlog. Planner/polish LLM skipped (quota). Hash/ΔE are movement floors, not scores. Not a 9/10.",
         },
         null,
         2,
       )}\n`,
     );
-    assert.equal(GRAPHIC_FIVE_PARENT_SHA, "9bb9a3c7829b956a9db8914928e3d5d85acf4982");
+    assert.equal(GRAPHIC_FIVE_PARENT_SHA, "bffc58f1af1ee22e69b99a0ed3dd65eaba8822f9");
     assert.equal(files.length, briefs.length * VIEWPORTS.length);
     assert.equal(new Set(files.map((f) => f.sha256)).size, files.length, "after shots must differ");
     assert.equal(new Set(mobileChrome).size, briefs.length, mobileChrome.join(" || "));
@@ -1338,12 +1470,12 @@ describe("graphic pipeline visual QA D/T/M", () => {
     assert.equal(agendaPalette?.display, "Figtree");
     assert.equal(agendaPalette?.bg.toLowerCase(), "#e8eef4");
     assert.equal(agendaPalette?.accent.toLowerCase(), "#1f6f68");
-    const mustMove = /^(agenda|profumi|abbigliamento|repo|ristorazione)-[DTM]\.png$/;
+    const mustMove = /^profumi-[DTM]\.png$/;
     for (const file of files) {
       const prior = before.find((b) => b.name === file.name);
       assert.ok(prior, file.name);
       if (mustMove.test(file.name)) {
-        assert.notEqual(file.sha256, prior!.sha256, `${file.name} after must move from parent 9bb9a3c`);
+        assert.notEqual(file.sha256, prior!.sha256, `${file.name} after must move from parent bffc58f`);
       }
       assert.equal(existsSync(join(BEFORE, file.name)), true);
     }
@@ -1443,6 +1575,9 @@ describe("graphic pipeline visual QA D/T/M", () => {
               await frame.locator("article.slot").first().locator('[data-act="del"]').click();
               await frame.locator("html:not([data-fenix-persist='busy'])").waitFor({ timeout: 8000 });
             }
+            if (row.id === "profumi") {
+              assertPerfumeThumbsFramed(await paintPerfumeThumbs(frame), `${row.id}/${vp.name}`);
+            }
             assert.equal(errors.length, 0, `${row.id}/${vp.name} ${errors.join(" | ")}`);
           } finally {
             await page.close();
@@ -1451,6 +1586,71 @@ describe("graphic pipeline visual QA D/T/M", () => {
       }
     } finally {
       await browser.close();
+    }
+  });
+
+  it("frames every perfume bottle of both variants in thumbs at 320 and 390", async () => {
+    const { composeProduct } = await import("./compose-product.ts");
+    const { formatPrefix } = await import("../projects/infer.ts");
+    const CONTACT = join(here, "fixtures/graphic/five/contact");
+    mkdirSync(CONTACT, { recursive: true });
+    const variants = [
+      {
+        id: "v0",
+        ice: false,
+        brief: `${formatPrefix("app")}Essenza: gestione profumi premium, flaconi, note olfattive e guardaroba.`,
+      },
+      {
+        id: "v1",
+        ice: true,
+        brief: `${formatPrefix("app")}Vetro di nebbia profumi flaconi ghiaccio.`,
+      },
+    ];
+    const browser = await launchChromium();
+    try {
+      for (const row of variants) {
+        const composed = composeProduct(row.brief);
+        const src = prepareSrcDoc(composed.html, composed.tokens.palette, `thumb-${row.id}`, "app");
+        for (const vp of [
+          { name: "320", viewport: { width: 320, height: 568 } },
+          { name: "390", viewport: { width: 390, height: 844 } },
+        ]) {
+          const page = await isolatedPage(browser, { viewport: vp.viewport });
+          try {
+            await page.setContent(FIVE_PERSIST_HOST, { waitUntil: "domcontentloaded", timeout: 15000 });
+            await page.locator("#f").evaluate((el, srcDoc: string) => {
+              (el as HTMLIFrameElement).srcdoc = srcDoc;
+            }, src);
+            const frame = page.frameLocator("#f");
+            await frame.locator("[data-fenix-ready]").waitFor({ timeout: 8000 });
+            const painted = await paintPerfumeThumbs(frame);
+            assertPerfumeThumbsFramed(painted, `${row.id}/${vp.name}`, row.ice);
+            const heroVb = await frame.locator(".hero svg").first().getAttribute("viewBox");
+            assert.equal(heroVb, "0 0 640 420", `${row.id}/${vp.name} hero viewBox`);
+            const n = await frame.locator(".fragrance .thumb").count();
+            for (let i = 0; i < n; i++) {
+              await frame.locator(".fragrance .thumb").nth(i).screenshot({
+                path: join(CONTACT, `after-${row.id}-${vp.name}-${i}.png`),
+              });
+            }
+            await frame.locator(".collection").screenshot({
+              path: join(CONTACT, `after-${row.id}-${vp.name}-list.png`),
+            });
+          } finally {
+            await page.close();
+          }
+        }
+      }
+    } finally {
+      await browser.close();
+    }
+    for (const row of variants) {
+      for (const vp of ["320", "390"]) {
+        for (let i = 0; i < 4; i++) {
+          assert.equal(existsSync(join(CONTACT, `before-${row.id}-${vp}-${i}.png`)), true, `before ${row.id} ${vp} ${i}`);
+          assert.equal(existsSync(join(CONTACT, `after-${row.id}-${vp}-${i}.png`)), true, `after ${row.id} ${vp} ${i}`);
+        }
+      }
     }
   });
 });

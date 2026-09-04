@@ -397,7 +397,7 @@ describe("focus-visible and worker model", () => {
     assert.doesNotMatch(fiveBrief, /btn\.click\(\)/);
     assert.match(fiveBrief, /width: 320/);
     assert.match(fiveBrief, /getBoundingClientRect/);
-    assert.match(fiveBrief, /parent 9bb9a3c/);
+    assert.match(fiveBrief, /parent bffc58f/);
     const recorded = readFileSync(join(root, "src/lib/ai/repair.recorded.test.ts"), "utf8");
     assert.match(recorded, /POLISH_REPAIR_LIVE_VERIFIED = false/);
     assert.match(recorded, /from "\.\/parse\.ts"/);
@@ -410,7 +410,7 @@ describe("focus-visible and worker model", () => {
     assert.doesNotMatch(recorded, /XAI_CHAT_COMPLETIONS_URL/);
     assert.doesNotMatch(compose, /void window\.Fenix\.save/);
     assert.match(compose, /GRAPHIC_FIVE_PARENT_SHA/);
-    assert.match(compose, /9bb9a3c7829b956a9db8914928e3d5d85acf4982/);
+    assert.match(compose, /bffc58f1af1ee22e69b99a0ed3dd65eaba8822f9/);
     assert.match(compose, /backdrop-filter:saturate\(1\.8\) blur\(20px\)/);
     assert.match(compose, /ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI"/);
     assert.match(compose, /function artOf\(/);
@@ -420,6 +420,9 @@ describe("focus-visible and worker model", () => {
     const imagery = readFileSync(join(root, "src/lib/ai/domain-imagery.ts"), "utf8");
     assert.match(imagery, /slot === 0 \? "meet" : "slice"/);
     assert.match(imagery, /data-fit="\$\{resolved\}"/);
+    assert.match(imagery, /function perfumeThumbViewBox/);
+    assert.match(imagery, /data-focus=/);
+    assert.match(imagery, /PERFUME_SUBJECT/);
     assert.match(compose, /class="collection"/);
     assert.match(compose, /align-items:start/);
     assert.match(compose, /nav\.tabs svg\{[^}]*overflow:visible/);

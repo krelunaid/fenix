@@ -57,8 +57,8 @@ export type ComposedProduct = {
   files: { path: string; content: string }[];
 };
 
-/** Parent SHA of the five-brief before/after. Frozen 9bb9a3c baseline, not a quality score. */
-export const GRAPHIC_FIVE_PARENT_SHA = "9bb9a3c7829b956a9db8914928e3d5d85acf4982";
+/** Parent SHA of the five-brief before/after. Frozen bffc58f baseline, not a quality score. */
+export const GRAPHIC_FIVE_PARENT_SHA = "bffc58f1af1ee22e69b99a0ed3dd65eaba8822f9";
 
 export type GraphicPipelineRun = {
   brief: string;

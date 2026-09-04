@@ -325,13 +325,16 @@ describe("graphic pipeline prompt→plan→generate→visual→QA", () => {
     assert.equal(runs.find((r) => r.id === "abbigliamento")!.grammar.id, "lookbook");
     assert.equal(runs.find((r) => r.id === "repo")!.grammar.id, "source-timeline");
     assert.equal(runs.find((r) => r.id === "ristorazione")!.grammar.id, "service-board");
-    assert.equal(GRAPHIC_FIVE_PARENT_SHA, "9bb9a3c7829b956a9db8914928e3d5d85acf4982");
+    assert.equal(GRAPHIC_FIVE_PARENT_SHA, "bffc58f1af1ee22e69b99a0ed3dd65eaba8822f9");
     const profumi = runs.find((r) => r.id === "profumi")!;
     const ristorazione = runs.find((r) => r.id === "ristorazione")!;
     const abbigliamento = runs.find((r) => r.id === "abbigliamento")!;
     assert.match(profumi.html, /class="collection"/);
     assert.match(profumi.html, /preserveAspectRatio="xMidYMid meet"/);
     assert.match(profumi.html, /xMidYMid slice/);
+    assert.match(profumi.html, /data-focus=\\"/);
+    assert.match(profumi.html, /data-thumb-box=\\"/);
+    assert.match(profumi.html, /viewBox="0 0 640 420"/);
     assert.match(ristorazione.html, /preserveAspectRatio="xMidYMid meet"/);
     assert.match(ristorazione.html, /xMidYMid slice/);
     assert.match(abbigliamento.html, /preserveAspectRatio="xMidYMid slice"/);
@@ -381,7 +384,7 @@ describe("graphic pipeline prompt→plan→generate→visual→QA", () => {
     }
   });
 
-  it("freezes five-brief before shots at parent SHA 9bb9a3c", () => {
+  it("freezes five-brief before shots at parent SHA bffc58f", () => {
     const here = dirname(fileURLToPath(import.meta.url));
     const before = join(here, "fixtures/graphic/five/before");
     const names = [
@@ -391,7 +394,7 @@ describe("graphic pipeline prompt→plan→generate→visual→QA", () => {
       "repo",
       "ristorazione",
     ].flatMap((id) => ["D", "T", "M"].map((vp) => `${id}-${vp}.png`));
-    assert.equal(GRAPHIC_FIVE_PARENT_SHA, "9bb9a3c7829b956a9db8914928e3d5d85acf4982");
+    assert.equal(GRAPHIC_FIVE_PARENT_SHA, "bffc58f1af1ee22e69b99a0ed3dd65eaba8822f9");
     assert.equal(existsSync(before), true);
     const listed = readdirSync(before).filter((n) => n.endsWith(".png")).sort();
     assert.deepEqual(listed, [...names].sort());

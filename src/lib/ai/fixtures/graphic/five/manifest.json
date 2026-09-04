@@ -1,80 +1,80 @@
 {
-  "parentSHA": "9bb9a3c7829b956a9db8914928e3d5d85acf4982",
+  "parentSHA": "bffc58f1af1ee22e69b99a0ed3dd65eaba8822f9",
   "before": [
     {
       "name": "agenda-D.png",
-      "sha256": "e1d79eb8d41bae5a1c735cb28dcf5468994dc508d8b53624ba75964dbd1c1627",
-      "bytes": 45219
+      "sha256": "5641c1dad44a44be9bb0dff9a574f0d4d75dd4ee50b496cb1c467e14646aadd9",
+      "bytes": 45304
     },
     {
       "name": "agenda-T.png",
-      "sha256": "efdba8bf2858fab1ba26f0147735bd8c82e7e3f4e5fb10904e6a7cedb52ecd44",
-      "bytes": 59547
+      "sha256": "4948a007471ec9ed2ba18596a0ab715690d2697b4c86e03befe0956c4fd4e8ac",
+      "bytes": 59712
     },
     {
       "name": "agenda-M.png",
-      "sha256": "c6a367c65791b8fd074aaf2110273f08a883a59a9f2f2490c1103d03833857b9",
-      "bytes": 54630
+      "sha256": "9de0d6b08a0e219eea9324db6c291aec9733639a2a38f23dbdbe324f07966c22",
+      "bytes": 54714
     },
     {
       "name": "profumi-D.png",
-      "sha256": "f4049092bcf0e1b02802151a35dc6072fcbe3859cb665b2797d29efa81ea012a",
-      "bytes": 149239
+      "sha256": "bce5d8ed3fd63a63c605596bd1113a5fcb7a43e75bb316b5437ad31c79c74875",
+      "bytes": 149255
     },
     {
       "name": "profumi-T.png",
-      "sha256": "cc625b6a9cda83290051051338b41a1b6c516cda6ead9a25ee8605444052dd88",
-      "bytes": 156714
+      "sha256": "cbd36b55d8c2345be99063e203f57fa213614e1813461b61bd2736a40f75b87a",
+      "bytes": 156775
     },
     {
       "name": "profumi-M.png",
-      "sha256": "0cacea5cee48089bb60da4dec238e876d314463382875c6c0a0839c01f3bcd30",
-      "bytes": 83713
+      "sha256": "f4d47ea7817792a3b1351593241630c681847ed097ae166d4315950bd388985b",
+      "bytes": 85567
     },
     {
       "name": "abbigliamento-D.png",
-      "sha256": "28844a4b71180670d27f0d8f1027455dc39cb2b9c804645362263539b8b37d77",
-      "bytes": 711123
+      "sha256": "2b60026e712a5bb0f40557c2c3e5c13b152df1163fe0ad15a1dbb9fa33fb2bcf",
+      "bytes": 711188
     },
     {
       "name": "abbigliamento-T.png",
-      "sha256": "e498d5f59e4ea7f916cf51026d60e9d98e6585f5d8d5b0393c42f36eb76c12a1",
-      "bytes": 576277
+      "sha256": "77a1b4e4a3d49178c64fc3be37152a3e7aae8984ccc1cfd0b0233850e7d7d28c",
+      "bytes": 576381
     },
     {
       "name": "abbigliamento-M.png",
-      "sha256": "d585fb229ccd390e6d74546825ffb83543d17e64757d5ad27070940338bfb317",
-      "bytes": 252397
+      "sha256": "b517db85e0704f84a848475518e07c10bf1489b48165ecd850243c4bd9c2efa2",
+      "bytes": 256643
     },
     {
       "name": "repo-D.png",
-      "sha256": "814baa1e7a2790c9682408f74afc8bdebfd1196da66b286cbc6d5b95491ede08",
-      "bytes": 116900
+      "sha256": "2458d9714b9ee321fd6c4048da47c5d36217c4aea4718a1c9d535a313bf005c6",
+      "bytes": 116935
     },
     {
       "name": "repo-T.png",
-      "sha256": "77a293e7cd4ceb7adebf29f39b32e095f4c352d39b6872705de4c594a09b8d9f",
-      "bytes": 95011
+      "sha256": "a6b967142741067c5a8e9e751b1d76d0a31e36a63d889308c4922d1fd7895373",
+      "bytes": 95024
     },
     {
       "name": "repo-M.png",
-      "sha256": "cd42647f2f3df2ba0990cc92a90ecff1478e4ca5d9888e7f29b583e9bc92e5ac",
-      "bytes": 70987
+      "sha256": "19d3be4792947e83adafe16214daa92ad4e8ea2ef70487fb59ac32dc6c1a8649",
+      "bytes": 71019
     },
     {
       "name": "ristorazione-D.png",
-      "sha256": "c08622b2ab6ad195810e2f4c7f706ec81b21760e62ac52751e2f9304ac215a2e",
-      "bytes": 225991
+      "sha256": "d31190ca9f256958ddefed03e74526c5a1e72591b1775ae0423d6c10a578c943",
+      "bytes": 226032
     },
     {
       "name": "ristorazione-T.png",
-      "sha256": "9c72e5f96bc6bdb59506f1b800fd815325ca367d08b1db3d6cfee321036873e7",
-      "bytes": 142339
+      "sha256": "39a0018a8c64d326015f91be264e12e19d08c20ae62d8c484cf43c6459a7cf3c",
+      "bytes": 142379
     },
     {
       "name": "ristorazione-M.png",
-      "sha256": "730f6e3bc4f610f7c169f10ae04a3822d63a0ec914013bef5e26b8132a0d0866",
-      "bytes": 119152
+      "sha256": "245df9bc9b7e93d09a3181b2af863d01777beb423cc319f2fe46f6690bb93605",
+      "bytes": 119852
     }
   ],
   "after": [
@@ -92,15 +92,15 @@
     },
     {
       "name": "profumi-D.png",
-      "sha256": "bce5d8ed3fd63a63c605596bd1113a5fcb7a43e75bb316b5437ad31c79c74875"
+      "sha256": "efb20e0a35b07942a696157563094b2deba7ecd7eb5823835961c42a7eb647a7"
     },
     {
       "name": "profumi-T.png",
-      "sha256": "cbd36b55d8c2345be99063e203f57fa213614e1813461b61bd2736a40f75b87a"
+      "sha256": "a90b15a8565e7364464b0b4e378f3838c17e8f18e52da0fdb909c8361204a625"
     },
     {
       "name": "profumi-M.png",
-      "sha256": "f4d47ea7817792a3b1351593241630c681847ed097ae166d4315950bd388985b"
+      "sha256": "5d9efa0f9f9b5b42d445136477c9a9f71228a50d1349a79c7fb92386763d1da8"
     },
     {
       "name": "abbigliamento-D.png",
@@ -281,5 +281,5 @@
       ]
     }
   ],
-  "note": "composeProduct+prepareSrcDoc five briefs D/T/M before/after on parent 9bb9a3c. Pocket chrome (system type in coda, tabbar blur) vs workshop/ledger. Identity (slot) is independent of meet/slice. Bottle/dish thumbs remain backlog. Planner/polish LLM skipped (quota). Hash/ΔE are movement floors, not scores. Not a 9/10."
+  "note": "composeProduct+prepareSrcDoc five briefs D/T/M before/after on parent bffc58f. Perfume thumb viewBox frames cap+body of every slot; hero stay 640/420 meet. Dishes remain backlog. Planner/polish LLM skipped (quota). Hash/\u0394E are movement floors, not scores. Not a 9/10."
 }

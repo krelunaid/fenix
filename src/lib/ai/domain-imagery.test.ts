@@ -14,6 +14,9 @@ import {
   ensureDomainImagery,
   heroPromptForBrief,
   materialSignature,
+  perfumeFocusFitsThumb,
+  perfumeSubjectBox,
+  perfumeThumbViewBox,
   upgradeProductChrome,
 } from "./domain-imagery.ts";
 import { auditGraphicQuality } from "../projects/graphic-quality.ts";
@@ -170,6 +173,27 @@ describe("domain imagery", () => {
     assert.deepEqual(bottles, ["nuit", "acqua", "fleur", "pelle"]);
     const ice = [0, 1, 2, 3].map((s) => materialSignature(domainIllustration("perfume", 1, "vetro", s)).bottle);
     assert.deepEqual(ice, ["sale", "nebbia", "pino", "vetro"]);
+    for (const variant of [0, 1] as const) {
+      for (const slot of [0, 1, 2, 3]) {
+        const meet = domainIllustration("perfume", variant, "flacone", slot, "meet");
+        const slice = domainIllustration("perfume", variant, "flacone", slot, "slice");
+        assert.match(meet, /viewBox="0 0 640 420"/, `${variant}/${slot} hero viewBox`);
+        assert.doesNotMatch(meet, /data-focus=/);
+        assert.match(slice, /data-focus="/);
+        assert.match(slice, /data-thumb-box="/);
+        assert.doesNotMatch(slice, /viewBox="0 0 640 420"/);
+        const sub = perfumeSubjectBox(variant, slot);
+        const box = perfumeThumbViewBox(variant, slot);
+        assert.ok(sub.w > 80 && sub.h > 200, `${variant}/${slot} subject ${sub.w}x${sub.h}`);
+        assert.equal(box.w, box.h, `${variant}/${slot} thumb box not square ${box.w}x${box.h}`);
+        assert.equal(perfumeFocusFitsThumb(variant, slot, 88, 112, 6), true, `${variant}/${slot} 88x112`);
+        assert.equal(perfumeFocusFitsThumb(variant, slot, 56, 56, 6), true, `${variant}/${slot} 56x56`);
+        assert.equal(materialSignature(meet).bottle, materialSignature(slice).bottle);
+      }
+    }
+    const foodSlice = domainIllustration("food", 0, "piatto", 1, "slice");
+    assert.match(foodSlice, /viewBox="0 0 640 420"/);
+    assert.doesNotMatch(foodSlice, /data-focus=/);
     const mill = materialSignature(domainIllustration("ops", 0, "ledger", 0));
     assert.equal(mill.scenes.includes("mill") || mill.parts.includes("mill"), true, `ops mill ${mill.scenes} ${mill.parts}`);
     const shears = materialSignature(domainIllustration("utility", 0, "taglio", 0));

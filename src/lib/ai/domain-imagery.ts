@@ -106,14 +106,100 @@ function esc(value: string): string {
     .replace(/>/g, "&" + "gt;");
 }
 
+export type FocusBox = { x: number; y: number; w: number; h: number };
+
+/**
+ * Cap+body bounds in the 640×420 scene. Decorative circles stay out.
+ * y may be negative when the cap was drawn above the hero viewBox.
+ */
+export const PERFUME_SUBJECT: Record<string, FocusBox> = {
+  "0-0": { x: 384, y: 62, w: 102, h: 322 },
+  "0-1": { x: 236, y: -78, w: 168, h: 470 },
+  "0-2": { x: 150, y: -2, w: 322, h: 388 },
+  "0-3": { x: 320, y: 10, w: 100, h: 374 },
+  "1-0": { x: 368, y: 28, w: 108, h: 284 },
+  "1-1": { x: 248, y: -58, w: 144, h: 388 },
+  "1-2": { x: 86, y: 22, w: 464, h: 324 },
+  "1-3": { x: 300, y: 36, w: 120, h: 314 },
+};
+
+/** Split-stage card 88×112 and default 56×56. */
+export const PERFUME_THUMB_SIZES = [
+  { w: 88, h: 112 },
+  { w: 56, h: 56 },
+] as const;
+
+function fmt(n: number): string {
+  const r = Math.round(n * 10) / 10;
+  return Number.isInteger(r) ? String(r) : r.toFixed(1);
+}
+
+export function perfumeSubjectBox(variant: 0 | 1, slot: number): FocusBox {
+  const key = `${variant}-${((slot % 4) + 4) % 4}`;
+  return PERFUME_SUBJECT[key]!;
+}
+
+export function perfumeThumbViewBox(variant: 0 | 1, slot: number): FocusBox {
+  const s = perfumeSubjectBox(variant, slot);
+  const padX = Math.max(28, s.w * 0.18);
+  const padY = Math.max(40, s.h * 0.16);
+  const bw = s.w + 2 * padX;
+  const bh = s.h + 2 * padY;
+  const cx = s.x + s.w / 2;
+  const cy = s.y + s.h / 2;
+  const minAc = Math.min(...PERFUME_THUMB_SIZES.map((t) => t.w / t.h));
+  const side = Math.max(bw / minAc, bh, bw);
+  return { x: cx - side / 2, y: cy - side / 2, w: side, h: side };
+}
+
+export function sliceVisibleWindow(vb: FocusBox, cw: number, ch: number): FocusBox {
+  const ac = cw / ch;
+  const av = vb.w / vb.h;
+  if (av > ac) {
+    const visW = vb.h * ac;
+    return { x: vb.x + (vb.w - visW) / 2, y: vb.y, w: visW, h: vb.h };
+  }
+  const visH = vb.w / ac;
+  return { x: vb.x, y: vb.y + (vb.h - visH) / 2, w: vb.w, h: visH };
+}
+
+/** Scene-space check that cap+body stay inside a sliced thumb with `px` margin. */
+export function perfumeFocusFitsThumb(variant: 0 | 1, slot: number, cw: number, ch: number, px = 6): boolean {
+  const s = perfumeSubjectBox(variant, slot);
+  const vis = sliceVisibleWindow(perfumeThumbViewBox(variant, slot), cw, ch);
+  const mx = (px * vis.w) / cw;
+  const my = (px * vis.h) / ch;
+  return (
+    s.x >= vis.x + mx &&
+    s.y >= vis.y + my &&
+    s.x + s.w <= vis.x + vis.w - mx &&
+    s.y + s.h <= vis.y + vis.h - my
+  );
+}
+
 function wrap(id: string, alt: string, inner: string, slot = 0, extraDefs = "", fit: "meet" | "slice" = "slice"): string {
   const bits = id.split("-");
   const family = bits[1] || "";
   const variant = bits[2] || "0";
   const resolved = fit === "meet" ? "meet" : "slice";
   const gid = `${id.replace(/[^a-z0-9]/gi, "")}s${slot}${resolved === "meet" ? "m" : "k"}n${inner.length}`;
-  return `<svg class="domain-art" data-imagery="domain" data-family="${esc(family)}" data-variant="${esc(variant)}" data-provenance="${esc(id)}" data-slot="${slot}" data-fit="${resolved}" viewBox="0 0 640 420" width="640" height="420" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${esc(alt)}" preserveAspectRatio="xMidYMid ${resolved}"><defs><filter id="${gid}" x="-10%" y="-10%" width="120%" height="120%"><feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="4" seed="${11 + slot * 5}" result="n"/><feColorMatrix in="n" type="saturate" values="0" result="g"/><feComponentTransfer in="g" result="g2"><feFuncA type="table" tableValues="0 0.26"/></feComponentTransfer><feBlend in="SourceGraphic" in2="g2" mode="multiply"/></filter><filter id="${gid}sh"><feDropShadow dx="0" dy="12" stdDeviation="14" flood-opacity=".34"/></filter><radialGradient id="${gid}vg" cx=".48" cy=".42" r=".78"><stop offset=".5" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".32"/></radialGradient>${extraDefs}</defs><g filter="url(#${gid})">${inner}</g>${family === "editorial" ? `<rect width="640" height="420" fill="#6a5a48" opacity=".07" pointer-events="none"/><rect width="640" height="420" fill="#f4ead8" opacity=".05" pointer-events="none"/>` : family === "repo" ? `<g pointer-events="none" opacity=".12">${Array.from({ length: 14 }, (_, i) => `<path d="M0 ${28 * i}h640" stroke="#9ec8d4" stroke-width="1"/>`).join("")}</g>` : ""}<rect width="640" height="420" fill="url(#${gid}vg)" pointer-events="none"/></svg>`;
+  let vb = "0 0 640 420";
+  let focusAttr = "";
+  let pad = "";
+  if (family === "perfume" && resolved === "slice") {
+    const v = (variant === "1" ? 1 : 0) as 0 | 1;
+    const sub = perfumeSubjectBox(v, slot);
+    const box = perfumeThumbViewBox(v, slot);
+    vb = `${fmt(box.x)} ${fmt(box.y)} ${fmt(box.w)} ${fmt(box.h)}`;
+    focusAttr = ` data-focus="${fmt(sub.x)} ${fmt(sub.y)} ${fmt(sub.w)} ${fmt(sub.h)}" data-thumb-box="${vb}"`;
+    const fill = inner.match(/<rect width="640" height="420" fill="([^"]+)"/)?.[1];
+    if (fill) {
+      pad = `<rect x="${fmt(box.x)}" y="${fmt(box.y)}" width="${fmt(box.w)}" height="${fmt(box.h)}" fill="${fill}"/>`;
+    }
+  }
+  return `<svg class="domain-art" data-imagery="domain" data-family="${esc(family)}" data-variant="${esc(variant)}" data-provenance="${esc(id)}" data-slot="${slot}" data-fit="${resolved}" viewBox="${vb}" width="640" height="420" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${esc(alt)}"${focusAttr} preserveAspectRatio="xMidYMid ${resolved}"><defs><filter id="${gid}" x="-10%" y="-10%" width="120%" height="120%"><feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="4" seed="${11 + slot * 5}" result="n"/><feColorMatrix in="n" type="saturate" values="0" result="g"/><feComponentTransfer in="g" result="g2"><feFuncA type="table" tableValues="0 0.26"/></feComponentTransfer><feBlend in="SourceGraphic" in2="g2" mode="multiply"/></filter><filter id="${gid}sh"><feDropShadow dx="0" dy="12" stdDeviation="14" flood-opacity=".34"/></filter><radialGradient id="${gid}vg" cx=".48" cy=".42" r=".78"><stop offset=".5" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".32"/></radialGradient>${extraDefs}</defs><g filter="url(#${gid})">${pad}${inner}</g>${family === "editorial" ? `<rect width="640" height="420" fill="#6a5a48" opacity=".07" pointer-events="none"/><rect width="640" height="420" fill="#f4ead8" opacity=".05" pointer-events="none"/>` : family === "repo" ? `<g pointer-events="none" opacity=".12">${Array.from({ length: 14 }, (_, i) => `<path d="M0 ${28 * i}h640" stroke="#9ec8d4" stroke-width="1"/>`).join("")}</g>` : ""}<rect width="640" height="420" fill="url(#${gid}vg)" pointer-events="none"/></svg>`;
 }
+
 
 function perfumeArt(variant: 0 | 1, slot: number, alt: string, fitArg?: "meet" | "slice"): string {
   const id = `svg-perfume-${variant}`;
