@@ -385,7 +385,6 @@ describe("graphic pipeline prompt→plan→generate→visual→QA", () => {
     assert.match(html, /selectedDay/);
     assert.match(html, /AGENDA_CYCLE/);
     assert.match(html, /prenotato:"confermato"/);
-    assert.match(html, /function payloadForHead/);
     assert.match(html, /function enqueueOp/);
     assert.match(html, /e\.day===d\.iso/);
     assert.match(html, /name="ora"/);
@@ -445,9 +444,12 @@ describe("graphic pipeline prompt→plan→generate→visual→QA", () => {
     assert.match(html, /function payloadForHead/);
     assert.match(html, /pendingOps/);
     assert.match(html, /function enqueueOp/);
+    assert.match(html, /function renderKeepForm/);
+    assert.match(html, /function finishBoot/);
+    assert.match(html, /op\.patch/);
     assert.match(html, /AGENDA_CYCLE\[item\.status\]\|\|"confermato"/);
     assert.match(html, /KICKER_CYCLE\[item\.kicker\]\|\|item\.kicker/);
-    assert.match(html, /render\(\);\s*return persistThen/);
+    assert.match(html, /renderKeepForm\(\);\s*return persistThen/);
     assert.match(html, /function saveOnce/);
     assert.match(html, /Promise\.resolve\(\)\.then\(function\(\)\{/);
     assert.match(html, /return window\.Fenix\.save\(COL, payload\)/);
@@ -455,6 +457,10 @@ describe("graphic pipeline prompt→plan→generate→visual→QA", () => {
     assert.doesNotMatch(html, /data=snapDel/);
     assert.doesNotMatch(html, /data=snapWear/);
     assert.doesNotMatch(html, /if\(cur\.status===nextStatus\)/);
+    assert.doesNotMatch(html, /status:\(prev&&prev.status\)/);
+    assert.doesNotMatch(html, /pendingOps=\[\];\s*confirmed/);
+    assert.doesNotMatch(html, /function finishBoot[\s\S]{0,500}pendingOps=\[\];/);
+    assert.match(html, /fromLoad && !pendingOps\.length/);
     assert.doesNotMatch(html, /if\(persistBusy\) return false/);
     assert.doesNotMatch(html, /void window\.Fenix\.save/);
     assert.doesNotMatch(html, /function save\(\)\{ if\(window\.Fenix\) void/);

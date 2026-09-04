@@ -737,6 +737,8 @@ window.__okSaves = [];
 window.__seen = {};
 window.__hold = false;
 window.__held = [];
+window.__loadDelay = 0;
+window.__loads = 0;
 window.addEventListener("message", function(e){
   var m=e.data;
   if(!m || m.t!=="fenix-db" || !m.id) return;
@@ -744,6 +746,7 @@ window.addEventListener("message", function(e){
   window.__seen[m.id]=1;
   var ack=function(){
     if(m.op==="load"){
+      window.__loads += 1;
       e.source.postMessage({t:"fenix-db",id:m.id,v:window.__db[m.col]||null},"*");
       return;
     }
@@ -767,7 +770,8 @@ window.addEventListener("message", function(e){
     e.source.postMessage({t:"fenix-db",id:m.id,v:{ok:true,v:m.data,durable:n}},"*");
   };
   var run=function(){
-    if(m.op==="save" && window.__delay) setTimeout(ack, window.__delay);
+    if(m.op==="load" && window.__loadDelay) setTimeout(ack, window.__loadDelay);
+    else if(m.op==="save" && window.__delay) setTimeout(ack, window.__delay);
     else ack();
   };
   if(window.__hold && m.op==="save") window.__held.push(run);
@@ -924,6 +928,8 @@ type QueueWin = {
   __okSaves: unknown[];
   __hold: boolean;
   __held: Array<() => void>;
+  __loadDelay: number;
+  __loads: number;
 };
 
 describe("Agenda persist same-row rebase", () => {
@@ -1015,6 +1021,20 @@ describe("Agenda persist same-row rebase", () => {
             });
           },
           { t: title, n: skip },
+        );
+      }
+
+      async function titleStatusShots(page: Page, titles: string[], skip: number) {
+        return page.evaluate(
+          ({ names, n }) => {
+            const w = window as unknown as QueueWin;
+            return (w.__saves || []).slice(n).map((pack) => {
+              const items = (pack as { items?: { title?: string; status?: string }[] }).items || [];
+              const hit = items.find((it) => names.includes(it.title || ""));
+              return hit ? `${hit.title}:${hit.status}` : "";
+            });
+          },
+          { names: titles, n: skip },
         );
       }
 
@@ -1178,6 +1198,169 @@ describe("Agenda persist same-row rebase", () => {
         await frame.getByRole("heading", { name: "Gamma keep edit", exact: true }).waitFor({ timeout: 8000 });
         await page.close();
       }
+
+      // advance fail then edit ok: patch title, keep confirmed prenotato
+      {
+        const { page, frame } = await openQueue();
+        await createSlot(frame, "Delta patch");
+        const savesBefore = await page.evaluate(() => (window as unknown as QueueWin).__saves.length);
+        await armHold(page, [true, true, false]);
+        await frame.locator('article.slot:has-text("Delta patch") [data-act="advance"]').click();
+        await frame.locator("html[data-fenix-queue='1']").waitFor({ state: "attached", timeout: 8000 });
+        await frame.locator('article.slot:has-text("Delta patch") [data-act="edit"]').click();
+        await frame.locator("#n").fill("Delta patch edit");
+        await frame.locator("#ora").fill("09:10");
+        await frame.locator("#data").fill("2026-09-04");
+        await frame.locator("#fnew [data-act='save']").click();
+        await frame.locator("html[data-fenix-queue='2']").waitFor({ state: "attached", timeout: 8000 });
+        await releaseHold(page);
+        await settlePersist(frame);
+        await frame.locator('nav button[data-view="oggi"]').click();
+        await frame.getByRole("heading", { name: "Delta patch edit", exact: true }).waitFor({ timeout: 8000 });
+        assert.equal(
+          await frame.locator('article.slot:has-text("Delta patch edit")').getAttribute("data-status"),
+          "prenotato",
+          "edit patch must not resurrect failed advance status",
+        );
+        const row = await backendRow(page, "Delta patch edit");
+        assert.equal(row && row.status, "prenotato");
+        assert.equal(await backendRow(page, "Delta patch"), null);
+        const shots = await titleStatusShots(page, ["Delta patch", "Delta patch edit"], savesBefore);
+        assert.ok(shots.length >= 3, `advance retry + edit ${shots.join(",")}`);
+        assert.equal(shots[0], "Delta patch:confermato");
+        assert.equal(shots[1], "Delta patch:confermato", "retry of advance is immutable");
+        assert.equal(shots[shots.length - 1], "Delta patch edit:prenotato");
+        assert.equal(
+          shots.some((s) => s === "Delta patch edit:confermato"),
+          false,
+          "edit payload must not copy optimistic confermato",
+        );
+        await reloadFrame(page, frame);
+        await frame.getByRole("heading", { name: "Delta patch edit", exact: true }).waitFor({ timeout: 8000 });
+        assert.equal(
+          await frame.locator('article.slot:has-text("Delta patch edit")').getAttribute("data-status"),
+          "prenotato",
+        );
+        await page.close();
+      }
+
+      // advance ok then edit fail: status stays confermato, title rolls back
+      {
+        const { page, frame } = await openQueue();
+        await createSlot(frame, "Delta keep");
+        const savesBefore = await page.evaluate(() => (window as unknown as QueueWin).__saves.length);
+        await armHold(page, [false, true, true]);
+        await frame.locator('article.slot:has-text("Delta keep") [data-act="advance"]').click();
+        await frame.locator("html[data-fenix-queue='1']").waitFor({ state: "attached", timeout: 8000 });
+        await frame.locator('article.slot:has-text("Delta keep") [data-act="edit"]').click();
+        await frame.locator("#n").fill("Delta keep edit");
+        await frame.locator("#ora").fill("09:10");
+        await frame.locator("#data").fill("2026-09-04");
+        await frame.locator("#fnew [data-act='save']").click();
+        await frame.locator("html[data-fenix-queue='2']").waitFor({ state: "attached", timeout: 8000 });
+        await releaseHold(page);
+        await settlePersist(frame);
+        await frame.locator('nav button[data-view="oggi"]').click();
+        await frame.getByRole("heading", { name: "Delta keep", exact: true }).waitFor({ timeout: 8000 });
+        assert.equal(await frame.getByRole("heading", { name: "Delta keep edit", exact: true }).count(), 0);
+        assert.equal(
+          await frame.locator('article.slot:has-text("Delta keep")').getAttribute("data-status"),
+          "confermato",
+        );
+        const kept = await backendRow(page, "Delta keep");
+        assert.equal(kept && kept.status, "confermato");
+        assert.equal(await backendRow(page, "Delta keep edit"), null);
+        const shots = await titleStatusShots(page, ["Delta keep", "Delta keep edit"], savesBefore);
+        assert.ok(shots.length >= 3, `advance + edit retry ${shots.join(",")}`);
+        assert.equal(shots[0], "Delta keep:confermato");
+        assert.equal(shots[1], "Delta keep edit:confermato");
+        assert.equal(shots[2], "Delta keep edit:confermato", "retry of failed edit is immutable");
+        await reloadFrame(page, frame);
+        await frame.getByRole("heading", { name: "Delta keep", exact: true }).waitFor({ timeout: 8000 });
+        assert.equal(
+          await frame.locator('article.slot:has-text("Delta keep")').getAttribute("data-status"),
+          "confermato",
+        );
+        await page.close();
+      }
+
+      // ACK of another op must not wipe an unsaved form
+      {
+        const { page, frame } = await openQueue();
+        await createSlot(frame, "Form viva");
+        await armHold(page, [false]);
+        await frame.locator('article.slot:has-text("Form viva") [data-act="advance"]').click();
+        await frame.locator("html[data-fenix-queue='1']").waitFor({ state: "attached", timeout: 8000 });
+        await frame.locator('nav button[data-view="nuovo"]').click();
+        await frame.locator("#n").waitFor({ timeout: 4000 });
+        await frame.locator("#n").fill("Bozza viva");
+        await releaseHold(page);
+        await settlePersist(frame);
+        assert.equal(await frame.locator("#n").inputValue(), "Bozza viva");
+        await frame.locator('nav button[data-view="oggi"]').click();
+        assert.equal(
+          await frame.locator('article.slot:has-text("Form viva")').getAttribute("data-status"),
+          "confermato",
+        );
+        await page.close();
+      }
+    } finally {
+      await browser.close();
+    }
+  });
+});
+
+describe("Agenda persist late boot and queue", () => {
+  it("does not drop a queued advance when load returns after the 500ms fallback", async () => {
+    const composed = composeProduct(BRIEF);
+    const html = withFenixNow(composed.html, 2026, 9, 4);
+    const src = prepareSrcDoc(html, composed.tokens.palette, "agenda-late-boot", "app");
+    const browser = await launchChromium();
+    try {
+      const page = await isolatedPage(browser, { viewport: { width: 390, height: 844 } });
+      page.setDefaultTimeout(20000);
+      await page.setContent(persistHostQueue());
+      await page.evaluate(() => {
+        const w = window as unknown as QueueWin;
+        w.__loadDelay = 2000;
+        w.__hold = true;
+        w.__held = [];
+        w.__rejectPlan = [];
+      });
+      await page.locator("#f").evaluate((el, srcDoc: string) => {
+        (el as HTMLIFrameElement).srcdoc = srcDoc;
+      }, src);
+      const frame = page.frameLocator("#f");
+      await frame.locator("[data-fenix-ready]").waitFor({ timeout: 8000 });
+      const loadsAtReady = await page.evaluate(() => (window as unknown as QueueWin).__loads);
+      assert.equal(loadsAtReady, 0, "ready from fallback before delayed load");
+      const seed = frame.locator("article.slot").filter({
+        has: frame.locator("h2").filter({ hasText: /^Taglio e piega$/ }),
+      });
+      await seed.locator('[data-act="advance"]').click();
+      await frame.locator("html[data-fenix-queue='1']").waitFor({ state: "attached", timeout: 8000 });
+      assert.equal(await seed.getAttribute("data-status"), "confermato");
+      await page.waitForFunction(() => (window as unknown as QueueWin).__loads >= 1, null, { timeout: 8000 });
+      await frame.locator("html[data-fenix-queue='1']").waitFor({ state: "attached", timeout: 4000 });
+      assert.equal(
+        await seed.getAttribute("data-status"),
+        "confermato",
+        "late load must not drop the queued advance",
+      );
+      assert.notEqual(
+        await seed.getAttribute("data-status"),
+        "in-corso",
+        "late load must not replay the advance onto an optimistic snapshot",
+      );
+      await page.evaluate(() => {
+        const w = window as unknown as QueueWin;
+        w.__hold = false;
+        const q = (w.__held || []).splice(0);
+        q.forEach((fn) => fn());
+      });
+      await frame.locator("html:not([data-fenix-persist='busy'])").waitFor({ timeout: 8000 });
+      assert.equal(await seed.getAttribute("data-status"), "confermato");
+      await page.close();
     } finally {
       await browser.close();
     }

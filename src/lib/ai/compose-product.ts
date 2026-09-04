@@ -1023,10 +1023,11 @@ function applyOp(state, op){
   } else if(op.kind==="create"){
     state.items.unshift(cloneOf(op.row));
   } else if(op.kind==="edit"){
-    var ei=state.items.findIndex(function(x){return x.id===op.id;});
-    var nextRow=cloneOf(op.row);
-    if(ei>=0) state.items[ei]=nextRow;
-    else state.items.unshift(nextRow);
+    var item=state.items.find(function(x){return x.id===op.id;});
+    if(!item || !op.patch) return state;
+    Object.keys(op.patch).forEach(function(k){
+      if(op.patch[k]!==undefined) item[k]=op.patch[k];
+    });
   }
   return state;
 }
@@ -1086,6 +1087,24 @@ function restoreForm(keep){
   if(f.k) f.k.value=keep.k||"";
   if(f.note) f.note.value=keep.note||"";
 }
+function captureForm(){
+  var f=document.getElementById("fnew");
+  if(!f) return null;
+  return {
+    n:f.n&&f.n.value||"",
+    ora:f.ora&&f.ora.value||"",
+    data:f.data&&f.data.value||"",
+    luogo:f.luogo&&f.luogo.value||"",
+    cliente:f.cliente&&f.cliente.value||"",
+    k:f.k&&f.k.value||"",
+    note:f.note&&f.note.value||""
+  };
+}
+function renderKeepForm(){
+  var keep=captureForm();
+  render();
+  if(keep) restoreForm(keep);
+}
 function markPersist(on){
   persistBusy=!!on;
   try{
@@ -1110,14 +1129,14 @@ function persistThen(afterOk, afterFail){
       ping(true);
       try {
         if(afterOk) afterOk();
-        else render();
+        else renderKeepForm();
       } catch (e) {}
       return true;
     }).catch(function(err){
       if(pendingOps.length) pendingOps.shift();
       replayPending();
       markQueue();
-      render();
+      renderKeepForm();
       try { if(afterFail) afterFail(); } catch (e2) {}
       flashErr(err && err.message ? err.message : "Salvataggio non riuscito.");
       ping(false);
@@ -1134,7 +1153,7 @@ function enqueueOp(op, afterOk, afterFail){
   pendingOps.push(op);
   replayPending();
   markQueue();
-  render();
+  renderKeepForm();
   return persistThen(afterOk, afterFail);
 }
 function commitForm(f){
@@ -1174,18 +1193,30 @@ function commitForm(f){
     var luogo=(f.luogo&&f.luogo.value||"").trim()||place;
     var cliente=(f.cliente&&f.cliente.value||"").trim()||"—";
     keep.ora=ora; keep.data=giorno; keep.luogo=luogo; keep.cliente=cliente;
-    var prev=wasEdit?data.items.find(function(x){return x.id===editId;}):null;
-    row={id:wasEdit?editId:("n"+Date.now()),title:nome,kicker:ora,note:luogo+" · "+cliente,meta:(prev&&prev.meta)||"30 min",status:(prev&&prev.status)||"prenotato",day:giorno};
-    createdId=row.id;
+    createdId=wasEdit?editId:("n"+Date.now());
+    if(wasEdit){
+      row=null;
+    } else {
+      row={id:createdId,title:nome,kicker:ora,note:luogo+" · "+cliente,meta:"30 min",status:"prenotato",day:giorno};
+    }
     nextDay=giorno;
     nextView=giorno===todayIso()?tabDefs[0].id:tabDefs[2].id;
   } else {
-    var prevGeneric=wasEdit?data.items.find(function(x){return x.id===editId;}):null;
-    row={id:wasEdit?editId:("n"+Date.now()),title:nome,kicker:(f.k&&f.k.value||"").trim()||census,note:(f.note&&f.note.value||"").trim()||"—",meta:(prevGeneric&&prevGeneric.meta)||"nuovo"};
-    createdId=row.id;
+    createdId=wasEdit?editId:("n"+Date.now());
+    if(!wasEdit){
+      row={id:createdId,title:nome,kicker:(f.k&&f.k.value||"").trim()||census,note:(f.note&&f.note.value||"").trim()||"—",meta:"nuovo"};
+    }
     nextView=tabDefs[0].id;
   }
-  return enqueueOp({kind:wasEdit?"edit":"create",id:createdId,row:row}, function(){
+  var op;
+  if(wasEdit){
+    op={kind:"edit",id:createdId,patch:grammarId==="agenda"
+      ? {title:nome,kicker:keep.ora,note:keep.luogo+" · "+keep.cliente,day:keep.data}
+      : {title:nome,kicker:(f.k&&f.k.value||"").trim()||census,note:(f.note&&f.note.value||"").trim()||"—"}};
+  } else {
+    op={kind:"create",id:createdId,row:row};
+  }
+  return enqueueOp(op, function(){
     editId=null;
     selectedDay=nextDay;
     view=nextView;
@@ -1566,19 +1597,40 @@ document.getElementById("root").addEventListener("submit",function(e){
 });
 
 function markReady(){ document.documentElement.setAttribute("data-fenix-ready","1"); }
+var bootDone=false;
+function finishBoot(fromLoad){
+  var keep=captureForm();
+  hydrateAgenda();
+  if(!bootDone){
+    confirmed=cloneData();
+    bootDone=true;
+  } else if(fromLoad && !pendingOps.length){
+    confirmed=cloneData();
+  }
+  replayPending();
+  markQueue();
+  render();
+  if(keep) restoreForm(keep);
+  markReady();
+}
 async function boot(){
   var load=document.getElementById("load");
   if(load) load.hidden=false;
-  try{ if(window.Fenix&&window.Fenix.load){ var r=await window.Fenix.load(COL); if(r&&typeof r==="object"&&Array.isArray(r.items)) data=r; } }catch(err){ var box=document.getElementById("err"); if(box) box.hidden=false; }
+  var fromLoad=false;
+  try{
+    if(window.Fenix&&window.Fenix.load){
+      var r=await window.Fenix.load(COL);
+      if(r&&typeof r==="object"&&Array.isArray(r.items)){
+        data=r;
+        fromLoad=true;
+      }
+    }
+  }catch(err){ var box=document.getElementById("err"); if(box) box.hidden=false; }
   if(load) load.hidden=true;
-  hydrateAgenda();
-  confirmed=cloneData();
-  pendingOps=[];
-  markQueue();
-  render(); markReady();
+  finishBoot(fromLoad);
 }
 boot();
-setTimeout(function(){ if(!document.documentElement.getAttribute("data-fenix-ready")) { hydrateAgenda(); confirmed=cloneData(); pendingOps=[]; markQueue(); render(); markReady(); } }, 500);
+setTimeout(function(){ if(bootDone) return; finishBoot(false); }, 500);
 </script>
 </body>
 </html>`;
