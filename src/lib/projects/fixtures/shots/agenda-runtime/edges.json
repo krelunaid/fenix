@@ -1,0 +1,67 @@
+{
+  "product": "Agenda-calendar-edges",
+  "files": [
+    {
+      "name": "agenda-runtime-weekend-d.png",
+      "sha256": "5a9a8b70358d5b84cab3117a4741367ee2760c7a2089a65e56d6455a191f7d65",
+      "bytes": 46902
+    },
+    {
+      "name": "agenda-runtime-empty-d.png",
+      "sha256": "4002495acebd389a85524dfdcd3fc6d29349582b722264a2fc41ac2321b3c9ea",
+      "bytes": 47167
+    },
+    {
+      "name": "agenda-runtime-valid-d.png",
+      "sha256": "bf743ea0e879b3122472a3783dcfb03421861b4d0dc34a379f49a46b355a54aa",
+      "bytes": 45176
+    },
+    {
+      "name": "agenda-runtime-clean-d.png",
+      "sha256": "ce466c02f908906df17d5a718b58a66a57dd1355c643493b62102443ef596c51",
+      "bytes": 45506
+    },
+    {
+      "name": "agenda-runtime-weekend-t.png",
+      "sha256": "4c08dac6541a8fb9796f94b0e41bcd70bf0dcb81852c1b11548151ad1317d586",
+      "bytes": 42640
+    },
+    {
+      "name": "agenda-runtime-empty-t.png",
+      "sha256": "93335ca34d265a43e79b664095ccaba451288ead619fa15daab5151b2c65c7f6",
+      "bytes": 42070
+    },
+    {
+      "name": "agenda-runtime-valid-t.png",
+      "sha256": "8e95c2afefffa44a07ca047a8f320353663362cb14619a34aed619ce54fe44df",
+      "bytes": 44475
+    },
+    {
+      "name": "agenda-runtime-clean-t.png",
+      "sha256": "f284bfbe92370dcd665c26b78ad4f4a7cefd7463026f788634367500dd9a9167",
+      "bytes": 40941
+    },
+    {
+      "name": "agenda-runtime-weekend-m.png",
+      "sha256": "e51bb6c88811d68a5712c0e18fbe20fe1eca5e4e826b4152af7ab0c51335d729",
+      "bytes": 38427
+    },
+    {
+      "name": "agenda-runtime-empty-m.png",
+      "sha256": "32120a06f1c4a3d6c66d36a56f7bf5cae66dc92674199e3e517c906dcffff5b8",
+      "bytes": 37167
+    },
+    {
+      "name": "agenda-runtime-valid-m.png",
+      "sha256": "9b4bb383fe4f68fd9a96c3d08bc4cdd8b88922404cb0ae68fa80434e25a2d0ca",
+      "bytes": 40116
+    },
+    {
+      "name": "agenda-runtime-clean-m.png",
+      "sha256": "c9f546e9cd316aa14a38a468de58bd6c92d64e2149c6c3d8c9d57f4dde41bb37",
+      "bytes": 37084
+    }
+  ],
+  "credits": 0,
+  "residual": "Five-brief graphic residual moved to fixtures/graphic/five before/after on parent a930493. Calendar edges prove function, not 9/10 craft."
+}

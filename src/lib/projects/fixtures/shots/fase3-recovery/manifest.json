@@ -1,0 +1,20 @@
+{
+  "generatedAt": "2026-09-04T20:53:02.209Z",
+  "shots": [
+    {
+      "name": "recovery-D.png",
+      "sha256": "7e1a433d6553deaf1cb11ce7959d6ff26e3aad57d2bdb31954c98777d38864f7",
+      "bytes": 26898
+    },
+    {
+      "name": "recovery-T.png",
+      "sha256": "f60afaa82c0584c98a3ff8994d55a7bd696ace3dd9a093f19e1bcdeaa5e8cd4c",
+      "bytes": 33033
+    },
+    {
+      "name": "recovery-M.png",
+      "sha256": "68c4275e0b963b5b5fc53578a8579bc1d4c0f2edc53c5dfc3a35b60a7cda86d5",
+      "bytes": 34621
+    }
+  ]
+}

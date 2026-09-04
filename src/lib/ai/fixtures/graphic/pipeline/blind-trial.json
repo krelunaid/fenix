@@ -1,0 +1,159 @@
+{
+  "trial": {
+    "briefId": "essenza",
+    "brief": "FORMATO: app telefono 390×844. kind=app. Tab in basso, 5 schermate. NON un sito.\n\nEssenza: gestione profumi premium, flaconi, note olfattive e guardaroba.",
+    "seed": 3174128190,
+    "order": [
+      "A",
+      "B"
+    ],
+    "mapping": {
+      "A": "essenza-fail",
+      "B": "essenza-or"
+    },
+    "labels": {
+      "A": "Candidate A",
+      "B": "Candidate B"
+    },
+    "scores": {
+      "A": {
+        "slot": "A",
+        "criteria": [
+          {
+            "id": "hierarchy",
+            "label": "Gerarchia",
+            "score": 3,
+            "motivation": "Home scheletrica (4 riquadri + Ultimo/Stato)."
+          },
+          {
+            "id": "composition",
+            "label": "Composizione",
+            "score": 1,
+            "motivation": "Layout ancora da scheletro, senza grammatica di mestiere."
+          },
+          {
+            "id": "density",
+            "label": "Densità utile",
+            "score": 5,
+            "motivation": "Pochi contenuti utili visibili."
+          },
+          {
+            "id": "imagery",
+            "label": "Imagery di dominio",
+            "score": 2,
+            "motivation": "Prodotto senza immagine, texture o flacone/abito/sala."
+          },
+          {
+            "id": "originality",
+            "label": "Originalità",
+            "score": 2,
+            "motivation": "Icone o lastre ancora riciclate dal fallback."
+          },
+          {
+            "id": "typography",
+            "label": "Tipografia",
+            "score": 3,
+            "motivation": "Tipografia di sistema, senza rampa."
+          },
+          {
+            "id": "color",
+            "label": "Colore",
+            "score": 3,
+            "motivation": "Palette beige/terracotta su un brief che non è ceramica."
+          },
+          {
+            "id": "controls",
+            "label": "Controllo/micro-interazione",
+            "score": 3,
+            "motivation": "Micro-interazione assente o solo hover."
+          },
+          {
+            "id": "responsive",
+            "label": "Responsive",
+            "score": 3,
+            "motivation": "Un solo layout, non device-aware."
+          },
+          {
+            "id": "a11y",
+            "label": "Accessibilità",
+            "score": 10,
+            "motivation": "Focus visibile e etichette aria sul mestiere."
+          }
+        ],
+        "total": 35
+      },
+      "B": {
+        "slot": "B",
+        "criteria": [
+          {
+            "id": "hierarchy",
+            "label": "Gerarchia",
+            "score": 10,
+            "motivation": "Scala h1/h2 e inchiostro quiete/forte dichiarati nel CSS."
+          },
+          {
+            "id": "composition",
+            "label": "Composizione",
+            "score": 10,
+            "motivation": "Composizione device-aware con lastre/featured plate o desk."
+          },
+          {
+            "id": "density",
+            "label": "Densità utile",
+            "score": 9,
+            "motivation": "Densità utile: voci, lastre o KPI con soggetto di dominio."
+          },
+          {
+            "id": "imagery",
+            "label": "Imagery di dominio",
+            "score": 10,
+            "motivation": "Imagery di dominio con parti semantiche (garment/dish/scene/room/bottle)."
+          },
+          {
+            "id": "originality",
+            "label": "Originalità",
+            "score": 10,
+            "motivation": "Set di icone nav distinti e soggetto non riciclato."
+          },
+          {
+            "id": "typography",
+            "label": "Tipografia",
+            "score": 10,
+            "motivation": "Due famiglie e rampa h1/h2/body nel foglio del prodotto."
+          },
+          {
+            "id": "color",
+            "label": "Colore",
+            "score": 9,
+            "motivation": "Inchiostri distinti per titolo, nota e kicker."
+          },
+          {
+            "id": "controls",
+            "label": "Controllo/micro-interazione",
+            "score": 10,
+            "motivation": "Hover, press e stati empty/loading dichiarati."
+          },
+          {
+            "id": "responsive",
+            "label": "Responsive",
+            "score": 10,
+            "motivation": "Breakpoint tablet e desktop con chrome device-aware."
+          },
+          {
+            "id": "a11y",
+            "label": "Accessibilità",
+            "score": 10,
+            "motivation": "Focus visibile e etichette aria sul mestiere."
+          }
+        ],
+        "total": 98
+      }
+    }
+  },
+  "external": {
+    "available": false,
+    "declaration": "benchmark esterno non disponibile",
+    "referenceSet": "none",
+    "note": "Nessun output Emergent equivalente è depositato nel repository e non si acquistano piani o workspace per ottenerlo. Il protocollo cieco gira su artifact interni (legacy geometrico vs riferimento premium originale). Non conclude parità né superiorità."
+  }
+}

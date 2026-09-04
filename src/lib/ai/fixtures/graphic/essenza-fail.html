@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Essenza</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;600&display=swap" rel="stylesheet"/>
+<style>
+:root{--bg:#efe6d4;--surface:#f7f1e4;--fg:#1c1712;--muted:#5c5348;--accent:#c45c26;--line:#c4b49a}
+html,body{height:100%;margin:0}
+body{font:400 16px/1.4 "IBM Plex Sans",system-ui,sans-serif;background:var(--bg);color:var(--fg);display:flex;flex-direction:column;min-height:100dvh}
+.fk-hello{margin:0;font-size:22px}
+.fk-role{margin:4px 0 0;font-size:12px;color:var(--muted)}
+.fk-main{flex:1;min-height:70vh;padding:16px}
+.fk-grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.fk-stat{background:var(--surface);padding:12px;border:1px solid var(--line)}
+.fk-tab{display:flex;gap:4px;padding:8px}
+button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+</style>
+</head>
+<body>
+<header class="fk-top">
+  <div>
+    <h1 class="fk-hello">Ciao</h1>
+    <p class="fk-role">Operatore</p>
+  </div>
+</header>
+<main class="fk-main" id="main"></main>
+<nav class="fk-tab" aria-label="Navigazione">
+  <button type="button" data-view="home" class="on">Home</button>
+  <button type="button" data-view="new">Nuovo</button>
+  <button type="button" data-view="list">Elenco</button>
+  <button type="button" data-view="stats">Numeri</button>
+  <button type="button" data-view="more">Altro</button>
+</nav>
+<script>
+(function(){
+  var S={items:[
+    {id:"e1",n:"Bois de Nuit",t:"50 ml"},
+    {id:"e2",n:"Acqua Chiara",t:"30 ml"},
+    {id:"e3",n:"Fleur Ambrée",t:"100 ml"}
+  ], limit:100, team:[]};
+  var current="home";
+  function save(){ if(window.Fenix&&window.Fenix.save) window.Fenix.save("state", S); }
+  var views={
+    home:function(){
+      return '<div class="fk-grid2"><div class="fk-stat"><b>3</b><span>voci</span></div><div class="fk-stat"><b>0</b><span>ore</span></div><div class="fk-stat"><b>0</b><span>pezzi</span></div><div class="fk-stat"><b>65</b><span>%</span></div></div><div class="fk-grid2"><div class="fk-tile"><span>Ultimo</span><b>—</b></div><div class="fk-tile"><span>Stato</span><b>In corso</b></div></div><div style="min-height:55vh"></div>';
+    },
+    new:function(){
+      return '<form id="fnew"><input name="v" placeholder="Nome"><button type="submit">Salva</button></form>';
+    },
+    list:function(){
+      return '<p>Nessun elemento</p>'+S.items.map(function(it){return '<div class="fk-tile" data-id="'+it.id+'"><b>'+it.n+'</b> <span>'+it.t+'</span> <button type="button" data-del="'+it.id+'">Rimuovi</button></div>';}).join("");
+    },
+    stats:function(){ return '<p>3</p>'; },
+    more:function(){ return '<p>Altro</p>'; }
+  };
+  function show(id){
+    current=id;
+    document.getElementById("main").innerHTML=views[id]();
+    document.querySelectorAll(".fk-tab button").forEach(function(b){ b.classList.toggle("on", b.getAttribute("data-view")===id); });
+  }
+  document.addEventListener("click", function(e){
+    var t=e.target.closest("[data-view],[data-del]");
+    if(!t) return;
+    if(t.dataset.view) show(t.dataset.view);
+    if(t.dataset.del){ S.items=S.items.filter(function(x){return x.id!==t.dataset.del;}); save(); show("list"); }
+  });
+  document.addEventListener("submit", function(e){
+    e.preventDefault();
+    var v=(e.target.v.value||"").trim(); if(!v) return;
+    S.items.unshift({id:"e"+Date.now(),n:v,t:"30 ml"}); e.target.reset(); save(); show("list");
+  });
+  function markReady(){ document.documentElement.setAttribute("data-fenix-ready","1"); }
+  function boot(){
+    try { show(current); } catch (err) {}
+    markReady();
+    var p=window.Fenix&&window.Fenix.load?window.Fenix.load("state"):null;
+    Promise.resolve(p).then(function(v){
+      if(v&&typeof v==="object"&&v.items) S=Object.assign({limit:100,team:[]},S,v);
+      try { show(current); } catch (err) {}
+      markReady();
+    }).catch(function(){ markReady(); });
+  }
+  boot();
+})();
+</script>
+</body>
+</html>

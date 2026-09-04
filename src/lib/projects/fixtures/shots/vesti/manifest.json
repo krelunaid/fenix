@@ -1,0 +1,27 @@
+{
+  "product": "Vesti",
+  "collection": "capi",
+  "viewports": [
+    "D",
+    "T",
+    "M"
+  ],
+  "files": [
+    {
+      "name": "vesti-d.png",
+      "sha256": "8b4bff78b0e9b5e8515fbbe63615060894b4e40dec103eceaf9fdd0e42989cbb",
+      "bytes": 15813
+    },
+    {
+      "name": "vesti-t.png",
+      "sha256": "9bfa1494bbc7bb524e0515bd94523380048cd12d4f8af502abb2352fda42148e",
+      "bytes": 15632
+    },
+    {
+      "name": "vesti-m.png",
+      "sha256": "0740ca8e23ba9da86bbd6f693bf73aa9102c9684523185557d8e865a34b9b378",
+      "bytes": 14231
+    }
+  ],
+  "credits": 0
+}

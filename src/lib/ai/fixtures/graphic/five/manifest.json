@@ -1,0 +1,285 @@
+{
+  "parentSHA": "bffc58f1af1ee22e69b99a0ed3dd65eaba8822f9",
+  "before": [
+    {
+      "name": "agenda-D.png",
+      "sha256": "5641c1dad44a44be9bb0dff9a574f0d4d75dd4ee50b496cb1c467e14646aadd9",
+      "bytes": 45304
+    },
+    {
+      "name": "agenda-T.png",
+      "sha256": "4948a007471ec9ed2ba18596a0ab715690d2697b4c86e03befe0956c4fd4e8ac",
+      "bytes": 59712
+    },
+    {
+      "name": "agenda-M.png",
+      "sha256": "9de0d6b08a0e219eea9324db6c291aec9733639a2a38f23dbdbe324f07966c22",
+      "bytes": 54714
+    },
+    {
+      "name": "profumi-D.png",
+      "sha256": "bce5d8ed3fd63a63c605596bd1113a5fcb7a43e75bb316b5437ad31c79c74875",
+      "bytes": 149255
+    },
+    {
+      "name": "profumi-T.png",
+      "sha256": "cbd36b55d8c2345be99063e203f57fa213614e1813461b61bd2736a40f75b87a",
+      "bytes": 156775
+    },
+    {
+      "name": "profumi-M.png",
+      "sha256": "f4d47ea7817792a3b1351593241630c681847ed097ae166d4315950bd388985b",
+      "bytes": 85567
+    },
+    {
+      "name": "abbigliamento-D.png",
+      "sha256": "2b60026e712a5bb0f40557c2c3e5c13b152df1163fe0ad15a1dbb9fa33fb2bcf",
+      "bytes": 711188
+    },
+    {
+      "name": "abbigliamento-T.png",
+      "sha256": "77a1b4e4a3d49178c64fc3be37152a3e7aae8984ccc1cfd0b0233850e7d7d28c",
+      "bytes": 576381
+    },
+    {
+      "name": "abbigliamento-M.png",
+      "sha256": "b517db85e0704f84a848475518e07c10bf1489b48165ecd850243c4bd9c2efa2",
+      "bytes": 256643
+    },
+    {
+      "name": "repo-D.png",
+      "sha256": "2458d9714b9ee321fd6c4048da47c5d36217c4aea4718a1c9d535a313bf005c6",
+      "bytes": 116935
+    },
+    {
+      "name": "repo-T.png",
+      "sha256": "a6b967142741067c5a8e9e751b1d76d0a31e36a63d889308c4922d1fd7895373",
+      "bytes": 95024
+    },
+    {
+      "name": "repo-M.png",
+      "sha256": "19d3be4792947e83adafe16214daa92ad4e8ea2ef70487fb59ac32dc6c1a8649",
+      "bytes": 71019
+    },
+    {
+      "name": "ristorazione-D.png",
+      "sha256": "d31190ca9f256958ddefed03e74526c5a1e72591b1775ae0423d6c10a578c943",
+      "bytes": 226032
+    },
+    {
+      "name": "ristorazione-T.png",
+      "sha256": "39a0018a8c64d326015f91be264e12e19d08c20ae62d8c484cf43c6459a7cf3c",
+      "bytes": 142379
+    },
+    {
+      "name": "ristorazione-M.png",
+      "sha256": "245df9bc9b7e93d09a3181b2af863d01777beb423cc319f2fe46f6690bb93605",
+      "bytes": 119852
+    }
+  ],
+  "after": [
+    {
+      "name": "agenda-D.png",
+      "sha256": "71d4f34fc9af422f4c31e67685c86066ceed3d586df2985be3bd8e6b2713cb92"
+    },
+    {
+      "name": "agenda-T.png",
+      "sha256": "bdfb13f286a658eb28faa3ba3505e5c8ca02fed23f4d2efec437f4e55d43c442"
+    },
+    {
+      "name": "agenda-M.png",
+      "sha256": "41dfb6a063a3b881fe08fb0e944fb4063b92ab5e13164d6d84c56529420cf95f"
+    },
+    {
+      "name": "profumi-D.png",
+      "sha256": "268afa85a053e95199afd35f3089e2773e23a4ca893c06b947e49c232469cb4c"
+    },
+    {
+      "name": "profumi-T.png",
+      "sha256": "54444db52ef5ff6e0529698cbc6aae34fe9b16446319bc34be43a60dfc89802e"
+    },
+    {
+      "name": "profumi-M.png",
+      "sha256": "f7f0ffe627eef565995dc9528391cd271bb90d03c45cb3f7c0fd9479e4966236"
+    },
+    {
+      "name": "abbigliamento-D.png",
+      "sha256": "709611996990304022ea5ed504bddd7730142faed18aee9dbdb72f3dd06e7b38"
+    },
+    {
+      "name": "abbigliamento-T.png",
+      "sha256": "ed9fc5c221cb1a2818f639de501c27ad3c690401bd875d0a3dbaeb9fc3d90ccc"
+    },
+    {
+      "name": "abbigliamento-M.png",
+      "sha256": "78b434f88d9dfd365fc0ccaa0ef6d432cf1f13f3b77873bbb3b7851ff270ebcd"
+    },
+    {
+      "name": "repo-D.png",
+      "sha256": "490097477efa3666b2c2706a81088ca894c0801bc4ed958644108d8910678a85"
+    },
+    {
+      "name": "repo-T.png",
+      "sha256": "6701056d6ec5a6967467148d5341392309bef9fddd4cf0d45917fff8453b8cfb"
+    },
+    {
+      "name": "repo-M.png",
+      "sha256": "7692a216c6f4061f5ef778e819107fae804df4df6c8cf4ac1aa538cb3cc4915f"
+    },
+    {
+      "name": "ristorazione-D.png",
+      "sha256": "3a4405814115be47cc4a670bcd26a95984f123ba75a4c3adf368f35e593b3acd"
+    },
+    {
+      "name": "ristorazione-T.png",
+      "sha256": "202d73f72aa9a71c8009e53f55a137f5156de1c312ac829b41b0cf872606034b"
+    },
+    {
+      "name": "ristorazione-M.png",
+      "sha256": "8ea596947ee21e23b3892835be5073414da366e7f466cce730f600fbbb4054e4"
+    }
+  ],
+  "palettes": [
+    {
+      "id": "agenda",
+      "bg": "#e8eef4",
+      "accent": "#1f6f68",
+      "family": "booking",
+      "grammar": "agenda",
+      "display": "Figtree",
+      "painted": [
+        {
+          "vp": "D",
+          "bgVar": "#e8eef4",
+          "accentVar": "#1f6f68",
+          "bgPaint": "#e8eef4"
+        },
+        {
+          "vp": "T",
+          "bgVar": "#e8eef4",
+          "accentVar": "#1f6f68",
+          "bgPaint": "#e8eef4"
+        },
+        {
+          "vp": "M",
+          "bgVar": "#e8eef4",
+          "accentVar": "#1f6f68",
+          "bgPaint": "#e8eef4"
+        }
+      ]
+    },
+    {
+      "id": "profumi",
+      "bg": "#120e0c",
+      "accent": "#c4a15a",
+      "family": "perfume",
+      "grammar": "split-stage",
+      "display": "Cormorant Garamond",
+      "painted": [
+        {
+          "vp": "D",
+          "bgVar": "#120e0c",
+          "accentVar": "#c4a15a",
+          "bgPaint": "#120e0c"
+        },
+        {
+          "vp": "T",
+          "bgVar": "#120e0c",
+          "accentVar": "#c4a15a",
+          "bgPaint": "#120e0c"
+        },
+        {
+          "vp": "M",
+          "bgVar": "#120e0c",
+          "accentVar": "#c4a15a",
+          "bgPaint": "#120e0c"
+        }
+      ]
+    },
+    {
+      "id": "abbigliamento",
+      "bg": "#f6f1ea",
+      "accent": "#c81d25",
+      "family": "fashion",
+      "grammar": "lookbook",
+      "display": "Playfair Display",
+      "painted": [
+        {
+          "vp": "D",
+          "bgVar": "#f6f1ea",
+          "accentVar": "#c81d25",
+          "bgPaint": "#f6f1ea"
+        },
+        {
+          "vp": "T",
+          "bgVar": "#f6f1ea",
+          "accentVar": "#c81d25",
+          "bgPaint": "#f6f1ea"
+        },
+        {
+          "vp": "M",
+          "bgVar": "#f6f1ea",
+          "accentVar": "#c81d25",
+          "bgPaint": "#f6f1ea"
+        }
+      ]
+    },
+    {
+      "id": "repo",
+      "bg": "#111826",
+      "accent": "#2e9dc8",
+      "family": "repo",
+      "grammar": "source-timeline",
+      "display": "IBM Plex Mono",
+      "painted": [
+        {
+          "vp": "D",
+          "bgVar": "#111826",
+          "accentVar": "#2e9dc8",
+          "bgPaint": "#111826"
+        },
+        {
+          "vp": "T",
+          "bgVar": "#111826",
+          "accentVar": "#2e9dc8",
+          "bgPaint": "#111826"
+        },
+        {
+          "vp": "M",
+          "bgVar": "#111826",
+          "accentVar": "#2e9dc8",
+          "bgPaint": "#111826"
+        }
+      ]
+    },
+    {
+      "id": "ristorazione",
+      "bg": "#1a1210",
+      "accent": "#c43c2c",
+      "family": "food",
+      "grammar": "service-board",
+      "display": "Zilla Slab",
+      "painted": [
+        {
+          "vp": "D",
+          "bgVar": "#1a1210",
+          "accentVar": "#c43c2c",
+          "bgPaint": "#1a1210"
+        },
+        {
+          "vp": "T",
+          "bgVar": "#1a1210",
+          "accentVar": "#c43c2c",
+          "bgPaint": "#1a1210"
+        },
+        {
+          "vp": "M",
+          "bgVar": "#1a1210",
+          "accentVar": "#c43c2c",
+          "bgPaint": "#1a1210"
+        }
+      ]
+    }
+  ],
+  "note": "composeProduct+prepareSrcDoc five briefs D/T/M before/after on parent bffc58f. Perfume thumb viewBox frames cap+body of every slot; hero stay 640/420 meet. Dishes remain backlog. Planner/polish LLM skipped (quota). Hash/ΔE are movement floors, not scores. Not a 9/10."
+}

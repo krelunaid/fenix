@@ -1,0 +1,51 @@
+{
+  "against": "47895fb77dbc092cf83c8872f7986e6c87dff4cb",
+  "slice": "premium chrome + imagery",
+  "visualScoreHonest": 90,
+  "externalParity": false,
+  "externalBenchmark": "benchmark esterno non disponibile",
+  "claim100": false,
+  "independentPrior": 86,
+  "axes": {
+    "navIcons": {
+      "before": 55,
+      "after": 92,
+      "note": "47895fb second tab was a mitered triangle A/compass, unconstrained on ops/magazine rail. Current icons share viewBox 0 0 24 24, width/height 24, round joins, overflow hidden, optical box ~5–19. Piramide is three stacked note layers, not a letter. Bbox/overflow gate on D/T/M is non-tautological."
+    },
+    "typeSystems": {
+      "before": 88,
+      "after": 88,
+      "note": "Unchanged: six display faces stay distinct. Device-aware chrome kept."
+    },
+    "imagery": {
+      "before": 80,
+      "after": 86,
+      "note": "Vesti coat has lapels, lining, pockets, dress-form stand. Crudo has marble veins, flesh striation, lemon, herb. Atelier has film sprockets and stills, not brown rectangles. Still procedural SVG, not photography."
+    },
+    "emptySpaceHierarchy": {
+      "before": 82,
+      "after": 84,
+      "note": "Lookbook garments fill more of the studio frame. Magazine contact sheet is denser. Residual cream is editorial, not a blank phone."
+    },
+    "opsDesk": {
+      "before": 88,
+      "after": 90,
+      "note": "Rail icons now 18px, optically even, no giant second glyph. KPI still wraps pipeline Q3."
+    },
+    "interaction": {
+      "before": 84,
+      "after": 90,
+      "note": "First look/room/ticket/deal/plate paints data-state=on in the screenshot (in prova, accent ring). Hover/pressed/loading/empty/success gates kept D/T/M."
+    }
+  },
+  "nonTautological": [
+    "no M5 19l7-14 7 14 letter-A path in pipeline HTML",
+    "visible nav svg max/min size ratio <= 1.35",
+    "visible nav svg CSS box 16–26px",
+    "nav svg getBBox stays inside 24 viewBox",
+    "nav svg overflow vs parent <= 1.5px",
+    "four unique craft-nav icons per hard brief",
+    "stroke-linejoin=round and overflow=hidden on craft-nav",
+    "EXTERNAL_BENCHMARK.available === false"
+  ]
+}

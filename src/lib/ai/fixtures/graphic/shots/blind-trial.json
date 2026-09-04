@@ -1,0 +1,151 @@
+{
+  "briefId": "perfume",
+  "brief": "FORMATO: app telefono 390×844. kind=app. Tab in basso, 5 schermate. NON un sito.\n\nMaison Lumière: gestione profumi premium, flaconi, note olfattive e guardaroba.",
+  "seed": 2013884394,
+  "order": [
+    "A",
+    "B"
+  ],
+  "mapping": {
+    "A": "maison-lumiere",
+    "B": "lumiere-or"
+  },
+  "labels": {
+    "A": "Candidate A",
+    "B": "Candidate B"
+  },
+  "scores": {
+    "A": {
+      "slot": "A",
+      "criteria": [
+        {
+          "id": "hierarchy",
+          "label": "Gerarchia",
+          "score": 5,
+          "motivation": "Titoli presenti, scala tipografica incompleta."
+        },
+        {
+          "id": "composition",
+          "label": "Composizione",
+          "score": 3,
+          "motivation": "Desktop boxed (max 1080/1100) con bande vuote ai lati."
+        },
+        {
+          "id": "density",
+          "label": "Densità utile",
+          "score": 3,
+          "motivation": "Desktop boxed (max 1080/1100) con bande vuote ai lati."
+        },
+        {
+          "id": "imagery",
+          "label": "Imagery di dominio",
+          "score": 2,
+          "motivation": "Hero/card con forme geometriche o gradienti al posto di imagery di dominio."
+        },
+        {
+          "id": "originality",
+          "label": "Originalità",
+          "score": 2,
+          "motivation": "Icone o lastre ancora riciclate dal fallback."
+        },
+        {
+          "id": "typography",
+          "label": "Tipografia",
+          "score": 3,
+          "motivation": "Tipografia di sistema, senza rampa."
+        },
+        {
+          "id": "color",
+          "label": "Colore",
+          "score": 5,
+          "motivation": "Pochi inchiostri, gerarchia cromatica debole."
+        },
+        {
+          "id": "controls",
+          "label": "Controllo/micro-interazione",
+          "score": 3,
+          "motivation": "Micro-interazione assente o solo hover."
+        },
+        {
+          "id": "responsive",
+          "label": "Responsive",
+          "score": 7,
+          "motivation": "Un solo layout, non device-aware."
+        },
+        {
+          "id": "a11y",
+          "label": "Accessibilità",
+          "score": 8,
+          "motivation": "Focus visibile e etichette aria sul mestiere."
+        }
+      ],
+      "total": 41
+    },
+    "B": {
+      "slot": "B",
+      "criteria": [
+        {
+          "id": "hierarchy",
+          "label": "Gerarchia",
+          "score": 5,
+          "motivation": "Titoli presenti, scala tipografica incompleta."
+        },
+        {
+          "id": "composition",
+          "label": "Composizione",
+          "score": 10,
+          "motivation": "Composizione device-aware con lastre/featured plate o desk."
+        },
+        {
+          "id": "density",
+          "label": "Densità utile",
+          "score": 9,
+          "motivation": "Densità utile: voci, lastre o KPI con soggetto di dominio."
+        },
+        {
+          "id": "imagery",
+          "label": "Imagery di dominio",
+          "score": 9,
+          "motivation": "Imagery di dominio con parti semantiche (garment/dish/scene/room/bottle)."
+        },
+        {
+          "id": "originality",
+          "label": "Originalità",
+          "score": 7,
+          "motivation": "Icone o lastre ancora riciclate dal fallback."
+        },
+        {
+          "id": "typography",
+          "label": "Tipografia",
+          "score": 3,
+          "motivation": "Tipografia di sistema, senza rampa."
+        },
+        {
+          "id": "color",
+          "label": "Colore",
+          "score": 7,
+          "motivation": "Pochi inchiostri, gerarchia cromatica debole."
+        },
+        {
+          "id": "controls",
+          "label": "Controllo/micro-interazione",
+          "score": 3,
+          "motivation": "Micro-interazione assente o solo hover."
+        },
+        {
+          "id": "responsive",
+          "label": "Responsive",
+          "score": 10,
+          "motivation": "Breakpoint tablet e desktop con chrome device-aware."
+        },
+        {
+          "id": "a11y",
+          "label": "Accessibilità",
+          "score": 10,
+          "motivation": "Focus visibile e etichette aria sul mestiere."
+        }
+      ],
+      "total": 73
+    }
+  }
+}

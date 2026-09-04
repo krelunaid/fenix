@@ -1,0 +1,36 @@
+{
+  "slice": "adaptive palette engine + anti-template composition",
+  "against": "5c3e9767962b4fbcbcd21260772aea20f09bbe3a",
+  "visualScoreHonest": 87,
+  "claim100": false,
+  "externalParity": false,
+  "externalBenchmark": "non disponibile",
+  "axes": {
+    "paletteEngine": {
+      "before": 48,
+      "after": 90,
+      "notes": "8 famiglie distinte, override hex, anti-ripetizione OKLab, fallback hashato. Non tautologico sul corpus 22 brief."
+    },
+    "repoVociComposition": {
+      "before": 42,
+      "after": 88,
+      "notes": "Prima: ceramic phone-seed terracotta, tab Tavolo/Registra, 3 voci. Dopo: source-timeline, SHA, rami, sync, scarto. SVG procedurale, non fotografia."
+    },
+    "antiTemplateDomains": {
+      "before": 40,
+      "after": 84,
+      "notes": "Clinica agenda, Pulse palco, Carta Luce magazine, Pastello bacheca, Segnale nastro. Distinti tra loro; restano seed deterministici."
+    },
+    "aaContrast": {
+      "before": 80,
+      "after": 92,
+      "notes": "fg/bg >= 4.5 e muted/bg >= 3 sul corpus. Surface distinguibile."
+    }
+  },
+  "notClaimed": [
+    "100/100",
+    "parità Emergent",
+    "fotografia",
+    "clone GitHub"
+  ]
+}

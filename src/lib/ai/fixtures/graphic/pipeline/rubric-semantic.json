@@ -1,0 +1,64 @@
+{
+  "against": "7812483c7d7066bf62d4a59a3818dd91661237ab",
+  "slice": "semantic asset diversity + material depth",
+  "visualScoreHonest": 93,
+  "externalParity": false,
+  "externalBenchmark": "benchmark esterno non disponibile",
+  "claim100": false,
+  "independentPrior": 91,
+  "priorSlice": "5c3e9767962b4fbcbcd21260772aea20f09bbe3a",
+  "axes": {
+    "navIcons": {
+      "before": 92,
+      "after": 92,
+      "note": "Unchanged: 24-box round-join craft nav, bbox/overflow gate D/T/M."
+    },
+    "typeSystems": {
+      "before": 88,
+      "after": 88,
+      "note": "Unchanged: six display faces, device-aware chrome."
+    },
+    "imagery": {
+      "before": 82,
+      "after": 91,
+      "note": "Coat keeps V-opening, lapels, buttons, pockets on a dress form. Dress gains hip and a flared hem instead of a tube. Trousers hang from a hanger with seat, drape folds, belt loops and a real leg gap — not two bars. Ricciola/gambero/ostrica/tonno stay four platings. Olivo is a terraced grove with silver canopy masses, not a lollipop tree. Contact sheet has film rebate frames. Still procedural SVG, not photography."
+    },
+    "semanticDiversity": {
+      "before": 55,
+      "after": 93,
+      "note": "Look/ticket/plate titles still map 1:1 onto data-garment/data-dish/data-scene. Olivo requires grove+terrace and rejects the 5c3e976 canopy path. Trousers require seat+drape. Canvas fingerprints still fail reused compositions. Title must sit below the sil, not overlay the garment."
+    },
+    "emptySpaceHierarchy": {
+      "before": 90,
+      "after": 91,
+      "note": "Fashion subjects scaled to 0.9 so hem and stand survive slice on M/T. Look titles padded below the sil."
+    },
+    "opsDesk": {
+      "before": 90,
+      "after": 90,
+      "note": "Unchanged."
+    },
+    "interaction": {
+      "before": 90,
+      "after": 90,
+      "note": "in prova / data-state=on kept. Hover/pressed/loading/empty/success gates kept D/T/M."
+    }
+  },
+  "nonTautological": [
+    "GEOMETRIC_REGRESSIONS rejects 7812483 oval coat, tube trousers, blob gambero/ostrica AND the 5c3e976 olivo lollipop canopy M214 176 C198 148",
+    "fashion slots 0-3 require four distinct data-garment values (coat/dress/trousers/skirt)",
+    "coat requires data-part=shoulder and waist, shoulder getBBox width > 1.08 × waist",
+    "trousers require waistband, crease, seat, drape, two data-part=leg with a gap, cuff, hanger",
+    "look with data-garment=trousers must have seat+drape and leg gap (not only the featured hero)",
+    "look title top >= sil bottom - 8px (fails if CAPPOTTO is painted over the hem)",
+    "crudo tickets: title Ricciola|Gambero|Ostrica|Tonno must equal data-dish, four unique dishes",
+    "ticket thumbs D/T: canvas hue/luminance fingerprint pairwise distance >= 48",
+    "look sils D/T and atelier plates D/T: fingerprint pairwise distance",
+    "gambero requires antenna+shell; ostrica requires shell; tonno requires fat-line",
+    "dish fill-set Jaccard < 0.72 across ricciola/gambero/ostrica/tonno",
+    "atelier lastre: title Pozzo|Olivo|Fienile must equal data-scene; olivo requires grove+terrace and forbids canopy",
+    "contact sheet slot 3 requires data-part=frame",
+    "look/ticket/plate h2 height >= 14 and width >= 48; look cards overlap area < 24px",
+    "EXTERNAL_BENCHMARK.available === false"
+  ]
+}

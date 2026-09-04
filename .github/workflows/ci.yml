@@ -1,0 +1,98 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.7"
+      - name: Verified Gradle wrapper jar
+        run: |
+          dest=workers/release/vendor/gradle-wrapper.jar
+          mkdir -p workers/release/vendor
+          if [ ! -s "$dest" ]; then
+            curl -fsSL https://raw.githubusercontent.com/gradle/gradle/v8.7.0/gradle/wrapper/gradle-wrapper.jar -o "$dest"
+          fi
+          echo "cb0da6751c2b753a16ac168bb354870ebb1e162e9083f116729cec9c781156b8  $dest" | sha256sum -c -
+      - run: pnpm install --frozen-lockfile
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            playwright-${{ runner.os }}-
+      - name: Install Playwright Chromium
+        run: pnpm exec playwright install --with-deps chromium
+      - run: node scripts/secret-scan.mjs
+      - run: pnpm typecheck
+      - run: pnpm build
+      - run: pnpm test
+
+  postgres-reliability:
+    name: postgres-16-reliability
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: fenix_ci
+          POSTGRES_PASSWORD: fenix_ci_not_a_secret
+          POSTGRES_DB: fenix_reliability
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U fenix_ci -d fenix_reliability"
+          --health-interval 4s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      # Fixture CI credentials. Not a production secret.
+      DATABASE_URL: postgres://fenix_ci:fenix_ci_not_a_secret@127.0.0.1:5432/fenix_reliability
+      PGPASSWORD: fenix_ci_not_a_secret
+      FENIX_REQUIRE_PG16: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Install PostgreSQL 16 client
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y postgresql-client-16
+          pg_dump --version
+          pg_restore --version
+          pg_dump --version | grep -E ' 16\.' >/dev/null
+          pg_restore --version | grep -E ' 16\.' >/dev/null
+      - run: pnpm install --frozen-lockfile
+      - name: Production-like PostgreSQL 16 harness
+        run: pnpm run test:postgres-reliability
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: postgres-reliability-report
+          path: artifacts/postgres-reliability.json
+          if-no-files-found: error

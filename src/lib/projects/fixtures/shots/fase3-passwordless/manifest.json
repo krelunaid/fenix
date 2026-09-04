@@ -1,0 +1,20 @@
+{
+  "generatedAt": "2026-09-04T20:53:02.942Z",
+  "shots": [
+    {
+      "name": "passwordless-D.png",
+      "sha256": "bca634b22b5f847d977e31868dcd98203740f0fe312019a6f0a0ec8484bf8469",
+      "bytes": 32679
+    },
+    {
+      "name": "passwordless-T.png",
+      "sha256": "7cac7b732caffbb5a9ee7dd4ca14f7df9e89a4b82ca785d0b033399b3c410a8a",
+      "bytes": 33810
+    },
+    {
+      "name": "passwordless-M.png",
+      "sha256": "a6ba4eae7a731d90044be58cf5ceb712860e7b3e32e05a38db4a233f1ef7a7b5",
+      "bytes": 26221
+    }
+  ]
+}

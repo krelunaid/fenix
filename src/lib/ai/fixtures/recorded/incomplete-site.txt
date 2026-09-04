@@ -1,0 +1,19 @@
+<<<META>>>
+{"name":"Onda","tagline":"Collezione","kind":"site","summary":"Payload incompleto dichiarato","direction":"inchiostro","palette":{"bg":"#120c1c","surface":"#1c1624","elevated":"#241c2c","fg":"#f4efe8","muted":"#a890a0","accent":"#e85d4c","line":"#3a3048","accentInk":"#120c1c","success":"#3d9a6a","warning":"#c4a15a"}}
+<<<HTML>>>
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Onda incompleta</title>
+<style>
+:root{--bg:#120c1c;--fg:#f4efe8;--accent:#e85d4c}
+body{margin:0;background:#120c1c;color:#f4efe8;font:16px/1.5 Georgia,serif}
+</style>
+</head>
+<body>
+<p>Pagina incompleta senza navigazione, senza sezioni e senza API Fenix. Fixture worker-shaped di prova, non una completion xAI.</p>
+</body>
+</html>
+<<<END>>>

@@ -1,0 +1,199 @@
+@import "tailwindcss";
+
+@theme {
+  --font-display: "Manrope", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Manrope", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  --color-background: #07041a;
+  --color-foreground: #f4f1ff;
+  --color-card: #120c28;
+  --color-raised: #1a1238;
+  --color-muted: #1a1238;
+  --color-muted-foreground: #9b93c2;
+  --color-faint: #6e6794;
+  --color-primary: #8b7cff;
+  --color-primary-foreground: #f4f1ff;
+  --color-border: #2a2150;
+  --color-ring: #8b7cff;
+  --color-destructive: #f0719a;
+  --color-paper: #120c28;
+  --color-paper-foreground: #f4f1ff;
+  --color-paper-muted: #9b93c2;
+
+  --radius-xs: 4px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-2xl: 32px;
+
+  --shadow-soft: 0 24px 60px -32px rgb(0 0 0 / 0.55);
+}
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    background: var(--color-background);
+    color: var(--color-foreground);
+    color-scheme: dark;
+  }
+
+  html,
+  body,
+  #app {
+    min-height: 100%;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    background: var(--color-background);
+    color: var(--color-foreground);
+  }
+
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+
+  :focus {
+    outline: none;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-ring);
+    outline-offset: 2px;
+  }
+
+  a:focus-visible,
+  button:focus-visible,
+  [role="button"]:focus-visible,
+  input:focus-visible,
+  textarea:focus-visible,
+  select:focus-visible {
+    outline: 2px solid var(--color-ring);
+    outline-offset: 2px;
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+    font-weight: 400;
+    letter-spacing: -0.03em;
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  ::selection {
+    background: var(--color-foreground);
+    color: var(--color-background);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+.helix-grid {
+  background-color: #07041a;
+  background-image:
+    linear-gradient(rgba(124, 107, 255, 0.09) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(124, 107, 255, 0.09) 1px, transparent 1px);
+  background-size: 52px 52px;
+}
+
+.fenix-grad {
+  background: linear-gradient(100deg, #c4b5fd 0%, #818cf8 45%, #67e8f9 100%);
+  background-clip: text;
+  color: transparent;
+}
+
+.rise-in {
+  animation: rise 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.rise-in-2 {
+  animation: rise 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.08s both;
+}
+.rise-in-3 {
+  animation: rise 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.16s both;
+}
+.rise-in-4 {
+  animation: rise 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.24s both;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.kit-orb {
+  animation: kit-breathe 1.6s ease-in-out infinite;
+  filter: drop-shadow(0 0 22px rgba(124, 107, 255, 0.65));
+}
+
+.kit-led {
+  background: linear-gradient(180deg, #e9d5ff 0%, #7c6bff 55%, #22d3ee 100%);
+  box-shadow: 0 0 8px rgba(124, 107, 255, 0.7);
+  transition: height 70ms linear;
+}
+
+@keyframes kit-breathe {
+  0%,
+  100% {
+    transform: scale(0.96);
+    filter: drop-shadow(0 0 14px rgba(124, 107, 255, 0.4));
+  }
+  50% {
+    transform: scale(1.04);
+    filter: drop-shadow(0 0 32px rgba(124, 107, 255, 0.85));
+  }
+}
+
+.shimmer-text {
+  background: linear-gradient(
+    90deg,
+    var(--color-muted-foreground) 0%,
+    var(--color-foreground) 50%,
+    var(--color-muted-foreground) 100%
+  );
+  background-size: 200% 100%;
+  background-clip: text;
+  color: transparent;
+  animation: shimmer 1.6s linear infinite;
+}
+
+@keyframes shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rise-in,
+  .rise-in-2,
+  .rise-in-3,
+  .rise-in-4,
+  .kit-orb,
+  .shimmer-text {
+    animation: none;
+    color: inherit;
+    background: none;
+  }
+}

@@ -1,0 +1,118 @@
+{
+  "benchmark": {
+    "fixtures": 6,
+    "viewports": 3,
+    "journeys": [
+      "gestionale-crud/D: apri vista risk",
+      "gestionale-crud/T: apri vista risk",
+      "gestionale-crud/M: apri vista risk",
+      "consumer-mobile/D: apri vista pezzi",
+      "consumer-mobile/T: apri vista pezzi",
+      "consumer-mobile/M: apri vista pezzi",
+      "dashboard-multifile/D: apri vista risk",
+      "dashboard-multifile/T: apri vista risk",
+      "dashboard-multifile/M: apri vista risk",
+      "utility-calculator/D: aggiungi spesa → saldi ricalcolati",
+      "utility-calculator/T: aggiungi spesa → saldi ricalcolati",
+      "utility-calculator/M: aggiungi spesa → saldi ricalcolati",
+      "interactive-game/D: gira due carte → contatore mosse",
+      "interactive-game/T: gira due carte → contatore mosse",
+      "interactive-game/M: gira due carte → contatore mosse",
+      "portfolio-contact/D: invia richiesta → conferma persistita",
+      "portfolio-contact/T: invia richiesta → conferma persistita",
+      "portfolio-contact/M: invia richiesta → conferma persistita"
+    ]
+  },
+  "files": [
+    {
+      "name": "gestionale-crud-D.png",
+      "sha256": "7f49e326acfd3261f69fc3066865ff3642a36129d4850102e1578fc1c3d7fd26",
+      "bytes": 59363
+    },
+    {
+      "name": "gestionale-crud-T.png",
+      "sha256": "bdffc618a3d4a79ea5a2c9e311669f8144b10017c66d1a931e65fd5023357047",
+      "bytes": 57271
+    },
+    {
+      "name": "gestionale-crud-M.png",
+      "sha256": "d7168d4c904301f79cd79a7592473c50b5d0574b18343d780cfb1d882c88f1f4",
+      "bytes": 53833
+    },
+    {
+      "name": "consumer-mobile-D.png",
+      "sha256": "05a31dc5565edef498522596d227d05c209c83bb8362941aef9206a427cecaa2",
+      "bytes": 75212
+    },
+    {
+      "name": "consumer-mobile-T.png",
+      "sha256": "f41add0eec6caa3ed8b4fec5d6f8618dd1940d3514371eec7ede667a268a76d1",
+      "bytes": 79792
+    },
+    {
+      "name": "consumer-mobile-M.png",
+      "sha256": "9b4dc9925d4887360af31129825b103073f045f35f78dce4db7e3a684b6f6c45",
+      "bytes": 57928
+    },
+    {
+      "name": "dashboard-multifile-D.png",
+      "sha256": "7f49e326acfd3261f69fc3066865ff3642a36129d4850102e1578fc1c3d7fd26",
+      "bytes": 59363
+    },
+    {
+      "name": "dashboard-multifile-T.png",
+      "sha256": "bdffc618a3d4a79ea5a2c9e311669f8144b10017c66d1a931e65fd5023357047",
+      "bytes": 57271
+    },
+    {
+      "name": "dashboard-multifile-M.png",
+      "sha256": "d7168d4c904301f79cd79a7592473c50b5d0574b18343d780cfb1d882c88f1f4",
+      "bytes": 53833
+    },
+    {
+      "name": "utility-calculator-D.png",
+      "sha256": "4caf7a6095a825b717041eedb4d9ab4211be7a0100991bef054cd52dd7408a38",
+      "bytes": 28342
+    },
+    {
+      "name": "utility-calculator-T.png",
+      "sha256": "65ee2176d0bd1275b77c28b27f1c609516a901d757601c00f96ee90edbbe24c2",
+      "bytes": 27787
+    },
+    {
+      "name": "utility-calculator-M.png",
+      "sha256": "09d523b5c79c5fdab88017f023e3b8f45720b214ed4dbed2f561968ca4483403",
+      "bytes": 24881
+    },
+    {
+      "name": "interactive-game-D.png",
+      "sha256": "fedfe0d7d4ccbe7469a6957856b7d8404c746b1b0a30d74e4ee485d661e25f8a",
+      "bytes": 16518
+    },
+    {
+      "name": "interactive-game-T.png",
+      "sha256": "a3982c522dcc4910156095a036b016a22e1cebdd9a3f2027af70a41d50bd7104",
+      "bytes": 16576
+    },
+    {
+      "name": "interactive-game-M.png",
+      "sha256": "c1dc37b3d01b6b8129819a55716921e71d832aec7db0f2750d21b04e4671345f",
+      "bytes": 14522
+    },
+    {
+      "name": "portfolio-contact-D.png",
+      "sha256": "e06c89e9f36a84553344c8fa49dc417de15a1599da8e941321a3d559d22491a0",
+      "bytes": 32915
+    },
+    {
+      "name": "portfolio-contact-T.png",
+      "sha256": "799a687d489a2ee8a5d3d32059b160253e0087308d8b9a338e1a1d12e79e0d18",
+      "bytes": 36461
+    },
+    {
+      "name": "portfolio-contact-M.png",
+      "sha256": "85f53291549a1816a41d9adc8d758a46e097abb8165c5b2f374c75140fd41402",
+      "bytes": 28326
+    }
+  ]
+}

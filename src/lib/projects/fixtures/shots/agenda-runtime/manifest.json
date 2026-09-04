@@ -1,0 +1,42 @@
+{
+  "product": "Agenda-runtime",
+  "viewports": [
+    "D",
+    "T",
+    "M"
+  ],
+  "files": [
+    {
+      "name": "agenda-runtime-week-d.png",
+      "sha256": "4b5224f902a79d110e1d00a41ccfa3369b3c367aeb164515ab5ca47a9e88dfcc",
+      "bytes": 46938
+    },
+    {
+      "name": "agenda-runtime-d.png",
+      "sha256": "792304bf95fedbcb75f9d64ccb3c30411e48b4b27d84e89c96b2ec1c6492a951",
+      "bytes": 47037
+    },
+    {
+      "name": "agenda-runtime-week-t.png",
+      "sha256": "4aa356acc3887bf246b71d6acf1b742832776c5d5062b7da838195b9ed336f11",
+      "bytes": 41999
+    },
+    {
+      "name": "agenda-runtime-t.png",
+      "sha256": "44eaee6c4e6e3d983eafbebff3ababf0ff33005b274f8a1a01950ca83293a54b",
+      "bytes": 45233
+    },
+    {
+      "name": "agenda-runtime-week-m.png",
+      "sha256": "550f024b4b1b45952b848c0cd03acea32b1c2a3b3dafc148765229cb87ccf47f",
+      "bytes": 37176
+    },
+    {
+      "name": "agenda-runtime-m.png",
+      "sha256": "a27a1863b1e4a817f5087b71bfbbd310cbabff92e42f2e6772e287f1721abbd0",
+      "bytes": 40081
+    }
+  ],
+  "credits": 0,
+  "residual": "Five-brief graphic residual moved to fixtures/graphic/five before/after on parent a930493. This file proves Agenda function, not 9/10 craft."
+}

@@ -1,0 +1,60 @@
+{
+  "schema": "fenix-revisions-evidence-v1",
+  "viewports": [
+    "desktop",
+    "tablet",
+    "phone"
+  ],
+  "journeys": [
+    "activity-diagnostics",
+    "branch-merge",
+    "rollback"
+  ],
+  "screenshots": [
+    {
+      "name": "activity-desktop.png",
+      "bytes": 107123,
+      "sha256": "bccd8b01ccd8e3828d1a6a7a438971ba3dc2dc3e33fea64f42b36523882498d8"
+    },
+    {
+      "name": "activity-phone.png",
+      "bytes": 54745,
+      "sha256": "eafbbb25cbc401e3275c0e7f8d49c4ceec2ab7f1611f08f2f08ff23bfd5b5913"
+    },
+    {
+      "name": "activity-tablet.png",
+      "bytes": 92854,
+      "sha256": "45784f4a9c63cbf428dfdc7aa21ef41fbfda5d57cfbe48f11a84c5d7bbdd5110"
+    },
+    {
+      "name": "merge-desktop.png",
+      "bytes": 109368,
+      "sha256": "32aa3071efbcad4833b5a430f4d069bb0cf99e3c22415c8ad835b58fb9669b0a"
+    },
+    {
+      "name": "merge-phone.png",
+      "bytes": 51174,
+      "sha256": "fb02ac421f6f2c9da30c540e84ff53e81c59ce429c41817a77efccd7e4a7a9c8"
+    },
+    {
+      "name": "merge-tablet.png",
+      "bytes": 97130,
+      "sha256": "e43ba2abc89a64f98b217329c3153aa38171b6cf3e4803c55342d58bcef116ba"
+    },
+    {
+      "name": "versions-desktop.png",
+      "bytes": 99620,
+      "sha256": "91e6d3c4c555641945d840b22243ca477833f2e99d0db16edf50ea4083f79cc4"
+    },
+    {
+      "name": "versions-phone.png",
+      "bytes": 47802,
+      "sha256": "7df86c95adeffca71e27f062e1f16fde4d780e6e7f61cc871e23c73253fa16ee"
+    },
+    {
+      "name": "versions-tablet.png",
+      "bytes": 90558,
+      "sha256": "1ee3199843c2606723b0ceb4b77c3243ec09db2cdf7189c81cc16f7a93f11eab"
+    }
+  ]
+}

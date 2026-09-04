@@ -1,0 +1,35 @@
+{
+  "generatedAt": "2026-09-04T20:54:13.727Z",
+  "shots": [
+    {
+      "name": "workspace-D.png",
+      "sha256": "ffa481485e72aa6ccba0f5303d335e81a49baf9363a363aa663fed3e10d7fae4",
+      "bytes": 111024
+    },
+    {
+      "name": "workspace-T.png",
+      "sha256": "d9a2e213b86202a971c23be18e76d43986d516804b83dd700203f67cf1b48028",
+      "bytes": 98263
+    },
+    {
+      "name": "workspace-M.png",
+      "sha256": "4a6ed398848a8e77e5431a9d88f1e9188092f50b9024ba387ed3555cde8f6053",
+      "bytes": 53407
+    },
+    {
+      "name": "coedit-D.png",
+      "sha256": "2a2403bebe801c3c293cd767b54a5a6fe4114f6248e647083365652dd1370c95",
+      "bytes": 144342
+    },
+    {
+      "name": "coedit-T.png",
+      "sha256": "b02b285f99ba037a1b2719788154b88585764a01ff391b94cfe2f39c09c2ad23",
+      "bytes": 75023
+    },
+    {
+      "name": "coedit-M.png",
+      "sha256": "0471b19063923b7705d8c2f963df7a47dbe76e4443a98f36562f34aa7932b052",
+      "bytes": 73784
+    }
+  ]
+}

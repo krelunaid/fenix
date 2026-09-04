@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8"/>
+<title>Argilla Viva</title>
+<style>
+:root{--bg:#f5f5f7;--fg:#1d1d1f;--accent:#0071e3}
+body{font-family:Inter,system-ui,sans-serif;background:#f5f5f7;color:#1d1d1f;margin:0}
+.modal{display:none;position:fixed;inset:0;background:#fff;padding:24px}
+.modal.open{display:block}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<header>
+  <strong>Argilla Viva</strong>
+  <nav>
+    <button type="button" data-view="dash" class="on">Dashboard</button>
+    <button type="button" data-view="inv">Inventario</button>
+    <button type="button" data-view="ord">Ordini</button>
+    <button type="button" data-view="cli">Clienti</button>
+  </nav>
+</header>
+<main>
+  <section data-view-panel="dash">
+    <h1>Dashboard</h1>
+    <div class="summary" id="dash-summary">
+      <div class="summary-item"><b>24</b> pezzi</div>
+      <div class="summary-item"><b>102</b> in stock</div>
+      <div class="summary-item">€<b>3604</b></div>
+    </div>
+    <h2>Ultimi pezzi inseriti</h2>
+    <table id="recent">
+      <thead>
+        <tr><th>Nome</th><th>Prezzo</th></tr>
+      </thead>
+      <tbody id="recent-rows">
+        <tr><td>P20</td><td>€18</td></tr>
+        <tr><td>Q1</td><td>€18</td></tr>
+        <tr><td>Q2</td><td>€18</td></tr>
+        <tr><td>Q3</td><td>€18</td></tr>
+      </tbody>
+    </table>
+    <button type="button" id="btn-new-dash">+ Nuovo pezzo</button>
+  </section>
+  <section data-view-panel="inv" hidden>
+    <h1>Inventario</h1>
+    <div class="summary" id="inv-summary">
+      <div class="summary-item"><b>24</b> pezzi</div>
+      <div class="summary-item"><b>102</b> in stock</div>
+      <div class="summary-item">€<b>3604</b></div>
+    </div>
+    <button type="button" id="btn-new">+ Nuovo pezzo</button>
+    <table>
+      <thead>
+        <tr><th>Nome</th><th>Categoria</th><th>Stato</th><th>QTÀ</th><th>Prezzo</th><th>Azioni</th></tr>
+      </thead>
+      <tbody id="rows">
+        <tr><td>Ciotola</td><td>Terraglia</td><td>in laboratorio</td><td>4</td><td>€42</td><td><button type="button" class="edit">Modifica</button></td></tr>
+        <tr><td>P01</td><td>Terraglia</td><td>in laboratorio</td><td>4</td><td>€40</td><td><button type="button" class="edit">Modifica</button></td></tr>
+        <tr><td>P02</td><td>Terraglia</td><td>in laboratorio</td><td>4</td><td>€40</td><td><button type="button" class="edit">Modifica</button></td></tr>
+        <tr><td>P03</td><td>Terraglia</td><td>in laboratorio</td><td>4</td><td>€40</td><td><button type="button" class="edit">Modifica</button></td></tr>
+        <tr><td>P04</td><td>Terraglia</td><td>in laboratorio</td><td>4</td><td>€40</td><td><button type="button" class="edit">Modifica</button></td></tr>
+        <tr><td>P05</td><td>Terraglia</td><td>in laboratorio</td><td>4</td><td>€40</td><td><button type="button" class="edit">Modifica</button></td></tr>
+        <tr><td>P06</td><td>Terraglia</td><td>in laboratorio</td><td>4</td><td>€40</td><td><button type="button" class="edit">Modifica</button></td></tr>
+        <tr><td>P07</td><td>Terraglia</td><td>in laboratorio</td><td>4</td><td>€40</td><td><button type="button" class="edit">Modifica</button></td></tr>
+        <tr><td>P08</td><td>Terraglia</td><td>in laboratorio</td><td>4</td><td>€40</td><td><button type="button" class="edit">Modifica</button></td></tr>
+        <tr><td>P09</td><td>Terraglia</td><td>in laboratorio</td><td>4</td><td>€40</td><td><button type="button" class="edit">Modifica</button></td></tr>
+        <tr><td>P10</td><td>Terraglia</td><td>in laboratorio</td><td>4</td><td>€40</td><td><button type="button" class="edit">Modifica</button></td></tr>
+        <tr><td>P11</td><td>Terraglia</td><td>in laboratorio</td><td>4</td><td>€40</td><td><button type="button" class="edit">Modifica</button></td></tr>
+        <tr><td>P12</td><td>Terraglia</td><td>in laboratorio</td><td>4</td><td>€40</td><td><button type="button" class="edit">Modifica</button></td></tr>
+        <tr><td>P13</td><td>Terraglia</td><td>in laboratorio</td><td>4</td><td>€40</td><td><button type="button" class="edit">Modifica</button></td></tr>
+        <tr><td>P14</td><td>Terraglia</td><td>in laboratorio</td><td>4</td><td>€40</td><td><button type="button" class="edit">Modifica</button></td></tr>
+        <tr><td>P15</td><td>Terraglia</td><td>in laboratorio</td><td>4</td><td>€40</td><td><button type="button" class="edit">Modifica</button></td></tr>
+        <tr><td>P16</td><td>Terraglia</td><td>in laboratorio</td><td>4</td><td>€40</td><td><button type="button" class="edit">Modifica</button></td></tr>
+        <tr><td>P17</td><td>Terraglia</td><td>in laboratorio</td><td>4</td><td>€40</td><td><button type="button" class="edit">Modifica</button></td></tr>
+        <tr><td>P18</td><td>Terraglia</td><td>in laboratorio</td><td>4</td><td>€40</td><td><button type="button" class="edit">Modifica</button></td></tr>
+        <tr><td>P19</td><td>Terraglia</td><td>in laboratorio</td><td>4</td><td>€40</td><td><button type="button" class="edit">Modifica</button></td></tr>
+        <tr><td>P20</td><td>Terraglia</td><td>in laboratorio</td><td>4</td><td>€18</td><td><button type="button" class="edit">Modifica</button></td></tr>
+        <tr><td>Q1</td><td>Gres</td><td>in vetrina</td><td>6</td><td>€18</td><td><button type="button" class="edit">Modifica</button></td></tr>
+        <tr><td>Q2</td><td>Gres</td><td>in vetrina</td><td>6</td><td>€18</td><td><button type="button" class="edit">Modifica</button></td></tr>
+        <tr><td>Q3</td><td>Gres</td><td>in vetrina</td><td>6</td><td>€18</td><td><button type="button" class="edit">Modifica</button></td></tr>
+      </tbody>
+    </table>
+    <div class="modal" id="modal">
+      <form id="form-pezzo">
+        <label>Nome</label>
+        <input id="p-nome" placeholder="Nome del pezzo"/>
+        <label>Categoria</label>
+        <select id="p-cat"><option>Terraglia</option><option>Gres</option></select>
+        <label>Stato</label>
+        <select id="p-stato"><option>in laboratorio</option><option>in vetrina</option></select>
+        <label>Quantità</label>
+        <input id="p-qty" type="number" value="1"/>
+        <label>Prezzo</label>
+        <input id="p-prezzo" type="number" step="0.01" value="0"/>
+        <button type="button" id="btn-cancel">Annulla</button>
+        <button type="submit" id="btn-save">Salva</button>
+      </form>
+    </div>
+  </section>
+  <section data-view-panel="ord" hidden><h1>Ordini</h1></section>
+  <section data-view-panel="cli" hidden><h1>Clienti</h1></section>
+</main>
+<script>
+(function(){
+  window.Fenix = {
+    load: function(){ return Promise.resolve({ items: [] }); },
+    save: function(){ return Promise.resolve(); }
+  };
+  var items = [];
+  document.querySelectorAll("#rows tr").forEach(function(tr){
+    var td = tr.querySelectorAll("td");
+    items.push({
+      nome: ((td[0] && td[0].textContent) || "").trim(),
+      categoria: ((td[1] && td[1].textContent) || "").trim(),
+      stato: ((td[2] && td[2].textContent) || "").trim(),
+      qty: ((td[3] && td[3].textContent) || "").trim(),
+      prezzo: ((td[4] && td[4].textContent) || "").trim()
+    });
+  });
+  function rowInv(r){
+    return "<tr><td>"+r.nome+"</td><td>"+r.categoria+"</td><td>"+r.stato+"</td><td>"+r.qty+"</td><td>"+r.prezzo+"</td><td><button type=button class=edit>Modifica</button></td></tr>";
+  }
+  function rowRecent(r){
+    return "<tr><td>"+r.nome+"</td><td>"+r.prezzo+"</td></tr>";
+  }
+  function seedLine(){
+    var stock = 0, valore = 0;
+    items.forEach(function(r){
+      var q = parseFloat(String(r.qty).replace(/[^0-9.-]/g, "")) || 0;
+      var p = parseFloat(String(r.prezzo).replace(/€/g, "").replace(/[^0-9.,-]/g, "").replace(",", ".")) || 0;
+      stock += q;
+      valore += q * p;
+    });
+    return { pezzi: items.length, stock: stock, valore: Math.round(valore) };
+  }
+  function fillSummary(id){
+    var t = seedLine();
+    var box = document.getElementById(id);
+    if (!box) return;
+    box.innerHTML = '<div class="summary-item"><b>'+t.pezzi+'</b> pezzi</div><div class="summary-item"><b>'+t.stock+'</b> in stock</div><div class="summary-item">€<b>'+t.valore+'</b></div>';
+  }
+  function renderInv(){
+    var tb = document.getElementById("rows");
+    if (tb) tb.innerHTML = items.map(rowInv).join("");
+    fillSummary("inv-summary");
+  }
+  function renderDash(){
+    var tb = document.getElementById("recent-rows");
+    if (tb) tb.innerHTML = items.slice(-5).map(rowRecent).join("");
+    fillSummary("dash-summary");
+  }
+  function show(id){
+    document.querySelectorAll("[data-view-panel]").forEach(function(p){
+      p.hidden = p.getAttribute("data-view-panel") !== id;
+    });
+    document.querySelectorAll("[data-view]").forEach(function(b){
+      b.classList.toggle("on", b.getAttribute("data-view") === id);
+    });
+    if (id === "inv") renderInv();
+    if (id === "dash") renderDash();
+  }
+  window.Fenix.load("argilla_viva").then(function (st) {
+    if (st && Array.isArray(st.items) && st.items.length) return;
+  });
+  var modal = document.getElementById("modal");
+  var form = document.getElementById("form-pezzo");
+  document.getElementById("btn-new").addEventListener("click", function(){});
+  document.querySelectorAll(".edit").forEach(function(b){
+    b.addEventListener("click", function(){
+      modal.hidden = false;
+      modal.classList.add("open");
+    });
+  });
+  form.addEventListener("submit", function(e){
+    e.preventDefault();
+    var nome = form.nome && form.nome.value;
+    if (!nome) return;
+    window.Fenix.save("argilla_viva", { nome: nome });
+    modal.hidden = true;
+  });
+  document.querySelectorAll("[data-view]").forEach(function(b){
+    b.addEventListener("click", function(){
+      show(b.getAttribute("data-view"));
+    });
+  });
+  show("dash");
+  document.documentElement.setAttribute("data-fenix-ready","1");
+})();
+</script>
+</body>
+</html>

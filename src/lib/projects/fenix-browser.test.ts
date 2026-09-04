@@ -1,0 +1,1615 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { describe, it } from "node:test";
+import { type Browser } from "playwright";
+import { DEMOS } from "./demos.ts";
+import { prepareSrcDoc } from "./color-scheme.ts";
+import { RESUME_ERROR } from "./recover.ts";
+import { APP_SHELL_HTML } from "../ai/app-shell.ts";
+import { requirePreview } from "./ensure-preview.ts";
+import { holdVisualWork, isolatedPage, isBlockedPublicNetworkError, launchChromium } from "./playwright-harness.ts";
+
+const here = dirname(fileURLToPath(import.meta.url));
+const VALID = readFileSync(join(here, "fixtures/valid-app.html"), "utf8");
+const NULL_INNER = readFileSync(join(here, "fixtures/null-innerhtml.html"), "utf8");
+const NULL_FIXED = readFileSync(join(here, "fixtures/null-innerhtml-fixed.html"), "utf8");
+const LEAKED_CSS = readFileSync(join(here, "fixtures/leaked-phone-css.html"), "utf8");
+const PREVIEW = process.env.PREVIEW_URL || "http://127.0.0.1:8081";
+
+async function launch() {
+  return launchChromium();
+}
+
+async function newPage(browser: Browser, options?: Parameters<Browser["newPage"]>[0]) {
+  return isolatedPage(browser, options);
+}
+
+describe("Fenix bridge in browser", () => {
+  it("persists Split via window.Fenix.load/save across iframe reload", async () => {
+    const html = DEMOS.split.html;
+    assert.doesNotMatch(html, /\blocalStorage\b/);
+    const src = prepareSrcDoc(html, DEMOS.split.palette, "split-demo", DEMOS.split.kind);
+    const browser = await launch();
+    try {
+      const page = await newPage(browser);
+      await page.setContent(`<!DOCTYPE html><html><body>
+<iframe id="f" style="width:420px;height:720px;border:0"></iframe>
+<script>
+  window.__db = {};
+  window.addEventListener("message", function (e) {
+    var m = e.data;
+    if (!m || m.t !== "fenix-db" || !m.id) return;
+    if (m.op === "save") window.__db[m.col] = m.data;
+    var v = m.op === "load" ? (window.__db[m.col] || null) : m.data;
+    e.source.postMessage({ t: "fenix-db", id: m.id, v: v }, "*");
+  });
+</script>
+</body></html>`);
+      await page.locator("#f").evaluate((el, srcDoc: string) => {
+        (el as HTMLIFrameElement).srcdoc = srcDoc;
+      }, src);
+      const frame = page.frameLocator("#f");
+      await frame.locator("h1").filter({ hasText: "Spese" }).waitFor({ timeout: 8000 });
+      await frame.locator("#t").fill("Pane");
+      await frame.locator("#a").fill("12");
+      await frame.locator("[data-act=add]").click();
+      await frame.getByText("Pane · Anna").waitFor();
+      await page.waitForFunction(
+        () => {
+          const db = (window as unknown as { __db?: { state?: { costs?: unknown[] } } }).__db;
+          return Boolean(db?.state?.costs && db.state.costs.length >= 3);
+        },
+        null,
+        { timeout: 5000 },
+      );
+      const saved = await page.evaluate(
+        () => (window as unknown as { __db: { state?: { costs?: unknown[] } } }).__db,
+      );
+      assert.ok(
+        saved?.state?.costs && saved.state.costs.length >= 3,
+        "parent store received Fenix.save",
+      );
+      await page.locator("#f").evaluate((el, srcDoc: string) => {
+        (el as HTMLIFrameElement).srcdoc = srcDoc;
+      }, src);
+      await frame.getByText("Pane · Anna").waitFor({ timeout: 8000 });
+    } finally {
+      await browser.close();
+    }
+  });
+
+  it("site contact form saves via Fenix and survives iframe reload even if parent boxes arrays", async () => {
+    const html = `<!DOCTYPE html><html lang="it"><head><meta charset="utf-8"/><title>Bottega</title></head>
+<body>
+<nav><a href="#visita">Visita</a></nav>
+<main>
+<section id="visita">
+<form id="contact-form">
+<label for="name">Nome</label>
+<input type="text" id="name" required>
+<label for="email">Email</label>
+<input type="email" id="email" required>
+<label for="message">Messaggio</label>
+<textarea id="message" required></textarea>
+<button type="submit">Invia messaggio</button>
+</form>
+<ul id="messages-list"></ul>
+</section>
+</main>
+<footer>via</footer>
+<script>
+async function init() {
+  const form = document.getElementById("contact-form");
+  const list = document.getElementById("messages-list");
+  let messages = [];
+  try {
+    const loaded = await window.Fenix.load("messages");
+    if (Array.isArray(loaded)) messages = loaded;
+  } catch (e) {}
+  function render() {
+    list.innerHTML = "";
+    if (!messages.length) {
+      const li = document.createElement("li");
+      li.textContent = "Nessun messaggio ancora.";
+      list.appendChild(li);
+      return;
+    }
+    messages.forEach(function (msg) {
+      const li = document.createElement("li");
+      li.textContent = msg.name + " — " + msg.message;
+      list.appendChild(li);
+    });
+  }
+  render();
+  form.addEventListener("submit", async function (e) {
+    e.preventDefault();
+    const name = document.getElementById("name").value.trim();
+    const email = document.getElementById("email").value.trim();
+    const message = document.getElementById("message").value.trim();
+    if (!name || !message) return;
+    messages.push({ name: name, email: email, message: message, date: new Date().toISOString() });
+    try { await window.Fenix.save("messages", messages); } catch (err) {}
+    render();
+    form.reset();
+  });
+}
+init();
+</script>
+</body></html>`;
+    const src = prepareSrcDoc(html, "#1a1612", "bottega-form", "site");
+    assert.match(src, /var desk = true/);
+    const browser = await launch();
+    try {
+      const page = await newPage(browser);
+      await page.setContent(`<!DOCTYPE html><html><body>
+<iframe id="f" style="width:1100px;height:800px;border:0"></iframe>
+<script>
+  window.__db = {};
+  window.addEventListener("message", function (e) {
+    var m = e.data;
+    if (!m || m.t !== "fenix-db" || !m.id) return;
+    if (m.op === "save") {
+      var boxed = Array.isArray(m.data)
+        ? { _fenix: 1, rev: 1, items: m.data, writer: "", at: Date.now() }
+        : m.data;
+      window.__db[m.col] = boxed;
+      e.source.postMessage({ t: "fenix-db", id: m.id, v: { ok: true, v: boxed, durable: 1 } }, "*");
+      return;
+    }
+    e.source.postMessage({ t: "fenix-db", id: m.id, v: window.__db[m.col] || null }, "*");
+  });
+</script>
+</body></html>`);
+      await page.locator("#f").evaluate((el, srcDoc: string) => {
+        (el as HTMLIFrameElement).srcdoc = srcDoc;
+      }, src);
+      const frame = page.frameLocator("#f");
+      await frame.locator("#contact-form").waitFor({ timeout: 8000 });
+      await frame.locator("#name").fill("Anna della Luna");
+      await frame.locator("#email").fill("anna@bottegaterra.it");
+      await frame.locator("#message").fill("Vorrei prenotare una visita.");
+      await frame.locator("#contact-form button[type=submit]").click();
+      await frame.getByText("Anna della Luna").waitFor({ timeout: 5000 });
+      assert.equal(await frame.getByText("Nessun messaggio ancora.").count(), 0);
+      const saved = await page.evaluate(
+        () => (window as unknown as { __db: { messages?: { items?: { name?: string }[] } } }).__db,
+      );
+      assert.ok(
+        saved?.messages?.items?.some((m) => m.name === "Anna della Luna"),
+        "parent store received messages array inside the durability box",
+      );
+      await page.locator("#f").evaluate((el, srcDoc: string) => {
+        (el as HTMLIFrameElement).srcdoc = srcDoc;
+      }, src);
+      await frame.getByText("Anna della Luna").waitFor({ timeout: 8000 });
+    } finally {
+      await browser.close();
+    }
+  });
+
+  it("Fenix.data serializes CRUD mutations, filters safely and survives remount", async () => {
+    const html = `<!DOCTYPE html><html lang="it"><head><meta charset="utf-8"><title>Banco ordini</title></head>
+<body><header><h1>Banco ordini</h1></header><main>
+<nav><button data-view="orders">Ordini</button><button data-view="stock">Scorte</button><button data-view="reports">Report</button></nav>
+<p id="boot">avvio</p><button id="run" type="button">Esegui prova dati</button><pre id="result"></pre>
+</main><script>
+async function boot(){
+  const rows = await window.Fenix.data.query("orders");
+  document.getElementById("boot").textContent = "righe:" + rows.length;
+}
+document.getElementById("run").addEventListener("click", async function(){
+  const db = window.Fenix.data;
+  const jobs = [];
+  for (let i = 0; i < 20; i++) jobs.push(db.insert("orders", { id:"o"+i, stato:i%2?"aperto":"chiuso", totale:i }));
+  await Promise.all(jobs);
+  await Promise.all([
+    db.update("orders", "o3", { cliente:"Ada" }),
+    db.update("orders", "o3", { pagato:true })
+  ]);
+  await db.insert("tickets", { id:"t1", titolo:"Consegna" });
+  const open = await db.query("orders", { where:{ stato:"aperto" }, orderBy:"totale", direction:"desc", limit:3 });
+  const ada = await db.get("orders", "o3");
+  const removed = await db.remove("orders", "o0");
+  const all = await db.list("orders");
+  const tickets = await db.list("tickets");
+  let unsafe = false;
+  try { await db.query("../private"); } catch (error) { unsafe = true; }
+  document.getElementById("result").textContent = JSON.stringify({
+    mode:db.mode, shared:db.shared, count:all.length, open:open.map(x=>x.totale),
+    ada:ada, removed:removed, tickets:tickets.length, unsafe:unsafe
+  });
+});
+boot();
+</script></body></html>`;
+    const src = prepareSrcDoc(html, { bg: "#f4ede2", fg: "#211d18" }, "data-api-demo", "dashboard");
+    const browser = await launch();
+    try {
+      const page = await newPage(browser, { viewport: { width: 1280, height: 800 } });
+      const consoleErrors: string[] = [];
+      page.on("console", (message) => {
+        if (message.type() === "error" && !isBlockedPublicNetworkError(message.text())) {
+          consoleErrors.push(message.text());
+        }
+      });
+      await page.setContent(`<!DOCTYPE html><html><body>
+<iframe id="f" style="width:1100px;height:700px;border:0"></iframe>
+<script>
+window.__db = {};
+window.__ops = [];
+window.addEventListener("message", function(e){
+  var m=e.data;
+  if(!m || m.t!=="fenix-db" || !m.id) return;
+  window.__ops.push({op:m.op,col:m.col});
+  if(m.op==="save") window.__db[m.col]=m.data;
+  var value=m.op==="load" ? (window.__db[m.col] || null) : {ok:true,v:m.data,durable:Array.isArray(m.data)?m.data.length:0};
+  e.source.postMessage({t:"fenix-db",id:m.id,v:value},"*");
+});
+</script></body></html>`);
+      const load = () =>
+        page.locator("#f").evaluate((element, srcDoc: string) => {
+          (element as HTMLIFrameElement).srcdoc = srcDoc;
+        }, src);
+      await load();
+      const frame = page.frameLocator("#f");
+      await frame.getByText("righe:0").waitFor({ timeout: 8000 });
+      await frame.locator("#run").click();
+      await frame.locator("#result").filter({ hasText: '"count":19' }).waitFor({ timeout: 15000 });
+      const result = JSON.parse((await frame.locator("#result").textContent()) || "{}") as {
+        mode: string;
+        shared: boolean;
+        count: number;
+        open: number[];
+        ada: { cliente?: string; pagato?: boolean };
+        removed: boolean;
+        tickets: number;
+        unsafe: boolean;
+      };
+      assert.deepEqual(result, {
+        mode: "local-first",
+        shared: false,
+        count: 19,
+        open: [19, 17, 15],
+        ada: { id: "o3", stato: "aperto", totale: 3, cliente: "Ada", pagato: true },
+        removed: true,
+        tickets: 1,
+        unsafe: true,
+      });
+      const privateOps = await page.evaluate(
+        () =>
+          (window as unknown as { __ops: { col?: string }[] }).__ops.filter(
+            (entry) => entry.col === "../private",
+          ).length,
+      );
+      assert.equal(privateOps, 0, "invalid collections must be rejected before postMessage");
+      await load();
+      await frame.getByText("righe:19").waitFor({ timeout: 8000 });
+      assert.deepEqual(consoleErrors, []);
+    } finally {
+      await browser.close();
+    }
+  });
+});
+
+describe("leaked phone-kit CSS in the preview", () => {
+  it("does not show .fk-hello/.fk-tab/.fk-sheet as visible text after prepareSrcDoc", async () => {
+    const rawBrowser = await launch();
+    let raw = "";
+    try {
+      const page = await newPage(rawBrowser, { viewport: { width: 390, height: 844 } });
+      await page.setContent(LEAKED_CSS, { waitUntil: "domcontentloaded" });
+      raw = await page.evaluate(() => document.body.innerText);
+    } finally {
+      await rawBrowser.close();
+    }
+    assert.match(raw, /\.fk-hello\s*\{/, "fixture must leak CSS as visible text before repair");
+    assert.match(raw, /\.fk-tab/, "fixture must leak .fk-tab before repair");
+    assert.match(raw, /\.fk-sheet\s*\{/, "fixture must leak .fk-sheet before repair");
+
+    const src = prepareSrcDoc(LEAKED_CSS, "#efe6d4", "orto-vivo", "app");
+    assert.match(src, /data-fenix-rescued/);
+    const browser = await launch();
+    try {
+      const page = await newPage(browser, { viewport: { width: 390, height: 844 } });
+      await page.setContent(src, { waitUntil: "domcontentloaded", timeout: 15000 });
+      const visible = await page.evaluate(() => document.body.innerText);
+      assert.doesNotMatch(visible, /\.fk-hello\s*\{/);
+      assert.doesNotMatch(visible, /\.fk-tab\s*\{/);
+      assert.doesNotMatch(visible, /\.fk-sheet\s*\{/);
+      assert.match(visible, /Orto Vivo/);
+      const weight = await page
+        .locator(".fk-hello")
+        .evaluate((el) => getComputedStyle(el).fontWeight);
+      assert.ok(Number(weight) >= 600, `rescued CSS should bold the hello, got ${weight}`);
+    } finally {
+      await browser.close();
+    }
+  });
+
+  it("removes a late phone-kit CSS text node matching the production screenshot", async () => {
+    const screenshotDump =
+      ".fk-appicon{display:inline-flex;width:36px}.fk-hello{margin:0;font-size:20px}.fk-tab button{flex:1;border:none}.fk-main{overflow:auto;padding:16px}";
+    const dynamicLeak = VALID.replace(
+      "</body>",
+      `<script>document.addEventListener("DOMContentLoaded",function(){document.body.append(${JSON.stringify(screenshotDump)})})</script></body>`,
+    );
+    const src = prepareSrcDoc(dynamicLeak, "#efe6d4", "screenshot-leak", "app");
+    assert.match(src, /data-fenix-css-guard/);
+    const browser = await launch();
+    try {
+      const page = await newPage(browser, { viewport: { width: 390, height: 844 } });
+      await page.setContent(src, { waitUntil: "domcontentloaded", timeout: 15000 });
+      const visible = await page.evaluate(() => document.body.innerText);
+      assert.doesNotMatch(visible, /\.fk-appicon\s*\{/);
+      assert.doesNotMatch(visible, /\.fk-hello\s*\{/);
+      assert.doesNotMatch(visible, /\.fk-tab button\s*\{/);
+      assert.equal(await page.locator("style[data-fenix-dom-rescued]").count(), 1);
+    } finally {
+      await browser.close();
+    }
+  });
+});
+
+describe("studio overlay and resume in browser", () => {
+  it("covers the preview with an opaque creating lock, then Riprendi on stale error", async () => {
+    await requirePreview();
+    let browser;
+    browser = await launch();
+    try {
+      const page = await newPage(browser, { viewport: { width: 1280, height: 800 } });
+      await holdVisualWork(page, "job-overlay-hold");
+      await page.addInitScript(
+        ({ html, resumeError }: { html: string; resumeError: string }) => {
+          if (window !== window.parent) return;
+          const now = Date.now();
+          localStorage.setItem("fenix.session", JSON.stringify({ email: "qa@fenix.test", name: "QA" }));
+          const overlay = {
+            id: "p-overlay",
+            name: "Bozza overlay",
+            tagline: "",
+            prompt: "test overlay",
+            kind: "app",
+            summary: "",
+            palette: {
+              bg: "#16110c",
+              surface: "#221c16",
+              fg: "#efe6d4",
+              muted: "#9a8f7a",
+              accent: "#c45c26",
+            },
+            html,
+            lastStableHtml: html,
+            messages: [],
+            buildLog: ["Direzione visiva", "Codice"],
+            status: "building",
+            visualJobId: "job-overlay-hold",
+            visualJobStatus: "run",
+            visualJobStartedAt: now,
+            buildEpoch: 1,
+            createdAt: now,
+            updatedAt: now,
+          };
+          const resume = {
+            ...overlay,
+            id: "p-resume",
+            name: "Bozza resume",
+            status: "error",
+            error: resumeError,
+            visualJobId: undefined,
+            visualJobStatus: undefined,
+            visualJobStartedAt: undefined,
+            buildLog: ["Rifinitura interrotta"],
+          };
+          localStorage.setItem(
+            "officina-projects",
+            JSON.stringify({
+              state: { projects: [overlay, resume], creditsRemaining: 50, appDb: {} },
+              version: 3,
+            }),
+          );
+        },
+        { html: VALID, resumeError: RESUME_ERROR },
+      );
+      await page.goto(PREVIEW + "/studio/p-overlay", {
+        waitUntil: "domcontentloaded",
+        timeout: 20000,
+      });
+      const lock = page.getByRole("dialog", { name: "Fenix sta creando" }).first();
+      await lock.waitFor({ state: "visible", timeout: 12000 });
+      const box = await lock.boundingBox();
+      assert.ok(box && box.height > 300, `lock too short to cover preview: ${box?.height}`);
+      const compact = page.locator(
+        "section.hidden.md\\:block .pointer-events-none.absolute.inset-x-0.top-0.z-20",
+      );
+      assert.equal(await compact.count(), 0);
+      assert.equal(await page.getAttribute("[data-studio-lock]", "data-studio-lock"), "1");
+      const iframe = page.locator("iframe[data-preview]").first();
+      assert.equal(await iframe.evaluate((el) => (el as HTMLIFrameElement).inert), true);
+      await page.goto(PREVIEW + "/studio/p-resume", {
+        waitUntil: "domcontentloaded",
+        timeout: 20000,
+      });
+      await page
+        .getByRole("button", { name: "Riprendi rifinitura" })
+        .first()
+        .waitFor({ timeout: 12000 });
+    } finally {
+      await browser?.close();
+    }
+  });
+
+  it("reattaches resume polling after reload without a second POST", async () => {
+    await requirePreview();
+    let browser;
+    const ARGILLA_PROMPT =
+      "FORMATO: gestionale ufficio. kind=dashboard. Desktop: elenco, filtri, form nuovo, numeri. Tabella che si riempie. NON landing, NON tabbar iPhone.\n\nArgilla Viva — magazzino e ordini.";
+    const jobId = "job-argilla-reattach";
+    const readyHtml = DEMOS.kiln.html;
+    let polishPosts = 0;
+    let allowComplete = false;
+    browser = await launch();
+    try {
+      const page = await newPage(browser, { viewport: { width: 1280, height: 800 } });
+      await page.route(/\/api\/build/, async (route) => {
+        await route.fulfill({
+          status: 204,
+          body: "",
+        });
+      });
+      await page.route(/polish/, async (route) => {
+        if (route.request().method() === "POST") {
+          polishPosts += 1;
+          const posted = route.request().postDataJSON() as { projectId?: string };
+          assert.equal(posted?.projectId, "p-argilla");
+          await route.fulfill({
+            status: 202,
+            contentType: "application/json",
+            body: JSON.stringify({ id: jobId, status: "run" }),
+          });
+          return;
+        }
+        await route.continue();
+      });
+      await page.route(/\/jobs\//, async (route) => {
+        const payload = allowComplete
+          ? {
+              id: jobId,
+              status: "ok",
+              html: readyHtml,
+              meta: { kind: "dashboard", name: "Argilla Viva" },
+              log: ["Rifinitura gestionale desktop"],
+              files: [],
+            }
+          : { id: jobId, status: "run", log: ["In coda"], html: null };
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify(payload),
+        });
+      });
+      await page.addInitScript(
+        ({ html, resumeError, prompt }: { html: string; resumeError: string; prompt: string }) => {
+          if (window !== window.parent) return;
+          if (localStorage.getItem("officina-projects")) return;
+          const now = Date.now();
+          localStorage.setItem(
+            "officina-projects",
+            JSON.stringify({
+              state: {
+                projects: [
+                  {
+                    id: "p-argilla",
+                    name: "Argilla Viva",
+                    tagline: "",
+                    prompt,
+                    kind: "dashboard",
+                    requestedKind: "dashboard",
+                    summary: "",
+                    palette: {
+                      bg: "#f4efe6",
+                      surface: "#fffaf3",
+                      fg: "#2a241c",
+                      muted: "#6f675c",
+                      accent: "#b85c38",
+                    },
+                    html,
+                    messages: [],
+                    buildLog: ["Rifinitura interrotta"],
+                    status: "error",
+                    error: resumeError,
+                    createdAt: now,
+                    updatedAt: now,
+                  },
+                ],
+                creditsRemaining: 46,
+                appDb: {},
+              },
+              version: 3,
+            }),
+          );
+        },
+        { html: APP_SHELL_HTML, resumeError: RESUME_ERROR, prompt: ARGILLA_PROMPT },
+      );
+      await page.goto(PREVIEW + "/studio/p-argilla", {
+        waitUntil: "domcontentloaded",
+        timeout: 20000,
+      });
+      await page.getByRole("button", { name: "Riprendi rifinitura" }).first().click();
+      const waitUniqueArgilla = async () => {
+        await page.waitForFunction(
+          () => {
+            const raw = localStorage.getItem("officina-projects");
+            if (!raw) return false;
+            try {
+              const project = JSON.parse(raw).state.projects.find(
+                (p: { id: string }) => p.id === "p-argilla",
+              );
+              const logs: string[] = project?.buildLog ?? [];
+              return (
+                project?.visualJobId === "job-argilla-reattach" &&
+                project?.status === "building" &&
+                logs.filter((s) => s === "Riprendo rifinitura").length === 1 &&
+                logs.filter((s) => s === "In coda").length === 1
+              );
+            } catch {
+              return false;
+            }
+          },
+          null,
+          { timeout: 15000 },
+        );
+      };
+      await waitUniqueArgilla();
+      assert.equal(polishPosts, 1, "first resume must POST once");
+      await page.reload({ waitUntil: "domcontentloaded" });
+      await waitUniqueArgilla();
+      assert.equal(polishPosts, 1, "reload must not start a second polish job");
+      const afterReload = await page.evaluate(() => {
+        const raw = localStorage.getItem("officina-projects");
+        const project = JSON.parse(raw || "{}").state.projects.find(
+          (p: { id: string }) => p.id === "p-argilla",
+        );
+        return {
+          jobId: project?.visualJobId,
+          status: project?.status,
+          kind: project?.kind,
+          requestedKind: project?.requestedKind,
+          credits: JSON.parse(raw || "{}").state.creditsRemaining,
+        };
+      });
+      assert.equal(afterReload.jobId, jobId);
+      assert.equal(afterReload.status, "building");
+      assert.equal(afterReload.kind, "dashboard");
+      assert.equal(afterReload.requestedKind, "dashboard");
+      assert.equal(afterReload.credits, 46);
+      await page.reload({ waitUntil: "domcontentloaded" });
+      await waitUniqueArgilla();
+      assert.equal(polishPosts, 1);
+      const logsTwice = await page.evaluate(() => {
+        const raw = localStorage.getItem("officina-projects");
+        const project = JSON.parse(raw || "{}").state.projects.find(
+          (p: { id: string }) => p.id === "p-argilla",
+        );
+        const logs: string[] = project?.buildLog ?? [];
+        return {
+          riprendo: logs.filter((s) => s === "Riprendo rifinitura").length,
+          coda: logs.filter((s) => s === "In coda").length,
+          jobId: project?.visualJobId,
+          status: project?.status,
+        };
+      });
+      assert.equal(logsTwice.riprendo, 1, "second reload must not persist another Riprendo");
+      assert.equal(logsTwice.coda, 1);
+      assert.equal(logsTwice.jobId, jobId);
+      assert.equal(logsTwice.status, "building");
+      allowComplete = true;
+      await page.waitForFunction(
+        () => {
+          const raw = localStorage.getItem("officina-projects");
+          if (!raw) return false;
+          try {
+            const state = JSON.parse(raw).state;
+            const project = state.projects.find((p: { id: string }) => p.id === "p-argilla");
+            return (
+              project?.status === "ready" && !project?.visualJobId && state.creditsRemaining === 46
+            );
+          } catch {
+            return false;
+          }
+        },
+        null,
+        { timeout: 20000 },
+      );
+      assert.equal(polishPosts, 1);
+      const publish = page.getByRole("button", { name: /Pubblica/ }).first();
+      await publish.waitFor({ timeout: 8000 });
+      assert.equal(await publish.isDisabled(), false);
+    } finally {
+      await browser?.close();
+    }
+  });
+
+  it("pending JOB_STILL_RUNNING + reload keeps the same job, one POST, credits 42, then ready", async () => {
+    await requirePreview();
+    const jobId = "job-terra-live";
+    const readyHtml = DEMOS.kiln.html;
+    const ARGILLA_PROMPT =
+      "FORMATO: gestionale ufficio. kind=dashboard. Desktop: elenco, filtri, form nuovo, numeri. Tabella che si riempie. NON landing, NON tabbar iPhone.\n\nBottega Terra.";
+    let polishPosts = 0;
+    let allowComplete = false;
+    const browser = await launch();
+    try {
+      const page = await newPage(browser, { viewport: { width: 1280, height: 800 } });
+      await page.route(/\/api\/build/, async (route) => {
+        await route.fulfill({ status: 204, body: "" });
+      });
+      await page.route(/polish/, async (route) => {
+        if (route.request().method() === "POST") {
+          polishPosts += 1;
+          await route.fulfill({
+            status: 202,
+            contentType: "application/json",
+            body: JSON.stringify({ id: jobId, status: "run" }),
+          });
+          return;
+        }
+        await route.continue();
+      });
+      await page.route(/\/jobs\//, async (route) => {
+        const payload = allowComplete
+          ? {
+              id: jobId,
+              status: "ok",
+              html: readyHtml,
+              meta: { kind: "dashboard", name: "Bottega Terra" },
+              log: ["Rifinitura"],
+              files: [],
+            }
+          : { id: jobId, status: "run", log: ["Partito"], html: null };
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify(payload),
+        });
+      });
+      await page.addInitScript(
+        ({ html, prompt }: { html: string; prompt: string }) => {
+          if (window !== window.parent) return;
+          if (localStorage.getItem("officina-projects")) return;
+          const now = Date.now();
+          localStorage.setItem(
+            "officina-projects",
+            JSON.stringify({
+              state: {
+                projects: [
+                  {
+                    id: "p-terra",
+                    name: "Bottega Terra",
+                    tagline: "",
+                    prompt,
+                    kind: "dashboard",
+                    requestedKind: "dashboard",
+                    summary: "",
+                    palette: {
+                      bg: "#f4efe6",
+                      surface: "#fffaf3",
+                      fg: "#2a241c",
+                      muted: "#6f675c",
+                      accent: "#b85c38",
+                    },
+                    html,
+                    messages: [
+                      { id: "m1", role: "assistant", content: "JOB_STILL_RUNNING", at: now },
+                    ],
+                    buildLog: [
+                      "Motore visivo in sottofondo",
+                      "Partito",
+                      "Riprendo rifinitura",
+                      "Partito",
+                      "Riprendo rifinitura",
+                      "Motore visivo ancora in corso",
+                    ],
+                    status: "error",
+                    error: "JOB_STILL_RUNNING",
+                    creditRefunded: false,
+                    visualJobId: "job-terra-live",
+                    visualJobStatus: "run",
+                    visualJobStartedAt: now - 60_000,
+                    createdAt: now,
+                    updatedAt: now,
+                  },
+                ],
+                creditsRemaining: 42,
+                appDb: {},
+              },
+              version: 3,
+            }),
+          );
+        },
+        { html: DEMOS.kiln.html, prompt: ARGILLA_PROMPT },
+      );
+      await page.goto(PREVIEW + "/studio/p-terra", {
+        waitUntil: "domcontentloaded",
+        timeout: 20000,
+      });
+      await page.waitForFunction(
+        () => {
+          const raw = localStorage.getItem("officina-projects");
+          if (!raw) return false;
+          try {
+            const state = JSON.parse(raw).state;
+            const project = state.projects.find((p: { id: string }) => p.id === "p-terra");
+            return (
+              project?.status === "building" &&
+              project?.visualJobId === "job-terra-live" &&
+              state.creditsRemaining === 42
+            );
+          } catch {
+            return false;
+          }
+        },
+        null,
+        { timeout: 15000 },
+      );
+      assert.equal(await page.getByText("Bloccato").count(), 0);
+      assert.equal(polishPosts, 0, "live job must reattach, not POST again");
+      const countPhase = () =>
+        page.evaluate(() => {
+          const raw = localStorage.getItem("officina-projects");
+          const state = JSON.parse(raw || "{}").state;
+          const project = state.projects.find((p: { id: string }) => p.id === "p-terra");
+          const logs: string[] = project?.buildLog ?? [];
+          return {
+            jobId: project?.visualJobId ?? null,
+            status: project?.status,
+            credits: state.creditsRemaining,
+            riprendo: logs.filter((s) => s === "Riprendo rifinitura").length,
+            partito: logs.filter((s) => s === "Partito").length,
+            sottofondo: logs.filter((s) => s === "Motore visivo in sottofondo").length,
+            ancora: logs.filter((s) => s === "Motore visivo ancora in corso").length,
+          };
+        });
+      const first = await countPhase();
+      assert.equal(first.jobId, jobId);
+      assert.equal(first.status, "building");
+      assert.equal(first.credits, 42);
+      assert.equal(first.riprendo, 1, "historical Riprendo stays once after uniqueLogs");
+      assert.equal(first.partito, 1);
+      assert.equal(first.sottofondo, 1);
+      assert.equal(first.ancora, 1);
+      for (let i = 0; i < 2; i++) {
+        await page.reload({ waitUntil: "domcontentloaded" });
+        await page.waitForFunction(
+          () => {
+            const raw = localStorage.getItem("officina-projects");
+            if (!raw) return false;
+            try {
+              const state = JSON.parse(raw).state;
+              const project = state.projects.find((p: { id: string }) => p.id === "p-terra");
+              const logs: string[] = project?.buildLog ?? [];
+              return (
+                project?.status === "building" &&
+                project?.visualJobId === "job-terra-live" &&
+                state.creditsRemaining === 42 &&
+                logs.filter((s) => s === "Riprendo rifinitura").length === 1 &&
+                logs.filter((s) => s === "Partito").length === 1
+              );
+            } catch {
+              return false;
+            }
+          },
+          null,
+          { timeout: 15000 },
+        );
+        assert.equal(await page.getByText("Bloccato").count(), 0);
+        assert.equal(polishPosts, 0, `reload ${i + 1} must not POST`);
+        const snap = await countPhase();
+        assert.equal(snap.jobId, jobId);
+        assert.equal(snap.status, "building");
+        assert.equal(snap.credits, 42);
+        assert.equal(snap.riprendo, 1);
+        assert.equal(snap.partito, 1);
+        assert.equal(snap.sottofondo, 1);
+        assert.equal(snap.ancora, 1);
+        assert.equal(await page.getByRole("button", { name: /pubblica/i }).isDisabled(), true);
+      }
+      allowComplete = true;
+      await page.waitForFunction(
+        () => {
+          const raw = localStorage.getItem("officina-projects");
+          if (!raw) return false;
+          try {
+            const state = JSON.parse(raw).state;
+            const project = state.projects.find((p: { id: string }) => p.id === "p-terra");
+            return (
+              project?.status === "ready" && !project?.visualJobId && state.creditsRemaining === 42
+            );
+          } catch {
+            return false;
+          }
+        },
+        null,
+        { timeout: 20000 },
+      );
+      assert.equal(polishPosts, 0);
+      const publish = page.getByRole("button", { name: /Pubblica/ }).first();
+      await publish.waitFor({ timeout: 8000 });
+      assert.equal(await publish.isDisabled(), false);
+    } finally {
+      await browser.close();
+    }
+  });
+
+  it("missing worker job clears once and refunds once", async () => {
+    await requirePreview();
+    const jobId = "job-gone";
+    let polishPosts = 0;
+    const browser = await launch();
+    try {
+      const page = await newPage(browser, { viewport: { width: 1280, height: 800 } });
+      await page.route(/\/api\/build/, async (route) => {
+        const result = {
+          name: "Bottega Terra",
+          tagline: "Ceramica",
+          kind: "dashboard",
+          summary: "Gestionale",
+          direction: "terra",
+          palette: {
+            bg: "#f4efe6",
+            surface: "#fffaf3",
+            fg: "#2a241c",
+            muted: "#6f675c",
+            accent: "#b85c38",
+          },
+          html: DEMOS.kiln.html,
+          files: [],
+        };
+        const body =
+          `data: ${JSON.stringify({ t: "s", s: "Adatto Fenix" })}\n\n` +
+          `data: ${JSON.stringify({ t: "ok", result })}\n\n`;
+        await route.fulfill({
+          status: 200,
+          contentType: "text/event-stream; charset=utf-8",
+          body,
+        });
+      });
+      await page.route(/polish/, async (route) => {
+        if (route.request().method() === "POST") {
+          polishPosts += 1;
+          await route.fulfill({
+            status: 202,
+            contentType: "application/json",
+            body: JSON.stringify({ id: jobId, status: "run" }),
+          });
+          return;
+        }
+        await route.continue();
+      });
+      await page.route(/\/jobs\//, async (route) => {
+        await route.fulfill({ status: 404, body: "gone" });
+      });
+      await page.addInitScript(() => {
+        if (window !== window.parent) return;
+        const now = Date.now();
+        localStorage.setItem(
+          "officina-projects",
+          JSON.stringify({
+            state: {
+              projects: [
+                {
+                  id: "p-gone",
+                  name: "Bottega Terra",
+                  tagline: "",
+                  prompt: "FORMATO: gestionale ufficio. kind=dashboard. Bottega Terra",
+                  kind: "dashboard",
+                  requestedKind: "dashboard",
+                  summary: "",
+                  palette: {
+                    bg: "#f4efe6",
+                    surface: "#fffaf3",
+                    fg: "#2a241c",
+                    muted: "#6f675c",
+                    accent: "#b85c38",
+                  },
+                  html: "",
+                  messages: [],
+                  buildLog: [],
+                  status: "error",
+                  error: "Interrotto. Riprova.",
+                  creditRefunded: true,
+                  createdAt: now,
+                  updatedAt: now,
+                },
+              ],
+              creditsRemaining: 46,
+              appDb: {},
+            },
+            version: 3,
+          }),
+        );
+      });
+      await page.goto(PREVIEW + "/studio/p-gone", {
+        waitUntil: "domcontentloaded",
+        timeout: 20000,
+      });
+      await page.getByRole("button", { name: "Riprova. Lo ricostruisco." }).first().click();
+      await page.getByText("Bloccato").first().waitFor({ timeout: 40000 });
+      const snap = await page.evaluate(() => {
+        const raw = localStorage.getItem("officina-projects");
+        const state = JSON.parse(raw || "{}").state;
+        const project = state.projects.find((p: { id: string }) => p.id === "p-gone");
+        return {
+          jobId: project?.visualJobId ?? null,
+          status: project?.status,
+          credits: state.creditsRemaining,
+          refunded: project?.creditRefunded,
+        };
+      });
+      assert.equal(snap.status, "error");
+      assert.equal(snap.jobId, null);
+      assert.equal(snap.credits, 46);
+      assert.equal(polishPosts, 1);
+      assert.equal(await page.getByRole("button", { name: /pubblica/i }).isDisabled(), true);
+    } finally {
+      await browser.close();
+    }
+  });
+
+  it("duplicate live logs + 404 job clears in a few seconds, unique state, no POST", async () => {
+    await requirePreview();
+    const projectId = "8b04fd98-106c-46f5-ac9a-1e929028c476";
+    const jobId = "job-bottega-gone";
+    let polishPosts = 0;
+    const browser = await launch();
+    try {
+      const page = await newPage(browser, { viewport: { width: 1280, height: 800 } });
+      await page.route(/\/api\/build/, async (route) => {
+        await route.fulfill({ status: 204, body: "" });
+      });
+      await page.route(/polish/, async (route) => {
+        if (route.request().method() === "POST") {
+          polishPosts += 1;
+          await route.fulfill({
+            status: 202,
+            contentType: "application/json",
+            body: JSON.stringify({ id: jobId, status: "run" }),
+          });
+          return;
+        }
+        await route.continue();
+      });
+      await page.route(/\/jobs\//, async (route) => {
+        await route.fulfill({
+          status: 404,
+          contentType: "application/json",
+          body: JSON.stringify({ error: "Job non trovato" }),
+        });
+      });
+      await page.addInitScript(
+        ({ html, prompt }: { html: string; prompt: string }) => {
+          if (window !== window.parent) return;
+          if (localStorage.getItem("officina-projects")) return;
+          const now = Date.now();
+          localStorage.setItem(
+            "officina-projects",
+            JSON.stringify({
+              state: {
+                projects: [
+                  {
+                    id: "8b04fd98-106c-46f5-ac9a-1e929028c476",
+                    name: "Bottega del Tornio",
+                    tagline: "",
+                    prompt,
+                    kind: "dashboard",
+                    requestedKind: "dashboard",
+                    summary: "",
+                    palette: {
+                      bg: "#f4efe6",
+                      surface: "#fffaf3",
+                      fg: "#2a241c",
+                      muted: "#6f675c",
+                      accent: "#b85c38",
+                    },
+                    html,
+                    messages: [],
+                    buildLog: [
+                      "Motore visivo in sottofondo",
+                      "Partito",
+                      "Riprendo rifinitura",
+                      "Partito",
+                      "Riprendo rifinitura",
+                      "Motore visivo ancora in corso",
+                    ],
+                    status: "building",
+                    creditRefunded: true,
+                    visualJobId: "job-bottega-gone",
+                    visualJobStatus: "run",
+                    visualJobStartedAt: now - 60_000,
+                    createdAt: now,
+                    updatedAt: now,
+                  },
+                ],
+                creditsRemaining: 46,
+                appDb: {},
+              },
+              version: 3,
+            }),
+          );
+        },
+        {
+          html: DEMOS.kiln.html,
+          prompt:
+            "FORMATO: gestionale ufficio. kind=dashboard. Desktop: elenco, filtri, form nuovo, numeri.\n\nBottega del Tornio.",
+        },
+      );
+      await page.goto(PREVIEW + `/studio/${projectId}`, {
+        waitUntil: "domcontentloaded",
+        timeout: 20000,
+      });
+      await page.waitForFunction(
+        () => {
+          const raw = localStorage.getItem("officina-projects");
+          if (!raw) return false;
+          try {
+            const state = JSON.parse(raw).state;
+            const project = state.projects.find(
+              (p: { id: string }) => p.id === "8b04fd98-106c-46f5-ac9a-1e929028c476",
+            );
+            const logs: string[] = project?.buildLog ?? [];
+            return (
+              project?.status === "error" &&
+              !project?.visualJobId &&
+              state.creditsRemaining === 46 &&
+              !logs.includes("Partito") &&
+              !logs.includes("Riprendo rifinitura") &&
+              !logs.includes("Motore visivo ancora in corso")
+            );
+          } catch {
+            return false;
+          }
+        },
+        null,
+        { timeout: 8000 },
+      );
+      assert.equal(polishPosts, 0, "404 reattach must not POST");
+      await page.getByText("Bloccato").first().waitFor({ timeout: 8000 });
+      assert.equal(await page.getByText("Motore visivo ancora in corso").count(), 0);
+      const snap = await page.evaluate(() => {
+        const raw = localStorage.getItem("officina-projects");
+        const state = JSON.parse(raw || "{}").state;
+        const project = state.projects.find(
+          (p: { id: string }) => p.id === "8b04fd98-106c-46f5-ac9a-1e929028c476",
+        );
+        const logs: string[] = project?.buildLog ?? [];
+        return {
+          jobId: project?.visualJobId ?? null,
+          status: project?.status,
+          credits: state.creditsRemaining,
+          refunded: project?.creditRefunded,
+          partito: logs.filter((s) => s === "Partito").length,
+          riprendo: logs.filter((s) => s === "Riprendo rifinitura").length,
+          ancora: logs.filter((s) => s === "Motore visivo ancora in corso").length,
+        };
+      });
+      assert.equal(snap.jobId, null);
+      assert.equal(snap.status, "error");
+      assert.equal(snap.credits, 46);
+      assert.equal(snap.refunded, true);
+      assert.equal(snap.partito, 0);
+      assert.equal(snap.riprendo, 0);
+      assert.equal(snap.ancora, 0);
+      assert.equal(await page.getByRole("button", { name: /pubblica/i }).isDisabled(), true);
+    } finally {
+      await browser.close();
+    }
+  });
+
+  it("duplicate live logs + first fetch ok promotes ready, unique logs, no POST", async () => {
+    await requirePreview();
+    const projectId = "p-bottega-done";
+    const jobId = "job-bottega-done";
+    let polishPosts = 0;
+    const browser = await launch();
+    try {
+      const page = await newPage(browser, { viewport: { width: 1280, height: 800 } });
+      await page.route(/\/api\/build/, async (route) => {
+        await route.fulfill({ status: 204, body: "" });
+      });
+      await page.route(/polish/, async (route) => {
+        if (route.request().method() === "POST") {
+          polishPosts += 1;
+          await route.fulfill({
+            status: 202,
+            contentType: "application/json",
+            body: JSON.stringify({ id: jobId, status: "run" }),
+          });
+          return;
+        }
+        await route.continue();
+      });
+      await page.route(/\/jobs\//, async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            id: jobId,
+            status: "ok",
+            html: DEMOS.kiln.html,
+            meta: { kind: "dashboard", name: "Bottega del Tornio" },
+            log: ["Rifinitura"],
+            files: [],
+          }),
+        });
+      });
+      await page.addInitScript(
+        ({ html, prompt }: { html: string; prompt: string }) => {
+          if (window !== window.parent) return;
+          if (localStorage.getItem("officina-projects")) return;
+          const now = Date.now();
+          localStorage.setItem(
+            "officina-projects",
+            JSON.stringify({
+              state: {
+                projects: [
+                  {
+                    id: "p-bottega-done",
+                    name: "Bottega del Tornio",
+                    tagline: "",
+                    prompt,
+                    kind: "dashboard",
+                    requestedKind: "dashboard",
+                    summary: "",
+                    palette: {
+                      bg: "#f4efe6",
+                      surface: "#fffaf3",
+                      fg: "#2a241c",
+                      muted: "#6f675c",
+                      accent: "#b85c38",
+                    },
+                    html,
+                    messages: [],
+                    buildLog: [
+                      "Motore visivo in sottofondo",
+                      "Partito",
+                      "Riprendo rifinitura",
+                      "Partito",
+                      "Riprendo rifinitura",
+                    ],
+                    status: "building",
+                    creditRefunded: false,
+                    visualJobId: "job-bottega-done",
+                    visualJobStatus: "run",
+                    visualJobStartedAt: now - 30_000,
+                    createdAt: now,
+                    updatedAt: now,
+                  },
+                ],
+                creditsRemaining: 46,
+                appDb: {},
+              },
+              version: 3,
+            }),
+          );
+        },
+        {
+          html: DEMOS.kiln.html,
+          prompt:
+            "FORMATO: gestionale ufficio. kind=dashboard. Desktop: elenco, filtri, form nuovo, numeri.\n\nBottega del Tornio.",
+        },
+      );
+      await page.goto(PREVIEW + `/studio/${projectId}`, {
+        waitUntil: "domcontentloaded",
+        timeout: 20000,
+      });
+      await page.waitForFunction(
+        () => {
+          const raw = localStorage.getItem("officina-projects");
+          if (!raw) return false;
+          try {
+            const state = JSON.parse(raw).state;
+            const project = state.projects.find((p: { id: string }) => p.id === "p-bottega-done");
+            const logs: string[] = project?.buildLog ?? [];
+            return (
+              project?.status === "ready" &&
+              !project?.visualJobId &&
+              state.creditsRemaining === 46 &&
+              logs.filter((s) => s === "Partito").length === 0 &&
+              logs.filter((s) => s === "Riprendo rifinitura").length === 0 &&
+              logs.includes("Anteprima rifinita")
+            );
+          } catch {
+            return false;
+          }
+        },
+        null,
+        { timeout: 15000 },
+      );
+      assert.equal(polishPosts, 0);
+      const snap = await page.evaluate(() => {
+        const raw = localStorage.getItem("officina-projects");
+        const state = JSON.parse(raw || "{}").state;
+        const project = state.projects.find((p: { id: string }) => p.id === "p-bottega-done");
+        const logs: string[] = project?.buildLog ?? [];
+        return {
+          status: project?.status,
+          jobId: project?.visualJobId ?? null,
+          credits: state.creditsRemaining,
+          partito: logs.filter((s) => s === "Partito").length,
+          riprendo: logs.filter((s) => s === "Riprendo rifinitura").length,
+          refined: logs.filter((s) => s === "Anteprima rifinita").length,
+        };
+      });
+      assert.equal(snap.status, "ready");
+      assert.equal(snap.jobId, null);
+      assert.equal(snap.credits, 46);
+      assert.equal(snap.partito, 0);
+      assert.equal(snap.riprendo, 0);
+      assert.equal(snap.refined, 1);
+      const publish = page.getByRole("button", { name: /Pubblica/ }).first();
+      await publish.waitFor({ timeout: 8000 });
+      assert.equal(await publish.isDisabled(), false);
+    } finally {
+      await browser.close();
+    }
+  });
+
+  it("null innerHTML polish result never becomes ready or Pronto, Pubblica closed", async () => {
+    await requirePreview();
+    const projectId = "p-innerhtml-crash";
+    const jobId = "job-innerhtml-crash";
+    let polishPosts = 0;
+    const browser = await launch();
+    try {
+      const page = await newPage(browser, { viewport: { width: 1280, height: 800 } });
+      await page.route(/\/api\/build/, async (route) => {
+        await route.fulfill({ status: 204, body: "" });
+      });
+      await page.route(/polish/, async (route) => {
+        if (route.request().method() === "POST") {
+          polishPosts += 1;
+          await route.fulfill({
+            status: 202,
+            contentType: "application/json",
+            body: JSON.stringify({ id: jobId, status: "run" }),
+          });
+          return;
+        }
+        await route.continue();
+      });
+      await page.route(/\/jobs\//, async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            id: jobId,
+            status: "ok",
+            html: NULL_INNER,
+            meta: { kind: "dashboard", name: "Bottega Terra" },
+            log: ["Rifinitura"],
+            files: [
+              {
+                path: "src/screens/Home.tsx",
+                content: "export default function Home(){return null}",
+              },
+            ],
+          }),
+        });
+      });
+      await page.addInitScript(
+        ({ html, prompt }: { html: string; prompt: string }) => {
+          if (window !== window.parent) return;
+          if (localStorage.getItem("officina-projects")) return;
+          const now = Date.now();
+          localStorage.setItem(
+            "officina-projects",
+            JSON.stringify({
+              state: {
+                projects: [
+                  {
+                    id: "p-innerhtml-crash",
+                    name: "Bottega Terra",
+                    tagline: "",
+                    prompt,
+                    kind: "dashboard",
+                    requestedKind: "dashboard",
+                    summary: "",
+                    palette: {
+                      bg: "#f4efe6",
+                      surface: "#fffaf3",
+                      fg: "#2a241c",
+                      muted: "#6f675c",
+                      accent: "#b85c38",
+                    },
+                    html,
+                    messages: [],
+                    buildLog: ["Motore visivo in sottofondo", "Partito"],
+                    status: "building",
+                    creditRefunded: true,
+                    visualJobId: "job-innerhtml-crash",
+                    visualJobStatus: "run",
+                    visualJobStartedAt: now - 20_000,
+                    createdAt: now,
+                    updatedAt: now,
+                  },
+                ],
+                creditsRemaining: 46,
+                appDb: {},
+              },
+              version: 3,
+            }),
+          );
+        },
+        {
+          html: NULL_INNER,
+          prompt: "FORMATO: gestionale ufficio. kind=dashboard. Bottega Terra.",
+        },
+      );
+      await page.goto(PREVIEW + `/studio/${projectId}`, {
+        waitUntil: "domcontentloaded",
+        timeout: 20000,
+      });
+      await page.waitForFunction(
+        () => {
+          const raw = localStorage.getItem("officina-projects");
+          if (!raw) return false;
+          try {
+            const state = JSON.parse(raw).state;
+            const project = state.projects.find(
+              (p: { id: string }) => p.id === "p-innerhtml-crash",
+            );
+            return (
+              project?.status === "error" &&
+              !project?.visualJobId &&
+              /innerHTML/i.test(project?.error || "") &&
+              state.creditsRemaining === 46
+            );
+          } catch {
+            return false;
+          }
+        },
+        null,
+        { timeout: 20000 },
+      );
+      assert.equal(polishPosts, 0);
+      assert.equal(await page.getByText(/Pronto\. Bottega Terra è in anteprima/i).count(), 0);
+      await page.getByText("Bloccato").first().waitFor({ timeout: 8000 });
+      assert.equal(await page.getByRole("button", { name: /pubblica/i }).isDisabled(), true);
+    } finally {
+      await browser.close();
+    }
+  });
+
+  it("repaired innerHTML polish result is ready only after a clean canary", async () => {
+    await requirePreview();
+    const projectId = "p-innerhtml-fixed";
+    const jobId = "job-innerhtml-fixed";
+    let polishPosts = 0;
+    const browser = await launch();
+    try {
+      const page = await newPage(browser, { viewport: { width: 1280, height: 800 } });
+      await page.route(/\/api\/build/, async (route) => {
+        await route.fulfill({ status: 204, body: "" });
+      });
+      await page.route(/polish/, async (route) => {
+        if (route.request().method() === "POST") {
+          polishPosts += 1;
+          await route.fulfill({
+            status: 202,
+            contentType: "application/json",
+            body: JSON.stringify({ id: jobId, status: "run" }),
+          });
+          return;
+        }
+        await route.continue();
+      });
+      await page.route(/\/jobs\//, async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            id: jobId,
+            status: "ok",
+            html: NULL_FIXED,
+            meta: { kind: "dashboard", name: "Bottega Terra" },
+            log: ["Rifinitura"],
+            files: [],
+          }),
+        });
+      });
+      await page.addInitScript(
+        ({ html, prompt }: { html: string; prompt: string }) => {
+          if (window !== window.parent) return;
+          if (localStorage.getItem("officina-projects")) return;
+          const now = Date.now();
+          localStorage.setItem(
+            "officina-projects",
+            JSON.stringify({
+              state: {
+                projects: [
+                  {
+                    id: "p-innerhtml-fixed",
+                    name: "Bottega Terra",
+                    tagline: "",
+                    prompt,
+                    kind: "dashboard",
+                    requestedKind: "dashboard",
+                    summary: "",
+                    palette: {
+                      bg: "#f4efe6",
+                      surface: "#fffaf3",
+                      fg: "#2a241c",
+                      muted: "#6f675c",
+                      accent: "#b85c38",
+                    },
+                    html,
+                    messages: [],
+                    buildLog: ["Motore visivo in sottofondo"],
+                    status: "building",
+                    creditRefunded: true,
+                    visualJobId: "job-innerhtml-fixed",
+                    visualJobStatus: "run",
+                    visualJobStartedAt: now - 20_000,
+                    createdAt: now,
+                    updatedAt: now,
+                  },
+                ],
+                creditsRemaining: 46,
+                appDb: {},
+              },
+              version: 3,
+            }),
+          );
+        },
+        {
+          html: NULL_FIXED,
+          prompt: "FORMATO: gestionale ufficio. kind=dashboard. Bottega Terra.",
+        },
+      );
+      await page.goto(PREVIEW + `/studio/${projectId}`, {
+        waitUntil: "domcontentloaded",
+        timeout: 20000,
+      });
+      await page.waitForFunction(
+        () => {
+          const raw = localStorage.getItem("officina-projects");
+          if (!raw) return false;
+          try {
+            const state = JSON.parse(raw).state;
+            const project = state.projects.find(
+              (p: { id: string }) => p.id === "p-innerhtml-fixed",
+            );
+            const msgs = (project?.messages ?? []) as { content?: string }[];
+            const pronto = msgs.some((m) =>
+              /Pronto\. Bottega Terra è in anteprima/i.test(m.content || ""),
+            );
+            return (
+              project?.status === "ready" &&
+              !project?.visualJobId &&
+              pronto &&
+              state.creditsRemaining === 46
+            );
+          } catch {
+            return false;
+          }
+        },
+        null,
+        { timeout: 20000 },
+      );
+      assert.equal(polishPosts, 0);
+      const publish = page.getByRole("button", { name: /Pubblica/ }).first();
+      await publish.waitFor({ timeout: 8000 });
+      assert.equal(await publish.isDisabled(), false);
+    } finally {
+      await browser.close();
+    }
+  });
+
+  it("building draft with leaked phone CSS hides the dump and keeps Pubblica closed", async () => {
+    await requirePreview();
+    const projectId = "p-orto-leak";
+    const jobId = "job-orto-leak";
+    let polishPosts = 0;
+    const browser = await launch();
+    try {
+      const page = await newPage(browser, { viewport: { width: 1280, height: 800 } });
+      await page.route(/\/api\/build/, async (route) => {
+        await route.fulfill({ status: 204, body: "" });
+      });
+      await page.route(/polish/, async (route) => {
+        if (route.request().method() === "POST") {
+          polishPosts += 1;
+          await route.fulfill({
+            status: 202,
+            contentType: "application/json",
+            body: JSON.stringify({ id: jobId, status: "run" }),
+          });
+          return;
+        }
+        await route.continue();
+      });
+      await page.route(/\/jobs\//, async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({ id: jobId, status: "run", log: ["Partito"] }),
+        });
+      });
+      await page.addInitScript(
+        ({ html }: { html: string }) => {
+          if (window !== window.parent) return;
+          const now = Date.now();
+          localStorage.setItem(
+            "fenix.session",
+            JSON.stringify({ email: "qa@fenix.test", name: "QA" }),
+          );
+          localStorage.setItem(
+            "officina-projects",
+            JSON.stringify({
+              state: {
+                projects: [
+                  {
+                    id: "p-orto-leak",
+                    name: "Orto Vivo",
+                    tagline: "",
+                    prompt: "FORMATO: app telefono. kind=app. Orto Vivo.",
+                    kind: "app",
+                    requestedKind: "app",
+                    summary: "",
+                    palette: {
+                      bg: "#efe6d4",
+                      surface: "#f7f1e4",
+                      fg: "#1c1712",
+                      muted: "#5c5348",
+                      accent: "#3d4a1f",
+                    },
+                    html,
+                    messages: [],
+                    buildLog: ["Motore visivo in sottofondo", "Partito"],
+                    status: "building",
+                    creditRefunded: true,
+                    visualJobId: "job-orto-leak",
+                    visualJobStatus: "run",
+                    visualJobStartedAt: now - 20_000,
+                    createdAt: now,
+                    updatedAt: now,
+                  },
+                ],
+                creditsRemaining: 100,
+                appDb: {},
+              },
+              version: 3,
+            }),
+          );
+        },
+        { html: LEAKED_CSS },
+      );
+      await page.goto(PREVIEW + `/studio/${projectId}`, {
+        waitUntil: "domcontentloaded",
+        timeout: 20000,
+      });
+      await page
+        .locator("section.hidden.md\\:block")
+        .getByText(/Partito|Rifinitura/i)
+        .first()
+        .waitFor({ timeout: 12000 });
+      const frame = page.frameLocator("iframe").first();
+      await frame.locator(".fk-hello").waitFor({ timeout: 12000 });
+      const visible = await frame.locator("body").innerText();
+      assert.doesNotMatch(visible, /\.fk-hello\s*\{/);
+      assert.doesNotMatch(visible, /\.fk-tab\s*\{/);
+      assert.doesNotMatch(visible, /\.fk-sheet\s*\{/);
+      assert.match(visible, /Orto Vivo/);
+      assert.equal(
+        await page
+          .getByRole("button", { name: /pubblica/i })
+          .first()
+          .isDisabled(),
+        true,
+      );
+      assert.equal(polishPosts, 0);
+    } finally {
+      await browser.close();
+    }
+  });
+});

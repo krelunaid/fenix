@@ -1,0 +1,6 @@
+{
+  "liveVerified": false,
+  "provenance": "declared worker-shaped META+HTML fixtures assembled from repository fixture music-site-no-fenix.html. Not live xAI completions. Not recorded LLM responses.",
+  "transport": "injected mock fetch in repair.recorded.test.ts; XAI_CHAT_COMPLETIONS_URL is never contacted",
+  "note": "Netlify quota is not xAI quota. POLISH_REPAIR_LIVE_VERIFIED remains false."
+}

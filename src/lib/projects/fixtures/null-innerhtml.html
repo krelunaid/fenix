@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Bottega Terra</title>
+<style>
+:root{--bg:#f4efe6;--fg:#2a241c;--accent:#b85c38;--line:#d7c4b0}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.45 Georgia,serif}
+header,nav{padding:12px 18px}
+nav button{margin-right:8px;border:1px solid var(--line);background:#fffaf3;color:var(--fg);padding:8px 12px}
+main{padding:18px 20px 48px}
+section{margin:0 0 22px}
+</style>
+</head>
+<body>
+<header><h1>Bottega Terra</h1><p>Ceramica a Grottaglie.</p></header>
+<nav>
+  <button type="button" data-view="elenco">Elenco</button>
+  <button type="button" data-view="nuovo">Nuovo</button>
+  <button type="button" data-view="numeri">Numeri</button>
+</nav>
+<main>
+  <section data-view-panel="elenco"><h2>Elenco</h2><p>Pezzi in bottega. Nessun nodo #elenco.</p></section>
+  <section data-view-panel="nuovo"><h2>Nuovo</h2><form><label>Nome <input name="nome"/></label><button type="submit">Salva</button></form></section>
+  <section data-view-panel="numeri"><h2>Numeri</h2><p>3 in forno.</p></section>
+</main>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  window.Fenix.load("state").then(function (st) {
+    var data = st && typeof st === "object" ? st : { items: [] };
+    window.Fenix.save("state", data);
+    document.querySelector("#elenco").innerHTML = "<li>terracotta</li>";
+    document.getElementById("lista-pezzi").innerHTML = "<li>x</li>";
+  });
+});
+</script>
+</body>
+</html>

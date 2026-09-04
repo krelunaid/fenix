@@ -1,0 +1,20 @@
+{
+  "generatedAt": "2026-09-04T20:53:01.657Z",
+  "shots": [
+    {
+      "name": "fullstack-D.png",
+      "sha256": "b17442bbd440076289e00bddf498772ea94ea83141e165f297cc8f7b682d06bb",
+      "bytes": 38267
+    },
+    {
+      "name": "fullstack-T.png",
+      "sha256": "ee30216565a01db4cbe5a38208f9c7c458a0b1ef0bb1d792564f38774991c1cc",
+      "bytes": 36015
+    },
+    {
+      "name": "fullstack-M.png",
+      "sha256": "891c17df97187af4deaaf9af17c3874ecbff61b071ebf2da9a78d26d637fe105",
+      "bytes": 32643
+    }
+  ]
+}

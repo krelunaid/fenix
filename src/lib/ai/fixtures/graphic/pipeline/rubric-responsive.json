@@ -1,0 +1,49 @@
+{
+  "against": "035d88b628b5b1f17466a1d5834a52e15cb346ec",
+  "slice": "visual realism + responsive divergence",
+  "visualScoreHonest": 88,
+  "externalParity": false,
+  "externalBenchmark": "benchmark esterno non disponibile",
+  "claim100": false,
+  "axes": {
+    "deviceAwareNav": {
+      "before": 42,
+      "after": 90,
+      "note": "035d88b desktop still painted a full-width phone tabbar on Essenza. Current D header/nav in testata; M tabbar only under 768; ops/magazine never use a tabbar."
+    },
+    "typeSystems": {
+      "before": 70,
+      "after": 88,
+      "note": "Six hard-brief display faces stay distinct: Cormorant Garamond, Playfair Display, Fraunces, Zilla Slab, IBM Plex Sans, Literata. Kickers are tabular (ops), sentence (food/hospitality), uppercase (perfume/fashion/editorial)."
+    },
+    "imagery": {
+      "before": 62,
+      "after": 80,
+      "note": "Slot-unique SVG with crop/light/grain/vignette and craft detail (liquid, lapels, fireplace, steam, contact sheet). Still procedural, not photography. Not tautological: four slots per family hash differently."
+    },
+    "emptySpaceHierarchy": {
+      "before": 60,
+      "after": 82,
+      "note": "Lookbook dropped the census card. Hospitality is rooms-first with a thin banner, not a perfume-tall hero. Perfume/food overlay census on the stage."
+    },
+    "opsDesk": {
+      "before": 55,
+      "after": 88,
+      "note": "035d88b left rail was oversized/clipped. Current desk is header+KPI+4-lane+table, KPI wraps, no ops-hero, no clipping of pipeline Q3."
+    },
+    "interaction": {
+      "before": 50,
+      "after": 84,
+      "note": "Primary flow (wear/advance) verified D/T/M with hover, pressed, loading node, success flash, empty+CTA on Essenza D. Console zero after interact."
+    }
+  },
+  "nonTautological": [
+    "desktop nav position !== fixed",
+    "mobile tabbar sticky/fixed or bottom near vh (non ops/magazine)",
+    "display font set size === 6",
+    "four unique SVG slots per product family",
+    "deadRatio < 0.58 on rendered D/T/M",
+    "overflow <= 8",
+    "EXTERNAL_BENCHMARK.available === false"
+  ]
+}

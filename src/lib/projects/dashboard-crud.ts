@@ -1,0 +1,165 @@
+import { DASHBOARD_CRUD_SCRIPT, dashboardCrudScript } from "./fenix-crud-runtime.ts";
+import { extractFenixCollectionHits, parseFenixCollection } from "./fenix-collection.ts";
+export { DASHBOARD_CRUD_SCRIPT, dashboardCrudScript };
+
+/** Repair gestionali: modal Nuovo/Annulla/Salva + pelle professionale cobalto/argilla. */
+
+export const ARGILLA_PALETTE = {
+  bg: "#eef3f8",
+  surface: "#ffffff",
+  fg: "#18212f",
+  muted: "#5a687a",
+  accent: "#1f5f8b",
+  line: "#d5dee9",
+};
+
+const FAKE_COPY =
+  /Fenix 2:\s*Vite \+ React|Vite \+ React|Persistenza via\s*,?\s*|1 schermate/gi;
+
+export function stripFakeStudioCopy(text: string): string {
+  return String(text || "")
+    .replace(/\bJOB_STILL_RUNNING\b/g, "Rifinitura interrotta. Tocca Riprendi rifinitura.")
+    .replace(FAKE_COPY, "")
+    .replace(/\(\s*\)\.?/g, "")
+    .replace(/:\s*\.?\s*$/g, "")
+    .replace(/\s{2,}/g, " ")
+    .replace(/\s+\./g, ".")
+    .replace(/\s+:/g, ":")
+    .trim();
+}
+
+export function scrubTechMessages<T extends { content: string }>(messages: T[] = []): T[] {
+  return keepLatestPronto(
+    messages
+      .map((m) => ({ ...m, content: stripFakeStudioCopy(m.content) }))
+      .filter((m) => m.content.length > 1),
+  );
+}
+
+/** Keep a single current Pronto. Historical duplicates collapse on recover. */
+export function keepLatestPronto<T extends { content: string }>(messages: T[] = []): T[] {
+  let last = -1;
+  for (let i = 0; i < messages.length; i++) {
+    if (/^Pronto\./.test(String(messages[i]?.content || ""))) last = i;
+  }
+  if (last < 0) return messages;
+  return messages.filter((m, i) => !/^Pronto\./.test(String(m.content || "")) || i === last);
+}
+
+export function parseEuro(v: unknown): number {
+  let s = String(v ?? "")
+    .replace(/€/g, "")
+    .replace(/\s/g, "")
+    .trim();
+  if (!s) return 0;
+  if (/^\d{1,3}(\.\d{3})+(,\d+)?$/.test(s)) {
+    s = s.replace(/\./g, "").replace(",", ".");
+  } else if (s.includes(",") && !s.includes(".")) {
+    s = s.replace(",", ".");
+  } else {
+    s = s.replace(/[^\d.-]/g, "");
+  }
+  const n = parseFloat(s);
+  return Number.isFinite(n) ? n : 0;
+}
+
+export function looksLikeBeigeSaas(html: string): boolean {
+  const h = String(html || "");
+  if (/Barlow Condensed|Fraunces|data-fenix-craft-desk/i.test(h)) return false;
+  const beige = /#f5f5f7|#fafafa|#f8f8f8|#ffffff|#f4f4f5|#efe6d4|#f7f1e4/i.test(h);
+  const generic = /Inter|Manrope|system-ui|beige|SaaS/i.test(h);
+  const fewMarks = (h.match(/<svg/gi) || []).length < 2;
+  return (beige && generic) || (beige && fewMarks && /nuovo pezzo|inventario/i.test(h));
+}
+
+export function shouldRepairDashboard(html: string, kind?: string): boolean {
+  if (kind && kind !== "dashboard") return false;
+  if (!html) return false;
+  if (/\bfk-tab\b/.test(html)) return false;
+  if (/Barlow Condensed/i.test(html) && /#0e0d0b/i.test(html)) return false;
+  return /<table/i.test(html) || /nuovo pezzo/i.test(html) || /inventario/i.test(html);
+}
+
+export function hasDashboardCrud(html: string): boolean {
+  return /data-fenix-crud/.test(html);
+}
+
+export function discoverAppCollection(html: string): string {
+  const hits = extractFenixCollectionHits(String(html || ""));
+  const valid = hits.map((hit) => hit.raw).filter((name) => parseFenixCollection(name));
+  const named = valid.find((n) => n !== "items" && n !== "state");
+  if (named) return named;
+  if (valid.includes("state")) return "state";
+  if (valid.includes("items")) return "items";
+  return "items";
+}
+
+export function repairDashboardCrud(html: string): string {
+  if (!html) return html;
+  let next = html.replace(FAKE_COPY, "");
+  next = next.replace(/<script[^>]*data-fenix-crud[^>]*>[\s\S]*?<\/script>/gi, "");
+  const script = dashboardCrudScript(discoverAppCollection(html));
+  if (/<\/body>/i.test(next)) return next.replace(/<\/body>/i, `${script}</body>`);
+  return next + script;
+}
+
+const CRAFT_DESK_CSS = `<style data-fenix-craft-desk>
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Source+Sans+3:wght@400;600;700&display=swap");
+:root{--bg:#eef3f8;--surface:#fff;--fg:#18212f;--muted:#5a687a;--accent:#1f5f8b;--line:#d5dee9;--cobalt:#1f5f8b;--clay:#c35d35}
+*,*::before,*::after{box-sizing:border-box}
+html,body{background:var(--bg);color:var(--fg);font:400 15px/1.45 "Source Sans 3",sans-serif}
+h1,h2,.brand,header .mark{font-family:"Fraunces",Georgia,serif;color:var(--fg)}
+header{background:var(--surface);border-bottom:1px solid var(--line);box-shadow:0 8px 26px rgba(24,33,47,.05)}
+header .mark svg,.fk-appicon{color:var(--clay)}
+nav button.on,nav a.on{color:var(--cobalt);border-bottom:2px solid var(--clay)}
+main{width:min(1180px,100%);margin:0 auto}
+table{display:block;width:100%;max-width:100%;overflow-x:auto;border-collapse:collapse;background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:0 12px 36px rgba(24,33,47,.07)}
+thead,tbody{display:table;width:100%;min-width:680px;table-layout:auto}
+th{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);text-align:left;padding:10px 12px;border-bottom:1px solid var(--line)}
+td{padding:10px 12px;border-bottom:1px solid var(--line);color:var(--fg)}
+button,.cta{appearance:none;min-height:40px;padding:9px 14px;border:1px solid var(--line);border-radius:7px;background:var(--surface);color:var(--fg);font:650 13px/1.2 "Source Sans 3",sans-serif;cursor:pointer}
+button:hover,.cta:hover{border-color:var(--cobalt);color:var(--cobalt)}
+button[type=submit],[data-fenix=save],.cta.primary{background:var(--cobalt);border-color:var(--cobalt);color:#fff}
+td button{min-height:34px;padding:7px 10px;margin:2px 4px 2px 0;white-space:nowrap}
+button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+dialog,[role=dialog],.modal{width:min(560px,calc(100vw - 28px));max-width:560px;max-height:calc(100dvh - 28px);overflow:auto;background:var(--surface);color:var(--fg);border:1px solid var(--line);border-radius:12px;padding:22px 24px;box-shadow:0 24px 70px rgba(24,33,47,.28)}
+dialog::backdrop{background:rgba(24,33,47,.46);backdrop-filter:blur(3px)}
+form{display:grid;gap:12px}
+form label{display:grid;gap:6px;color:var(--muted);font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase}
+form>div:last-child{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;margin-top:4px}
+input:not([type=hidden]):not([type=checkbox]):not([type=radio]),textarea,select{appearance:none;width:100%;min-height:44px;padding:10px 12px;border:1px solid var(--line);border-radius:7px;background:#fff;color:var(--fg);font:500 15px/1.4 "Source Sans 3",sans-serif}
+</style>`;
+
+const VESSEL_MARK = `<span class="fk-appicon" aria-hidden="true" data-fenix-vessel><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M8 8h8l-1 11H9L8 8z"/><path d="M9 8V6h6v2"/><path d="M7 8h10"/></svg></span>`;
+
+function neutralizeIosTemplate(html: string): string {
+  return html
+    .replace(/#f5f5f7/gi, ARGILLA_PALETTE.bg)
+    .replace(/#0071e3/gi, ARGILLA_PALETTE.accent)
+    .replace(/\bInter\b/g, "Source Sans 3")
+    .replace(/\bManrope\b/g, "Fraunces");
+}
+
+export function applyCraftDashboardSkin(html: string): string {
+  if (!html) return html;
+  if (/Barlow Condensed/i.test(html) && /#0e0d0b/i.test(html)) return html;
+  let next = html;
+  if (!/data-fenix-craft-desk/.test(next)) {
+    if (/<\/head>/i.test(next)) {
+      next = next.replace(/<\/head>/i, `${CRAFT_DESK_CSS}</head>`);
+    } else if (/<head[^>]*>/i.test(next)) {
+      next = next.replace(/<head[^>]*>/i, (open) => `${open}${CRAFT_DESK_CSS}`);
+    } else {
+      next = CRAFT_DESK_CSS + next;
+    }
+    if (!/data-fenix-vessel/.test(next) && /<header/i.test(next)) {
+      next = next.replace(/<header([^>]*)>/i, `<header$1>${VESSEL_MARK}`);
+    }
+  }
+  return neutralizeIosTemplate(next);
+}
+
+export function polishDashboardHtml(html: string, kind?: string): string {
+  if (!shouldRepairDashboard(html, kind)) return html;
+  return repairDashboardCrud(applyCraftDashboardSkin(html));
+}

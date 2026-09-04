@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="color-scheme" content="light"/>
+<title>Vesti</title>
+<style>
+:root{--bg:#f3ead8;--surface:#fff8ec;--fg:#1c1712;--muted:#5c5348;--accent:#8c2f1b;--line:#d2c4ae}
+html,body{height:100%;margin:0}
+body{font:400 16px/1.4 "Source Sans 3",system-ui,sans-serif;background:var(--bg);color:var(--fg);display:flex;flex-direction:column;min-height:100dvh}
+button,a,input{min-height:44px}
+button:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+header.fk-top{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;background:var(--surface);border-bottom:1px solid var(--line)}
+h1.fk-hello{margin:0;font-size:1.25rem}
+p.fk-role{margin:0;color:var(--muted);font-size:.85rem}
+main.fk-main{flex:1;min-height:0;overflow:auto;padding:16px 16px 80px}
+nav.fk-tab{position:fixed;left:0;right:0;bottom:0;height:64px;display:flex;gap:4px;padding:6px 8px;background:var(--surface);border-top:1px solid var(--line)}
+nav.fk-tab button{flex:1;border:0;background:transparent;color:var(--muted);font-size:11px}
+nav.fk-tab button.on{color:var(--accent);font-weight:700}
+.fk-btn{background:var(--accent);color:#fff8ec;border:0;border-radius:8px;padding:10px 16px}
+.fk-field{display:flex;flex-direction:column;gap:8px}
+.fk-tile{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.fk-kicker{text-transform:uppercase;letter-spacing:.08em;font-size:11px;color:var(--muted)}
+</style>
+</head>
+<body>
+<header class="fk-top">
+  <div>
+    <h1 class="fk-hello">Vesti</h1>
+    <p class="fk-role">Armadio di casa</p>
+  </div>
+</header>
+<main class="fk-main" id="main"></main>
+<nav class="fk-tab" aria-label="Navigazione">
+  <button type="button" data-view="home" class="on">Home</button>
+  <button type="button" data-view="new">Nuovo</button>
+  <button type="button" data-view="list">Capi</button>
+  <button type="button" data-view="stats">Numeri</button>
+  <button type="button" data-view="more">Altro</button>
+</nav>
+<template id="t-home">
+  <section class="fk-sheet">
+    <p class="fk-kicker">Oggi</p>
+    <p id="home-count">Nessun capo in armadio.</p>
+    <button type="button" class="fk-btn" data-go="new">Aggiungi capo</button>
+  </section>
+</template>
+<template id="t-new">
+  <form class="fk-field" id="fnew">
+    <label class="fk-lbl" for="nome">Capo</label>
+    <input id="nome" name="nome" placeholder="Es. cappotto lana" required/>
+    <label class="fk-lbl" for="stagione">Stagione</label>
+    <input id="stagione" name="stagione" placeholder="Es. inverno" required/>
+    <button class="fk-btn" type="button" id="salva">Salva</button>
+  </form>
+</template>
+<template id="t-list">
+  <div id="elenco"><p class="fk-role">Nessun elemento.</p></div>
+</template>
+<template id="t-stats">
+  <div class="fk-panel"><h3>Numeri</h3><p id="stats-count">0 capi</p></div>
+</template>
+<template id="t-more">
+  <section><h3>Vesti</h3><p>I capi restano su questo dispositivo.</p></section>
+</template>
+<script>
+(function(){
+  var COL = "capi vesti";
+  var current = "home";
+  function rows(){
+    return window.Fenix.data.query(COL);
+  }
+  function show(view){
+    current = view;
+    document.querySelectorAll("nav.fk-tab button").forEach(function(b){
+      b.classList.toggle("on", b.getAttribute("data-view") === view);
+    });
+    var tpl = document.getElementById("t-" + view);
+    var main = document.getElementById("main");
+    if (!tpl || !main) return;
+    main.innerHTML = tpl.innerHTML;
+    if (view === "home" || view === "list" || view === "stats") paint();
+    var saveBtn = document.getElementById("salva");
+    if (saveBtn) saveBtn.addEventListener("click", onSave);
+  }
+  function paint(){
+    rows().then(function(list){
+      var n = list.length;
+      var home = document.getElementById("home-count");
+      if (home) home.textContent = n ? (n + " capi in armadio") : "Nessun capo in armadio.";
+      var stats = document.getElementById("stats-count");
+      if (stats) stats.textContent = n + " capi";
+      var elenco = document.getElementById("elenco");
+      if (elenco) {
+        if (!n) elenco.innerHTML = '<p class="fk-role">Nessun elemento.</p>';
+        else elenco.innerHTML = list.map(function(it){
+          return '<div class="fk-tile"><b>'+it.nome+'</b><span>'+(it.stagione||"")+'</span><button type="button" class="fk-chip" data-del="'+it.id+'">Rimuovi</button></div>';
+        }).join("");
+      }
+    });
+  }
+  function onSave(ev){
+    if (ev && ev.preventDefault) ev.preventDefault();
+    var form = document.getElementById("fnew");
+    if (!form) return;
+    var nome = (form.nome && form.nome.value || "").trim();
+    var stagione = (form.stagione && form.stagione.value || "").trim();
+    if (!nome) return;
+    window.Fenix.data.insert(COL, { nome: nome, stagione: stagione }).then(function(){
+      show("list");
+    });
+  }
+  document.querySelectorAll("[data-view]").forEach(function(b){
+    b.addEventListener("click", function(){ show(b.getAttribute("data-view")); });
+  });
+  document.addEventListener("click", function(ev){
+    var go = ev.target && ev.target.getAttribute && ev.target.getAttribute("data-go");
+    if (go) show(go);
+    var del = ev.target && ev.target.getAttribute && ev.target.getAttribute("data-del");
+    if (del) window.Fenix.data.remove(COL, del).then(function(){ paint(); });
+  });
+  rows().then(function(){
+    show("home");
+    document.documentElement.setAttribute("data-fenix-ready","1");
+  });
+})();
+</script>
+</body>
+</html>

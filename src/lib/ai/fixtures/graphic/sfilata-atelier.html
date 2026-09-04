@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+<meta name="color-scheme" content="light"/>
+<title>Sfilata Atelier</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Playfair+Display:wght@500;700&display=swap" rel="stylesheet"/>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Crect width='48' height='48' fill='%23161412'/%3E%3Cpath d='M16 38V18l8-8 8 8v20' fill='none' stroke='%23c81d25' stroke-width='2'/%3E%3C/svg%3E"/>
+<style data-fenix-phone>
+:root{color-scheme:light;--bg:#f6f1ea;--surface:#fffdf8;--elevated:#fff;--fg:#161412;--muted:#6b645c;--accent:#c81d25;--line:#e4d9cc;--accent-ink:#fffdf8;--r:2px}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg);color:var(--fg);font:400 15px/1.45 "DM Sans",system-ui,sans-serif}
+.app{min-height:100dvh;height:100dvh;display:flex;flex-direction:column}
+header{padding:16px 18px 10px;border-bottom:1px solid var(--fg);display:flex;justify-content:space-between;align-items:baseline}
+.brand{font-family:"Playfair Display",Georgia,serif;font-size:clamp(1.7rem,5vw,2.3rem);font-weight:700;letter-spacing:-.04em}
+.season{font-size:11px;letter-spacing:.16em;text-transform:uppercase}
+main{flex:1;min-height:0;overflow-y:auto;padding:14px 14px 24px}
+.lookbook{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.look{background:var(--surface);border:1px solid var(--line);min-height:220px;display:flex;flex-direction:column}
+.sil{height:140px;background:linear-gradient(180deg,#161412 0%,#c81d25 55%,#f6f1ea 55%)}
+.look h2{font-family:"Playfair Display",serif;font-size:1.05rem;padding:10px 10px 0}
+.look p{color:var(--muted);font-size:12px;padding:4px 10px 12px}
+.card{background:var(--surface);border:1px solid var(--line);padding:14px;margin-bottom:10px}
+.card h2{font-family:"Playfair Display",serif;font-size:1.2rem}
+.row{display:flex;justify-content:space-between;gap:8px;align-items:center;margin-top:8px}
+.btn{appearance:none;border:0;cursor:pointer;font:700 13px/1 "DM Sans",sans-serif;letter-spacing:.06em;text-transform:uppercase;padding:12px 14px;min-height:44px;background:var(--accent);color:var(--accent-ink);border-radius:var(--r)}
+.btn.ghost{background:transparent;color:var(--fg);border:1px solid var(--fg)}
+label{display:block;font-size:10px;letter-spacing:.14em;text-transform:uppercase;margin:10px 0 4px;color:var(--muted)}
+input,select{width:100%;font:inherit;padding:11px 12px;border:1px solid var(--fg);background:var(--elevated);color:var(--fg);border-radius:var(--r)}
+.tabs{height:calc(64px + env(safe-area-inset-bottom));display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--fg);padding:6px 4px calc(6px + env(safe-area-inset-bottom));background:var(--surface)}
+.tabs button{border:0;background:none;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:3px;font:700 10px/1.1 "DM Sans",sans-serif;text-transform:uppercase;letter-spacing:.08em}
+.tabs button.on{color:var(--accent)}
+.tabs svg{width:22px;height:22px}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.empty{padding:32px;text-align:center;color:var(--muted)}
+.euro{font-variant-numeric:tabular-nums}
+@media(min-width:768px){
+  .app{display:grid;grid-template-columns:200px 1fr;width:min(1100px,100%);margin:0 auto;height:auto;min-height:100dvh}
+  header{grid-column:1;writing-mode:horizontal-tb;border-bottom:0;border-right:1px solid var(--fg);flex-direction:column;align-items:flex-start;gap:18px}
+  .tabs{grid-column:1;display:flex;flex-direction:column;height:auto;border-top:0;border-right:1px solid var(--fg);padding:16px}
+  .tabs button{flex-direction:row;font-size:12px;min-height:44px;gap:10px}
+  main{grid-column:2;grid-row:1 / span 2;padding:22px}
+  .lookbook{grid-template-columns:repeat(3,1fr)}
+}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="app">
+<header>
+  <h1 class="brand">Sfilata</h1>
+  <p class="season">Atelier · SS26</p>
+</header>
+<main id="root"></main>
+<nav class="tabs" id="tabs">
+  <button type="button" data-view="lookbook" class="on">Look</button>
+  <button type="button" data-view="vendite">Vendite</button>
+  <button type="button" data-view="clienti">Clienti</button>
+  <button type="button" data-view="atelier">Atelier</button>
+</nav>
+</div>
+<script>
+const defaultData={
+  capi:[
+    {id:"c1",nome:"Cappotto inchiostro",taglia:"M",prezzo:890,stato:"in passerella"},
+    {id:"c2",nome:"Abito carminio",taglia:"S",prezzo:640,stato:"venduto"},
+    {id:"c3",nome:"Pantalone carta",taglia:"L",prezzo:320,stato:"in atelier"}
+  ],
+  vendite:[
+    {id:"v1",cliente:"Giulia R.",capo:"Abito carminio",euro:640}
+  ]
+};
+let data=structuredClone(defaultData);
+let view="lookbook";
+const tabDefs=[
+  {id:"lookbook",label:"Look",svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M8 21V8l4-4 4 4v13"/><path d="M8 11h8"/></svg>'},
+  {id:"vendite",label:"Vendite",svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 7h16v12H4z"/><path d="M8 7V5h8v2"/></svg>'},
+  {id:"clienti",label:"Clienti",svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="8" r="3"/><path d="M5 20c1.5-4 12.5-4 14 0"/></svg>'},
+  {id:"atelier",label:"Atelier",svg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 20l6-6 3 3 7-8"/><path d="M14 9h6v6"/></svg>'}
+];
+function save(){ if(window.Fenix) void window.Fenix.save("state", data); }
+function renderTabs(){
+  document.getElementById("tabs").innerHTML=tabDefs.map(t=>`<button type="button" data-view="${t.id}" class="${view===t.id?"on":""}">${t.svg}<span>${t.label}</span></button>`).join("");
+}
+function render(){
+  renderTabs();
+  const root=document.getElementById("root");
+  let html="";
+  if(view==="lookbook"){
+    html+='<div class="lookbook">';
+    data.capi.forEach(c=>{
+      html+=`<article class="look" data-id="${c.id}"><div class="sil" aria-hidden="true"></div><h2>${c.nome}</h2><p>${c.taglia} · ${c.stato}</p></article>`;
+    });
+    html+="</div>";
+  }
+  if(view==="vendite"){
+    const tot=data.vendite.reduce((s,v)=>s+v.euro,0);
+    html+=`<div class="card"><p class="season">Cassa</p><h2 class="euro">€${tot}</h2><p>${data.vendite.length} pezzi usciti</p></div>`;
+    data.vendite.forEach(v=>{
+      html+=`<div class="card" data-id="${v.id}"><div class="row"><h2>${v.cliente}</h2><strong>€${v.euro}</strong></div><p>${v.capo}</p></div>`;
+    });
+  }
+  if(view==="clienti"){
+    const names=[...new Set(data.vendite.map(v=>v.cliente))];
+    if(!names.length) html+='<p class="empty">Nessun cliente in agenda. Registra una vendita.</p>';
+    else names.forEach(n=>{ html+=`<div class="card"><h2>${n}</h2><p>atelier privato</p></div>`; });
+  }
+  if(view==="atelier"){
+    html+=`<div class="card"><p class="season">Nuovo capo</p><h2>Taglia e prezzo</h2>
+      <form id="fnew">
+        <label for="n">Capo</label><input class="field" id="n" name="n" required placeholder="Es. Blazer latte">
+        <label for="t">Taglia</label><select class="field" id="t" name="t"><option>XS</option><option>S</option><option selected>M</option><option>L</option></select>
+        <label for="p">Prezzo</label><input class="field" id="p" name="p" type="number" min="0" step="10" value="240">
+        <button class="btn" type="submit" style="margin-top:14px;width:100%">Metti in passerella</button>
+      </form></div>`;
+    data.capi.forEach(c=>{
+      html+=`<div class="card" data-id="${c.id}"><div class="row"><h2>${c.nome}</h2><button class="btn ghost" data-act="sell" data-id="${c.id}">Vendi</button></div><p>${c.taglia} · €${c.prezzo}</p></div>`;
+    });
+  }
+  root.innerHTML=html;
+}
+document.getElementById("tabs").addEventListener("click",e=>{
+  const b=e.target.closest("[data-view]"); if(!b) return; view=b.getAttribute("data-view"); render();
+});
+document.getElementById("root").addEventListener("click",e=>{
+  const b=e.target.closest("[data-act]"); if(!b) return;
+  if(b.getAttribute("data-act")==="sell"){
+    const c=data.capi.find(x=>x.id===b.getAttribute("data-id")); if(!c||c.stato==="venduto") return;
+    c.stato="venduto"; data.vendite.unshift({id:"v"+Date.now(),cliente:"Cliente atelier",capo:c.nome,euro:c.prezzo}); save(); view="vendite"; render();
+  }
+});
+document.getElementById("root").addEventListener("submit",e=>{
+  e.preventDefault();
+  const f=e.target; if(f.id!=="fnew") return;
+  const nome=(f.n.value||"").trim(); if(!nome) return;
+  data.capi.unshift({id:"c"+Date.now(),nome,taglia:f.t.value,prezzo:+f.p.value||0,stato:"in atelier"});
+  f.reset(); save(); view="lookbook"; render();
+});
+function markReady(){ document.documentElement.setAttribute("data-fenix-ready","1"); }
+async function boot(){ try{ if(window.Fenix&&window.Fenix.load){ const r=await window.Fenix.load("state"); if(r&&typeof r==="object"&&Array.isArray(r.capi)) data=r; } }catch(err){} render(); markReady(); }
+boot();
+setTimeout(function(){ if(!document.documentElement.getAttribute("data-fenix-ready")) { render(); markReady(); } }, 500);
+</script>
+</body>
+</html>

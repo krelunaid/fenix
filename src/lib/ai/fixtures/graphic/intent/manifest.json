@@ -1,0 +1,62 @@
+{
+  "parent": "76414c75ce4dc1b2f66343fc0ed1160be0c1b45b",
+  "before": [
+    {
+      "name": "system-D.png",
+      "sha256": "069403df7ace5f55bd6ed7910e4ccdb30b8e4a99c10caf2a124baac46edf78f7",
+      "bytes": 51098
+    },
+    {
+      "name": "system-T.png",
+      "sha256": "d929b0ed8205a874b798a579253c9937142834947ddfb08431416b98977c13c5",
+      "bytes": 46210
+    },
+    {
+      "name": "system-M.png",
+      "sha256": "e1e6ce2e0cf2bb259b7042b69dbb136f946272b5c59eeda44fe613bc1caa6d4e",
+      "bytes": 41307
+    },
+    {
+      "name": "serif-D.png",
+      "sha256": "494ce48774f2aab9fdec73b72082a6c7487b1b8eb5f04f5d843918f0ae7f4edf",
+      "bytes": 664375
+    },
+    {
+      "name": "serif-T.png",
+      "sha256": "8951430d09a34d9ede5ce8a8d73a53fd0c727b3542d7ae8aeafdb5d77ee8dd3d",
+      "bytes": 500301
+    },
+    {
+      "name": "serif-M.png",
+      "sha256": "f08299ab4002b0cfe141ddde50325a42139fa619b7ace2cda2af7710882e4084",
+      "bytes": 202071
+    }
+  ],
+  "after": [
+    {
+      "name": "system-D.png",
+      "sha256": "7af227a7d96796fabbd99a1b482089c348ea8e026c8f235bf45b36e4751311f1"
+    },
+    {
+      "name": "system-T.png",
+      "sha256": "2b2030e6f2ad16c2aeb2ab260b7e8a0ec0c62f1772d054c4f70df706eed7dda8"
+    },
+    {
+      "name": "system-M.png",
+      "sha256": "b6baa401503257c6bd2b35a6c65b86f559e48eafdeea3c3329af14740482d7bb"
+    },
+    {
+      "name": "serif-D.png",
+      "sha256": "764da75501fc5be9ec32cbd926a647a4484afda14feaf0ab6648f50b95719f3d"
+    },
+    {
+      "name": "serif-T.png",
+      "sha256": "db97870025c9ebbcd10abd8187c77a252505be3eeec878293922f9a5c0e29f8b"
+    },
+    {
+      "name": "serif-M.png",
+      "sha256": "a9901525a1bcc0faf10676f4cb8eadd2ce513b18d26ee220676af5a61a639d14"
+    }
+  ],
+  "note": "composeProduct+repairBuild(declared mock)+prepareSrcDoc. First-screen shots wait for real settle (no #err/#toast mask). After-CRUD is a separate file. Tab ON/OFF contrast>=4.5 at D/T/M/320. Shorthand font:700 22px/1.2 and 22px/ 1.2 keep size/weight/lh. SYSTEM empty first-run, adaptive sheet not a single petrol, one title, CTA >=200x44, pocket-list list-style none, no — · nuovo. Four pairwise-distinct panes, Persona wipe-ask/confirm/reload empty, 320/390 content above nav. Hash is movement, not a score. Not 9/10. Not premium/parity."
+}

@@ -1,0 +1,1656 @@
+import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
+import { existsSync, mkdirSync, readFileSync, writeFileSync, statSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { describe, it } from "node:test";
+import { type FrameLocator, type Page } from "playwright";
+import { isolatedPage, isBlockedPublicNetworkError, launchChromium } from "../projects/playwright-harness.ts";
+import { prepareSrcDoc } from "../projects/color-scheme.ts";
+import { waitForFenixReady } from "../../../scripts/fenix-ready.mjs";
+import {
+  auditGraphicQuality,
+  collectRenderedGraphic,
+  GRAPHIC_SCORE_THRESHOLD,
+} from "../projects/graphic-quality.ts";
+import { evaluateContract, planContract, blocksPublish } from "./build-contract.ts";
+import { loadPipelineFixtures, runGraphicPipeline, GRAPHIC_FIVE_PARENT_SHA } from "./compose-product.ts";
+import { loadLegacyGraphicFixtures } from "./graphic-fixtures.ts";
+import { EXTERNAL_BENCHMARK, runBlindTrial } from "../projects/blind-visual-benchmark.ts";
+
+const here = dirname(fileURLToPath(import.meta.url));
+const SHOTS = join(here, "fixtures/graphic/pipeline");
+const PALETTE_SHOTS = join(here, "fixtures/graphic/palette");
+const OUT = process.env.FENIX_SCORECARD_OUT || "/workspace/screenshots/fase3-graphic-pipeline";
+const VIEWPORTS = [
+  ["D", { width: 1280, height: 800 }],
+  ["T", { width: 768, height: 1024 }],
+  ["M", { width: 390, height: 844 }],
+] as const;
+
+type PerfumeThumbPaint = {
+  title: string;
+  bottle: string;
+  slot: string;
+  focus: string;
+  fit: string;
+  viewBox: string;
+  tw: number;
+  th: number;
+  ml: number;
+  mr: number;
+  mt: number;
+  mb: number;
+  dx: number;
+  dy: number;
+  capH: number;
+  glassH: number;
+};
+
+function expectedPerfumeBottle(title: string, ice: boolean): string {
+  if (/nuit|sale adriatico/i.test(title)) return ice ? "sale" : "nuit";
+  if (/acqua|nebbia/i.test(title)) return ice ? "nebbia" : "acqua";
+  if (/fleur|pino/i.test(title)) return ice ? "pino" : "fleur";
+  if (/pelle|vetro/i.test(title)) return ice ? "vetro" : "pelle";
+  return "";
+}
+
+async function paintPerfumeThumbs(frame: FrameLocator): Promise<PerfumeThumbPaint[]> {
+  return frame.locator("html").evaluate(() => {
+    return [...document.querySelectorAll(".fragrance")].map((card) => {
+      const thumb = card.querySelector(".thumb");
+      const cap = thumb?.querySelector("[data-part='cap']");
+      const glass = thumb?.querySelector("[data-part='glass']");
+      const svg = thumb?.querySelector("svg");
+      const title = card.querySelector("h2")?.textContent || "";
+      if (!thumb || !cap || !glass) {
+        return {
+          title,
+          bottle: "",
+          slot: "",
+          focus: "",
+          fit: "",
+          viewBox: "",
+          tw: 0,
+          th: 0,
+          ml: -99,
+          mr: -99,
+          mt: -99,
+          mb: -99,
+          dx: 1,
+          dy: 1,
+          capH: 0,
+          glassH: 0,
+        };
+      }
+      const t = thumb.getBoundingClientRect();
+      const rs = [cap.getBoundingClientRect(), glass.getBoundingClientRect()];
+      const left = Math.min(rs[0]!.left, rs[1]!.left);
+      const right = Math.max(rs[0]!.right, rs[1]!.right);
+      const top = Math.min(rs[0]!.top, rs[1]!.top);
+      const bottom = Math.max(rs[0]!.bottom, rs[1]!.bottom);
+      return {
+        title,
+        bottle: thumb.querySelector("[data-bottle]")?.getAttribute("data-bottle") || "",
+        slot: svg?.getAttribute("data-slot") || "",
+        focus: svg?.getAttribute("data-focus") || "",
+        fit: svg?.getAttribute("data-fit") || "",
+        viewBox: svg?.getAttribute("viewBox") || "",
+        tw: t.width,
+        th: t.height,
+        ml: left - t.left,
+        mr: t.right - right,
+        mt: top - t.top,
+        mb: t.bottom - bottom,
+        dx: t.width ? Math.abs((left + right) / 2 - (t.left + t.right) / 2) / t.width : 1,
+        dy: t.height ? Math.abs((top + bottom) / 2 - (t.top + t.bottom) / 2) / t.height : 1,
+        capH: rs[0]!.height,
+        glassH: rs[1]!.height,
+      };
+    });
+  });
+}
+
+function assertPerfumeThumbsFramed(rows: PerfumeThumbPaint[], label: string, ice = false) {
+  assert.ok(rows.length >= 4, `${label} thumbs ${rows.length}`);
+  const bottles = new Set<string>();
+  for (const row of rows) {
+    const tag = `${label} ${row.title || row.bottle}`;
+    const expected = expectedPerfumeBottle(row.title, ice);
+    if (expected) assert.equal(row.bottle, expected, `${tag} bottle`);
+    bottles.add(row.bottle);
+    assert.match(row.focus, /^-?\d/, `${tag} focus`);
+    assert.notEqual(row.viewBox, "0 0 640 420", `${tag} still hero viewBox`);
+    assert.equal(row.fit, "slice", `${tag} fit`);
+    assert.ok(row.tw >= 48 && row.th >= 48, `${tag} thumb ${row.tw}x${row.th}`);
+    assert.ok(row.ml >= 4, `${tag} left ${row.ml.toFixed(1)}`);
+    assert.ok(row.mr >= 4, `${tag} right ${row.mr.toFixed(1)}`);
+    assert.ok(row.mt >= 4, `${tag} top ${row.mt.toFixed(1)}`);
+    assert.ok(row.mb >= 4, `${tag} bottom ${row.mb.toFixed(1)}`);
+    assert.ok(row.dx <= 0.22, `${tag} optical x ${row.dx.toFixed(3)}`);
+    assert.ok(row.dy <= 0.22, `${tag} optical y ${row.dy.toFixed(3)}`);
+    assert.ok(row.capH >= 6, `${tag} capH ${row.capH}`);
+    assert.ok(row.glassH >= 24, `${tag} glassH ${row.glassH}`);
+  }
+  assert.ok(bottles.size >= 4, `${label} bottle diversity ${[...bottles]}`);
+}
+
+function cssToHex(value: string): string {
+  const v = value.trim().toLowerCase();
+  if (v.startsWith("#")) {
+    if (v.length === 4) return `#${v[1]}${v[1]}${v[2]}${v[2]}${v[3]}${v[3]}`;
+    return v.slice(0, 7);
+  }
+  const m = v.match(/^rgba?\(\s*(\d+)[,\s/]+(\d+)[,\s/]+(\d+)/);
+  if (!m) return v;
+  return `#${[m[1], m[2], m[3]].map((n) => Number(n).toString(16).padStart(2, "0")).join("")}`;
+}
+
+const FIVE_PERSIST_HOST = `<!DOCTYPE html><html><head><style>html,body,#f{margin:0;width:100%;height:100%;border:0;display:block;background:transparent}</style></head><body>
+<iframe id="f"></iframe>
+<script>
+window.__db = {};
+window.addEventListener("message", function(e){
+  var m=e.data;
+  if(!m || m.t!=="fenix-db" || !m.id) return;
+  if(m.op==="save") window.__db[m.col]=m.data;
+  var value=m.op==="load" ? (window.__db[m.col] || null) : {ok:true,v:m.data,durable:Array.isArray(m.data&&m.data.items)?m.data.items.length:0};
+  e.source.postMessage({t:"fenix-db",id:m.id,v:value},"*");
+});
+</script></body></html>`;
+
+async function iframeHeadingCount(page: Page, title: string): Promise<number> {
+  return page.locator("#f").evaluate((el, t) => {
+    const doc = (el as HTMLIFrameElement).contentDocument;
+    if (!doc) return 0;
+    return [...doc.querySelectorAll("h2")].filter((node) => (node.textContent || "").trim() === t).length;
+  }, title);
+}
+
+async function waitIframeHeading(page: Page, title: string, timeout = 8000) {
+  await page.waitForFunction(
+    (t) => {
+      const el = document.querySelector("#f") as HTMLIFrameElement | null;
+      const doc = el && el.contentDocument;
+      if (!doc) return false;
+      return [...doc.querySelectorAll("h2")].some((node) => (node.textContent || "").trim() === t);
+    },
+    title,
+    { timeout },
+  );
+}
+
+async function clickActOnHeading(
+  frame: ReturnType<Page["frameLocator"]>,
+  title: string,
+  act: "edit" | "del",
+) {
+  const cards = frame.locator("article[data-id], div.card[data-id]");
+  const n = await cards.count();
+  for (let i = 0; i < n; i++) {
+    const text = await cards
+      .nth(i)
+      .locator("h2")
+      .first()
+      .evaluate((el) => (el.textContent || "").trim());
+    if (text !== title) continue;
+    await cards
+      .nth(i)
+      .locator(`[data-act="${act}"]`)
+      .click();
+    return;
+  }
+  assert.equal(true, false, `${act} control for ${title}`);
+}
+
+async function shot(page: Page, name: string, dir = SHOTS) {
+  mkdirSync(dir, { recursive: true });
+  const dest = join(dir, name);
+  await page.screenshot({ path: dest, fullPage: false });
+  try {
+    mkdirSync(OUT, { recursive: true });
+    await page.screenshot({ path: join(OUT, name), fullPage: false });
+  } catch {
+    /* CI without scorecard dir */
+  }
+  return dest;
+}
+
+type PaintFingerprint = { hist: number[]; mean: [number, number, number]; paints: number };
+
+function fingerprintDistance(a: PaintFingerprint, b: PaintFingerprint): number {
+  let hist = 0;
+  const n = Math.max(a.hist.length, b.hist.length);
+  for (let i = 0; i < n; i++) hist += Math.abs((a.hist[i] || 0) - (b.hist[i] || 0));
+  const mean =
+    Math.abs(a.mean[0] - b.mean[0]) + Math.abs(a.mean[1] - b.mean[1]) + Math.abs(a.mean[2] - b.mean[2]);
+  return hist + mean * 6;
+}
+
+async function paintFingerprints(page: Page, selector: string): Promise<PaintFingerprint[]> {
+  return page.evaluate(async (sel) => {
+    const roots = [...document.querySelectorAll(sel)];
+    const out: { hist: number[]; mean: [number, number, number]; paints: number }[] = [];
+    for (const root of roots) {
+      const svg = (root.tagName.toLowerCase() === "svg" ? root : root.querySelector("svg")) as SVGSVGElement | null;
+      if (!svg) continue;
+      const paints = new Set<string>();
+      svg.querySelectorAll("*").forEach((n) => {
+        for (const a of ["fill", "stroke"]) {
+          const v = n.getAttribute(a);
+          if (v && v !== "none") paints.add(v.toLowerCase());
+        }
+      });
+      const xml = new XMLSerializer().serializeToString(svg);
+      const url = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(xml)}`;
+      const img = await new Promise<HTMLImageElement | null>((resolve) => {
+        const image = new Image();
+        image.onload = () => resolve(image);
+        image.onerror = () => resolve(null);
+        image.src = url;
+      });
+      const hist = new Array(24).fill(0);
+      let rS = 0;
+      let gS = 0;
+      let bS = 0;
+      let n = 0;
+      if (img) {
+        const canvas = document.createElement("canvas");
+        canvas.width = 48;
+        canvas.height = 36;
+        const ctx = canvas.getContext("2d", { willReadFrequently: true });
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, 48, 36);
+          const data = ctx.getImageData(0, 0, 48, 36).data;
+          for (let i = 0; i < data.length; i += 4) {
+            const r = data[i]!;
+            const g = data[i + 1]!;
+            const b = data[i + 2]!;
+            const a = data[i + 3]!;
+            if (a < 16) continue;
+            rS += r;
+            gS += g;
+            bS += b;
+            n += 1;
+            const max = Math.max(r, g, b);
+            const min = Math.min(r, g, b);
+            const lum = (max + min) / 2;
+            let hue = 0;
+            if (max !== min) {
+              const d = max - min;
+              if (max === r) hue = ((g - b) / d + (g < b ? 6 : 0)) / 6;
+              else if (max === g) hue = ((b - r) / d + 2) / 6;
+              else hue = ((r - g) / d + 4) / 6;
+            }
+            const hi = Math.min(7, Math.floor(hue * 8));
+            const li = lum < 85 ? 0 : lum < 170 ? 1 : 2;
+            hist[hi * 3 + li] += 1;
+          }
+        }
+      }
+      out.push({
+        hist,
+        mean: n ? [rS / n, gS / n, bS / n] : [0, 0, 0],
+        paints: paints.size,
+      });
+    }
+    return out;
+  }, selector);
+}
+
+describe("graphic pipeline visual QA D/T/M", () => {
+  it("paints six hard briefs plus dual directions, scores them, and records a blind rubric", async () => {
+    const fixtures = loadPipelineFixtures();
+    assert.ok(fixtures.length >= 10);
+    const browser = await launchChromium();
+    const manifest: {
+      threshold: number;
+      files: { name: string; sha256: string; bytes: number; score: number; ok: boolean; grammar: string }[];
+      external: typeof EXTERNAL_BENCHMARK.declaration;
+    } = { threshold: GRAPHIC_SCORE_THRESHOLD, files: [], external: EXTERNAL_BENCHMARK.declaration };
+    try {
+      for (const fix of fixtures) {
+        const kind = fix.kind || "app";
+        const contract = planContract(fix.brief);
+        for (const [vp, viewport] of VIEWPORTS) {
+          const page = await isolatedPage(browser, { viewport });
+          const errors: string[] = [];
+          page.on("pageerror", (err) => {
+            if (!isBlockedPublicNetworkError(String(err))) errors.push(String(err));
+          });
+          page.on("console", (msg) => {
+            if (msg.type() === "error" && !isBlockedPublicNetworkError(msg.text())) errors.push(msg.text());
+          });
+          try {
+            const src = prepareSrcDoc(fix.html, fix.palette, fix.id, kind);
+            await page.setContent(src, { waitUntil: "domcontentloaded", timeout: 15000 });
+            await waitForFenixReady(page, 8000);
+            const rendered = await page.evaluate(collectRenderedGraphic);
+            rendered.consoleErrors = errors.length;
+            const report = auditGraphicQuality(fix.html, { brief: fix.brief, kind, rendered });
+            const evaluation = evaluateContract({
+              html: fix.html,
+              files: [{ path: "index.html", content: fix.html }],
+              contract,
+              kind,
+              brief: fix.brief,
+              rendered,
+            });
+            const dest = await shot(page, `${fix.id}-${vp}.png`);
+            const buf = await page.screenshot({ type: "png" });
+            const st = statSync(dest);
+            manifest.files.push({
+              name: `${fix.id}-${vp}.png`,
+              sha256: createHash("sha256").update(buf).digest("hex"),
+              bytes: st.size,
+              score: report.score,
+              ok: report.ok,
+              grammar: fix.grammar,
+            });
+            const overflow = await page.evaluate(
+              () => document.documentElement.scrollWidth - window.innerWidth,
+            );
+            assert.ok(overflow <= 8, `${fix.id}/${vp} overflow ${overflow}`);
+            assert.equal(errors.length, 0, `${fix.id}/${vp} console ${errors.join(" | ")}`);
+            const iconMetrics = await page.evaluate(() => {
+              const svgs = [...document.querySelectorAll("nav svg")];
+              return svgs.map((node) => {
+                const el = node as SVGSVGElement;
+                const r = el.getBoundingClientRect();
+                const parent = el.parentElement?.getBoundingClientRect();
+                let bbox = { x: 0, y: 0, width: 0, height: 0 };
+                try {
+                  const b = el.getBBox();
+                  bbox = { x: b.x, y: b.y, width: b.width, height: b.height };
+                } catch {
+                  /* not rendered */
+                }
+                const cs = getComputedStyle(el);
+                return {
+                  w: r.width,
+                  h: r.height,
+                  display: cs.display,
+                  overflowRight: parent ? r.right - parent.right : 0,
+                  overflowBottom: parent ? r.bottom - parent.bottom : 0,
+                  overflowLeft: parent ? parent.left - r.left : 0,
+                  overflowTop: parent ? parent.top - r.top : 0,
+                  bbox,
+                  viewBox: el.getAttribute("viewBox"),
+                  join: el.getAttribute("stroke-linejoin"),
+                };
+              });
+            });
+            assert.doesNotMatch(fix.html, /M5 19l7-14 7 14/);
+            const visibleIcons = iconMetrics.filter((m) => m.display !== "none" && m.w > 0 && m.h > 0);
+            if (visibleIcons.length > 0) {
+              const sizes = visibleIcons.map((m) => Math.max(m.w, m.h));
+              const max = Math.max(...sizes);
+              const min = Math.min(...sizes);
+              assert.ok(
+                max / min <= 1.35,
+                `${fix.id}/${vp} nav icon size ratio ${max.toFixed(1)}/${min.toFixed(1)}`,
+              );
+              for (const m of visibleIcons) {
+                assert.ok(m.w <= 26 && m.h <= 26, `${fix.id}/${vp} nav icon oversized ${m.w.toFixed(1)}x${m.h.toFixed(1)}`);
+                assert.ok(m.w >= 16 && m.h >= 16, `${fix.id}/${vp} nav icon tiny ${m.w.toFixed(1)}x${m.h.toFixed(1)}`);
+                assert.ok(m.overflowRight <= 1.5, `${fix.id}/${vp} icon overflow right ${m.overflowRight}`);
+                assert.ok(m.overflowBottom <= 1.5, `${fix.id}/${vp} icon overflow bottom ${m.overflowBottom}`);
+                assert.ok(m.overflowLeft <= 1.5, `${fix.id}/${vp} icon overflow left ${m.overflowLeft}`);
+                assert.ok(m.overflowTop <= 1.5, `${fix.id}/${vp} icon overflow top ${m.overflowTop}`);
+                assert.equal(m.viewBox, "0 0 24 24", `${fix.id}/${vp} viewBox`);
+                assert.equal(m.join, "round", `${fix.id}/${vp} linejoin`);
+                assert.ok(m.bbox.x >= -1.2 && m.bbox.y >= -1.2, `${fix.id}/${vp} bbox origin ${m.bbox.x},${m.bbox.y}`);
+                assert.ok(
+                  m.bbox.x + m.bbox.width <= 25.2 && m.bbox.y + m.bbox.height <= 25.2,
+                  `${fix.id}/${vp} bbox ${m.bbox.width}x${m.bbox.height} at ${m.bbox.x},${m.bbox.y}`,
+                );
+              }
+            }
+            if (["vesti-inchiostro", "vesti-osso", "crudo-mare", "atelier-carta"].includes(fix.id)) {
+              const material = await page.evaluate(() => {
+                const svg = document.querySelector(".sil svg, .hero svg, .plate svg") as SVGSVGElement | null;
+                if (!svg) return { ok: false as const };
+                const parts = [...svg.querySelectorAll("[data-part]")].map((n) => n.getAttribute("data-part") || "");
+                const garment = svg.querySelector("[data-garment]")?.getAttribute("data-garment") || "";
+                const scenes = [...svg.querySelectorAll("[data-scene]")].map((n) => n.getAttribute("data-scene") || "");
+                const paths = svg.querySelectorAll("path").length;
+                const paints = new Set<string>();
+                svg.querySelectorAll("*").forEach((n) => {
+                  for (const a of ["fill", "stroke"]) {
+                    const v = n.getAttribute(a);
+                    if (v && v !== "none") paints.add(v);
+                  }
+                });
+                let sleeveWider = false;
+                const sleeve = svg.querySelector("[data-part='sleeve']") as SVGGraphicsElement | null;
+                const body = svg.querySelector("[data-part='body']") as SVGGraphicsElement | null;
+                try {
+                  if (sleeve && body) sleeveWider = sleeve.getBBox().width >= body.getBBox().width * 0.92;
+                } catch {
+                  /* not rendered */
+                }
+                const looks = [...document.querySelectorAll(".look")].map((el) => {
+                  const b = el.getBoundingClientRect();
+                  const title = el.querySelector("h2")?.textContent || "";
+                  const garment = el.querySelector("[data-garment]")?.getAttribute("data-garment") || "";
+                  const h2 = el.querySelector("h2")?.getBoundingClientRect();
+                  const parts = [...el.querySelectorAll("[data-part]")].map((n) => n.getAttribute("data-part") || "");
+                  const legs = [...el.querySelectorAll("[data-part='leg']")].map((n) => {
+                    try {
+                      const box = (n as SVGGraphicsElement).getBBox();
+                      return { x: box.x, w: box.width };
+                    } catch {
+                      return { x: 0, w: 0 };
+                    }
+                  });
+                  const sil = el.querySelector(".sil")?.getBoundingClientRect();
+                  const svg = el.querySelector("svg")?.getBoundingClientRect();
+                  return {
+                    h: b.height,
+                    title,
+                    garment,
+                    parts,
+                    legs,
+                    titleH: h2?.height || 0,
+                    titleW: h2?.width || 0,
+                    titleTop: h2?.top || 0,
+                    silBottom: sil?.bottom || 0,
+                    silH: sil?.height || 0,
+                    svgH: svg?.height || 0,
+                    top: b.top,
+                    left: b.left,
+                    right: b.right,
+                    bottom: b.bottom,
+                  };
+                });
+                const tickets = [...document.querySelectorAll(".ticket")].map((el) => {
+                  const title = el.querySelector("h2")?.textContent || "";
+                  const dish = el.querySelector("[data-dish]")?.getAttribute("data-dish") || "";
+                  const h2 = el.querySelector("h2")?.getBoundingClientRect();
+                  return { title, dish, titleH: h2?.height || 0, titleW: h2?.width || 0 };
+                });
+                const plates = [...document.querySelectorAll("#lastre .plate")].map((el) => {
+                  const title = el.querySelector("h2")?.textContent || "";
+                  const scene = el.querySelector("[data-scene]")?.getAttribute("data-scene") || "";
+                  const h2 = el.querySelector("h2")?.getBoundingClientRect();
+                  const parts = [...el.querySelectorAll("[data-part]")].map((n) => n.getAttribute("data-part") || "");
+                  return { title, scene, parts, titleH: h2?.height || 0, titleW: h2?.width || 0 };
+                });
+                let shoulderWaist = { shoulder: 0, waist: 0 };
+                const shoulder = svg.querySelector("[data-part='shoulder']") as SVGGraphicsElement | null;
+                const waist = svg.querySelector("[data-part='waist']") as SVGGraphicsElement | null;
+                try {
+                  if (shoulder) shoulderWaist.shoulder = shoulder.getBBox().width;
+                  if (waist) shoulderWaist.waist = waist.getBBox().width;
+                } catch {
+                  /* not rendered */
+                }
+                const legs = [...svg.querySelectorAll("[data-part='leg']")].map((n) => {
+                  try {
+                    const b = (n as SVGGraphicsElement).getBBox();
+                    return { x: b.x, w: b.width };
+                  } catch {
+                    return { x: 0, w: 0 };
+                  }
+                });
+                const parent = svg.parentElement?.getBoundingClientRect();
+                const box = svg.getBoundingClientRect();
+                const sil = document.querySelector(".look .sil")?.getBoundingClientRect();
+                const thumbs = [...document.querySelectorAll(".ticket .thumb")].map((el) => {
+                  const b = el.getBoundingClientRect();
+                  return { w: b.width, h: b.height };
+                });
+                const nav = document.querySelector("nav")?.getBoundingClientRect();
+                const firstTitle = document.querySelector(".look h2, .ticket h2, #copertina h2, .plate h2")?.getBoundingClientRect();
+                return {
+                  ok: true as const,
+                  parts,
+                  garment,
+                  dish: svg.querySelector("[data-dish]")?.getAttribute("data-dish") || "",
+                  scenes,
+                  paths,
+                  paints: paints.size,
+                  sleeveWider,
+                  looks,
+                  tickets,
+                  plates,
+                  shoulderWaist,
+                  legs,
+                  fillW: parent && parent.width ? box.width / parent.width : 0,
+                  fillH: parent && parent.height ? box.height / parent.height : 0,
+                  silH: sil?.height || 0,
+                  viewH: window.innerHeight,
+                  thumbs,
+                  navTop: nav?.top || 0,
+                  firstTitleBottom: firstTitle?.bottom || 0,
+                  firstTitleH: firstTitle?.height || 0,
+                };
+              });
+              assert.equal(material.ok, true, `${fix.id}/${vp} material svg`);
+              assert.ok((material.paths || 0) >= 12, `${fix.id}/${vp} paths ${material.paths}`);
+              assert.ok((material.paints || 0) >= 8, `${fix.id}/${vp} paints ${material.paints}`);
+              assert.ok((material.fillW || 0) >= 0.92, `${fix.id}/${vp} svg fillW ${material.fillW}`);
+              assert.ok((material.fillH || 0) >= 0.88, `${fix.id}/${vp} svg fillH ${material.fillH}`);
+              if (fix.id.startsWith("vesti")) {
+                assert.ok(
+                  ["coat", "dress", "trousers", "skirt"].includes(material.garment || ""),
+                  `${fix.id}/${vp} garment ${material.garment}`,
+                );
+                assert.ok(
+                  (material.parts || []).includes("lapel") || (material.parts || []).includes("seam"),
+                  `${fix.id}/${vp} parts`,
+                );
+                if (material.garment === "coat") {
+                  assert.equal(material.sleeveWider, true, `${fix.id}/${vp} sleeves must add width beyond the body tube`);
+                  assert.ok(
+                    (material.shoulderWaist?.shoulder || 0) > (material.shoulderWaist?.waist || 0) * 1.08,
+                    `${fix.id}/${vp} coat shoulder ${material.shoulderWaist?.shoulder} vs waist ${material.shoulderWaist?.waist}`,
+                  );
+                }
+                if (material.garment === "trousers" && (material.legs || []).length >= 2) {
+                  const [a, b] = material.legs;
+                  const left = a!.x <= b!.x ? a! : b!;
+                  const right = a!.x <= b!.x ? b! : a!;
+                  assert.ok(
+                    right.x > left.x + left.w * 0.18,
+                    `${fix.id}/${vp} trousers legs must leave a gap ${JSON.stringify(material.legs)}`,
+                  );
+                }
+                const looks = material.looks || [];
+                for (const look of looks) {
+                  assert.ok(look.titleH >= 14 && look.titleW >= 48, `${fix.id}/${vp} look title unreadable ${look.title} ${look.titleW}x${look.titleH}`);
+                  if (look.silBottom && look.titleTop) {
+                    assert.ok(
+                      look.titleTop + 1 >= look.silBottom - 8,
+                      `${fix.id}/${vp} title overlay on ${look.garment} (title ${look.titleTop} sil ${look.silBottom})`,
+                    );
+                  }
+                  const expected =
+                    /cappotto/i.test(look.title) ? "coat"
+                    : /abito|colonna/i.test(look.title) ? "dress"
+                    : /pantalone/i.test(look.title) ? "trousers"
+                    : /gonna/i.test(look.title) ? "skirt"
+                    : "";
+                  if (expected) {
+                    assert.equal(look.garment, expected, `${fix.id}/${vp} ${look.title} -> ${look.garment}`);
+                  }
+                  if (look.garment === "trousers") {
+                    assert.ok((look.parts || []).includes("seat"), `${fix.id}/${vp} trousers missing seat`);
+                    assert.ok((look.parts || []).includes("drape"), `${fix.id}/${vp} trousers missing drape`);
+                    if ((look.legs || []).length >= 2) {
+                      const [a, b] = look.legs;
+                      const left = a!.x <= b!.x ? a! : b!;
+                      const right = a!.x <= b!.x ? b! : a!;
+                      assert.ok(
+                        right.x > left.x + left.w * 0.22,
+                        `${fix.id}/${vp} trousers look legs gap ${JSON.stringify(look.legs)}`,
+                      );
+                    }
+                  }
+                  if (look.garment === "dress") {
+                    assert.ok((look.parts || []).includes("hip") && (look.parts || []).includes("column"), `${fix.id}/${vp} dress parts`);
+                  }
+                }
+                assert.ok(new Set(looks.map((l) => l.garment).filter(Boolean)).size >= Math.min(3, looks.length), `${fix.id}/${vp} garment diversity`);
+                if (vp !== "M" && looks.length >= 2) {
+                  const fps = await paintFingerprints(page, ".look .sil svg");
+                  if (fps.length >= 2) {
+                    for (let i = 0; i < fps.length; i++) {
+                      for (let j = i + 1; j < fps.length; j++) {
+                        const d = fingerprintDistance(fps[i]!, fps[j]!);
+                        assert.ok(
+                          d >= 28,
+                          `${fix.id}/${vp} look ${i}/${j} look the same (dist ${d.toFixed(1)})`,
+                        );
+                      }
+                    }
+                  }
+                }
+                for (let i = 0; i < looks.length; i++) {
+                  for (let j = i + 1; j < looks.length; j++) {
+                    const a = looks[i]!;
+                    const b = looks[j]!;
+                    const overlap = !(a.right <= b.left + 1 || b.right <= a.left + 1 || a.bottom <= b.top + 1 || b.bottom <= a.top + 1);
+                    if (overlap) {
+                      const w = Math.min(a.right, b.right) - Math.max(a.left, b.left);
+                      const h = Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top);
+                      assert.ok(w * h < 24, `${fix.id}/${vp} look overlap ${w * h}`);
+                    }
+                  }
+                }
+                if (vp === "M") {
+                  assert.ok(
+                    (material.silH || 0) >= (material.viewH || 0) * 0.4,
+                    `${fix.id}/M sil height ${material.silH} vs view ${material.viewH}`,
+                  );
+                }
+                if (vp !== "M") {
+                  if (looks.length >= 2) {
+                    assert.ok(
+                      looks[0]!.h > looks[1]!.h * 1.35,
+                      `${fix.id}/${vp} featured look ${looks[0]!.h} vs ${looks[1]!.h}`,
+                    );
+                  }
+                }
+              }
+              if (fix.id === "crudo-mare") {
+                for (const part of ["plate", "flesh", "citrus", "herb"]) {
+                  assert.ok((material.parts || []).includes(part), `${fix.id}/${vp} missing ${part}`);
+                }
+                for (const thumb of material.thumbs || []) {
+                  assert.ok(
+                    Math.min(thumb.w, thumb.h) >= 72,
+                    `${fix.id}/${vp} ticket thumb ${thumb.w}x${thumb.h}`,
+                  );
+                }
+                const tickets = material.tickets || [];
+                assert.ok(tickets.length >= 4, `${fix.id}/${vp} tickets ${tickets.length}`);
+                for (const t of tickets) {
+                  assert.ok(t.titleH >= 14 && t.titleW >= 48, `${fix.id}/${vp} ticket title unreadable ${t.title}`);
+                  const expected =
+                    /ricciola/i.test(t.title) ? "ricciola"
+                    : /gambero/i.test(t.title) ? "gambero"
+                    : /ostrica/i.test(t.title) ? "ostrica"
+                    : /tonno/i.test(t.title) ? "tonno"
+                    : "";
+                  if (expected) assert.equal(t.dish, expected, `${fix.id}/${vp} ${t.title} -> ${t.dish}`);
+                }
+                assert.equal(new Set(tickets.map((t) => t.dish)).size, tickets.length, `${fix.id}/${vp} dish diversity ${tickets.map((t) => t.dish)}`);
+                if (vp !== "M") {
+                  const fps = await paintFingerprints(page, ".ticket .thumb svg");
+                  assert.ok(fps.length >= 4, `${fix.id}/${vp} ticket fingerprints ${fps.length}`);
+                  for (let i = 0; i < fps.length; i++) {
+                    for (let j = i + 1; j < fps.length; j++) {
+                      const d = fingerprintDistance(fps[i]!, fps[j]!);
+                      assert.ok(
+                        d >= 48,
+                        `${fix.id}/${vp} ticket ${i}/${j} look the same (dist ${d.toFixed(1)})`,
+                      );
+                    }
+                  }
+                }
+              }
+              if (fix.id === "atelier-carta") {
+                assert.ok((material.scenes || []).length >= 1, `${fix.id}/${vp} scene`);
+                const plates = material.plates || [];
+                for (const p of plates) {
+                  assert.ok(p.titleH >= 14 && p.titleW >= 40, `${fix.id}/${vp} plate title unreadable ${p.title} ${p.titleW}x${p.titleH}`);
+                  const expected =
+                    /pozzo/i.test(p.title) ? "pozzo"
+                    : /olivo/i.test(p.title) ? "olivo"
+                    : /fienile/i.test(p.title) ? "fienile"
+                    : "";
+                  if (expected) assert.equal(p.scene, expected, `${fix.id}/${vp} ${p.title} -> ${p.scene}`);
+                  if (p.scene === "olivo") {
+                    assert.ok((p.parts || []).includes("grove"), `${fix.id}/${vp} olivo missing grove`);
+                    assert.ok((p.parts || []).includes("terrace"), `${fix.id}/${vp} olivo missing terrace`);
+                    assert.equal((p.parts || []).includes("canopy"), false, `${fix.id}/${vp} olivo still a lollipop canopy`);
+                  }
+                }
+                if (plates.length >= 3) {
+                  assert.equal(new Set(plates.map((p) => p.scene)).size, plates.length, `${fix.id}/${vp} scene diversity`);
+                }
+                if (vp !== "M") {
+                  const fps = await paintFingerprints(page, "#lastre .plate svg");
+                  if (fps.length >= 2) {
+                    for (let i = 0; i < fps.length; i++) {
+                      for (let j = i + 1; j < fps.length; j++) {
+                        const d = fingerprintDistance(fps[i]!, fps[j]!);
+                        assert.ok(
+                          d >= 36,
+                          `${fix.id}/${vp} plate ${i}/${j} look the same (dist ${d.toFixed(1)})`,
+                        );
+                      }
+                    }
+                  }
+                }
+              }
+              if (material.firstTitleH && material.navTop) {
+                assert.ok(
+                  material.firstTitleBottom <= material.navTop + 8 || material.firstTitleH >= 14,
+                  `${fix.id}/${vp} title under nav`,
+                );
+              }
+            }
+            if (["locanda-pietra", "hotel-notte"].includes(fix.id)) {
+              const rooms = await page.evaluate(() =>
+                [...document.querySelectorAll(".room")].map((el) => {
+                  const h2 = el.querySelector("h2")?.getBoundingClientRect();
+                  return {
+                    title: el.querySelector("h2")?.textContent || "",
+                    room: el.querySelector("[data-room]")?.getAttribute("data-room") || "",
+                    parts: [...el.querySelectorAll("[data-part]")].map((n) => n.getAttribute("data-part") || ""),
+                    titleH: h2?.height || 0,
+                    titleW: h2?.width || 0,
+                  };
+                }),
+              );
+              assert.ok(rooms.length >= 4, `${fix.id}/${vp} rooms ${rooms.length}`);
+              for (const r of rooms) {
+                assert.ok(r.titleH >= 14 && r.titleW >= 40, `${fix.id}/${vp} room title ${r.title} ${r.titleW}x${r.titleH}`);
+                const expected = /pozzo/i.test(r.title)
+                  ? "pozzo"
+                  : /olivo/i.test(r.title)
+                    ? "olivo"
+                    : /fienile/i.test(r.title)
+                      ? "fienile"
+                      : /salice/i.test(r.title)
+                        ? "salice"
+                        : /champagne/i.test(r.title)
+                          ? "champagne"
+                          : /inchiostro/i.test(r.title)
+                            ? "inchiostro"
+                            : /attico/i.test(r.title)
+                              ? "attico"
+                              : /silenzio/i.test(r.title)
+                                ? "silenzio"
+                                : "";
+                if (expected) assert.equal(r.room, expected, `${fix.id}/${vp} ${r.title} -> ${r.room}`);
+              }
+              assert.ok(new Set(rooms.map((r) => r.room).filter(Boolean)).size >= 4, `${fix.id}/${vp} room diversity`);
+              if (vp !== "M") {
+                const fps = await paintFingerprints(page, ".room .thumb svg");
+                if (fps.length >= 2) {
+                  for (let i = 0; i < fps.length; i++) {
+                    for (let j = i + 1; j < fps.length; j++) {
+                      const d = fingerprintDistance(fps[i]!, fps[j]!);
+                      assert.ok(d >= 24, `${fix.id}/${vp} room ${i}/${j} look the same (dist ${d.toFixed(1)})`);
+                    }
+                  }
+                }
+              }
+            }
+            if (fix.id === "essenza-or" || fix.id === "essenza-ice") {
+              const frags = await page.evaluate(() =>
+                [...document.querySelectorAll(".fragrance")].map((el) => ({
+                  title: el.querySelector("h2")?.textContent || "",
+                  bottle: el.querySelector("[data-bottle]")?.getAttribute("data-bottle") || "",
+                })),
+              );
+              assert.ok(frags.length >= 4, `${fix.id}/${vp} bottles ${frags.length}`);
+              for (const f of frags) {
+                const ice = fix.id === "essenza-ice";
+                let expected = "";
+                if (/nuit|sale adriatico/i.test(f.title)) expected = ice ? "sale" : "nuit";
+                else if (/acqua|nebbia/i.test(f.title)) expected = ice ? "nebbia" : "acqua";
+                else if (/fleur|pino/i.test(f.title)) expected = ice ? "pino" : "fleur";
+                else if (/pelle|vetro/i.test(f.title)) expected = ice ? "vetro" : "pelle";
+                if (expected) assert.equal(f.bottle, expected, `${fix.id}/${vp} ${f.title} -> ${f.bottle}`);
+              }
+              assert.ok(new Set(frags.map((f) => f.bottle).filter(Boolean)).size >= 4, `${fix.id}/${vp} bottle diversity`);
+              const heroBottle = await page.evaluate(
+                () => document.querySelector(".hero [data-bottle]")?.getAttribute("data-bottle") || "",
+              );
+              assert.equal(heroBottle, frags[0]?.bottle, `${fix.id}/${vp} hero ${heroBottle} vs first ${frags[0]?.bottle}`);
+              const painted = await page.evaluate(() => {
+                return [...document.querySelectorAll(".fragrance")].map((card) => {
+                  const thumb = card.querySelector(".thumb");
+                  const cap = thumb?.querySelector("[data-part='cap']");
+                  const glass = thumb?.querySelector("[data-part='glass']");
+                  const svg = thumb?.querySelector("svg");
+                  if (!thumb || !cap || !glass) return null;
+                  const t = thumb.getBoundingClientRect();
+                  const a = cap.getBoundingClientRect();
+                  const g = glass.getBoundingClientRect();
+                  const left = Math.min(a.left, g.left);
+                  const right = Math.max(a.right, g.right);
+                  const top = Math.min(a.top, g.top);
+                  const bottom = Math.max(a.bottom, g.bottom);
+                  return {
+                    title: card.querySelector("h2")?.textContent || "",
+                    bottle: thumb.querySelector("[data-bottle]")?.getAttribute("data-bottle") || "",
+                    viewBox: svg?.getAttribute("viewBox") || "",
+                    ml: left - t.left,
+                    mr: t.right - right,
+                    mt: top - t.top,
+                    mb: t.bottom - bottom,
+                    capH: a.height,
+                  };
+                });
+              });
+              const ice = fix.id === "essenza-ice";
+              for (const row of painted) {
+                assert.ok(row, `${fix.id}/${vp} thumb`);
+                const expected = expectedPerfumeBottle(row!.title, ice);
+                if (expected) assert.equal(row!.bottle, expected, `${fix.id}/${vp} ${row!.title}`);
+                assert.notEqual(row!.viewBox, "0 0 640 420", `${fix.id}/${vp} ${row!.title} hero viewBox`);
+                assert.ok(row!.ml >= 4 && row!.mr >= 4, `${fix.id}/${vp} ${row!.title} x ${row!.ml}/${row!.mr}`);
+                assert.ok(row!.mt >= 4 && row!.mb >= 4, `${fix.id}/${vp} ${row!.title} y ${row!.mt}/${row!.mb}`);
+                assert.ok(row!.capH >= 6, `${fix.id}/${vp} ${row!.title} cap ${row!.capH}`);
+              }
+            }
+            if (fix.id === "osteria-passo") {
+              const tickets = await page.evaluate(() =>
+                [...document.querySelectorAll(".ticket")].map((el) => ({
+                  title: el.querySelector("h2")?.textContent || "",
+                  dish: el.querySelector("[data-dish]")?.getAttribute("data-dish") || "",
+                })),
+              );
+              assert.ok(tickets.length >= 4, `${fix.id}/${vp} dishes ${tickets.length}`);
+              for (const t of tickets) {
+                let expected = "";
+                if (/plin/i.test(t.title)) expected = "plin";
+                else if (/brasato/i.test(t.title)) expected = "brasato";
+                else if (/bonet/i.test(t.title)) expected = "bonet";
+                else if (/tajarin/i.test(t.title)) expected = "tajarin";
+                if (expected) assert.equal(t.dish, expected, `${fix.id}/${vp} ${t.title} -> ${t.dish}`);
+              }
+              const heroDish = await page.evaluate(
+                () => document.querySelector(".hero [data-dish]")?.getAttribute("data-dish") || "",
+              );
+              assert.equal(heroDish, tickets[0]?.dish, `${fix.id}/${vp} hero ${heroDish} vs first ${tickets[0]?.dish}`);
+            }
+            if (fix.id === "nord-desk") {
+              const desk = await page.evaluate(() => {
+                const sparks = [...document.querySelectorAll(".kpi .spark")].map((s) =>
+                  [...s.querySelectorAll("i")].map((i) => (i as HTMLElement).style.height || "").join("|"),
+                );
+                const lanes = [...document.querySelectorAll("[data-lane]")].map((n) => n.getAttribute("data-lane") || "");
+                const kpis = [...document.querySelectorAll("[data-kpi]")].map((n) => n.getAttribute("data-kpi") || "");
+                return { sparks, lanes, kpis };
+              });
+              assert.ok(desk.sparks.length >= 3, `${fix.id}/${vp} sparks ${desk.sparks.length}`);
+              assert.ok(new Set(desk.sparks).size >= 3, `${fix.id}/${vp} cloned sparks ${desk.sparks.join(" / ")}`);
+              assert.equal(new Set(desk.lanes.filter(Boolean)).size, 4, `${fix.id}/${vp} lanes ${desk.lanes}`);
+              assert.ok(desk.kpis.includes("book") && desk.kpis.includes("ticket"), `${fix.id}/${vp} kpi ${desk.kpis}`);
+            }
+            const tabs = page.locator("button[data-view]");
+            if ((await tabs.count()) > 1) {
+              await tabs.nth(1).click();
+              await tabs.nth(0).click();
+            }
+            const interactable = page.locator(".btn, .deal, .look, .ticket, .room, .fragrance, .plate, .commit").first();
+            if ((await interactable.count()) > 0) {
+              await interactable.hover();
+              const hovered = await interactable.evaluate((el) => el.matches(":hover"));
+              assert.equal(hovered, true, `${fix.id}/${vp} hover`);
+              const box = await interactable.boundingBox();
+              if (box) {
+                await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+                await page.mouse.down();
+                const pressed = await interactable.evaluate(
+                  (el) => el.matches(":active") || Boolean(el.querySelector(":active")),
+                );
+                await page.mouse.up();
+                assert.equal(pressed, true, `${fix.id}/${vp} pressed`);
+              }
+            }
+            assert.equal(await page.locator("#load").count(), 1);
+            await page.evaluate(() => {
+              const n = document.getElementById("load");
+              if (n) n.hidden = false;
+            });
+            assert.equal(await page.locator("#load").isVisible(), true, `${fix.id}/${vp} loading`);
+            await page.evaluate(() => {
+              const n = document.getElementById("load");
+              if (n) n.hidden = true;
+            });
+            const primary = page.locator("[data-act='advance'], [data-act='wear']").first();
+            if ((await primary.count()) > 0) {
+              await primary.click();
+              await page.waitForFunction(
+                () => document.documentElement.getAttribute("data-fenix-flash") === "ok",
+                null,
+                { timeout: 4000 },
+              );
+            }
+            if (fix.id === "essenza-or" && vp === "D") {
+              await page.locator("button[data-view]").nth(2).click();
+              for (let i = 0; i < 8; i++) {
+                const del = page.locator("[data-act=del]").first();
+                if ((await del.count()) === 0) break;
+                await del.click();
+              }
+              await page.locator(".state-empty").waitFor({ timeout: 4000 });
+            }
+            assert.equal(errors.length, 0, `${fix.id}/${vp} console after interact ${errors.join(" | ")}`);
+            assert.equal(
+              report.ok,
+              true,
+              `${fix.id}/${vp} ${report.findings.filter((f) => f.severity === "fail").map((f) => f.code).join(" · ")}`,
+            );
+            assert.ok(report.score >= GRAPHIC_SCORE_THRESHOLD, `${fix.id} score ${report.score}`);
+            assert.equal(evaluation.ok, true, `${fix.id}/${vp} contract`);
+            assert.equal(blocksPublish(fix.html, kind, undefined, fix.brief), "");
+            assert.ok(rendered.headingCount >= 1, `${fix.id} heading`);
+            assert.ok(rendered.deadRatio < 0.58, `${fix.id} dead ${rendered.deadRatio}`);
+            const title = await page.evaluate(() => document.title);
+            assert.ok(title.length > 2, `${fix.id} title`);
+            if (vp === "D") {
+              const appWidth = await page.evaluate(() => {
+                const app = document.querySelector(".app") as HTMLElement | null;
+                return app ? Math.round(app.getBoundingClientRect().width) : 0;
+              });
+              assert.ok(appWidth >= 1000, `${fix.id} desktop app width ${appWidth}`);
+              const nav = await page.evaluate(() => {
+                const el = document.querySelector("nav");
+                if (!el) return { pos: "none", bottom: 0 };
+                const s = getComputedStyle(el);
+                return { pos: s.position, bottom: Math.round(el.getBoundingClientRect().bottom) };
+              });
+              assert.notEqual(nav.pos, "fixed", `${fix.id}/D nav should not be a phone tabbar (${nav.pos})`);
+            }
+            if (vp === "M" && fix.grammar !== "ops-desk" && fix.grammar !== "magazine" && fix.grammar !== "source-timeline") {
+              const nav = await page.evaluate(() => {
+                const el = document.querySelector("nav");
+                if (!el) return { pos: "none", bottom: 0, vh: 0 };
+                const r = el.getBoundingClientRect();
+                return { pos: getComputedStyle(el).position, bottom: Math.round(r.bottom), vh: window.innerHeight };
+              });
+              assert.ok(
+                nav.pos === "sticky" || nav.pos === "fixed" || nav.bottom >= nav.vh - 80,
+                `${fix.id}/M tabbar should sit at the bottom (${nav.pos} bottom=${nav.bottom} vh=${nav.vh})`,
+              );
+            }
+          } finally {
+            await page.close();
+          }
+        }
+      }
+    } finally {
+      await browser.close();
+    }
+    const palettes = fixtures.map((f) => f.palette.bg.toLowerCase());
+    assert.ok(new Set(palettes).size >= 8, `grounds ${[...new Set(palettes)].join(",")}`);
+    mkdirSync(SHOTS, { recursive: true });
+    writeFileSync(join(SHOTS, "manifest.json"), `${JSON.stringify(manifest, null, 2)}\n`);
+    assert.equal(manifest.files.length, fixtures.length * VIEWPORTS.length);
+
+    const fail = loadLegacyGraphicFixtures().find((f) => f.id === "essenza-fail")!;
+    const gold = fixtures.find((f) => f.id === "essenza-or")!;
+    const trial = runBlindTrial({
+      briefId: "essenza",
+      brief: gold.brief,
+      left: { id: fail.id, html: fail.html },
+      right: { id: gold.id, html: gold.html },
+    });
+    writeFileSync(join(SHOTS, "blind-trial.json"), `${JSON.stringify({ trial, external: EXTERNAL_BENCHMARK }, null, 2)}\n`);
+    assert.equal(trial.labels.A, "Candidate A");
+    assert.equal(EXTERNAL_BENCHMARK.available, false);
+    assert.equal(EXTERNAL_BENCHMARK.declaration, "benchmark esterno non disponibile");
+    const pipeline = runGraphicPipeline(gold.brief);
+    assert.equal(pipeline.qa.ok, true);
+  });
+
+  it("captures RepoVoci and five distant domains on D/T/M with distinct palettes", async () => {
+    const { composeProduct } = await import("./compose-product.ts");
+    const { PALETTE_CORPUS } = await import("../projects/palette-engine.ts");
+    const ids = ["repo-voci", "clinica", "pulse", "carta-luce", "pastello", "segnale"];
+    const rows = PALETTE_CORPUS.filter((r) => ids.includes(r.id));
+    assert.equal(rows.length, 6);
+    const browser = await launchChromium();
+    const palettes: string[] = [];
+    try {
+      for (const row of rows) {
+        const composed = composeProduct(row.brief);
+        palettes.push(`${composed.tokens.palette.bg}:${composed.tokens.palette.accent}`);
+        for (const [vp, viewport] of VIEWPORTS) {
+          const page = await isolatedPage(browser, { viewport });
+          const errors: string[] = [];
+          page.on("pageerror", (err) => {
+            if (!isBlockedPublicNetworkError(String(err))) errors.push(String(err));
+          });
+          page.on("console", (msg) => {
+            if (msg.type() === "error" && !isBlockedPublicNetworkError(msg.text())) errors.push(msg.text());
+          });
+          try {
+            const src = prepareSrcDoc(composed.html, composed.tokens.palette, row.id, composed.grammar.kind);
+            await page.setContent(src, { waitUntil: "domcontentloaded", timeout: 15000 });
+            await waitForFenixReady(page, 8000);
+            await shot(page, `${row.id}-${vp}.png`, PALETTE_SHOTS);
+            const overflow = await page.evaluate(
+              () => document.documentElement.scrollWidth - window.innerWidth,
+            );
+            assert.ok(overflow <= 8, `${row.id}/${vp} overflow ${overflow}`);
+            assert.equal(errors.length, 0, `${row.id}/${vp} ${errors.join(" | ")}`);
+            if (row.id === "repo-voci") {
+              assert.ok((await page.locator(".commit").count()) >= 3, `${row.id} commits`);
+              assert.equal(await page.locator(".kpi").count(), 0);
+              assert.ok((await page.locator("[data-repo-stage]").count()) >= 1);
+            }
+            const tabs = page.locator("button[data-view]");
+            if ((await tabs.count()) > 1) {
+              await tabs.nth(1).click();
+              await tabs.nth(0).click();
+            }
+          } finally {
+            await page.close();
+          }
+        }
+      }
+    } finally {
+      await browser.close();
+    }
+    assert.equal(new Set(palettes).size, palettes.length, palettes.join(" | "));
+    mkdirSync(PALETTE_SHOTS, { recursive: true });
+    writeFileSync(
+      join(PALETTE_SHOTS, "manifest.json"),
+      `${JSON.stringify({ files: palettes, note: "adaptive palette + anti-template D/T/M" }, null, 2)}\n`,
+    );
+  });
+
+  it("paints five distinct generated briefs D/T/M from composeProduct with live CRUD", async () => {
+    const { composeProduct } = await import("./compose-product.ts");
+    const { formatPrefix } = await import("../projects/infer.ts");
+    const FIVE_SHOTS = join(here, "fixtures/graphic/five");
+    const BEFORE = join(FIVE_SHOTS, "before");
+    const AFTER = "/workspace/screenshots/fase3-graphic/five-after";
+    const briefs: { id: string; brief: string }[] = [
+      { id: "agenda", brief: `${formatPrefix("app")}Agenda: appuntamenti, calendario giornaliero, trattamenti e studio.` },
+      { id: "profumi", brief: `${formatPrefix("app")}Essenza: gestione profumi premium, flaconi, note olfattive e guardaroba.` },
+      { id: "abbigliamento", brief: `${formatPrefix("app")}Vesti: moda e vendite, lookbook, capi in passerella e cassa.` },
+      { id: "repo", brief: `${formatPrefix("app")}Taccuino: note e repository, commit, rami, sync e scarto del repo.` },
+      { id: "ristorazione", brief: `${formatPrefix("app")}Osteria del Passo: ristorazione, menu degustazione, comande al passo cucina e sala da pranzo.` },
+    ];
+    const before = briefs.flatMap((row) =>
+      VIEWPORTS.map(([vp]) => {
+        const name = `${row.id}-${vp}.png`;
+        const buf = readFileSync(join(BEFORE, name));
+        return { name, sha256: createHash("sha256").update(buf).digest("hex"), bytes: buf.length };
+      }),
+    );
+    assert.equal(before.length, 15);
+    const browser = await launchChromium();
+    const files: { name: string; sha256: string }[] = [];
+    const palettes: {
+      id: string;
+      bg: string;
+      accent: string;
+      family: string;
+      grammar: string;
+      display: string;
+      painted: { vp: string; bgVar: string; accentVar: string; bgPaint: string }[];
+    }[] = [];
+    const mobileChrome: string[] = [];
+    try {
+      for (const row of briefs) {
+        const composed = composeProduct(row.brief);
+        const tokenBg = composed.tokens.palette.bg.toLowerCase();
+        const tokenAccent = composed.tokens.palette.accent.toLowerCase();
+        palettes.push({
+          id: row.id,
+          bg: composed.tokens.palette.bg,
+          accent: composed.tokens.palette.accent,
+          family: composed.tokens.family,
+          grammar: composed.grammar.id,
+          display: composed.tokens.fonts.display,
+          painted: [],
+        });
+        assert.equal(composed.html.includes(`data-family="${composed.tokens.family}"`), true);
+        if (row.id === "repo") {
+          assert.doesNotMatch(composed.html, /home universale grigia/);
+          assert.doesNotMatch(composed.html, /due riquadri vuoti/);
+          assert.doesNotMatch(composed.html, /"label":"Scarto"/);
+        }
+        for (const [vp, viewport] of VIEWPORTS) {
+          const page = await isolatedPage(browser, { viewport });
+          const errors: string[] = [];
+          page.on("pageerror", (err) => {
+            if (!isBlockedPublicNetworkError(String(err))) errors.push(String(err));
+          });
+          page.on("console", (msg) => {
+            if (msg.type() === "error" && !isBlockedPublicNetworkError(msg.text())) errors.push(msg.text());
+          });
+          try {
+            const src = prepareSrcDoc(composed.html, composed.tokens.palette, `${row.id}-${vp}`, composed.grammar.kind);
+            await page.setContent(FIVE_PERSIST_HOST, { waitUntil: "domcontentloaded", timeout: 15000 });
+            const load = () =>
+              page.locator("#f").evaluate((el, srcDoc: string) => {
+                (el as HTMLIFrameElement).srcdoc = srcDoc;
+              }, src);
+            await load();
+            const frame = page.frameLocator("#f");
+            await frame.locator("[data-fenix-ready]").waitFor({ timeout: 8000 });
+            const painted = await frame.locator("html").evaluate(() => {
+              const css = getComputedStyle(document.documentElement);
+              return {
+                bgVar: css.getPropertyValue("--bg").trim(),
+                accentVar: css.getPropertyValue("--accent").trim(),
+                bgPaint: getComputedStyle(document.body).backgroundColor,
+              };
+            });
+            const bgVar = cssToHex(painted.bgVar);
+            const accentVar = cssToHex(painted.accentVar);
+            const bgPaint = cssToHex(painted.bgPaint);
+            palettes[palettes.length - 1]!.painted.push({
+              vp,
+              bgVar,
+              accentVar,
+              bgPaint,
+            });
+            assert.equal(bgVar, tokenBg, `${row.id}/${vp} --bg token`);
+            assert.equal(accentVar, tokenAccent, `${row.id}/${vp} --accent token`);
+            assert.equal(bgPaint, tokenBg, `${row.id}/${vp} body paint`);
+            assert.notEqual(bgVar, "#111827", `${row.id}/${vp} navy swap`);
+            assert.notEqual(accentVar, "#2dd4bf", `${row.id}/${vp} teal swap`);
+            const navIcon = frame.locator("nav button svg").first();
+            assert.ok((await navIcon.count()) >= 1, `${row.id}/${vp} nav svg`);
+            const iconCss = await navIcon.evaluate((el) => {
+              const s = getComputedStyle(el);
+              return { display: s.display, overflow: s.overflow };
+            });
+            assert.notEqual(iconCss.display, "none", `${row.id}/${vp} nav icon painted`);
+            assert.equal(iconCss.overflow, "visible", `${row.id}/${vp} nav icon overflow`);
+            const navMin = await frame
+              .locator("nav button")
+              .first()
+              .evaluate((el) => parseFloat(getComputedStyle(el).minHeight));
+            assert.ok(navMin >= 44, `${row.id}/${vp} tab touch ${navMin}`);
+            if (row.id === "profumi") {
+              assert.equal(bgVar, "#120e0c");
+              assert.equal(accentVar, "#c4a15a");
+              const cap = await frame.locator(".hero .caption h2").first().innerText();
+              assert.match(cap, /Bois de Nuit/);
+              assert.doesNotMatch(cap, /in prova/i);
+              const after = await frame.locator(".fragrance h2").first().evaluate((el) => getComputedStyle(el, ":after").content);
+              assert.doesNotMatch(after || "", /in prova/i);
+              const fit = await frame.locator(".hero svg").first().getAttribute("preserveAspectRatio");
+              assert.match(fit || "", /meet/);
+              const thumbFit = await frame.locator(".fragrance .thumb svg").first().getAttribute("preserveAspectRatio");
+              assert.match(thumbFit || "", /slice/);
+              const idn = await frame.locator("html").evaluate(() => {
+                const cards = [...document.querySelectorAll(".fragrance")].map((el) => ({
+                  title: el.querySelector("h2")?.textContent || "",
+                  bottle: el.querySelector("[data-bottle]")?.getAttribute("data-bottle") || "",
+                }));
+                const hero = document.querySelector(".hero [data-bottle]")?.getAttribute("data-bottle") || "";
+                return { cards, hero };
+              });
+              assert.equal(idn.hero, idn.cards[0]?.bottle, `${row.id}/${vp} hero ${idn.hero} vs ${idn.cards[0]?.bottle}`);
+              for (const f of idn.cards) {
+                const expected = expectedPerfumeBottle(f.title, false);
+                if (expected) assert.equal(f.bottle, expected, `${row.id}/${vp} ${f.title} -> ${f.bottle}`);
+              }
+              assertPerfumeThumbsFramed(await paintPerfumeThumbs(frame), `${row.id}/${vp}`);
+            }
+            if (row.id === "ristorazione") {
+              assert.equal(bgVar, "#1a1210");
+              assert.equal(accentVar, "#c43c2c");
+              const cap = await frame.locator(".hero .caption h2").first().innerText();
+              assert.match(cap, /Plin al burro/);
+              const fit = await frame.locator(".hero svg").first().getAttribute("preserveAspectRatio");
+              assert.match(fit || "", /meet/);
+              const thumbFit = await frame.locator(".ticket .thumb svg").first().getAttribute("preserveAspectRatio");
+              assert.match(thumbFit || "", /slice/);
+              const idn = await frame.locator("html").evaluate(() => {
+                const cards = [...document.querySelectorAll(".ticket")].map((el) => ({
+                  title: el.querySelector("h2")?.textContent || "",
+                  dish: el.querySelector("[data-dish]")?.getAttribute("data-dish") || "",
+                }));
+                const hero = document.querySelector(".hero [data-dish]")?.getAttribute("data-dish") || "";
+                return { cards, hero };
+              });
+              assert.equal(idn.hero, idn.cards[0]?.dish, `${row.id}/${vp} hero ${idn.hero} vs ${idn.cards[0]?.dish}`);
+              for (const t of idn.cards) {
+                let expected = "";
+                if (/plin/i.test(t.title)) expected = "plin";
+                else if (/brasato/i.test(t.title)) expected = "brasato";
+                else if (/bonet/i.test(t.title)) expected = "bonet";
+                else if (/tajarin/i.test(t.title)) expected = "tajarin";
+                if (expected) assert.equal(t.dish, expected, `${row.id}/${vp} ${t.title} -> ${t.dish}`);
+              }
+            }
+            if (row.id === "agenda") {
+              assert.equal(await frame.locator('button[data-view="home"]').count(), 0);
+              await frame.locator('nav button[data-view="settimana"]').click();
+              assert.equal(await frame.locator(".week-day[data-day]").count(), 7, `${row.id} days`);
+              const dayCounts = await frame.locator(".week-day [data-count]").evaluateAll((els) =>
+                els.map((el) => Number(el.getAttribute("data-count") || 0)),
+              );
+              assert.equal(dayCounts.length, 7, `${row.id} day counts`);
+              assert.ok(
+                dayCounts.reduce((a, b) => a + b, 0) >= 3,
+                `${row.id} week slots ${dayCounts.join(",")}`,
+              );
+              const wrap = await frame
+                .locator(".slot-actions")
+                .first()
+                .evaluate((el) => {
+                  const s = getComputedStyle(el);
+                  return { flexWrap: s.flexWrap, overflow: s.overflow };
+                });
+              assert.equal(wrap.flexWrap, "nowrap", `${row.id}/${vp} slot actions nowrap`);
+              assert.notEqual(wrap.overflow, "auto", `${row.id}/${vp} slot-actions overflow auto hides clip`);
+            }
+            const overflow = await frame.locator("html").evaluate(
+              () => document.documentElement.scrollWidth - window.innerWidth,
+            );
+            assert.ok(overflow <= 8, `${row.id}/${vp} overflow ${overflow}`);
+            assert.equal(errors.length, 0, `${row.id}/${vp} ${errors.join(" | ")}`);
+            if ((row.id === "profumi" || row.id === "ristorazione") && vp === "D") {
+              const measure = await frame.locator("html").evaluate(() => {
+                const hero = document.querySelector(".hero");
+                const card = document.querySelector(".fragrance, .ticket");
+                const heroSvg = document.querySelector(".hero svg");
+                const thumbSvg = document.querySelector(".fragrance .thumb svg, .ticket .thumb svg");
+                const cap = document.querySelector(".hero .caption");
+                const heroBox = hero?.getBoundingClientRect();
+                const cardBox = card?.getBoundingClientRect();
+                const svgBox = heroSvg?.getBoundingClientRect();
+                const capBox = cap?.getBoundingClientRect();
+                return {
+                  heroH: heroBox?.height ?? 0,
+                  cardH: cardBox?.height ?? 0,
+                  heroFit: heroSvg?.getAttribute("preserveAspectRatio") || "",
+                  thumbFit: thumbSvg?.getAttribute("preserveAspectRatio") || "",
+                  svgBottom: svgBox?.bottom ?? 0,
+                  capTop: capBox?.top ?? 0,
+                  collection: Boolean(document.querySelector(".collection, .tickets")),
+                };
+              });
+              assert.ok(measure.cardH > 80 && measure.cardH < 240, `${row.id} D cardH ${measure.cardH}`);
+              assert.ok(measure.heroH > 0 && measure.cardH < measure.heroH, `${row.id} D hero/card ${measure.heroH}/${measure.cardH}`);
+              assert.match(measure.heroFit, /meet/);
+              assert.match(measure.thumbFit, /slice/);
+              assert.ok(measure.capTop + 0.5 >= measure.svgBottom, `${row.id} caption covers object ${measure.capTop}<${measure.svgBottom}`);
+              assert.equal(measure.collection, true, `${row.id} list wrapper`);
+            }
+            if ((row.id === "profumi" || row.id === "ristorazione") && vp === "M") {
+              const band = await frame.locator("html").evaluate(() => {
+                const hero = document.querySelector(".hero");
+                const svg = document.querySelector(".hero svg");
+                if (!hero || !svg) return null;
+                const hb = hero.getBoundingClientRect();
+                const sb = svg.getBoundingClientRect();
+                return {
+                  left: sb.left - hb.left,
+                  right: hb.right - sb.right,
+                  ratio: sb.height ? sb.width / sb.height : 0,
+                  want: 640 / 420,
+                };
+              });
+              assert.ok(band, `${row.id}/M hero svg`);
+              assert.ok(band!.left < 8 && band!.right < 8, `${row.id}/M hero side ${band!.left}/${band!.right}`);
+              assert.ok(Math.abs(band!.ratio - band!.want) < 0.08, `${row.id}/M hero ratio ${band!.ratio}`);
+            }
+            const rendered = await frame.locator("html").evaluate(collectRenderedGraphic);
+            assert.equal(rendered.leakedText, false, `${row.id} leaked`);
+            assert.ok(rendered.headingCount >= 1, `${row.id} heading`);
+            if (vp === "M") {
+              const chrome = await frame.locator("html").evaluate(() => {
+                const brand = document.querySelector(".brand");
+                const nav = document.querySelector("nav");
+                const on = document.querySelector("nav button.on");
+                const html = document.documentElement;
+                return [
+                  html.getAttribute("data-family") || "",
+                  html.getAttribute("data-grammar") || "",
+                  getComputedStyle(document.body).backgroundColor,
+                  getComputedStyle(html).getPropertyValue("--accent").trim(),
+                  brand ? getComputedStyle(brand).fontFamily : "",
+                  brand ? getComputedStyle(brand).fontStyle : "",
+                  brand ? getComputedStyle(brand).textTransform : "",
+                  nav ? getComputedStyle(nav).borderTopColor : "",
+                  on ? getComputedStyle(on).backgroundColor : "",
+                ].join("|");
+              });
+              mobileChrome.push(chrome);
+            }
+            const dest = join(FIVE_SHOTS, `${row.id}-${vp}.png`);
+            mkdirSync(FIVE_SHOTS, { recursive: true });
+            await page.locator("#f").screenshot({ path: dest });
+            try {
+              mkdirSync(AFTER, { recursive: true });
+              await page.locator("#f").screenshot({ path: join(AFTER, `${row.id}-${vp}.png`) });
+            } catch {
+              /* CI without scorecard dir */
+            }
+            const buf = readFileSync(dest);
+            files.push({ name: `${row.id}-${vp}.png`, sha256: createHash("sha256").update(buf).digest("hex") });
+            if (row.id === "profumi") {
+              await frame.locator('.fragrance [data-act="wear"]').last().click();
+              await frame.locator("html:not([data-fenix-persist='busy'])").waitFor({ timeout: 8000 });
+              await frame.locator("nav button[data-view]").first().click();
+              const worn = await frame.locator("html").evaluate(() => {
+                const cards = [...document.querySelectorAll(".fragrance")].map((el) => ({
+                  title: el.querySelector("h2")?.textContent || "",
+                  bottle: el.querySelector("[data-bottle]")?.getAttribute("data-bottle") || "",
+                }));
+                const hero = document.querySelector(".hero [data-bottle]")?.getAttribute("data-bottle") || "";
+                return { cards, hero };
+              });
+              assert.ok(worn.cards.length >= 4, `${row.id}/${vp} wear cards`);
+              assert.equal(worn.hero, worn.cards[0]?.bottle, `${row.id}/${vp} wear hero ${worn.hero} vs ${worn.cards[0]?.bottle}`);
+              for (const f of worn.cards) {
+                const expected = expectedPerfumeBottle(f.title, false);
+                if (expected) assert.equal(f.bottle, expected, `${row.id}/${vp} wear ${f.title} -> ${f.bottle}`);
+              }
+              assertPerfumeThumbsFramed(await paintPerfumeThumbs(frame), `${row.id}/${vp} wear`);
+            }
+            const tabIndex = row.id === "repo" ? 2 : 1;
+            const tabs = frame.locator("button[data-view]");
+            assert.ok((await tabs.count()) > tabIndex, `${row.id} form tab`);
+            await tabs.nth(tabIndex).click();
+            const name = frame.locator("#n");
+            assert.equal(await name.count(), 1, `${row.id} name field`);
+            const created = `Prova ${row.id} ${vp}`;
+            let createdBottle = "";
+            await name.fill(created);
+            if ((await frame.locator("#ora").count()) === 1) {
+              await frame.locator("#ora").fill("10:15");
+            }
+            const submit = frame.locator("#fnew button[type='submit'], #fnew [data-act='save']");
+            assert.equal(await submit.count(), 1, `${row.id} form submit`);
+            await frame.locator("html:not([data-fenix-persist='busy'])").waitFor({ timeout: 8000 });
+            await submit.click();
+            await waitIframeHeading(page, created);
+            await frame.locator("html:not([data-fenix-persist='busy'])").waitFor({ timeout: 8000 });
+            await page.waitForFunction(
+              (title) => {
+                const db = (window as unknown as { __db?: Record<string, { items?: { title?: string }[] }> }).__db;
+                if (!db) return false;
+                return Object.keys(db).some((key) => {
+                  const items = db[key] && Array.isArray(db[key]!.items) ? db[key]!.items : [];
+                  return items.some((item) => item.title === title);
+                });
+              },
+              created,
+              { timeout: 8000 },
+            );
+            const body = await frame.locator("body").innerText();
+            assert.doesNotMatch(body, /\bundefined\b|\bNaN\b/);
+            assert.doesNotMatch(body, /home universale grigia/);
+            assert.doesNotMatch(body, /due riquadri vuoti/);
+            await load();
+            await frame.locator("[data-fenix-ready]").waitFor({ timeout: 8000 });
+            await waitIframeHeading(page, created);
+            if (row.id === "profumi") {
+              await frame.locator("nav button[data-view]").first().click();
+              const afterCreate = await paintPerfumeThumbs(frame);
+              const mine = afterCreate.find((t) => t.title === created);
+              assert.ok(mine, `${row.id}/${vp} created thumb`);
+              createdBottle = mine!.bottle;
+              assert.ok(createdBottle, `${row.id}/${vp} created bottle`);
+              for (const f of afterCreate) {
+                const expected = expectedPerfumeBottle(f.title, false);
+                if (expected) assert.equal(f.bottle, expected, `${row.id}/${vp} create ${f.title} -> ${f.bottle}`);
+              }
+              assertPerfumeThumbsFramed(afterCreate, `${row.id}/${vp} create`);
+            }
+
+            const updated = `${created} edit`;
+            if (row.id !== "agenda" && row.id !== "repo") {
+              await frame.locator("nav button[data-view]").nth(2).click();
+            }
+            await clickActOnHeading(frame, created, "edit");
+            await frame.locator("#n").waitFor({ timeout: 4000 });
+            await frame.locator("#n").fill(updated);
+            if ((await frame.locator("#ora").count()) === 1) {
+              await frame.locator("#ora").fill("10:15");
+            }
+            await frame.locator("html:not([data-fenix-persist='busy'])").waitFor({ timeout: 8000 });
+            await frame.locator("#fnew button[type='submit'], #fnew [data-act='save']").click();
+            await waitIframeHeading(page, updated);
+            assert.equal(await iframeHeadingCount(page, created), 0, `${row.id}/${vp} update`);
+            await frame.locator("html:not([data-fenix-persist='busy'])").waitFor({ timeout: 8000 });
+            const overflowAfter = await frame.locator("html").evaluate(
+              () => document.documentElement.scrollWidth - window.innerWidth,
+            );
+            assert.ok(overflowAfter <= 8, `${row.id}/${vp} overflow after UPDATE ${overflowAfter}`);
+            await page.waitForFunction(
+              (title) => {
+                const db = (window as unknown as { __db?: Record<string, { items?: { title?: string }[] }> }).__db;
+                if (!db) return false;
+                return Object.keys(db).some((key) => {
+                  const items = db[key] && Array.isArray(db[key]!.items) ? db[key]!.items : [];
+                  return items.some((item) => item.title === title);
+                });
+              },
+              updated,
+              { timeout: 8000 },
+            );
+            await load();
+            await frame.locator("[data-fenix-ready]").waitFor({ timeout: 8000 });
+            await waitIframeHeading(page, updated);
+            assert.equal(await iframeHeadingCount(page, created), 0, `${row.id}/${vp} update reload`);
+            if (row.id === "profumi") {
+              await frame.locator("nav button[data-view]").first().click();
+              const afterEdit = await paintPerfumeThumbs(frame);
+              const mine = afterEdit.find((t) => t.title === updated);
+              assert.equal(mine?.bottle, createdBottle, `${row.id}/${vp} update kept bottle ${mine?.bottle} vs ${createdBottle}`);
+              for (const f of afterEdit) {
+                const expected = expectedPerfumeBottle(f.title, false);
+                if (expected) assert.equal(f.bottle, expected, `${row.id}/${vp} update ${f.title} -> ${f.bottle}`);
+              }
+              assertPerfumeThumbsFramed(afterEdit, `${row.id}/${vp} update`);
+            }
+
+            if (row.id !== "agenda" && row.id !== "repo") {
+              await frame.locator("nav button[data-view]").nth(2).click();
+            }
+            await clickActOnHeading(frame, updated, "del");
+            await frame.locator("html:not([data-fenix-persist='busy'])").waitFor({ timeout: 8000 });
+            assert.equal(await iframeHeadingCount(page, updated), 0, `${row.id}/${vp} delete`);
+            await page.waitForFunction(
+              (title) => {
+                const db = (window as unknown as { __db?: Record<string, { items?: { title?: string }[] }> }).__db;
+                if (!db) return true;
+                return Object.keys(db).every((key) => {
+                  const items = db[key] && Array.isArray(db[key]!.items) ? db[key]!.items : [];
+                  return items.every((item) => item.title !== title);
+                });
+              },
+              updated,
+              { timeout: 8000 },
+            );
+            await load();
+            await frame.locator("[data-fenix-ready]").waitFor({ timeout: 8000 });
+            assert.equal(await iframeHeadingCount(page, updated), 0, `${row.id}/${vp} delete reload`);
+            assert.equal(errors.length, 0, `${row.id}/${vp} console after CRUD: ${errors.join(" | ")}`);
+            void dest;
+          } finally {
+            await page.close();
+          }
+        }
+      }
+    } finally {
+      await browser.close();
+    }
+    mkdirSync(FIVE_SHOTS, { recursive: true });
+    writeFileSync(
+      join(FIVE_SHOTS, "manifest.json"),
+      `${JSON.stringify(
+        {
+          parentSHA: GRAPHIC_FIVE_PARENT_SHA,
+          before,
+          after: files,
+          palettes,
+          note: "composeProduct+prepareSrcDoc five briefs D/T/M before/after on parent bffc58f. Perfume thumb viewBox frames cap+body of every slot; hero stay 640/420 meet. Dishes remain backlog. Planner/polish LLM skipped (quota). Hash/ΔE are movement floors, not scores. Not a 9/10.",
+        },
+        null,
+        2,
+      )}\n`,
+    );
+    assert.equal(GRAPHIC_FIVE_PARENT_SHA, "bffc58f1af1ee22e69b99a0ed3dd65eaba8822f9");
+    assert.equal(files.length, briefs.length * VIEWPORTS.length);
+    assert.equal(new Set(files.map((f) => f.sha256)).size, files.length, "after shots must differ");
+    assert.equal(new Set(mobileChrome).size, briefs.length, mobileChrome.join(" || "));
+    assert.equal(new Set(palettes.map((p) => `${p.bg}:${p.accent}`)).size, briefs.length);
+    const agendaPalette = palettes.find((p) => p.id === "agenda");
+    assert.equal(agendaPalette?.display, "Figtree");
+    assert.equal(agendaPalette?.bg.toLowerCase(), "#e8eef4");
+    assert.equal(agendaPalette?.accent.toLowerCase(), "#1f6f68");
+    const mustMove = /^profumi-[DTM]\.png$/;
+    for (const file of files) {
+      const prior = before.find((b) => b.name === file.name);
+      assert.ok(prior, file.name);
+      if (mustMove.test(file.name)) {
+        assert.notEqual(file.sha256, prior!.sha256, `${file.name} after must move from parent bffc58f`);
+      }
+      assert.equal(existsSync(join(BEFORE, file.name)), true);
+    }
+    for (const row of palettes) {
+      assert.equal(row.painted.length, 3, `${row.id} painted D/T/M`);
+      for (const paint of row.painted) {
+        assert.equal(paint.bgVar, row.bg.toLowerCase(), `${row.id}/${paint.vp} painted bg`);
+        assert.equal(paint.accentVar, row.accent.toLowerCase(), `${row.id}/${paint.vp} painted accent`);
+      }
+    }
+  });
+
+  it("keeps nav and Agenda actions on-canvas at 320 and 390 with real clicks", async () => {
+    const { composeProduct } = await import("./compose-product.ts");
+    const { formatPrefix } = await import("../projects/infer.ts");
+    const briefs: { id: string; brief: string }[] = [
+      { id: "agenda", brief: `${formatPrefix("app")}Agenda: appuntamenti, calendario giornaliero, trattamenti e studio.` },
+      { id: "profumi", brief: `${formatPrefix("app")}Essenza: gestione profumi premium, flaconi, note olfattive e guardaroba.` },
+      { id: "abbigliamento", brief: `${formatPrefix("app")}Vesti: moda e vendite, lookbook, capi in passerella e cassa.` },
+      { id: "repo", brief: `${formatPrefix("app")}Taccuino: note e repository, commit, rami, sync e scarto del repo.` },
+      { id: "ristorazione", brief: `${formatPrefix("app")}Osteria del Passo: ristorazione, menu degustazione, comande al passo cucina e sala da pranzo.` },
+    ];
+    const narrow = [
+      { name: "320", viewport: { width: 320, height: 568 } },
+      { name: "390", viewport: { width: 390, height: 844 } },
+    ] as const;
+    const browser = await launchChromium();
+    try {
+      for (const row of briefs) {
+        const composed = composeProduct(row.brief);
+        const src = prepareSrcDoc(composed.html, composed.tokens.palette, `${row.id}-hit`, composed.grammar.kind);
+        for (const vp of narrow) {
+          const page = await isolatedPage(browser, { viewport: vp.viewport });
+          const errors: string[] = [];
+          page.on("pageerror", (err) => {
+            if (!isBlockedPublicNetworkError(String(err))) errors.push(String(err));
+          });
+          try {
+            await page.setContent(FIVE_PERSIST_HOST, { waitUntil: "domcontentloaded", timeout: 15000 });
+            await page.locator("#f").evaluate((el, srcDoc: string) => {
+              (el as HTMLIFrameElement).srcdoc = srcDoc;
+            }, src);
+            const frame = page.frameLocator("#f");
+            await frame.locator("[data-fenix-ready]").waitFor({ timeout: 8000 });
+            const navs = frame.locator("nav button[data-view]");
+            const nNav = await navs.count();
+            assert.ok(nNav >= 3, `${row.id}/${vp.name} nav count ${nNav}`);
+            for (let i = 0; i < nNav; i++) {
+              const box = await navs.nth(i).evaluate((el) => {
+                const r = el.getBoundingClientRect();
+                return { x: r.x, y: r.y, w: r.width, h: r.height, vw: innerWidth, vh: innerHeight };
+              });
+              assert.ok(box.x >= -1, `${row.id}/${vp.name} nav ${i} x ${box.x}`);
+              assert.ok(box.x + box.w <= box.vw + 1, `${row.id}/${vp.name} nav ${i} right ${box.x + box.w}/${box.vw}`);
+              assert.ok(box.y >= -1, `${row.id}/${vp.name} nav ${i} y ${box.y}`);
+              assert.ok(box.y + box.h <= box.vh + 1, `${row.id}/${vp.name} nav ${i} bottom ${box.y + box.h}/${box.vh}`);
+              assert.ok(box.w >= 44 && box.h >= 44, `${row.id}/${vp.name} nav ${i} ${box.w}x${box.h}`);
+              await navs.nth(i).click();
+              await frame.locator("[data-fenix-ready]").waitFor({ timeout: 8000 });
+            }
+            await navs.first().click();
+            if (row.id === "agenda") {
+              const slot = frame.locator("article.slot").first();
+              assert.ok((await slot.count()) >= 1, `${vp.name} slot`);
+              for (const act of ["advance", "edit", "del"] as const) {
+                const btn = slot.locator(`[data-act="${act}"]`);
+                const hit = await btn.evaluate((el) => {
+                  const r = el.getBoundingClientRect();
+                  const slotEl = el.closest("article.slot");
+                  const sr = slotEl ? slotEl.getBoundingClientRect() : r;
+                  const wrap = el.parentElement ? getComputedStyle(el.parentElement) : null;
+                  return {
+                    x: r.x,
+                    y: r.y,
+                    w: r.width,
+                    h: r.height,
+                    vw: innerWidth,
+                    vh: innerHeight,
+                    sx: sr.x,
+                    sw: sr.width,
+                    overflow: wrap?.overflow || "",
+                    flexWrap: wrap?.flexWrap || "",
+                  };
+                });
+                assert.notEqual(hit.overflow, "auto", `${vp.name} ${act} overflow auto hides clip`);
+                assert.equal(hit.flexWrap, "nowrap", `${vp.name} ${act} wrap`);
+                assert.ok(hit.x >= hit.sx - 1, `${vp.name} ${act} left of slot`);
+                assert.ok(hit.x + hit.w <= hit.sx + hit.sw + 1, `${vp.name} ${act} right of slot ${hit.x + hit.w}/${hit.sx + hit.sw}`);
+                assert.ok(hit.x >= -1 && hit.x + hit.w <= hit.vw + 1, `${vp.name} ${act} x clip ${hit.x}+${hit.w}/${hit.vw}`);
+                assert.ok(hit.w >= 44 && hit.h >= 44, `${vp.name} ${act} ${hit.w}x${hit.h}`);
+              }
+              await slot.locator('[data-act="advance"]').click();
+              await frame.locator("html:not([data-fenix-persist='busy'])").waitFor({ timeout: 8000 });
+              await slot.locator('[data-act="edit"]').click();
+              await frame.locator("#n").waitFor({ timeout: 4000 });
+              await navs.first().click();
+              await frame.locator("article.slot").first().locator('[data-act="del"]').click();
+              await frame.locator("html:not([data-fenix-persist='busy'])").waitFor({ timeout: 8000 });
+            }
+            if (row.id === "profumi") {
+              assertPerfumeThumbsFramed(await paintPerfumeThumbs(frame), `${row.id}/${vp.name}`);
+            }
+            assert.equal(errors.length, 0, `${row.id}/${vp.name} ${errors.join(" | ")}`);
+          } finally {
+            await page.close();
+          }
+        }
+      }
+    } finally {
+      await browser.close();
+    }
+  });
+
+  it("frames every perfume bottle of both variants in thumbs at 320 and 390", async () => {
+    const { composeProduct } = await import("./compose-product.ts");
+    const { formatPrefix } = await import("../projects/infer.ts");
+    const CONTACT = join(here, "fixtures/graphic/five/contact");
+    mkdirSync(CONTACT, { recursive: true });
+    const variants = [
+      {
+        id: "v0",
+        ice: false,
+        brief: `${formatPrefix("app")}Essenza: gestione profumi premium, flaconi, note olfattive e guardaroba.`,
+      },
+      {
+        id: "v1",
+        ice: true,
+        brief: `${formatPrefix("app")}Vetro di nebbia profumi flaconi ghiaccio.`,
+      },
+    ];
+    const browser = await launchChromium();
+    try {
+      for (const row of variants) {
+        const composed = composeProduct(row.brief);
+        const src = prepareSrcDoc(composed.html, composed.tokens.palette, `thumb-${row.id}`, "app");
+        for (const vp of [
+          { name: "320", viewport: { width: 320, height: 568 } },
+          { name: "390", viewport: { width: 390, height: 844 } },
+        ]) {
+          const page = await isolatedPage(browser, { viewport: vp.viewport });
+          try {
+            await page.setContent(FIVE_PERSIST_HOST, { waitUntil: "domcontentloaded", timeout: 15000 });
+            await page.locator("#f").evaluate((el, srcDoc: string) => {
+              (el as HTMLIFrameElement).srcdoc = srcDoc;
+            }, src);
+            const frame = page.frameLocator("#f");
+            await frame.locator("[data-fenix-ready]").waitFor({ timeout: 8000 });
+            const painted = await paintPerfumeThumbs(frame);
+            assertPerfumeThumbsFramed(painted, `${row.id}/${vp.name}`, row.ice);
+            const heroVb = await frame.locator(".hero svg").first().getAttribute("viewBox");
+            assert.equal(heroVb, "0 0 640 420", `${row.id}/${vp.name} hero viewBox`);
+            const n = await frame.locator(".fragrance .thumb").count();
+            for (let i = 0; i < n; i++) {
+              await frame.locator(".fragrance .thumb").nth(i).screenshot({
+                path: join(CONTACT, `after-${row.id}-${vp.name}-${i}.png`),
+              });
+            }
+            await frame.locator(".collection").screenshot({
+              path: join(CONTACT, `after-${row.id}-${vp.name}-list.png`),
+            });
+          } finally {
+            await page.close();
+          }
+        }
+      }
+    } finally {
+      await browser.close();
+    }
+    for (const row of variants) {
+      for (const vp of ["320", "390"]) {
+        for (let i = 0; i < 4; i++) {
+          assert.equal(existsSync(join(CONTACT, `before-${row.id}-${vp}-${i}.png`)), true, `before ${row.id} ${vp} ${i}`);
+          assert.equal(existsSync(join(CONTACT, `after-${row.id}-${vp}-${i}.png`)), true, `after ${row.id} ${vp} ${i}`);
+        }
+      }
+    }
+  });
+});

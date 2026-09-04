@@ -1,0 +1,318 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { describe, it } from "node:test";
+import {
+  AGENDA_CALENDAR_SVG,
+  AGENDA_ICON_INSTRUCTION,
+  ICON_DELTA_BUDGET,
+  ICON_HTML_BOUND,
+  applyIconPatch,
+  applyIconRevision,
+  looksLikeIconInstruction,
+  refundIconFailure,
+  resolveIconTarget,
+  snapshotStructure,
+  structuralDrift,
+} from "../../../workers/visual/icon-patch.mjs";
+import { evaluateContract, planContract, blocksPublish } from "../ai/build-contract.ts";
+import { formatPrefix } from "./infer.ts";
+import { isPublishable } from "./recover.ts";
+import { leakedRuntimeText, staticClippingHint } from "./graphic-quality.ts";
+import { isStudioLocked } from "./studio-lock.ts";
+import { composeProduct } from "../ai/compose-product.ts";
+
+const here = dirname(fileURLToPath(import.meta.url));
+const AGENDA = readFileSync(join(here, "fixtures/agenda.html"), "utf8");
+const BROKEN = readFileSync(join(here, "fixtures/agenda-broken.html"), "utf8");
+const CLIP = readFileSync(join(here, "fixtures/agenda-clip.html"), "utf8");
+const BRIEF = `${formatPrefix("app")}Agenda studio: impegni e appuntamenti in tasca.`;
+
+function innerSvg(html: string, id: string) {
+  const i = html.indexOf(`data-fenix-id="${id}"`);
+  if (i < 0) return "";
+  const slice = html.slice(i, i + 900);
+  return slice.match(/<svg[\s\S]*?<\/svg>/i)?.[0] || "";
+}
+
+describe("atomic icon patch", () => {
+  it("classifies pointed icon requests and refuses full rewrites", () => {
+    assert.equal(looksLikeIconInstruction(AGENDA_ICON_INSTRUCTION), true);
+    assert.equal(looksLikeIconInstruction("Cambia solo l'icona della tab Prenota"), true);
+    assert.equal(looksLikeIconInstruction("Cambia le icone delle tab"), false);
+    assert.equal(looksLikeIconInstruction("Cambia l'icona delle tab Oggi"), true);
+    assert.equal(looksLikeIconInstruction("Rifai tutta l'app e l'icona"), false);
+    assert.equal(looksLikeIconInstruction("Sistema il form di Prenota"), false);
+    assert.ok(ICON_DELTA_BUDGET <= 8192);
+    assert.ok(ICON_HTML_BOUND >= 80_000);
+  });
+
+  it("inserts SVG into a target without svg and replaces a non-SVG glyph, keeping the label", () => {
+    const noSvg = `<!DOCTYPE html><html><body>
+<nav>
+<button type="button" data-view="home" data-fenix-id="icon:home">Oggi</button>
+<button type="button" data-view="new" data-fenix-id="icon:new">Prenota</button>
+</nav>
+</body></html>`;
+    const patchedEmpty = applyIconPatch(noSvg, "icon:home", AGENDA_CALENDAR_SVG);
+    assert.equal(patchedEmpty.applied, true, patchedEmpty.reason);
+    assert.match(innerSvg(patchedEmpty.html, "icon:home"), /M8 4v4M16 4v4/);
+    assert.match(patchedEmpty.html, /icon:home"[^>]*>[\s\S]*Oggi<\/button>/);
+    assert.doesNotMatch(innerSvg(patchedEmpty.html, "icon:new") || "Prenota", /M8 4v4/);
+
+    const glyph = `<!DOCTYPE html><html><body>
+<nav>
+<button type="button" data-view="home" data-fenix-id="icon:home"><span aria-hidden="true">📅</span>Oggi</button>
+</nav>
+</body></html>`;
+    const patchedGlyph = applyIconPatch(glyph, "icon:home", AGENDA_CALENDAR_SVG);
+    assert.equal(patchedGlyph.applied, true);
+    assert.match(innerSvg(patchedGlyph.html, "icon:home"), /<svg/i);
+    assert.match(patchedGlyph.html, /Oggi/);
+    assert.doesNotMatch(patchedGlyph.html, /📅/);
+    assert.match(patchedGlyph.html, /data-fenix-id="icon:home"/);
+
+    const emoji = `<!DOCTYPE html><html><body>
+<nav>
+<button type="button" data-view="home" data-fenix-id="icon:home">📅Oggi</button>
+</nav>
+</body></html>`;
+    const patchedEmoji = applyIconPatch(emoji, "icon:home", AGENDA_CALENDAR_SVG);
+    assert.equal(patchedEmoji.applied, true, patchedEmoji.reason);
+    assert.match(innerSvg(patchedEmoji.html, "icon:home"), /M8 4v4/);
+    assert.match(patchedEmoji.html, /Oggi<\/button>/);
+    assert.doesNotMatch(patchedEmoji.html, /📅/);
+
+    const img = `<!DOCTYPE html><html><body>
+<nav>
+<button type="button" data-view="home" data-fenix-id="icon:home"><img src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" alt="" width="24" height="24"/>Oggi</button>
+</nav>
+</body></html>`;
+    const patchedImg = applyIconPatch(img, "icon:home", AGENDA_CALENDAR_SVG);
+    assert.equal(patchedImg.applied, true, patchedImg.reason);
+    assert.match(innerSvg(patchedImg.html, "icon:home"), /M8 4v4/);
+    assert.match(patchedImg.html, /Oggi<\/button>/);
+    assert.doesNotMatch(patchedImg.html, /<img\b/i);
+  });
+
+  it("patches one owned icon and keeps files/views/CRUD byte-stable", () => {
+    const extra = {
+      path: "src/screens/Home.tsx",
+      content: "export default function Home(){return null}",
+    };
+    const files = [
+      { path: "index.html", content: AGENDA },
+      extra,
+    ];
+    const target = resolveIconTarget(AGENDA, AGENDA_ICON_INSTRUCTION);
+    assert.equal(target.status, "ok");
+    assert.equal(target.id, "icon:home");
+    const verdict = applyIconRevision({
+      html: AGENDA,
+      files,
+      instruction: AGENDA_ICON_INSTRUCTION,
+    });
+    assert.equal(verdict.status, "ok", verdict.reason);
+    assert.equal(verdict.spent, true);
+    assert.equal(verdict.refund, false);
+    assert.notEqual(innerSvg(verdict.html, "icon:home"), innerSvg(AGENDA, "icon:home"));
+    assert.match(innerSvg(verdict.html, "icon:home"), /M8 4v4M16 4v4/);
+    assert.equal(innerSvg(verdict.html, "icon:new"), innerSvg(AGENDA, "icon:new"));
+    assert.equal(innerSvg(verdict.html, "icon:list"), innerSvg(AGENDA, "icon:list"));
+    assert.equal(innerSvg(verdict.html, "icon:stats"), innerSvg(AGENDA, "icon:stats"));
+    assert.equal(innerSvg(verdict.html, "icon:more"), innerSvg(AGENDA, "icon:more"));
+    assert.equal(innerSvg(verdict.html, "icon:app"), innerSvg(AGENDA, "icon:app"));
+    assert.equal(
+      verdict.files.find((f: { path: string }) => f.path === extra.path)?.content,
+      extra.content,
+    );
+    const drift = structuralDrift(snapshotStructure(AGENDA, files), snapshotStructure(verdict.html, verdict.files));
+    assert.equal(drift, "");
+    assert.match(verdict.html, /Fenix\.data\.query\("impegni"\)/);
+    assert.match(verdict.html, /data-view="home"/);
+    assert.match(verdict.html, /data-view="new"/);
+    assert.match(verdict.html, /data-view="list"/);
+    assert.match(verdict.html, /data-view="stats"/);
+    assert.match(verdict.html, /data-view="more"/);
+    assert.equal(isStudioLocked({ status: "building" }), true);
+  });
+
+  it("fails absent and ambiguous targets without spending", () => {
+    const noHome = AGENDA.replace(
+      /<button type="button" data-view="home"[\s\S]*?<\/button>/,
+      "",
+    ).replace(/data-fenix-id="icon:home"/g, "");
+    const absent = applyIconRevision({
+      html: noHome,
+      instruction: AGENDA_ICON_INSTRUCTION,
+    });
+    assert.equal(absent.status, "absent");
+    assert.equal(absent.spent, false);
+    assert.equal(absent.refund, false);
+    assert.equal(absent.html, noHome);
+    assert.match(absent.reason, /assente/i);
+
+    const ambiguous = applyIconRevision({
+      html: AGENDA,
+      instruction: "Cambia solo l'icona",
+    });
+    assert.equal(ambiguous.status, "ambiguous");
+    assert.equal(ambiguous.spent, false);
+    assert.equal(ambiguous.html, AGENDA);
+    assert.match(ambiguous.reason, /ambigua/i);
+
+    const unnamed = applyIconRevision({
+      html: AGENDA,
+      instruction: "modificare un'icona",
+    });
+    assert.equal(unnamed.status, "ambiguous");
+    assert.equal(unnamed.spent, false);
+  });
+
+  it("resolves domain tab ids without data-fenix-id and stamps only the target", () => {
+    const domain = `<!DOCTYPE html><html><body>
+<nav class="fk-tab">
+<button type="button" data-view="oggi"><svg viewBox="0 0 24 24" width="24" height="24"><circle cx="8" cy="8" r="2"/></svg>Oggi</button>
+<button type="button" data-view="prenota"><svg viewBox="0 0 24 24" width="24" height="24"><circle cx="8" cy="8" r="2"/></svg>Prenota</button>
+<button type="button" data-view="appunti"><svg viewBox="0 0 24 24" width="24" height="24"><circle cx="8" cy="8" r="2"/></svg>Appunti</button>
+<button type="button" data-view="settimana"><svg viewBox="0 0 24 24" width="24" height="24"><circle cx="8" cy="8" r="2"/></svg>Settimana</button>
+<button type="button" data-view="studio"><svg viewBox="0 0 24 24" width="24" height="24"><circle cx="8" cy="8" r="2"/></svg>Studio</button>
+</nav>
+<script>window.Fenix={data:{query:function(){return Promise.resolve([])},insert:function(){return Promise.resolve()},remove:function(){return Promise.resolve()}},load:function(){},save:function(){}}</script>
+</body></html>`;
+    const target = resolveIconTarget(domain, AGENDA_ICON_INSTRUCTION);
+    assert.equal(target.status, "ok", target.reason);
+    assert.equal(target.id, "icon:oggi");
+    const verdict = applyIconRevision({ html: domain, instruction: AGENDA_ICON_INSTRUCTION });
+    assert.equal(verdict.status, "ok", verdict.reason);
+    assert.match(verdict.html, /data-fenix-id="icon:oggi"/);
+    assert.match(innerSvg(verdict.html, "icon:oggi") || verdict.html, /M8 4v4M16 4v4/);
+    assert.doesNotMatch(verdict.html, /data-fenix-id="icon:prenota"/);
+    assert.match(verdict.html, /data-view="prenota"/);
+    assert.match(verdict.html, /data-view="appunti"/);
+    assert.match(verdict.html, /data-view="settimana"/);
+    assert.match(verdict.html, /data-view="studio"/);
+    assert.match(verdict.html, /Fenix=\{data:/);
+  });
+
+  it("patches a compose-product Agenda without rewriting views or CRUD", () => {
+    const composed = composeProduct(`${formatPrefix("app")}Agenda studio: impegni e appuntamenti in tasca.`);
+    assert.match(composed.html, /data-fenix-id="icon:/);
+    const extra = { path: "src/screens/Home.tsx", content: "export default function Home(){return null}" };
+    const files = [...(composed.files || []), extra];
+    const verdict = applyIconRevision({
+      html: composed.html,
+      files,
+      instruction: AGENDA_ICON_INSTRUCTION,
+    });
+    assert.equal(verdict.status, "ok", verdict.reason);
+    assert.equal(verdict.spent, true);
+    const beforeViews = [...composed.html.matchAll(/data-view=["']([^"']+)/gi)].map((m) => m[1]).sort().join(",");
+    const afterViews = [...verdict.html.matchAll(/data-view=["']([^"']+)/gi)].map((m) => m[1]).sort().join(",");
+    assert.equal(afterViews, beforeViews);
+    assert.match(verdict.html, /Fenix\.load/);
+    assert.match(verdict.html, /Fenix\.save/);
+    assert.equal(
+      verdict.files.find((f: { path: string }) => f.path === extra.path)?.content,
+      extra.content,
+    );
+    const drift = structuralDrift(
+      snapshotStructure(composed.html, files),
+      snapshotStructure(verdict.html, verdict.files),
+    );
+    assert.equal(drift, "");
+  });
+
+  it("rejects worker full-rewrite/oversize, restores snapshot, refunds once", () => {
+    const files = [
+      { path: "index.html", content: AGENDA },
+      { path: "src/screens/Home.tsx", content: "keep" },
+    ];
+    const rewrite = `${AGENDA}<div id="junk">${"x".repeat(ICON_DELTA_BUDGET + 80)}</div>`;
+    const oversize = applyIconRevision({
+      html: AGENDA,
+      files,
+      instruction: AGENDA_ICON_INSTRUCTION,
+      worker: { html: rewrite, files: [...files, { path: "src/screens/New.tsx", content: "nope" }] },
+    });
+    assert.equal(oversize.status, "rejected");
+    assert.equal(oversize.refund, true);
+    assert.equal(oversize.html, AGENDA);
+    assert.match(oversize.reason, /full-rewrite|oversize|deriva|non target/i);
+
+    const project = {
+      html: AGENDA,
+      files,
+      lastStableHtml: AGENDA,
+      lastStableFiles: files,
+      creditRefunded: false,
+    };
+    const first = refundIconFailure(project, oversize);
+    assert.equal(first.refundedNow, true);
+    assert.equal(first.creditRefunded, true);
+    assert.equal(first.html, AGENDA);
+    const second = refundIconFailure({ ...project, creditRefunded: true }, oversize);
+    assert.equal(second.refundedNow, false);
+    assert.equal(second.html, AGENDA);
+
+    const huge = applyIconRevision({
+      html: AGENDA,
+      files,
+      instruction: AGENDA_ICON_INSTRUCTION,
+      worker: { html: `${"<!DOCTYPE html><html><body>nope</body></html>"}${"n".repeat(ICON_HTML_BOUND + 10)}` },
+    });
+    assert.equal(huge.status, "rejected");
+    assert.equal(huge.refund, true);
+  });
+
+  it("keeps Agenda publishable and blocks overflow/undefined/NaN", () => {
+    const contract = planContract(BRIEF);
+    const patched = applyIconPatch(AGENDA, "icon:home", AGENDA_CALENDAR_SVG);
+    assert.equal(patched.applied, true);
+    const evaluation = evaluateContract({
+      html: patched.html,
+      files: [{ path: "index.html", content: patched.html }],
+      contract,
+      kind: "app",
+      brief: BRIEF,
+    });
+    assert.equal(
+      evaluation.ok,
+      true,
+      evaluation.checks.filter((c) => !c.ok).map((c) => `${c.id}:${c.detail}`).join(" · "),
+    );
+    assert.equal(blocksPublish(patched.html, "app", undefined, BRIEF), "");
+    assert.equal(
+      isPublishable({ status: "ready", html: patched.html, kind: "app", prompt: BRIEF }),
+      true,
+    );
+
+    assert.equal(leakedRuntimeText(BROKEN), true);
+    const bad = evaluateContract({
+      html: BROKEN,
+      files: [{ path: "index.html", content: BROKEN }],
+      contract,
+      kind: "app",
+      brief: BRIEF,
+    });
+    assert.equal(bad.ok, false);
+    const ids = bad.checks.filter((c) => !c.ok).map((c) => c.id);
+    assert.ok(ids.includes("leaked-text") || ids.includes("overflow") || ids.includes("graphic"), ids.join(","));
+    assert.match(blocksPublish(BROKEN, "app", undefined, BRIEF), /undefined|overflow|graphic|NaN|clip/i);
+    assert.equal(isPublishable({ status: "ready", html: BROKEN, kind: "app", prompt: BRIEF }), false);
+    assert.equal(staticClippingHint(AGENDA), false);
+    assert.equal(staticClippingHint(CLIP), true);
+    const clipped = evaluateContract({
+      html: CLIP,
+      files: [{ path: "index.html", content: CLIP }],
+      contract,
+      kind: "app",
+      brief: BRIEF,
+    });
+    assert.equal(clipped.ok, false);
+    assert.equal(clipped.checks.find((c) => c.id === "clipping")?.ok, false);
+    assert.match(blocksPublish(CLIP, "app", undefined, BRIEF), /clip/i);
+    assert.equal(isPublishable({ status: "ready", html: CLIP, kind: "app", prompt: BRIEF }), false);
+  });
+});

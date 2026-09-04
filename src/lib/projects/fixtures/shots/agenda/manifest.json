@@ -1,0 +1,27 @@
+{
+  "product": "Agenda",
+  "collection": "impegni",
+  "viewports": [
+    "D",
+    "T",
+    "M"
+  ],
+  "files": [
+    {
+      "name": "agenda-d.png",
+      "sha256": "a7db5f7ec6dc583572d4e38f476e83eab1edbe702565cdb5b1deb39fbca61622",
+      "bytes": 22926
+    },
+    {
+      "name": "agenda-t.png",
+      "sha256": "64cfc2ce69259b1fb0734b95c7ad3c2423edd96231378dc6dab90b18b4c8465b",
+      "bytes": 22470
+    },
+    {
+      "name": "agenda-m.png",
+      "sha256": "d985ece257822b8a8e69b5783cfb5ffe6bd149d1fc920ff556283b0f40447a89",
+      "bytes": 20597
+    }
+  ],
+  "credits": 0
+}
