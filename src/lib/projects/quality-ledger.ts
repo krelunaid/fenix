@@ -273,15 +273,15 @@ export const QUALITY_LEDGER: LedgerRow[] = [
   {
     id: "generated-app-craft",
     claim:
-      "Il generatore condiviso (composeProduct, non le sole fixture) produce cinque brief distinti — Agenda, profumi, abbigliamento, note/repository, ristorazione — con icone semantiche su griglia 24, palette diverse dal brief (override utente conservato), tipo 17/headline, imagery di dominio e niente hero KPI o tab Home/Elenco sull'agenda. D/T/M, CRUD reale, console pulita, AA, overflow/clipping chiusi. Punteggio tecnico, giudizio grafico e benchmark esterno restano assi distinti. Nessun 9/10 senza prova. 0 crediti xAI su questi gate.",
+      "Il generatore condiviso (composeProduct, non le sole fixture) produce cinque brief distinti — Agenda, profumi, abbigliamento, note/repository, ristorazione — con icone semantiche su griglia 24, palette diverse dal brief (override utente conservato), tipo 17/headline, imagery di dominio e niente hero KPI o tab Home/Elenco sull'agenda. Before/after D/T/M su parent 77e2cb4, chrome di famiglia visibile su mobile, ΔE palette ≥ 14. D/T/M, CRUD reale, console pulita, AA, overflow/clipping chiusi. Punteggio tecnico, giudizio grafico e benchmark esterno restano assi distinti. Nessun 9/10 senza prova. 0 crediti xAI su questi gate.",
     evidence:
-      "compose-product.ts agendaRailMarkup + craft-icons.ts data-icon-grid=24 + design-tokens booking 17/1.75 + compose-product.test.ts five briefs + compose-product-browser.test.ts D/T/M CRUD + fixtures/graphic/five",
+      "compose-product.ts GRAPHIC_FIVE_PARENT_SHA + familyChromeCss + craft-icons.ts data-icon-grid=24 + design-tokens booking 17/1.75 + compose-product.test.ts five briefs + compose-product-browser.test.ts D/T/M CRUD + fixtures/graphic/five before/after",
     ok: true,
   },
   {
     id: "agenda-runtime",
     claim:
-      "Agenda generata: settimana Lun-Dom allineata al giorno selezionato (prev/next/oggi senza spostare gli ISO salvati); selezione ISO/ARIA/tastiera; stato distinto dall'orario; form di dominio; create/update/delete/advance con esito bridge (niente falso successo, rollback e form integro se reject/timeout); empty-state unico (dati ⇒ zero empty, zero dati ⇒ uno solo, niente kit «Nessun elemento»). 0 crediti xAI. Il residuo grafico five-brief (manifest solo after, palette mobile vicine, niente before/parentSHA) resta aperto e non è prova di 9/10.",
+      "Agenda generata: settimana Lun-Dom allineata al giorno selezionato (prev/next/oggi senza spostare gli ISO salvati); selezione ISO/ARIA/tastiera; stato distinto dall'orario; form di dominio; create/update/delete/advance con esito bridge (niente falso successo, rollback e form integro se reject/timeout); empty-state unico (dati ⇒ zero empty, zero dati ⇒ uno solo, niente kit «Nessun elemento»). 0 crediti xAI. Residui fonte, non dichiarati runtime-proven: saveOnce avvolge Fenix.save in Promise.resolve e non cattura un throw sincrono prima della Promise; bridge assente risolve ok; reject/timeout solo su M e saves>=2 non prova il limite esatto. settleVisual #toast 4s vs ping 1600ms: un fail isolato con suite da ~15 min non è riprodotto (hide a ~1.8s). Il five-brief grafico ha before/after su parent 77e2cb4; non è prova di 9/10.",
     evidence:
       "compose-product.ts mondayOf/week-nav/persistThen + color-scheme.ts productOwnsList + compose-product.test.ts + agenda-runtime-browser.test.ts D/T/M empty-state + bridge reject/timeout + fixtures/shots/agenda-runtime",
     ok: true,

@@ -105,7 +105,7 @@ describe("Agenda generated runtime D/T/M", () => {
       files: [],
       credits: 0,
       residual:
-        "Graphic five-brief proof remains after-only: no parent-SHA before/after, three mobile palettes still close. This file proves Agenda function, not 9/10 craft.",
+        "Five-brief graphic residual moved to fixtures/graphic/five before/after on parent 77e2cb4. This file proves Agenda function, not 9/10 craft.",
     };
     try {
       for (const [vp, viewport] of VIEWPORTS) {
@@ -581,7 +581,7 @@ describe("Agenda calendar edges Fri/Sat/Sun, validation, date keep", () => {
       files,
       credits: 0,
       residual:
-        "Graphic five-brief proof remains after-only: no parent-SHA before/after, three mobile palettes still close. Calendar edges prove function, not 9/10 craft.",
+        "Five-brief graphic residual moved to fixtures/graphic/five before/after on parent 77e2cb4. Calendar edges prove function, not 9/10 craft.",
     };
     writeFileSync(join(SHOTS, "edges.json"), `${JSON.stringify(extra, null, 2)}\n`);
     assert.equal(files.length, 12);

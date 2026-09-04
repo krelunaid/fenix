@@ -233,6 +233,14 @@ document.getElementById('main').innerHTML = 'x';
     ];
     const drawn = tabs.map((t, i) => craftNavIcon(t, i));
     assert.equal(new Set(drawn).size, drawn.length);
+    const kitchen = [
+      { id: "passo", label: "Passo" },
+      { id: "comanda", label: "Comanda" },
+      { id: "menu", label: "Menu" },
+      { id: "sala", label: "Sala" },
+    ].map((t, i) => craftNavIcon(t, i));
+    assert.equal(new Set(kitchen).size, 4, "kitchen tabs must be four distinct glyphs");
+    assert.match(kitchen[0]!, /M6\.6 10\.4h10\.8/);
     for (const svg of drawn) {
       assert.equal(isLetterAIcon(svg), false);
       assert.equal(isAppleChromeSvg(svg), false);

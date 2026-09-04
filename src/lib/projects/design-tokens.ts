@@ -65,7 +65,7 @@ const FAMILIES: Record<TokenFamily, FamilySrc> = {
     fonts: {
       display: "Cormorant Garamond",
       body: "Outfit",
-      href: "https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Outfit:wght@400;500;600&display=swap",
+      href: "https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,600;1,700&family=Outfit:wght@400;500;600&display=swap",
     },
     radius: "18px",
     type: { h1: "clamp(1.8rem, 6vw, 2.6rem)", body: "16px", label: "11px uppercase tracking" },
@@ -316,9 +316,9 @@ const FAMILIES: Record<TokenFamily, FamilySrc> = {
   repo: {
     mood: "terminale, ciano freddo, carta di commit",
     fonts: {
-      display: "IBM Plex Sans",
+      display: "IBM Plex Mono",
       body: "IBM Plex Sans",
-      href: "https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap",
+      href: "https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap",
     },
     radius: "6px",
     type: { h1: "clamp(1.3rem, 3vw, 1.75rem)", body: "14px", label: "11px tabular" },

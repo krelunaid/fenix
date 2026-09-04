@@ -21,8 +21,8 @@
         {
           "id": "hierarchy",
           "label": "Gerarchia",
-          "score": 8,
-          "motivation": "Nessun rilievo sul criterio."
+          "score": 5,
+          "motivation": "Titoli presenti, scala tipografica incompleta."
         },
         {
           "id": "composition",
@@ -39,47 +39,47 @@
         {
           "id": "imagery",
           "label": "Imagery di dominio",
-          "score": 3,
+          "score": 2,
           "motivation": "Hero/card con forme geometriche o gradienti al posto di imagery di dominio."
         },
         {
           "id": "originality",
           "label": "Originalità",
-          "score": 8,
-          "motivation": "Rilievo visivo sul criterio, senza attributo di produttore."
+          "score": 2,
+          "motivation": "Icone o lastre ancora riciclate dal fallback."
         },
         {
           "id": "typography",
           "label": "Tipografia",
-          "score": 8,
-          "motivation": "Rilievo visivo sul criterio, senza attributo di produttore."
+          "score": 3,
+          "motivation": "Tipografia di sistema, senza rampa."
         },
         {
           "id": "color",
           "label": "Colore",
-          "score": 8,
-          "motivation": "Famiglia perfume distinta."
+          "score": 5,
+          "motivation": "Pochi inchiostri, gerarchia cromatica debole."
         },
         {
           "id": "controls",
           "label": "Controllo/micro-interazione",
-          "score": 8,
-          "motivation": "Nessun rilievo sul criterio."
+          "score": 3,
+          "motivation": "Micro-interazione assente o solo hover."
         },
         {
           "id": "responsive",
           "label": "Responsive",
-          "score": 8,
-          "motivation": "Nessun rilievo sul criterio."
+          "score": 7,
+          "motivation": "Un solo layout, non device-aware."
         },
         {
           "id": "a11y",
           "label": "Accessibilità",
           "score": 8,
-          "motivation": "Focus visibile dichiarato."
+          "motivation": "Focus visibile e etichette aria sul mestiere."
         }
       ],
-      "total": 65
+      "total": 41
     },
     "B": {
       "slot": "B",
@@ -87,65 +87,65 @@
         {
           "id": "hierarchy",
           "label": "Gerarchia",
-          "score": 8,
-          "motivation": "Nessun rilievo sul criterio."
+          "score": 5,
+          "motivation": "Titoli presenti, scala tipografica incompleta."
         },
         {
           "id": "composition",
           "label": "Composizione",
-          "score": 8,
-          "motivation": "Nessun rilievo sul criterio."
+          "score": 10,
+          "motivation": "Composizione device-aware con lastre/featured plate o desk."
         },
         {
           "id": "density",
           "label": "Densità utile",
-          "score": 8,
-          "motivation": "Nessun rilievo sul criterio."
+          "score": 9,
+          "motivation": "Densità utile: voci, lastre o KPI con soggetto di dominio."
         },
         {
           "id": "imagery",
           "label": "Imagery di dominio",
-          "score": 8,
-          "motivation": "Nessun rilievo sul criterio."
+          "score": 9,
+          "motivation": "Imagery di dominio con parti semantiche (garment/dish/scene/room/bottle)."
         },
         {
           "id": "originality",
           "label": "Originalità",
-          "score": 8,
-          "motivation": "Rilievo visivo sul criterio, senza attributo di produttore."
+          "score": 7,
+          "motivation": "Icone o lastre ancora riciclate dal fallback."
         },
         {
           "id": "typography",
           "label": "Tipografia",
-          "score": 8,
-          "motivation": "Rilievo visivo sul criterio, senza attributo di produttore."
+          "score": 3,
+          "motivation": "Tipografia di sistema, senza rampa."
         },
         {
           "id": "color",
           "label": "Colore",
-          "score": 8,
-          "motivation": "Famiglia perfume distinta."
+          "score": 7,
+          "motivation": "Pochi inchiostri, gerarchia cromatica debole."
         },
         {
           "id": "controls",
           "label": "Controllo/micro-interazione",
-          "score": 8,
-          "motivation": "Nessun rilievo sul criterio."
+          "score": 3,
+          "motivation": "Micro-interazione assente o solo hover."
         },
         {
           "id": "responsive",
           "label": "Responsive",
-          "score": 8,
-          "motivation": "Nessun rilievo sul criterio."
+          "score": 10,
+          "motivation": "Breakpoint tablet e desktop con chrome device-aware."
         },
         {
           "id": "a11y",
           "label": "Accessibilità",
-          "score": 8,
-          "motivation": "Focus visibile dichiarato."
+          "score": 10,
+          "motivation": "Focus visibile e etichette aria sul mestiere."
         }
       ],
-      "total": 80
+      "total": 73
     }
   }
 }

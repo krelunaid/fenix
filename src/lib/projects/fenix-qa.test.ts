@@ -347,7 +347,15 @@ describe("focus-visible and worker model", () => {
     assert.match(compose, /data-act="week-today"/);
     assert.match(compose, /id="day-label"/);
     assert.match(compose, /function persistThen/);
+    assert.match(compose, /setTimeout\(function\(\)\{ n\.hidden=true; document\.documentElement\.removeAttribute\("data-fenix-flash"\); \}, 1600\)/);
+    const agendaRuntime = readFileSync(join(root, "src/lib/projects/agenda-runtime-browser.test.ts"), "utf8");
+    assert.match(agendaRuntime, /waitFor\(\{ state: "hidden", timeout: 4000 \}\)/);
     assert.doesNotMatch(compose, /void window\.Fenix\.save/);
+    assert.match(compose, /GRAPHIC_FIVE_PARENT_SHA/);
+    assert.match(compose, /data-family=/);
+    assert.match(compose, /family-chrome /);
+    assert.match(compose, /html\[data-family\]::before/);
+    assert.match(compose, /function displayStack/);
     assert.equal(existsSync(join(root, "src/lib/projects/agenda-runtime-browser.test.ts")), true);
     const runtime = readFileSync(join(root, "src/lib/projects/color-scheme.ts"), "utf8");
     assert.match(runtime, /function productOwnsList/);
@@ -357,6 +365,7 @@ describe("focus-visible and worker model", () => {
     const craft = readFileSync(join(root, "src/lib/projects/craft-icons.ts"), "utf8");
     assert.match(craft, /data-fenix-id="icon:\$\{t\.id\}"/);
     assert.match(craft, /data-icon-grid="24"/);
+    assert.match(craft, /pot: navIcon/);
     const appShell = readFileSync(join(root, "src/lib/ai/app-shell.ts"), "utf8");
     assert.match(appShell, /data-fenix-id="icon:app"/);
     const iconFn = runBuild.slice(runBuild.indexOf("async function runIconBuild"));

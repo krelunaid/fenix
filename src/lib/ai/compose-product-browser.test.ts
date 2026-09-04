@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { mkdirSync, writeFileSync, statSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync, statSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, it } from "node:test";
@@ -14,7 +14,7 @@ import {
   GRAPHIC_SCORE_THRESHOLD,
 } from "../projects/graphic-quality.ts";
 import { evaluateContract, planContract, blocksPublish } from "./build-contract.ts";
-import { loadPipelineFixtures, runGraphicPipeline } from "./compose-product.ts";
+import { loadPipelineFixtures, runGraphicPipeline, GRAPHIC_FIVE_PARENT_SHA } from "./compose-product.ts";
 import { loadLegacyGraphicFixtures } from "./graphic-fixtures.ts";
 import { EXTERNAL_BENCHMARK, runBlindTrial } from "../projects/blind-visual-benchmark.ts";
 
@@ -797,6 +797,7 @@ describe("graphic pipeline visual QA D/T/M", () => {
     const { composeProduct } = await import("./compose-product.ts");
     const { formatPrefix } = await import("../projects/infer.ts");
     const FIVE_SHOTS = join(here, "fixtures/graphic/five");
+    const BEFORE = join(FIVE_SHOTS, "before");
     const AFTER = "/workspace/screenshots/fase3-graphic/five-after";
     const briefs: { id: string; brief: string }[] = [
       { id: "agenda", brief: `${formatPrefix("app")}Agenda: appuntamenti, calendario giornaliero, trattamenti e studio.` },
@@ -805,11 +806,30 @@ describe("graphic pipeline visual QA D/T/M", () => {
       { id: "repo", brief: `${formatPrefix("app")}Taccuino: note e repository, commit, rami, sync e scarto del repo.` },
       { id: "ristorazione", brief: `${formatPrefix("app")}Osteria del Passo: ristorazione, menu degustazione, comande al passo cucina e sala da pranzo.` },
     ];
+    const before = briefs.flatMap((row) =>
+      VIEWPORTS.map(([vp]) => {
+        const name = `${row.id}-${vp}.png`;
+        const buf = readFileSync(join(BEFORE, name));
+        return { name, sha256: createHash("sha256").update(buf).digest("hex"), bytes: buf.length };
+      }),
+    );
+    assert.equal(before.length, 15);
     const browser = await launchChromium();
     const files: { name: string; sha256: string }[] = [];
+    const palettes: { id: string; bg: string; accent: string; family: string; grammar: string; display: string }[] = [];
+    const mobileChrome: string[] = [];
     try {
       for (const row of briefs) {
         const composed = composeProduct(row.brief);
+        palettes.push({
+          id: row.id,
+          bg: composed.tokens.palette.bg,
+          accent: composed.tokens.palette.accent,
+          family: composed.tokens.family,
+          grammar: composed.grammar.id,
+          display: composed.tokens.fonts.display,
+        });
+        assert.equal(composed.html.includes(`data-family="${composed.tokens.family}"`), true);
         for (const [vp, viewport] of VIEWPORTS) {
           const page = await isolatedPage(browser, { viewport });
           const errors: string[] = [];
@@ -844,6 +864,26 @@ describe("graphic pipeline visual QA D/T/M", () => {
             const rendered = await page.evaluate(collectRenderedGraphic);
             assert.equal(rendered.leakedText, false, `${row.id} leaked`);
             assert.ok(rendered.headingCount >= 1, `${row.id} heading`);
+            if (vp === "M") {
+              const chrome = await page.evaluate(() => {
+                const brand = document.querySelector(".brand");
+                const nav = document.querySelector("nav");
+                const on = document.querySelector("nav button.on");
+                const html = document.documentElement;
+                return [
+                  html.getAttribute("data-family") || "",
+                  html.getAttribute("data-grammar") || "",
+                  getComputedStyle(document.body).backgroundColor,
+                  getComputedStyle(html).getPropertyValue("--accent").trim(),
+                  brand ? getComputedStyle(brand).fontFamily : "",
+                  brand ? getComputedStyle(brand).fontStyle : "",
+                  brand ? getComputedStyle(brand).textTransform : "",
+                  nav ? getComputedStyle(nav).borderTopColor : "",
+                  on ? getComputedStyle(on).backgroundColor : "",
+                ].join("|");
+              });
+              mobileChrome.push(chrome);
+            }
             const dest = await shot(page, `${row.id}-${vp}.png`, FIVE_SHOTS);
             try {
               mkdirSync(AFTER, { recursive: true });
@@ -878,7 +918,30 @@ describe("graphic pipeline visual QA D/T/M", () => {
       await browser.close();
     }
     mkdirSync(FIVE_SHOTS, { recursive: true });
-    writeFileSync(join(FIVE_SHOTS, "manifest.json"), `${JSON.stringify({ files, note: "composeProduct five briefs D/T/M" }, null, 2)}\n`);
+    writeFileSync(
+      join(FIVE_SHOTS, "manifest.json"),
+      `${JSON.stringify(
+        {
+          parentSHA: GRAPHIC_FIVE_PARENT_SHA,
+          before,
+          after: files,
+          palettes,
+          note: "composeProduct five briefs D/T/M before/after on parent 77e2cb4. Not a 9/10.",
+        },
+        null,
+        2,
+      )}\n`,
+    );
+    assert.equal(GRAPHIC_FIVE_PARENT_SHA, "77e2cb4307d55a447d19cfa9bc7ab80076475ec5");
     assert.equal(files.length, briefs.length * VIEWPORTS.length);
+    assert.equal(new Set(files.map((f) => f.sha256)).size, files.length, "after shots must differ");
+    assert.equal(new Set(mobileChrome).size, briefs.length, mobileChrome.join(" || "));
+    assert.equal(new Set(palettes.map((p) => `${p.bg}:${p.accent}`)).size, briefs.length);
+    for (const file of files) {
+      const prior = before.find((b) => b.name === file.name);
+      assert.ok(prior, file.name);
+      assert.notEqual(file.sha256, prior!.sha256, `${file.name} after must move from parent 77`);
+      assert.equal(existsSync(join(BEFORE, file.name)), true);
+    }
   });
 });

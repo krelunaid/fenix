@@ -1,4 +1,7 @@
 import assert from "node:assert/strict";
+import { existsSync, readdirSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, it } from "node:test";
 import { formatPrefix } from "../projects/infer.ts";
 import { evaluateContract, planContract } from "./build-contract.ts";
@@ -9,10 +12,11 @@ import {
   loadPipelineFixtures,
   runGraphicPipeline,
   seedHtmlForBrief,
+  GRAPHIC_FIVE_PARENT_SHA,
 } from "./compose-product.ts";
 import { APP_SHELL_HTML } from "./app-shell.ts";
 import { hueBucket } from "../projects/design-tokens.ts";
-import { PALETTE_CORPUS } from "../projects/palette-engine.ts";
+import { PALETTE_CORPUS, paletteDistance, CLOSE_DELTA_E } from "../projects/palette-engine.ts";
 import { domainIllustration, GEOMETRIC_REGRESSIONS, materialSignature } from "./domain-imagery.ts";
 import { isLetterAIcon } from "../projects/craft-icons.ts";
 
@@ -306,6 +310,50 @@ describe("graphic pipeline prompt→plan→generate→visual→QA", () => {
     assert.equal(runs.find((r) => r.id === "abbigliamento")!.grammar.id, "lookbook");
     assert.equal(runs.find((r) => r.id === "repo")!.grammar.id, "source-timeline");
     assert.equal(runs.find((r) => r.id === "ristorazione")!.grammar.id, "service-board");
+    assert.equal(GRAPHIC_FIVE_PARENT_SHA, "77e2cb4307d55a447d19cfa9bc7ab80076475ec5");
+    assert.equal(runs.find((r) => r.id === "repo")!.tokens.fonts.display, "IBM Plex Mono");
+    for (const run of runs) {
+      assert.match(run.html, new RegExp(`data-family="${run.tokens.family}"`));
+      assert.match(run.html, new RegExp(`data-grammar="${run.grammar.id}"`));
+      assert.match(run.html, /family-chrome /);
+      assert.match(run.html, /html\[data-family\]::before/);
+      const pipeline = runGraphicPipeline(five[run.id as keyof typeof five]);
+      assert.equal(pipeline.qa.ok, true, `${run.id} pipeline qa`);
+      assert.equal(pipeline.generated.html, run.html);
+    }
+    for (let i = 0; i < runs.length; i++) {
+      for (let j = i + 1; j < runs.length; j++) {
+        const a = runs[i]!.tokens.palette;
+        const b = runs[j]!.tokens.palette;
+        const dist = paletteDistance(
+          { bg: a.bg, surface: a.surface, accent: a.accent },
+          { bg: b.bg, surface: b.surface, accent: b.accent },
+        );
+        assert.ok(
+          dist >= CLOSE_DELTA_E,
+          `${runs[i]!.id}/${runs[j]!.id} ΔE ${dist.toFixed(2)} < ${CLOSE_DELTA_E}`,
+        );
+      }
+    }
+  });
+
+  it("freezes five-brief before shots at parent SHA 77e2cb4", () => {
+    const here = dirname(fileURLToPath(import.meta.url));
+    const before = join(here, "fixtures/graphic/five/before");
+    const names = [
+      "agenda",
+      "profumi",
+      "abbigliamento",
+      "repo",
+      "ristorazione",
+    ].flatMap((id) => ["D", "T", "M"].map((vp) => `${id}-${vp}.png`));
+    assert.equal(GRAPHIC_FIVE_PARENT_SHA, "77e2cb4307d55a447d19cfa9bc7ab80076475ec5");
+    assert.equal(existsSync(before), true);
+    const listed = readdirSync(before).filter((n) => n.endsWith(".png")).sort();
+    assert.deepEqual(listed, [...names].sort());
+    for (const name of names) {
+      assert.equal(existsSync(join(before, name)), true, name);
+    }
   });
 
   it("agenda runtime: ISO days, status cycle, domain form, Sala place, desktop inset", () => {

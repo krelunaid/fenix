@@ -1,65 +1,185 @@
 {
-  "files": [
+  "parentSHA": "77e2cb4307d55a447d19cfa9bc7ab80076475ec5",
+  "before": [
     {
       "name": "agenda-D.png",
-      "sha256": "179d4bc8ecc16a83573d1d7ee4a688d8cc042ff450704e47229ac9f1eaba1060"
+      "sha256": "179d4bc8ecc16a83573d1d7ee4a688d8cc042ff450704e47229ac9f1eaba1060",
+      "bytes": 46366
     },
     {
       "name": "agenda-T.png",
-      "sha256": "5e829d6b999af03f028fabd873abe71af1809f5f5ea961fb9f444a245f0cc3a6"
+      "sha256": "5e829d6b999af03f028fabd873abe71af1809f5f5ea961fb9f444a245f0cc3a6",
+      "bytes": 63435
     },
     {
       "name": "agenda-M.png",
-      "sha256": "ba2db80c2139b8e0f09a72fa5c4eb2608c75aa1881e36ab5e9b82d56f7279d54"
+      "sha256": "ba2db80c2139b8e0f09a72fa5c4eb2608c75aa1881e36ab5e9b82d56f7279d54",
+      "bytes": 61577
     },
     {
       "name": "profumi-D.png",
-      "sha256": "bfdcc9d9370a6ae71f27b51b19c70bcf2b29f51072aa9d986d1bb7930a0c08cc"
+      "sha256": "db78abfa98c4d6c4aceea2bbed5310857c34cc5c297b4b37ad9820eb257b403a",
+      "bytes": 213936
     },
     {
       "name": "profumi-T.png",
-      "sha256": "82e9be82577a5d9f8e2fdcfa1b5158c223f34af3130c92a918bc941614594445"
+      "sha256": "bcb3be127183cf220409737f7e18dea40f6c6faaf5ea6a59822ea3fd07086548",
+      "bytes": 152196
     },
     {
       "name": "profumi-M.png",
-      "sha256": "81d0bf9691b3afa714836c70feb86bfe02664056c50950b89180e9ab0001df18"
+      "sha256": "44a8cecd866b96481829dfb877cce99087677b792f8b5a142b691a1cb94ed1d2",
+      "bytes": 99073
     },
     {
       "name": "abbigliamento-D.png",
-      "sha256": "cc477f65405c4846b36faadc9bb1ec007499f59aac0863ab76a3ed34e7e4c322"
+      "sha256": "14423f3fc4372b6cea8edfb21805620b0ca313f995f039c33445114a996c5491",
+      "bytes": 709012
     },
     {
       "name": "abbigliamento-T.png",
-      "sha256": "fe1e4f17d93861299f37df1dc7890f7f69528fa468d7b7d44a74e360683ec52a"
+      "sha256": "fc8c5dca04dee0426c1c59d0b70b00c1bbf6c348e24b9acc67d5dcad7801a81e",
+      "bytes": 576824
     },
     {
       "name": "abbigliamento-M.png",
-      "sha256": "aebca37dfcbf7edd63830827028e85d4b9993618080e8a4be16654b4a03ddcc7"
+      "sha256": "38d1c3708fe17648efa750b9c4df14224e24d5a0ab4dfe23017911c33171c4e2",
+      "bytes": 260429
     },
     {
       "name": "repo-D.png",
-      "sha256": "25750700c0e2f95de82c1f850747b84403d30961e378d8c154b149ad1324ceda"
+      "sha256": "25750700c0e2f95de82c1f850747b84403d30961e378d8c154b149ad1324ceda",
+      "bytes": 104994
     },
     {
       "name": "repo-T.png",
-      "sha256": "737c4b4fa7c732d05beb856856d888a33aa6357b62b8bb6918cb56355f27d2ac"
+      "sha256": "737c4b4fa7c732d05beb856856d888a33aa6357b62b8bb6918cb56355f27d2ac",
+      "bytes": 84435
     },
     {
       "name": "repo-M.png",
-      "sha256": "2577d60fba12f0e522438a1accb2486615e33c82f6aaffd4d68006b91f7f1e21"
+      "sha256": "2577d60fba12f0e522438a1accb2486615e33c82f6aaffd4d68006b91f7f1e21",
+      "bytes": 68235
     },
     {
       "name": "ristorazione-D.png",
-      "sha256": "94ae0e4f0cdf9d35e40bb64d546e7821a90ef02c4f1f3dc920c3658c15f5bcca"
+      "sha256": "d8043019c3a3f6f1c436c2200356975c4ad89e1bcb710d4228000a0fc4f6ec28",
+      "bytes": 312489
     },
     {
       "name": "ristorazione-T.png",
-      "sha256": "ba70c73d1f3872e6c254d08815aabe9b150828aae58fc90c816b5708080ea2ad"
+      "sha256": "f28e6546d3b60a983deb53287f448720bfc2421e888a8a3edf420352b99240cc",
+      "bytes": 264924
     },
     {
       "name": "ristorazione-M.png",
-      "sha256": "39aa61f6f8ee53b01ba9ae4bb172f0d32352889e6f061357e13c7726d5630710"
+      "sha256": "4f1b2b8fee7ba328c3e358fb783b0f784ef01d6d8915260cf44a93cb262b730a",
+      "bytes": 134141
     }
   ],
-  "note": "composeProduct five briefs D/T/M"
+  "after": [
+    {
+      "name": "agenda-D.png",
+      "sha256": "70c9136ef9dff9fd7b6e796c70e978a18e33f19d8e7293dac9d48b5f8293b1d5"
+    },
+    {
+      "name": "agenda-T.png",
+      "sha256": "208424640b8974e5eb8e64f66a676a9caee9b401941087f97e26da37c59056ae"
+    },
+    {
+      "name": "agenda-M.png",
+      "sha256": "c9cc12ebcdd01d799628633032a7086d5535d8463aefd8abaf3af685d8620c5e"
+    },
+    {
+      "name": "profumi-D.png",
+      "sha256": "51e2dcd1796c77c716093ec3a28c7abaa8488f50e9095e75069893380b2c6050"
+    },
+    {
+      "name": "profumi-T.png",
+      "sha256": "3b71f9170725253c1a0e7d71f0243e3c23b6f33194ef91c8b9b7b8efbf02ffdd"
+    },
+    {
+      "name": "profumi-M.png",
+      "sha256": "317864a9271e5c3c86ce99fabbcf39ae8ce48ee6d9aff6acab7a5c5ab250394d"
+    },
+    {
+      "name": "abbigliamento-D.png",
+      "sha256": "c3d7023e9b343abee1c55692d6f33bdfdc876a6569c5328952c202e5194ed19d"
+    },
+    {
+      "name": "abbigliamento-T.png",
+      "sha256": "5ef8fb5805dc1b76f0d7c79f58622e671fcb8a26a37debab74c26e3a4c6ec5fa"
+    },
+    {
+      "name": "abbigliamento-M.png",
+      "sha256": "2d7b075d742d49ed7085c11cf9bfd1b1689bafc535091ff172bf0505c1443acf"
+    },
+    {
+      "name": "repo-D.png",
+      "sha256": "fa2d6cb2b7d346226c9eecca1f38bbd83108e9108385527039a2708907bd5325"
+    },
+    {
+      "name": "repo-T.png",
+      "sha256": "98a7a347c87da168415ce965e17233f6c58b30fcb2e0786e2e2a5342e8aefd90"
+    },
+    {
+      "name": "repo-M.png",
+      "sha256": "881923bae986fa2a0c180f5dce352f00f5f3d90e85e50cc5572dfe038ac185ab"
+    },
+    {
+      "name": "ristorazione-D.png",
+      "sha256": "1bb560129711bbda726b39376b350821d7610cd4340ccb7c1a38e2176166954c"
+    },
+    {
+      "name": "ristorazione-T.png",
+      "sha256": "7d75e0a8b8afe3ac76b1d868dc8daed51cd68675525fe94224afe2b294bba0aa"
+    },
+    {
+      "name": "ristorazione-M.png",
+      "sha256": "cbff0eb4dd52bd533d496bdebc4dfe64de504902ad2cc46eeb6e01ef69d6a24f"
+    }
+  ],
+  "palettes": [
+    {
+      "id": "agenda",
+      "bg": "#eef3ea",
+      "accent": "#1f6f68",
+      "family": "booking",
+      "grammar": "agenda",
+      "display": "Newsreader"
+    },
+    {
+      "id": "profumi",
+      "bg": "#120e0c",
+      "accent": "#c4a15a",
+      "family": "perfume",
+      "grammar": "split-stage",
+      "display": "Cormorant Garamond"
+    },
+    {
+      "id": "abbigliamento",
+      "bg": "#f6f1ea",
+      "accent": "#c81d25",
+      "family": "fashion",
+      "grammar": "lookbook",
+      "display": "Playfair Display"
+    },
+    {
+      "id": "repo",
+      "bg": "#111826",
+      "accent": "#2e9dc8",
+      "family": "repo",
+      "grammar": "source-timeline",
+      "display": "IBM Plex Mono"
+    },
+    {
+      "id": "ristorazione",
+      "bg": "#1a1210",
+      "accent": "#c43c2c",
+      "family": "food",
+      "grammar": "service-board",
+      "display": "Zilla Slab"
+    }
+  ],
+  "note": "composeProduct five briefs D/T/M before/after on parent 77e2cb4. Not a 9/10."
 }

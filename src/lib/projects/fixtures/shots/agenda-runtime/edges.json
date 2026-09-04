@@ -3,65 +3,65 @@
   "files": [
     {
       "name": "agenda-runtime-weekend-d.png",
-      "sha256": "373482182e3c6d99a224be999846371027cf0a40e53826d783937567035f3767",
-      "bytes": 46683
+      "sha256": "a284669e029147cdf31337b9ee8e7a80126da95f870196202efe5593380ea23c",
+      "bytes": 46404
     },
     {
       "name": "agenda-runtime-empty-d.png",
-      "sha256": "5dd30d526c7b3dfc3298217be543d7fb124cb3b5149ca27b3b84a49d5091df0d",
-      "bytes": 46577
+      "sha256": "2ec1fcddfad930df55a70d6e14592095b9ae25de65987626cb9b2776384a7be0",
+      "bytes": 46297
     },
     {
       "name": "agenda-runtime-valid-d.png",
-      "sha256": "0ba0de45e131f792add092fc2914974b4f7429c269ea88dad661cde45113314d",
-      "bytes": 45774
+      "sha256": "e467f52d03d36bd8a9b07022ecaf28d5ca2b29f03c24f76cc22c9693d740181b",
+      "bytes": 45473
     },
     {
       "name": "agenda-runtime-clean-d.png",
-      "sha256": "1486e3e60acc2438176015cbaf367ae4b46dff7996a9dbc3e4acc5b8d4b2e753",
-      "bytes": 45519
+      "sha256": "6ea47543588243eadd69c782e3972c439953fb33fbbdee8fc2cde603f1120c21",
+      "bytes": 45220
     },
     {
       "name": "agenda-runtime-weekend-t.png",
-      "sha256": "47c292effd3eb574b6f7d0eae52d753a1fb9f73778718cbec01e4a28ebf3a1bd",
-      "bytes": 42768
+      "sha256": "6ff6f94aeb2173bf9c7c8a72815c7b87cfe6c1fac132ad46340127e1be8adbfa",
+      "bytes": 42820
     },
     {
       "name": "agenda-runtime-empty-t.png",
-      "sha256": "5e3a757b9cfeeda75e1d3acb320cd61b8ba20c2cb4d1ac0288f9094866a04df9",
-      "bytes": 41024
+      "sha256": "5ddd15e93a41796a8e46f94e2d2b71360c459f3e75f3a477de3ca7ba74c022f4",
+      "bytes": 41106
     },
     {
       "name": "agenda-runtime-valid-t.png",
-      "sha256": "7d3b99331c38c868d717073e10d2ef84dbaee1a6dca35e616307e51fdda8a020",
-      "bytes": 45037
+      "sha256": "b183c9589370abaa870b317b2e444d263b9de334f12d6699d907de9af781e4cd",
+      "bytes": 44756
     },
     {
       "name": "agenda-runtime-clean-t.png",
-      "sha256": "4d52223bd5511410109e6406011201710ec3b4d92daab3f6fea3c2da169cd0c6",
-      "bytes": 41090
+      "sha256": "738c7c3745a21ee6575e12220da7afb927869999e26129baefb2556004a2552e",
+      "bytes": 41157
     },
     {
       "name": "agenda-runtime-weekend-m.png",
-      "sha256": "8dd1136427d8e291b69fd53cd7430533612b22b77bdaf4cab3512b164674bf28",
-      "bytes": 39831
+      "sha256": "c1f3e22078a5376a6690ee0bac3c05a2402afdf3f2b3658570c896b7cb4edf25",
+      "bytes": 39789
     },
     {
       "name": "agenda-runtime-empty-m.png",
-      "sha256": "39d44b62fb1a093d65f3fa5364c6b1b71cd5ba92864b2b7f4116d78d927ff297",
-      "bytes": 36021
+      "sha256": "a9074dfabc4f3b60d2d4e8065796720bcf154a6b91e4413f718e696ad0d2868f",
+      "bytes": 35967
     },
     {
       "name": "agenda-runtime-valid-m.png",
-      "sha256": "39312ea6ad78d7f96a0fbc7f00ac510842ae613ef6a90986184505fc7d782729",
-      "bytes": 41308
+      "sha256": "5d6eecd84bce46a806f71ee7b018ceafa85dfdfb9585d5d8cbd90b8f283ef50b",
+      "bytes": 41198
     },
     {
       "name": "agenda-runtime-clean-m.png",
-      "sha256": "d73713a742bcc4faf94201062cf4e08e1d53ac87676d9ff48b4ccfc15469a699",
-      "bytes": 38647
+      "sha256": "4cbb770d1bec79f89407ce51d85a68e1125cd23ba58bb0c878bbca41b790a5f6",
+      "bytes": 38618
     }
   ],
   "credits": 0,
-  "residual": "Graphic five-brief proof remains after-only: no parent-SHA before/after, three mobile palettes still close. Calendar edges prove function, not 9/10 craft."
+  "residual": "Five-brief graphic residual moved to fixtures/graphic/five before/after on parent 77e2cb4. Calendar edges prove function, not 9/10 craft."
 }

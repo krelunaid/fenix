@@ -57,6 +57,9 @@ export type ComposedProduct = {
   files: { path: string; content: string }[];
 };
 
+/** Parent SHA of the five-brief before/after graphic residual. Frozen baseline, not a quality score. */
+export const GRAPHIC_FIVE_PARENT_SHA = "77e2cb4307d55a447d19cfa9bc7ab80076475ec5";
+
 export type GraphicPipelineRun = {
   brief: string;
   tokens: DesignTokens;
@@ -444,6 +447,60 @@ function kickerCss(t: DesignTokens): string {
   return `.kicker,header .place{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}`;
 }
 
+function displayStack(t: DesignTokens): string {
+  if (t.family === "repo" || t.family === "ops") {
+    return `"${t.fonts.display}",ui-monospace,"IBM Plex Mono",Menlo,monospace`;
+  }
+  if (
+    t.family === "perfume" ||
+    t.family === "fashion" ||
+    t.family === "booking" ||
+    t.family === "food" ||
+    t.family === "editorial" ||
+    t.family === "hospitality" ||
+    t.family === "ceramic" ||
+    t.family === "paper"
+  ) {
+    return `"${t.fonts.display}",ui-serif,Georgia,"Times New Roman",serif`;
+  }
+  return `"${t.fonts.display}",ui-sans-serif,system-ui,sans-serif`;
+}
+
+function familyChromeCss(t: DesignTokens, grammar: LayoutGrammar): string {
+  const brand =
+    t.family === "perfume"
+      ? `.brand{font-style:italic;font-weight:600;letter-spacing:-.035em}`
+      : t.family === "fashion"
+        ? `.brand{letter-spacing:-.05em;text-transform:uppercase;font-size:clamp(1.35rem,5.4vw,2rem);font-weight:700}`
+        : t.family === "food"
+          ? `.brand{font-weight:700;letter-spacing:-.028em}`
+          : t.family === "repo"
+            ? `.brand{font-family:${displayStack(t)};letter-spacing:0;font-size:clamp(1.05rem,2.4vw,1.35rem);font-weight:600}`
+            : t.family === "booking"
+              ? `.brand{font-weight:650;letter-spacing:-.03em}`
+              : "";
+  const nav =
+    grammar.chrome === "tabs"
+      ? `nav.tabs{border-top:2px solid var(--accent);background:var(--surface)}
+nav.tabs button.on{color:var(--accent);background:color-mix(in srgb,var(--accent) 14%,transparent);border-radius:calc(var(--r) * .4)}`
+      : `nav.rail button.on{color:var(--accent)}`;
+  const matter =
+    t.family === "food"
+      ? `.ticket{border-left:4px solid var(--accent)}`
+      : t.family === "fashion"
+        ? `.look,.btn,nav.tabs button.on{border-radius:0}`
+        : t.family === "perfume"
+          ? `.fragrance{border-radius:calc(var(--r) * .65)}`
+          : t.family === "repo"
+            ? `.commit .sha{font-family:${displayStack(t)}}`
+            : "";
+  return `/* family-chrome ${t.family}/${grammar.id} */
+html[data-family]::before{content:"";position:fixed;top:0;left:0;right:0;height:3px;background:var(--accent);z-index:50;pointer-events:none}
+${brand}
+${nav}
+${matter}`;
+}
+
 function phoneCss(id: GrammarId): string {
   const stage =
     id === "split-stage"
@@ -730,6 +787,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
 }
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
 ${desk ? deskCss(grammar.id) : phoneCss(grammar.id)}
+${familyChromeCss(t, grammar)}
 /* ${t.family}/${t.variant} device-aware */`;
 }
 
@@ -778,7 +836,7 @@ function productHtml(spec: PipelineSpec, tokens: DesignTokens, grammar: LayoutGr
             ? "var(--t-headline)"
             : "clamp(1.18rem, 2.2vw, 1.55rem)";
   return `<!DOCTYPE html>
-<html lang="it"${desk ? ' data-fenix-craft-desk' : ""}>
+<html lang="it" data-family="${tokens.family}" data-grammar="${grammar.id}"${desk ? " data-fenix-craft-desk" : ""}>
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
@@ -787,7 +845,7 @@ function productHtml(spec: PipelineSpec, tokens: DesignTokens, grammar: LayoutGr
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="${tokens.fonts.href}" rel="stylesheet"/>
 <style data-fenix-phone data-fenix-site data-fenix-craft>
-:root{color-scheme:${scheme};--bg:${p.bg};--surface:${p.surface};--elevated:${p.elevated};--fg:${p.fg};--muted:${p.muted};--accent:${p.accent};--line:${p.line};--accent-ink:${p.accentInk};--success:${p.success};--warning:${p.warning};--r:${tokens.radius};--display:"${tokens.fonts.display}",ui-sans-serif,system-ui,sans-serif;--body:"${tokens.fonts.body}",ui-sans-serif,system-ui,sans-serif;--t-h1:${tokens.type.h1};--t-h2:${h2};--t-body:${tokens.type.body};--t-large:1.75rem;--t-headline:1.0625rem;--t-footnote:.8125rem;--t-caption:.6875rem;--ink-loud:${p.fg};--ink-quiet:${p.muted}}
+:root{color-scheme:${scheme};--bg:${p.bg};--surface:${p.surface};--elevated:${p.elevated};--fg:${p.fg};--muted:${p.muted};--accent:${p.accent};--line:${p.line};--accent-ink:${p.accentInk};--success:${p.success};--warning:${p.warning};--r:${tokens.radius};--display:${displayStack(tokens)};--body:"${tokens.fonts.body}",ui-sans-serif,system-ui,sans-serif;--t-h1:${tokens.type.h1};--t-h2:${h2};--t-body:${tokens.type.body};--t-large:1.75rem;--t-headline:1.0625rem;--t-footnote:.8125rem;--t-caption:.6875rem;--ink-loud:${p.fg};--ink-quiet:${p.muted}}
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%;background:var(--bg);color:var(--fg);font:400 ${tokens.type.body}/1.29 var(--body),ui-sans-serif,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
 body{min-height:100dvh}

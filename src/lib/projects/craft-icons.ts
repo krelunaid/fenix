@@ -148,6 +148,9 @@ const NAV_ICONS = {
   week: navIcon(
     '<rect x="5.8" y="6.4" width="12.4" height="11.2" rx="1.2"/><path d="M5.8 10h12.4"/><path d="M8.2 13.2h.01M12 13.2h.01M15.8 13.2h.01M8.2 16h.01M12 16h.01"/>',
   ),
+  pot: navIcon(
+    '<path d="M6.6 10.4h10.8v6.2a2.2 2.2 0 0 1-2.2 2.2H8.8a2.2 2.2 0 0 1-2.2-2.2z"/><path d="M9.2 10.4V8.6a2.8 2.8 0 0 1 5.6 0v1.8"/><path d="M5.4 10.4h13.2"/>',
+  ),
 } as const;
 
 const NAV_FALLBACKS = [NAV_ICONS.book, NAV_ICONS.pencil, NAV_ICONS.atelier, NAV_ICONS.kanban] as const;
@@ -176,7 +179,8 @@ export function craftNavIcon(tab: { id: string; label: string }, index = 0): str
   else if (/prenota|check-in|checkin/.test(key)) svg = NAV_ICONS.key;
   else if (/camere|suite/.test(key)) svg = NAV_ICONS.bed;
   else if (/soggiorno|notte/.test(key)) svg = NAV_ICONS.lamp;
-  else if (/passo|marmo/.test(key)) svg = NAV_ICONS.plate;
+  else if (/passo|cucina/.test(key)) svg = NAV_ICONS.pot;
+  else if (/marmo/.test(key)) svg = NAV_ICONS.plate;
   else if (/comanda|ordine/.test(key)) svg = NAV_ICONS.ticket;
   else if (/menu|crudi/.test(key)) svg = NAV_ICONS.glass;
   else if (/sala|banchina/.test(key)) svg = NAV_ICONS.table;
