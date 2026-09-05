@@ -102,10 +102,30 @@ export const FASE3_GAPS: Fase3Gap[] = [
     area: "Qualità generata",
     emergent: "Agente di test che ripara; output lento (45–60 min in prove terze).",
     fenix:
-      "Contratto di build v1 (planner deterministico, 0 token) + ruoli grok-build-0.1 con ricevute, niente CoT. Evaluator su 6 fixture storiche, tre geometrici rifiutati, dieci prodotti premium (5 brief × 2) e una regressione Essenza. Pipeline deterministica prompt→plan→generate→visual→QA su sei brief difficili (Essenza, Vesti, ospitalità, ristorazione, dashboard, portfolio) con tre coppie di direzioni diverse: grammatica di layout, token dal brief, imagery di dominio, desktop editoriale. Gate grafico blocking: densità, originalità anti-clone, card-clone, canvas boxed, empty-state, D/T/M screenshot; compilare non basta per ready/pubblica. Direzione grafica esplicita (system/iPhone-like primario, serif da rivista, tab Home/Aggiungi/Persona se richieste) conservata dopo repair mock e prepareSrcDoc; dominio invariato se non chiesto. Protocollo cieco a 10 criteri; benchmark esterno non disponibile. AA fail-closed. Critic LLM saltato se i gate (incluso grafico) passano. Repair max 2. Collection Fenix.data ristretta. Ledger in quality-ledger.ts. Nessun confronto testa-a-testa con Emergent.",
+      "Contratto di build v1 (planner deterministico, 0 token) + ruoli grok-build-0.1 con ricevute, niente CoT. Evaluator su 6 fixture storiche, tre geometrici rifiutati, dieci prodotti premium (5 brief × 2) e una regressione Essenza. Pipeline deterministica prompt→plan→generate→visual→QA su sei brief difficili (Essenza, Vesti, ospitalità, ristorazione, dashboard, portfolio) con tre coppie di direzioni diverse: grammatica di layout, token dal brief, imagery di dominio, desktop editoriale. Gate grafico blocking: densità, originalità anti-clone, card-clone, canvas boxed, empty-state, D/T/M screenshot; compilare non basta per ready/pubblica. Direzione grafica esplicita: «stile iPhone»/system-ui primario e serif da rivista conservati dopo repairBuild mock e prepareSrcDoc anche su CSS senza variabili, font shorthand (peso/corsivo/line-height e quattro spaziature size/line-height, incluso font:700 22px/ 1.2) e selettori qualificati; negazione scoped alla clausola (Non usare Literata ma system-ui = system; Non voglio tab Home Aggiungi Persona ≠ semantic da raw); dominio invariato se non chiesto; home richiesta non sostituita dal fallback widget. PHONE_KIT default 5 colonne, N dal numero reale di tab, prova 5 tab senza data-fenix-phone. SYSTEM first-run: empty onesto, palette adattiva + history (non un unico #eceff3/#125e57), un titolo, CTA piena, pocket-list senza marker, niente dna paper·glacier·anti-clone né record uno/due/tre; serif rail ON accent-ink. Screenshot: settle reale, niente maschera #err/#toast. Follow-up sola icona = mock repair, non controller-edit live. Non premium. Protocollo cieco a 10 criteri; benchmark esterno non disponibile. AA fail-closed. Critic LLM saltato se i gate (incluso grafico) passano. Repair max 2. Collection Fenix.data ristretta. Ledger in quality-ledger.ts. Nessun confronto testa-a-testa con Emergent.",
     impact: "high",
     cost: "medium",
     slice: "now",
+  },
+  {
+    id: "intent-seed-copy",
+    area: "Copy seed SYSTEM/iPhone-like",
+    emergent: "Copy di prodotto sul dominio del brief.",
+    fenix:
+      "Seed SYSTEM/iPhone-like: empty first-run onesto (Niente in lista), palette adattiva + history (non un unico #eceff3/#125e57), un titolo in header, CTA 48px, pocket-list list-style none, niente — · nuovo, niente paper·glacier·Literata/Karla·anti-clone né record uno/due/tre visibili. Home overview distinta da Elenco CRUD e Persona storage locale. Serif rail ON: accent-ink su fill accent. Dominio profumi/agenda invariato. Non premium. Verificato composeProduct+repairBuild mock+prepareSrcDoc D/T/M/320.",
+    impact: "medium",
+    cost: "low",
+    slice: "next",
+  },
+  {
+    id: "generated-app-composition",
+    area: "Composizione APP GENERATE",
+    emergent: "Gerarchia, palette e icone da prodotto su brief reali.",
+    fenix:
+      "SYSTEM/iPhone-like: Home overview compatta (conteggio/recenti/empty/CTA da storage, niente stretch 100dvh), Elenco lista raggruppata CRUD, Aggiungi form, Persona storage locale con wipe confermato e reload vuoto. Quattro corpi pairwise-distinct. Palette adattiva + history, data-chroma in CSS. Agenda/profumi/abbigliamento/repository/ristorazione restano ricette distinte. Serif esplicito non forzato a system. 320/390 contenuto sopra la nav. Non 10/10. Non premium. Non scorecard al posto del render.",
+    impact: "high",
+    cost: "medium",
+    slice: "next",
   },
   {
     id: "onboarding-deploy",

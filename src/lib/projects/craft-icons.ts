@@ -179,6 +179,7 @@ export function craftNavIcon(tab: { id: string; label: string }, index = 0): str
   if (/^home$/.test(label)) svg = NAV_ICONS.home;
   else if (/^aggiungi$/.test(label)) svg = NAV_ICONS.add;
   else if (/^persona$|^profilo$/.test(label)) svg = NAV_ICONS.person;
+  else if (/^elenco$|^lista$/.test(label)) svg = NAV_ICONS.book;
   else if (/piramide|accordi/.test(key)) svg = NAV_ICONS.pyramid;
   else if (/collezione|vetrina|essenz|profum/.test(key)) svg = NAV_ICONS.bottle;
   else if (/pelle|polso/.test(key)) svg = NAV_ICONS.wrist;
@@ -268,6 +269,7 @@ export function applyChromeGuards(html: string): string {
   if (!html) return html;
   const preserve = /data-intent-chrome="semantic"/.test(html);
   const next = preserve ? html : replaceAppleTabIcons(html);
+  if (preserve && hasRequestedWorkingHome(next)) return next;
   return rewriteIosWidgetHome(next);
 }
 
@@ -282,6 +284,34 @@ export function craftTabNavHtml(): string {
 export function looksLikeIosWidgetHome(html: string): boolean {
   const stats = (String(html || "").match(/class=["']fk-stat["']/g) || []).length;
   return stats >= 4 && /Ultimo/i.test(html) && /Stato/i.test(html) && /fk-grid2/.test(html);
+}
+
+function extractHomeFn(html: string): string | null {
+  const text = String(html || "");
+  const block = text.match(/home\s*:\s*function\s*\(\)\s*\{[\s\S]*?\n\s*\},/);
+  if (block) return block[0];
+  const line = text.match(/home\s*:\s*function\s*\(\)\s*\{[^\n]*\}/);
+  if (line) return line[0];
+  const render = text.match(/function renderHome\s*\(\)\s*\{[\s\S]*?\n\}/);
+  if (render) return render[0];
+  return null;
+}
+
+function isDumpedWidgetHome(body: string): boolean {
+  const stats = (body.match(/class=["']fk-stat["']/g) || []).length;
+  return stats >= 4 && /Ultimo/i.test(body) && /Stato/i.test(body);
+}
+
+function isUsefulHomeBody(body: string): boolean {
+  if (!body || isDumpedWidgetHome(body)) return false;
+  return /S\.items|data\.items|data-id=|data-act=|fk-sheet|renderList|renderPerfume|article class/i.test(body);
+}
+
+/** Requested product home (semantic chrome), not the 4-tile iPhone dump. */
+export function hasRequestedWorkingHome(html: string): boolean {
+  const home = extractHomeFn(html);
+  if (!home) return false;
+  return isUsefulHomeBody(home);
 }
 
 /** First-run product sheet. Not a Voci/Limite/Squadra ledger and not 4 KPI tiles. */

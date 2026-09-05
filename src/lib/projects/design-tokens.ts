@@ -10,10 +10,13 @@ import {
   applyUserColors,
   avoidRecent,
   classifyPalette,
+  CLOSE_DELTA_E,
   ENGINE_FAMILIES,
   ensureAccessible,
   extractBriefAxes,
+  extractUserColors,
   hashedFallbackPalette,
+  paletteDistance,
   resolveAdaptivePalette,
   selectPaletteFamily,
   type EnginePalette,
@@ -619,6 +622,67 @@ function asEngine(p: FamilySrc["palette"]): EnginePalette {
   };
 }
 
+function mixHexLocal(a: string, b: string, t: number): string {
+  const pa = a.replace("#", "");
+  const pb = b.replace("#", "");
+  const ch = (i: number) => {
+    const x = parseInt(pa.slice(i, i + 2), 16);
+    const y = parseInt(pb.slice(i, i + 2), 16);
+    return Math.max(0, Math.min(255, Math.round(x + (y - x) * t)))
+      .toString(16)
+      .padStart(2, "0");
+  };
+  return `#${ch(0)}${ch(2)}${ch(4)}`;
+}
+
+/** Adaptive SYSTEM sheet. Not a single petrol, not Apple SET, AA on chrome. */
+function finishSystemSheet(tokens: DesignTokens, brief: string, recent?: PaletteRecord[]): DesignTokens {
+  const intent = graphicIntentFromBrief(brief);
+  if (intent.type !== "system") return tokens;
+  if (isProductFamily(tokens.family) && tokens.family !== "repo") return tokens;
+  const user = extractUserColors(brief);
+  const lock = { bg: Boolean(user.bg), accent: Boolean(user.accent) };
+  let palette: EnginePalette = { ...tokens.palette };
+  if (!lock.bg && !lock.accent) {
+    const apple =
+      palette.bg.toLowerCase() === "#f5f5f7" && palette.accent.toLowerCase() === "#0071e3";
+    const chroma = classifyPalette(palette);
+    const warm = chroma === "earth-kiln" || chroma === "wine-ink";
+    const cool: PaletteFamily[] = [
+      "glacier",
+      "luminous-paper",
+      "ink-terminal",
+      "mono-signal",
+      "chroma-pulse",
+      "pastel-studio",
+    ];
+    if (apple || warm) {
+      const fam = cool[briefSeed(brief) % cool.length]!;
+      palette = { ...ENGINE_FAMILIES[fam].palette };
+    }
+    palette = avoidRecent(palette, recent, briefSeed(brief), lock);
+    let step = 0;
+    const rec = recent || [];
+    const clashes = (p: EnginePalette) =>
+      rec.some((row) => {
+        const self = { bg: p.bg, surface: p.surface, accent: p.accent };
+        return row.bg.toLowerCase() === p.bg.toLowerCase() || paletteDistance(self, row) < CLOSE_DELTA_E;
+      });
+    while (rec.length && !lock.bg && clashes(palette) && step < cool.length) {
+      const fam = cool[(briefSeed(brief) + step + 1) % cool.length]!;
+      palette = avoidRecent({ ...ENGINE_FAMILIES[fam].palette }, rec, briefSeed(brief) + step * 19, lock);
+      step += 1;
+    }
+  }
+  palette = ensureAccessible(palette, lock);
+  let guard = 0;
+  while (contrastRatio(palette.muted, palette.bg) < 4.5 && guard < 10) {
+    palette.muted = mixHexLocal(palette.muted, palette.fg, 0.2);
+    guard += 1;
+  }
+  return { ...tokens, palette, chroma: classifyPalette(palette) };
+}
+
 export function tokensFromBrief(brief: string, opts?: TokenOptions): DesignTokens {
   const family = familyFromBrief(brief);
   const variant = variantFromBrief(brief);
@@ -635,18 +699,25 @@ export function tokensFromBrief(brief: string, opts?: TokenOptions): DesignToken
     const type = family === "repo" && repoSrc ? repoSrc.type : recipe.type;
     const dont = family === "repo" && repoSrc ? repoSrc.dont : recipe.dont;
     const dna = `${srcFamily}${variant ? `/v${variant}` : ""} · ${adaptive.family} · ${fonts.display}/${fonts.body} · anti-clone`;
-    return applyGraphicIntent({
-      family: srcFamily,
-      variant,
-      mood,
-      fonts: { ...fonts },
-      radius,
-      type: { ...type },
-      palette: adaptive.palette,
-      dna: dna.slice(0, 80),
-      dont: [...dont],
-      chroma: adaptive.family,
-    }, brief);
+    return finishSystemSheet(
+      applyGraphicIntent(
+        {
+          family: srcFamily,
+          variant,
+          mood,
+          fonts: { ...fonts },
+          radius,
+          type: { ...type },
+          palette: adaptive.palette,
+          dna: dna.slice(0, 80),
+          dont: [...dont],
+          chroma: adaptive.family,
+        },
+        brief,
+      ),
+      brief,
+      opts?.recent,
+    );
   }
   const src = variant === 1 && VARIANTS[family] ? VARIANTS[family]! : FAMILIES[family];
   const applied = applyUserColors(asEngine(src.palette), brief);
@@ -666,18 +737,25 @@ export function tokensFromBrief(brief: string, opts?: TokenOptions): DesignToken
   }
   const chroma = classifyPalette(palette);
   const dna = `${family}${variant ? `/v${variant}` : ""} · ${src.fonts.display}/${src.fonts.body} · anti-clone`;
-  return applyGraphicIntent({
-    family,
-    variant,
-    mood: src.mood,
-    fonts: { ...src.fonts },
-    radius: src.radius,
-    type: { ...src.type },
-    palette,
-    dna: dna.slice(0, 80),
-    dont: [...src.dont],
-    chroma,
-  }, brief);
+  return finishSystemSheet(
+    applyGraphicIntent(
+      {
+        family,
+        variant,
+        mood: src.mood,
+        fonts: { ...src.fonts },
+        radius: src.radius,
+        type: { ...src.type },
+        palette,
+        dna: dna.slice(0, 80),
+        dont: [...src.dont],
+        chroma,
+      },
+      brief,
+    ),
+    brief,
+    opts?.recent,
+  );
 }
 
 export function fallbackPaletteFromBrief(brief: string): Palette {
@@ -691,7 +769,7 @@ export function tokensInstruction(tokens: DesignTokens, brief = ""): string {
   const intent = graphicIntentFromBrief(brief);
   const typeLaw =
     intent.type === "system"
-      ? "Tipo: system-ui/-apple-system/Segoe UI è il PRIMARIO (non in coda). Non nominare SF Pro. Non clonare la coppia #f5f5f7+#0071e3."
+      ? "Tipo: system-ui/-apple-system/Segoe UI è il PRIMARIO (non in coda). Non nominare SF Pro. Non clonare la coppia #f5f5f7+#0071e3. Palette dal motore adattivo + history, non un unico verde petrolio #125e57 né #eceff3 fisso. Hex espliciti del brief restano (solo correzione AA)."
       : intent.type === "serif"
         ? `Tipo: display serif ${tokens.fonts.display} è legge. Non sostituirlo con system-ui, Inter o Manrope.`
         : "Tipo: font del mestiere, system (-apple-system, BlinkMacSystemFont, Segoe UI) solo in coda. Vietato SF Pro/Inter come primario se il brief non li chiede. Vietato clonare schermate, marchi, SF Symbols o la coppia #f5f5f7+#0071e3.";

@@ -27,6 +27,7 @@ import { auditGraphicQuality, type GraphicReport } from "../projects/graphic-qua
 import { domainIllustration, altForBrief } from "./domain-imagery.ts";
 import { DASHBOARD_POLISH_INSTRUCTION, SITE_POLISH_INSTRUCTION } from "./app-shell.ts";
 import { craftNavIcon } from "../projects/craft-icons.ts";
+import { accentButtonPair, contrastRatio } from "../projects/visual-quality.ts";
 import type { Palette, ProjectKind } from "../projects/types.ts";
 
 export type PipelineRow = {
@@ -320,22 +321,32 @@ function specForBrief(brief: string): PipelineSpec | undefined {
   });
 }
 
+function seedNameFromBrief(brief: string): string {
+  const raw = String(brief || "")
+    .replace(/^FORMATO:[^\n]*\n+/i, "")
+    .replace(/\bkind\s*=\s*\w+/gi, "")
+    .replace(
+      /(?:tipo system-ui|iphone-?like|font di sistema primario|font system-ui primario|serif da rivista|tab Home[^.]*|elenco e CRUD|non clonare[^.]*|cose da fare operative)/gi,
+      " ",
+    )
+    .replace(/\s+/g, " ")
+    .trim();
+  const before = raw.split(/[:.]/)[0]!.trim().replace(/[,;]+$/g, "").trim().slice(0, 28);
+  if (!before || /^(voglio|vorrei|una app|app stile)/i.test(before)) return "Note";
+  return before;
+}
+
 function synthesizeSpec(brief: string): PipelineSpec {
   const tokens = tokensFromBrief(brief);
   const grammar = grammarFromBrief(brief);
   const intent = graphicIntentFromBrief(brief);
-  const name = brief
-    .replace(/^FORMATO:[^\n]*\n+/i, "")
-    .split(/[:.]/)[0]!
-    .replace(/\bkind\s*=\s*\w+/gi, "")
-    .trim()
-    .slice(0, 28) || "Atelier";
+  const name = seedNameFromBrief(brief);
   if (intent.chrome === "semantic") {
     return {
       id: `${tokens.family}-seed`,
       name,
-      kicker: grammar.voice.census,
-      place: tokens.mood.split(",")[0] || "studio",
+      kicker: /^lista/i.test(name) ? "Le tue voci" : "In tasca",
+      place: "Personale",
       collection: "voci",
       brief,
       tabs: [
@@ -344,13 +355,9 @@ function synthesizeSpec(brief: string): PipelineSpec {
         { id: "elenco", label: "Elenco" },
         { id: "persona", label: "Persona" },
       ],
-      rows: [
-        { id: "v1", title: `${name} uno`, kicker: grammar.voice.census, note: tokens.mood, meta: "01" },
-        { id: "v2", title: `${name} due`, kicker: "in prova", note: tokens.dna, meta: "02" },
-        { id: "v3", title: `${name} tre`, kicker: "aperto", note: tokens.fonts.display, meta: "03" },
-      ],
-      formTitle: "Nuova riga",
-      cta: "Salva nel mestiere",
+      rows: [],
+      formTitle: "Nuova voce",
+      cta: "Aggiungi",
     };
   }
   if (tokens.family === "repo" || grammar.id === "source-timeline") {
@@ -414,7 +421,7 @@ function synthesizeSpec(brief: string): PipelineSpec {
     id: `${tokens.family}-seed`,
     name,
     kicker: grammar.voice.census,
-    place: tokens.mood.split(",")[0] || "studio",
+    place: "Studio",
     collection: "voci",
     brief,
     tabs: [
@@ -423,11 +430,7 @@ function synthesizeSpec(brief: string): PipelineSpec {
       { id: "elenco", label: "Archivio" },
       { id: "studio", label: "Studio" },
     ],
-    rows: [
-      { id: "v1", title: `${name} uno`, kicker: grammar.voice.census, note: tokens.mood, meta: "01" },
-      { id: "v2", title: `${name} due`, kicker: "in prova", note: tokens.dna, meta: "02" },
-      { id: "v3", title: `${name} tre`, kicker: "aperto", note: tokens.fonts.display, meta: "03" },
-    ],
+    rows: [],
     formTitle: "Nuova riga",
     cta: "Salva nel mestiere",
   };
@@ -437,6 +440,8 @@ const AGENDA_EDIT_GLYPH =
   '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13.6 6.2 18.2 10.8 10.4 18.6H6.4v-4z"/><path d="M12.8 7.2l4.2 4.2"/></svg>';
 const AGENDA_DEL_GLYPH =
   '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6.2 8.2h11.6v10.2H6.2z"/><path d="M5.6 5.8h12.8v2.4H5.6z"/><path d="M10.2 12.4h3.6"/></svg>';
+const POCKET_EMPTY_MARK =
+  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="4.5" width="14" height="15" rx="2"/><path d="M8.2 9.2h7.6M8.2 12.4h7.6M8.2 15.6h5"/></svg>';
 
 function agendaActs(id: string, status: string): string {
   return `<div class="slot-actions"><button class="btn sm ghost" data-act="advance" data-id="${id}" aria-label="Avanza stato ${status}">Avanti</button><button class="btn sm ghost" data-act="edit" data-id="${id}" aria-label="Modifica">${AGENDA_EDIT_GLYPH}</button><button class="btn sm ghost" data-act="del" data-id="${id}" aria-label="Archivia">${AGENDA_DEL_GLYPH}</button></div>`;
@@ -487,6 +492,13 @@ function kickerCss(t: DesignTokens): string {
 
 function isOperationalApp(t: DesignTokens): boolean {
   return t.family === "booking" && t.variant === 0;
+}
+
+function safeAccentInk(t: DesignTokens): string {
+  const fill = t.palette.accent;
+  const ink = t.palette.accentInk || "#fffdf8";
+  if (contrastRatio(fill, ink) >= 4.5) return ink;
+  return accentButtonPair(fill).ink;
 }
 
 function displayStack(t: DesignTokens): string {
@@ -554,7 +566,7 @@ header{background:var(--surface)}
       ? `nav.tabs{border-top:2px solid var(--accent);background:color-mix(in srgb,var(--surface) 86%,transparent);-webkit-backdrop-filter:saturate(1.8) blur(20px);backdrop-filter:saturate(1.8) blur(20px)}
 nav.tabs button.on{color:var(--accent);background:color-mix(in srgb,var(--accent) 14%,transparent);border-radius:calc(var(--r) * .4)}`
       : `nav.rail{background:color-mix(in srgb,var(--surface) 86%,transparent);-webkit-backdrop-filter:saturate(1.8) blur(20px);backdrop-filter:saturate(1.8) blur(20px)}
-nav.rail button.on{color:var(--accent)}`;
+nav.rail button.on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}`;
   const matter =
     t.family === "food"
       ? `.ticket{border-left:4px solid var(--accent)}`
@@ -629,6 +641,63 @@ function phoneCss(id: GrammarId): string {
   .week-nav .week-range{flex:1;text-align:center;font:650 12px/1.3 var(--body),ui-sans-serif,system-ui,sans-serif;color:var(--muted);font-variant-numeric:tabular-nums}
   .week-nav .btn{min-height:40px;padding:8px 10px;width:auto}
   .day-rail ~ [data-fenix-crud]{display:none}`
+            : id === "phone-seed"
+              ? `.hero{display:none;min-height:0;height:0;margin:0;border:0}
+  .home-overview,.list-pane,.persona-pane{display:flex;flex-direction:column;gap:12px;padding:0;max-width:40rem;width:100%;margin:0 auto}
+  .home-hero,.home-aside .card,.persona-pane .card,.persona-privacy,[data-fenix-pane="nuovo"] [data-fenix-crud],.wipe-box{background:color-mix(in srgb,var(--surface) 88%,var(--accent) 8%);border:1px solid var(--line);border-radius:16px;box-shadow:0 1px 0 color-mix(in srgb,var(--fg) 4%,transparent),0 8px 22px color-mix(in srgb,var(--fg) 6%,transparent)}
+  .home-hero{padding:16px 16px 14px}
+  .home-count{font-family:var(--display);font-size:2.05rem;font-weight:700;letter-spacing:-.05em;line-height:1;margin:2px 0 8px;color:var(--accent);font-variant-numeric:tabular-nums}
+  .home-count b{font:inherit}
+  .home-count span{display:block;font-family:var(--body);font-size:13px;font-weight:650;letter-spacing:.02em;color:var(--muted);margin-top:6px}
+  .home-first{padding:2px 0 0;max-width:none}
+  .home-first .mark{width:44px;height:44px;margin:2px 0 10px;color:var(--accent)}
+  .home-first .mark svg{width:44px;height:44px;display:block}
+  .home-first h2,.list-head h2,.persona-pane > h2{font-family:var(--display);font-size:1.28rem;font-weight:700;letter-spacing:-.03em;line-height:1.15;margin:0 0 6px;color:var(--ink-loud)}
+  .home-first .notes,.home-hero > .notes,.persona-pane > .notes{color:var(--muted);font-size:15px;line-height:1.45;margin:0 0 12px}
+  .home-first .btn{min-height:48px;width:100%;max-width:280px;padding:14px 22px;font-size:16px;border-radius:14px}
+  .home-hero > .btn{min-height:48px;width:100%;max-width:280px;padding:14px 22px;font-size:16px;border-radius:14px}
+  .home-aside{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .home-aside .card{margin:0;padding:12px;min-height:0}
+  .home-aside h2{font-size:.98rem;margin:0 0 2px}
+  .home-aside .notes{margin:0;font-size:13px;line-height:1.35;color:var(--muted)}
+  .home-recent{display:flex;flex-direction:column;gap:0;background:color-mix(in srgb,var(--surface) 92%,var(--bg));border:1px solid var(--line);border-radius:16px;overflow:hidden;padding:10px 0 0}
+  .home-recent > .kicker{padding:0 16px 8px}
+  .home-recent .card{margin:0;padding:12px 16px;border:0;border-top:1px solid var(--line);border-radius:0;box-shadow:none;background:transparent}
+  .pocket-list{list-style:none;list-style-type:none;margin:0;padding:0;padding-inline-start:0;display:flex;flex-direction:column;gap:0;overflow:visible;background:color-mix(in srgb,var(--surface) 92%,var(--bg));border:1px solid var(--line);border-radius:16px}
+  .pocket-list > li{list-style:none;list-style-type:none;display:block;margin:0;padding:0;border-bottom:1px solid var(--line);background:transparent}
+  .pocket-list > li:last-child{border-bottom:0}
+  .pocket-list > li::marker{content:none;font-size:0}
+  .pocket-list .card{margin:0;padding:14px 16px;min-height:64px;border-radius:0;overflow:hidden;max-width:100%;box-sizing:border-box;border:0;box-shadow:none;background:transparent}
+  .pocket-list .card h2,.home-recent .card h2{font-size:17px;margin:0;letter-spacing:-.02em;overflow-wrap:anywhere}
+  .pocket-list .card .notes,.home-recent .card .notes{margin:6px 0 0;overflow-wrap:anywhere}
+  .pocket-list .slot-actions{display:flex;gap:6px;margin-top:10px}
+  .pocket-list .slot-actions .btn{min-width:44px;min-height:44px}
+  .list-head{padding:2px 2px 4px}
+  .persona-facts{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .persona-pane .card{margin:0;padding:14px 16px;min-height:0}
+  .persona-privacy{margin:0;padding:14px 16px}
+  .persona-pane .btn,.wipe-box .btn{min-height:44px;width:100%;max-width:280px;border-radius:14px}
+  .wipe-box{padding:14px 16px;margin:0}
+  .wipe-box[data-state="ask"]{border-color:var(--accent)}
+  .wipe-actions{display:flex;gap:8px;margin-top:10px}
+  .wipe-actions .btn{max-width:none;flex:1}
+  .state-empty{padding:16px 14px;border:1px dashed var(--line);border-radius:16px;background:color-mix(in srgb,var(--surface) 70%,transparent)}
+  nav.tabs{grid-template-columns:repeat(4,minmax(0,1fr))}
+  nav.tabs button span{overflow:visible;max-width:none;text-overflow:clip}
+  html[data-grammar="phone-seed"] header{padding:14px 18px 10px}
+  html[data-grammar="phone-seed"] .brand{font-size:1.5rem;letter-spacing:-.04em}
+  html[data-grammar="phone-seed"] header .place{font-size:13px}
+  html[data-grammar="phone-seed"] .app{display:grid;grid-template-rows:auto minmax(0,1fr) auto;grid-template-areas:"head" "main" "nav";height:100dvh;max-height:100dvh;min-height:100dvh}
+  html[data-grammar="phone-seed"] main{min-height:0;overflow:auto;padding:8px 16px 16px}
+  html[data-grammar="phone-seed"] nav.tabs{position:relative;bottom:auto;height:calc(72px + env(safe-area-inset-bottom));padding:8px 6px calc(10px + env(safe-area-inset-bottom))}
+  html[data-grammar="phone-seed"] nav.tabs button{gap:5px;font:650 12px/1.15 var(--body),sans-serif;min-height:48px;padding:6px 4px}
+  html[data-grammar="phone-seed"] nav.tabs svg{width:28px;height:28px;flex:0 0 28px}
+  html[data-grammar="phone-seed"] nav.tabs button.on{color:var(--accent);background:color-mix(in srgb,var(--accent) 12%,var(--surface));border-radius:14px;font-weight:650}
+  html[data-grammar="phone-seed"] [data-fenix-crud]{padding:18px 16px;border-radius:16px;background:color-mix(in srgb,var(--surface) 88%,var(--accent) 6%)}
+  html[data-grammar="phone-seed"] [data-fenix-crud] h2{font-size:1.28rem;margin:0 0 4px}
+  html[data-grammar="phone-seed"] [data-fenix-crud] .btn{width:100%;border-radius:14px}
+  html[data-chroma="chroma-pulse"] .home-hero,html[data-chroma="ink-terminal"] .home-hero{background:color-mix(in srgb,var(--accent) 16%,var(--surface))}
+  html[data-chroma="pastel-studio"] .home-hero,html[data-chroma="luminous-paper"] .home-hero{background:color-mix(in srgb,var(--accent) 10%,var(--surface))}`
             : "";
   return `${stage}
 .app{display:grid;grid-template-rows:auto 1fr auto;grid-template-areas:"head" "main" "nav";width:100%;min-height:100dvh}
@@ -675,6 +744,21 @@ main{grid-area:main;min-height:0;overflow:auto;padding:8px 16px 20px}
   .day-head{padding-bottom:8px}
   .slot{min-height:80px;padding:16px 18px}
   .week-strip,.week-nav{margin-bottom:12px}`
+        : id === "phone-seed"
+        ? `.home-overview,.list-pane,.persona-pane{max-width:none}
+  .home-overview{display:grid;grid-template-columns:minmax(280px,1.15fr) minmax(240px,.85fr);gap:16px;align-items:start;min-height:0;max-width:960px;margin-inline:auto}
+  .home-hero{grid-column:1;margin:0;min-height:0;display:flex;flex-direction:column}
+  .home-aside{grid-column:2;margin:0;min-height:0;grid-template-columns:1fr;gap:10px}
+  .home-aside .card{height:auto;min-height:0}
+  .home-recent{grid-column:1 / -1}
+  .home-first .btn,.home-hero > .btn{max-width:none}
+  .persona-facts{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .list-pane,.persona-pane{max-width:720px;margin-inline:auto;width:100%}
+  [data-fenix-pane="nuovo"]{display:flex;justify-content:center}
+  [data-fenix-pane="nuovo"] [data-fenix-crud]{width:min(460px,100%)}
+  html[data-grammar="phone-seed"] main{padding:22px 28px 40px}
+  html[data-grammar="phone-seed"] .app{height:auto;max-height:none;min-height:100dvh;grid-template-rows:auto 1fr;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"head nav" "main main"}
+  html[data-grammar="phone-seed"] nav.tabs{position:static;height:auto}`
         : ""
   }
 }
@@ -721,6 +805,12 @@ main{grid-area:main;min-height:0;overflow:auto;padding:8px 16px 20px}
   .day-rail{grid-column:1;min-height:0}
   .slot{padding:18px 20px;min-height:88px}
   .day-rail ~ [data-fenix-crud]{display:block;grid-column:2;grid-row:2 / span 8;align-self:start;margin:0}`
+            : id === "phone-seed"
+              ? `.app{max-width:1080px;margin-inline:auto}
+  main{padding:28px 36px 48px}
+  .home-overview{grid-template-columns:minmax(320px,1.1fr) minmax(260px,.9fr);gap:20px;max-width:960px;align-items:start;min-height:0}
+  .home-count{font-size:2.4rem}
+  .persona-facts{grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}`
             : ""
   }
 }`;
@@ -776,6 +866,7 @@ nav.rail{grid-area:nav;display:flex;gap:8px;flex-wrap:wrap;padding:10px 20px 14p
 nav.rail button{border:1px solid var(--line);background:var(--surface);color:var(--fg);min-height:44px;padding:10px 16px;border-radius:0;font:650 13px/1 var(--body),sans-serif;display:inline-flex;align-items:center;gap:8px}
 nav.rail button.on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
 nav.rail svg{width:18px;height:18px;flex:0 0 18px;overflow:visible;display:block}
+nav.rail span{overflow:visible;max-width:none}
 @media(max-width:390px){nav.rail{flex-wrap:wrap;overflow:visible}nav.rail button{flex:1 1 calc(50% - 8px);justify-content:center;min-width:44px}}
 main{grid-area:main;padding:16px 20px}
 .lastre{display:grid;grid-template-columns:1fr;gap:16px}
@@ -853,7 +944,7 @@ ${kickerCss(t)}
 .state-load:not([hidden]):before{content:"";width:14px;height:14px;border:2px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:fenix-spin .8s linear infinite}
 @keyframes fenix-spin{to{transform:rotate(360deg)}}
 .state-empty{padding:28px 16px;color:var(--muted);text-align:left;border:0;border-top:1px dashed var(--line);border-radius:0}
-.state-empty .btn{margin:16px 0 0;display:inline-flex}
+.state-empty .btn{margin:16px 0 0;display:inline-flex;min-height:48px;min-width:min(100%,280px);padding:14px 22px}
 .btn{appearance:none;border:0;cursor:pointer;font:650 14px/1 var(--body),system-ui,sans-serif;border-radius:${t.family === "editorial" || t.family === "fashion" ? "0" : "999px"};padding:12px 18px;background:var(--accent);color:var(--accent-ink);min-height:44px;min-width:44px}
 .btn.ghost{background:transparent;color:var(--fg);border:1px solid var(--line)}
 .btn.sm{padding:8px 12px;min-height:40px;font-size:13px}
@@ -915,12 +1006,16 @@ function productHtml(spec: PipelineSpec, tokens: DesignTokens, grammar: LayoutGr
   const deskAttr = desk ? ` data-fenix-craft-desk${grammar.kind === "dashboard" ? " data-fenix-crud" : ""}` : "";
   const navClass = desk ? (grammar.chrome === "masthead" ? "rail" : "rail") : "tabs";
   const headerExtra = grammar.chrome === "masthead" ? " mast" : "";
+  const accentInk = safeAccentInk(tokens);
+  const pocketEmpty = `<section class="home-overview" data-fenix-pane="home"><div class="home-hero"><p class="kicker">Panoramica</p><p class="home-count" data-count="0"><b>0</b><span>voci sul dispositivo</span></p><div class="home-first" data-state="empty"><div class="mark" aria-hidden="true">${POCKET_EMPTY_MARK}</div><h2>Niente in lista</h2><p class="notes">Aggiungi la prima voce. Qui non ci sono dati di prova.</p><button class="btn" type="button" data-view="${spec.tabs[1]!.id}">${spec.cta}</button></div></div><aside class="home-aside"><article class="card"><p class="kicker">Elenco</p><h2>Vuoto</h2><p class="notes">Le azioni restano nella lista.</p></article><article class="card"><p class="kicker">Privacy</p><h2>Solo qui</h2><p class="notes">Storage locale, senza profilo.</p></article></aside></section>`;
   const bootMain =
     grammar.id === "source-timeline"
       ? `<section class="repo-stage" data-repo-stage="activity"><div class="timeline-art">${hero}</div></section>`
       : grammar.id === "agenda"
         ? agendaRailMarkup(spec, grammar)
-        : `<div class="hero">${hero}</div>`;
+        : grammar.id === "phone-seed"
+          ? pocketEmpty
+          : `<div class="hero">${hero}</div>`;
   const navButtons = spec.tabs
     .map(
       (tab, i) =>
@@ -939,7 +1034,7 @@ function productHtml(spec: PipelineSpec, tokens: DesignTokens, grammar: LayoutGr
             : "clamp(1.18rem, 2.2vw, 1.55rem)";
   const large = isOperationalApp(tokens) ? "2.125rem" : "1.75rem";
   return `<!DOCTYPE html>
-<html lang="it" data-family="${tokens.family}" data-grammar="${grammar.id}" data-intent-type="${graphicIntentFromBrief(spec.brief).type}" data-intent-chrome="${graphicIntentFromBrief(spec.brief).chrome}"${desk ? " data-fenix-craft-desk" : ""}>
+<html lang="it" data-family="${tokens.family}" data-grammar="${grammar.id}" data-chroma="${tokens.chroma}" data-intent-type="${graphicIntentFromBrief(spec.brief).type}" data-intent-chrome="${graphicIntentFromBrief(spec.brief).chrome}"${desk ? " data-fenix-craft-desk" : ""}>
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
@@ -948,7 +1043,7 @@ function productHtml(spec: PipelineSpec, tokens: DesignTokens, grammar: LayoutGr
 ${tokens.fonts.href ? `<link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="${tokens.fonts.href}" rel="stylesheet"/>` : "<!-- system stack: no Google Fonts -->"}
 <style data-fenix-phone data-fenix-site data-fenix-craft>
-:root{color-scheme:${scheme};--bg:${p.bg};--surface:${p.surface};--elevated:${p.elevated};--fg:${p.fg};--muted:${p.muted};--accent:${p.accent};--line:${p.line};--accent-ink:${p.accentInk};--success:${p.success};--warning:${p.warning};--r:${tokens.radius};--display:${displayStack(tokens)};--body:${bodyStack(tokens)};--t-h1:${tokens.type.h1};--t-h2:${h2};--t-body:${tokens.type.body};--t-large:${large};--t-headline:1.0625rem;--t-footnote:.8125rem;--t-caption:.6875rem;--ink-loud:${p.fg};--ink-quiet:${p.muted}}
+:root{color-scheme:${scheme};--bg:${p.bg};--surface:${p.surface};--elevated:${p.elevated};--fg:${p.fg};--muted:${p.muted};--accent:${p.accent};--line:${p.line};--accent-ink:${accentInk};--success:${p.success};--warning:${p.warning};--r:${tokens.radius};--display:${displayStack(tokens)};--body:${bodyStack(tokens)};--t-h1:${tokens.type.h1};--t-h2:${h2};--t-body:${tokens.type.body};--t-large:${large};--t-headline:1.0625rem;--t-footnote:.8125rem;--t-caption:.6875rem;--ink-loud:${p.fg};--ink-quiet:${p.muted}}
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%;background:var(--bg);color:var(--fg);font:400 ${tokens.type.body}/1.29 var(--body);-webkit-font-smoothing:antialiased}
 body{min-height:100dvh}
@@ -975,7 +1070,7 @@ ${visualKitCss(tokens, grammar)}
 <div class="app"${deskAttr}>
 <header class="${headerExtra.trim()}">
   <div>
-    <p class="kicker">${spec.kicker}</p>
+    ${grammar.id === "phone-seed" ? "" : `<p class="kicker">${spec.kicker}</p>`}
     <h1 class="brand">${spec.name}</h1>
   </div>
   <p class="place">${spec.place}</p>
@@ -996,6 +1091,7 @@ let data=structuredClone(defaultData);
 let view=${JSON.stringify(homeView)};
 let selectedDay="";
 let editId=null;
+var wipeAsk=false;
 const arts=${JSON.stringify(slices)};
 const meets=${JSON.stringify(meets)};
 const hero=${JSON.stringify(hero)};
@@ -1113,6 +1209,8 @@ function applyOp(state, op){
     else item.kicker=KICKER_CYCLE[item.kicker]||item.kicker;
   } else if(op.kind==="del"){
     state.items=state.items.filter(function(x){return x.id!==op.id;});
+  } else if(op.kind==="wipe"){
+    state.items=[];
   } else if(op.kind==="wear"){
     var worn=state.items.find(function(x){return x.id===op.id;});
     if(!worn) return state;
@@ -1301,7 +1399,7 @@ function commitForm(f){
   } else {
     createdId=wasEdit?editId:("n"+Date.now());
     if(!wasEdit){
-      row={id:createdId,title:nome,kicker:(f.k&&f.k.value||"").trim()||census,note:(f.note&&f.note.value||"").trim()||"—",meta:"nuovo",slot:confirmed.items.length%4};
+      row={id:createdId,title:nome,kicker:(f.k&&f.k.value||"").trim(),note:(f.note&&f.note.value||"").trim(),meta:"",slot:confirmed.items.length%4};
     }
     nextView=tabDefs[0].id;
   }
@@ -1309,7 +1407,7 @@ function commitForm(f){
   if(wasEdit){
     op={kind:"edit",id:createdId,patch:grammarId==="agenda"
       ? {title:nome,kicker:keep.ora,note:keep.luogo+" · "+keep.cliente,day:keep.data}
-      : {title:nome,kicker:(f.k&&f.k.value||"").trim()||census,note:(f.note&&f.note.value||"").trim()||"—"}};
+      : {title:nome,kicker:(f.k&&f.k.value||"").trim(),note:(f.note&&f.note.value||"").trim()}};
   } else {
     op={kind:"create",id:createdId,row:row};
   }
@@ -1356,6 +1454,67 @@ function renderTabs(){
   }).join("");
 }
 function emptyBox(){ return '<div class="state-empty" data-state="empty"><p>'+emptyVoice+'</p><button class="btn" type="button" data-view="'+tabDefs[1].id+'">'+cta+"</button></div>"; }
+function pocketLine(e){
+  var parts=[];
+  function add(v){
+    v=String(v||"").trim();
+    if(!v || v==="—" || v==="nuovo" || v===census) return;
+    parts.push(v);
+  }
+  add(e.note); add(e.kicker); add(e.meta);
+  return parts.join(" · ");
+}
+function pocketEmptyInner(){
+  return '<div class="mark" aria-hidden="true">${POCKET_EMPTY_MARK}</div><h2>Niente in lista</h2><p class="notes">Aggiungi la prima voce. Qui non ci sono dati di prova.</p><button class="btn" type="button" data-view="'+tabDefs[1].id+'">'+cta+"</button>";
+}
+function renderPocketHome(){
+  var n=data.items.length;
+  var html='<section class="home-overview" data-fenix-pane="home"><div class="home-hero"><p class="kicker">Panoramica</p><p class="home-count" data-count="'+n+'"><b>'+n+'</b><span>'+(n===1?"voce sul dispositivo":"voci sul dispositivo")+"</span></p>";
+  if(!n){
+    html+='<div class="home-first" data-state="empty">'+pocketEmptyInner()+"</div></div>";
+    html+='<aside class="home-aside"><article class="card"><p class="kicker">Elenco</p><h2>Vuoto</h2><p class="notes">Le azioni restano nella lista.</p></article><article class="card"><p class="kicker">Privacy</p><h2>Solo qui</h2><p class="notes">Storage locale, senza profilo.</p></article></aside>';
+  } else {
+    html+='<p class="notes">Ultime voci dal dispositivo. Niente dati di prova.</p><button class="btn" type="button" data-view="'+tabDefs[1].id+'">'+cta+"</button></div>";
+    html+='<aside class="home-aside"><article class="card"><p class="kicker">Elenco</p><h2>'+n+(n===1?" voce":" voci")+'</h2><p class="notes">Apri Elenco per le azioni sulle voci.</p></article><article class="card"><p class="kicker">Privacy</p><h2>Solo qui</h2><p class="notes">Storage locale, senza profilo.</p></article></aside>';
+    html+='<div class="home-recent" data-fenix-recent><p class="kicker">Recenti</p>';
+    data.items.slice(0,3).forEach(function(e){
+      var line=pocketLine(e);
+      html+='<article class="card" data-id="'+e.id+'"><h2>'+e.title+'</h2>'+(line?'<p class="notes">'+line+"</p>":"")+'<button class="btn sm ghost" type="button" data-view="'+tabDefs[2].id+'">Apri elenco</button></article>';
+    });
+    html+="</div>";
+  }
+  return html+"</section>";
+}
+function renderPocketList(){
+  var n=data.items.length;
+  var html='<section class="list-pane" data-fenix-pane="elenco"><div class="list-head"><p class="kicker">Elenco</p><h2>'+n+" "+(n===1?"voce":"voci")+'</h2><p class="notes">Archivio completo, con azioni sulle voci.</p></div>';
+  if(!n){
+    html+='<div class="state-empty" data-state="empty"><p>Nessuna voce in elenco. Compila e salva; non inventiamo righe.</p><button class="btn" type="button" data-view="'+tabDefs[1].id+'">'+cta+"</button></div>";
+    return html+"</section>";
+  }
+  html+='<ul class="pocket-list" aria-label="Elenco voci">';
+  data.items.forEach(function(e){
+    var line=pocketLine(e);
+    html+='<li class="card" data-id="'+e.id+'"><h2>'+e.title+'</h2>'+(line?'<p class="notes">'+line+"</p>":"")+'<div class="slot-actions"><button class="btn sm ghost" data-act="edit" data-id="'+e.id+'">Modifica</button><button class="btn sm ghost" data-act="del" data-id="'+e.id+'">Archivia</button></div></li>';
+  });
+  return html+"</ul></section>";
+}
+function renderPocketPersona(){
+  var n=data.items.length;
+  var html='<section class="persona-pane" data-fenix-pane="persona"><p class="kicker">Dispositivo</p><h2>Storage locale</h2><p class="notes">Le voci restano sul dispositivo. Nessun profilo, nessun nome inventato.</p><div class="persona-facts">';
+  html+='<article class="card"><p class="kicker">Voci salvate</p><p class="home-count" data-count="'+n+'"><b>'+n+"</b></p></article>";
+  html+='<article class="card"><p class="kicker">Collezione</p><p class="notes">'+COL+"</p></article>";
+  html+='<article class="card"><p class="kicker">Archivio</p><p class="notes">locale, senza account</p></article></div>';
+  html+='<article class="persona-privacy card"><p class="kicker">Privacy</p><h2>Nessun profilo</h2><p class="notes">Nessuna identita finta da mostrare. Solo il conteggio e lo svuotamento dello storage locale.</p></article>';
+  if(n && wipeAsk){
+    html+='<div class="wipe-box" data-fenix-wipe data-state="ask"><p class="notes">Conferma: tutte le voci sul dispositivo verranno rimosse. Azione definitiva.</p><div class="wipe-actions"><button class="btn ghost" type="button" data-act="wipe-cancel">Annulla</button><button class="btn" type="button" data-act="wipe-confirm">Conferma svuota</button></div></div>';
+  } else if(n){
+    html+='<div class="wipe-box" data-fenix-wipe data-state="idle"><button class="btn ghost" type="button" data-act="wipe-ask">Svuota elenco locale</button></div>';
+  } else {
+    html+='<p class="notes" data-fenix-wipe-empty>Quando salvi una voce, il conteggio sale da qui. Non riempiamo la scheda.</p>';
+  }
+  return html+"</section>";
+}
 function chip(k){ return '<span class="chip '+k+'">'+k+"</span>"; }
 function renderPerfume(){
   var featured=data.items[0];
@@ -1477,7 +1636,7 @@ ${
   var title=editing?editing.title:"";
   var det=editing?editing.kicker:"";
   var nota=editing?editing.note:"";
-  return '<section class="card span" data-fenix-crud><p class="kicker">'+(editing?"Modifica":"Nuovo")+'</p><h2>'+(editing?"Aggiorna voce":formTitle)+'</h2><form id="fnew"><label for="n">Nome</label><input class="field" id="n" name="n" required placeholder="Nome" value="'+title+'"><label for="k">Dettaglio</label><input class="field" id="k" name="k" placeholder="stato, taglia, ora" value="'+det+'"><label for="note">Nota</label><input class="field" id="note" name="note" placeholder="materia" value="'+nota+'"><p class="notes" data-fenix-form-error role="alert" hidden>Controlla i campi obbligatori.</p><button class="btn" type="button" data-act="save" style="margin-top:14px;width:100%">'+(editing?"Salva modifiche":cta)+'</button></form></section>';`
+  return '<section class="card span" data-fenix-crud><p class="kicker">'+(editing?"Modifica":"Nuovo")+'</p><h2>'+(editing?"Aggiorna voce":formTitle)+'</h2>'+(grammarId==="phone-seed"?'<p class="notes">Campi sul dispositivo. Conferma visibile dopo Salva.</p>':'')+'<form id="fnew"><label for="n">Nome</label><input class="field" id="n" name="n" required placeholder="Nome" value="'+title+'"><label for="k">Dettaglio</label><input class="field" id="k" name="k" placeholder="stato, taglia, ora" value="'+det+'"><label for="note">Nota</label><input class="field" id="note" name="note" placeholder="materia" value="'+nota+'"><p class="notes" data-fenix-form-error role="alert" hidden>Controlla i campi obbligatori.</p><button class="btn" type="button" data-act="save" style="margin-top:14px;width:100%">'+(editing?"Salva modifiche":cta)+'</button></form></section>';`
 }
 }
 function renderList(){
@@ -1577,7 +1736,7 @@ function renderHome(){
   if(grammarId==="source-timeline") return renderSource("activity");
   if(grammarId==="agenda") return renderAgenda();
   if(grammarId==="pocket-tool") return renderTool();
-  if(grammarId==="phone-seed") return renderList();
+  if(grammarId==="phone-seed") return renderPocketHome();
   return renderPerfume();
 }
 function renderTool(){
@@ -1600,9 +1759,9 @@ function render(){
     else if(id===tabDefs[2].id) root.innerHTML=renderSource("sync");
     else root.innerHTML=renderSource("diff");
   } else if(id===tabDefs[0].id) root.innerHTML=renderHome();
-  else if(id===tabDefs[1].id) root.innerHTML=renderForm();
-  else if(id===tabDefs[2].id) root.innerHTML=grammarId==="ops-desk"?renderDesk():grammarId==="agenda"?renderWeek():renderList();
-  else root.innerHTML=grammarId==="magazine"?renderForm():renderStats();
+  else if(id===tabDefs[1].id) root.innerHTML=grammarId==="phone-seed"?('<div data-fenix-pane="nuovo">'+renderForm()+"</div>"):renderForm();
+  else if(id===tabDefs[2].id) root.innerHTML=grammarId==="phone-seed"?renderPocketList():grammarId==="ops-desk"?renderDesk():grammarId==="agenda"?renderWeek():renderList();
+  else root.innerHTML=grammarId==="phone-seed"?renderPocketPersona():grammarId==="magazine"?renderForm():renderStats();
   root.setAttribute("data-state", data.items.length?"ready":"empty");
   root.setAttribute("data-fenix-view", view);
 }
@@ -1634,6 +1793,23 @@ document.getElementById("root").addEventListener("click",function(e){
     return;
   }
   if(act==="save"){ commitForm(b.closest("form") || document.getElementById("fnew")); return; }
+  if(act==="wipe-local"||act==="wipe-ask"){
+    if(!data.items.length) return;
+    wipeAsk=true;
+    render();
+    return;
+  }
+  if(act==="wipe-cancel"){
+    wipeAsk=false;
+    render();
+    return;
+  }
+  if(act==="wipe-confirm"){
+    if(!data.items.length){ wipeAsk=false; render(); return; }
+    wipeAsk=false;
+    enqueueOp({kind:"wipe"}, function(){ view=tabDefs[3]?tabDefs[3].id:tabDefs[0].id; render(); }, null);
+    return;
+  }
   if(act==="del"){
     enqueueOp({kind:"del",id:id}, null, null);
     return;

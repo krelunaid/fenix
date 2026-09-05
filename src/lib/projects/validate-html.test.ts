@@ -222,6 +222,38 @@ describe("looksLikeSite kind lock", () => {
     assert.match(app, /overflowY = "scroll"/);
   });
 
+  it("sizes kit tab columns from the real tab count, default 5, not a global 4", () => {
+    const kitSrc = readFileSync(join(here, "color-scheme.ts"), "utf8");
+    assert.match(kitSrc, /grid-template-columns:repeat\(5,minmax\(0,1fr\)\)!important/);
+    assert.doesNotMatch(kitSrc, /grid-template-columns:repeat\(4,minmax\(0,1fr\)\)!important/);
+    const tabs = (n: number) =>
+      Array.from({ length: n }, (_, i) => `<button type="button" data-view="v${i}"><span>T${i}</span></button>`).join("");
+    const doc = (n: number) =>
+      `<!DOCTYPE html><html><head></head><body><main><p>x</p></main><nav class="fk-tab" aria-label="Navigazione">${tabs(n)}</nav></body></html>`;
+    const five = prepareSrcDoc(doc(5), "#efe6d4", "five-tabs", "app");
+    assert.doesNotMatch(doc(5), /data-fenix-phone/);
+    assert.match(five, /data-fenix-phone/);
+    assert.match(five, /grid-template-columns:repeat\(5,minmax\(0,1fr\)\)!important/);
+    const four = prepareSrcDoc(doc(4), "#efe6d4", "four-tabs", "app");
+    assert.match(four, /grid-template-columns:repeat\(4,minmax\(0,1fr\)\)!important/);
+    const three = prepareSrcDoc(doc(3), "#efe6d4", "three-tabs", "app");
+    assert.match(three, /grid-template-columns:repeat\(3,minmax\(0,1fr\)\)!important/);
+    const none = prepareSrcDoc(
+      `<!DOCTYPE html><html><head></head><body><main><p>x</p></main></body></html>`,
+      "#efe6d4",
+      "no-tabs",
+      "app",
+    );
+    assert.match(none, /grid-template-columns:repeat\(5,minmax\(0,1fr\)\)!important/);
+    const stamped = prepareSrcDoc(
+      `<!DOCTYPE html><html><head><style data-fenix-phone>.x{}</style></head><body><nav class="fk-tab">${tabs(5)}</nav></body></html>`,
+      "#efe6d4",
+      "already-stamped",
+      "app",
+    );
+    assert.doesNotMatch(stamped, /grid-template-columns:repeat\(4,minmax\(0,1fr\)\)!important/);
+  });
+
   it("gives site/dashboard documents page scroll", () => {
     const site = prepareSrcDoc(
       `<!DOCTYPE html><html><head></head><body><nav><a href="#a">a</a></nav><section></section><section></section><section></section><section></section><footer></footer></body></html>`,

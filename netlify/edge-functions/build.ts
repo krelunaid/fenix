@@ -12,10 +12,12 @@ import {
   planContract,
   roleReceipt,
 } from "../../src/lib/ai/build-contract.ts";
-import { gateIncompleteHtml } from "../../src/lib/projects/fenix-adapter.ts";
+import { gateIncompleteHtml, type GatedProduct } from "../../src/lib/projects/fenix-adapter.ts";
 import { fallbackPaletteFromBrief, tokensFromBrief, tokensInstruction } from "../../src/lib/projects/design-tokens.ts";
 import { grammarFromBrief, grammarInstruction } from "../../src/lib/projects/layout-grammar.ts";
 import { sanitizePaletteHistory, type PaletteRecord } from "../../src/lib/projects/palette-engine.ts";
+import { artifactContext, MAX_ARTIFACT_CHARS } from "../../workers/visual/artifact-context.mjs";
+import type { ProjectKind } from "../../src/lib/projects/types.ts";
 
 const MODEL = "grok-build-0.1";
 const XAI_URL = "https://api.x.ai/v1/chat/completions";
@@ -105,7 +107,7 @@ function parseResult(output: string, lockKind?: string, brief?: string) {
   const kinds = ["landing", "app", "dashboard", "tool", "game", "site"];
   const parsed =
     typeof meta.kind === "string" && kinds.includes(meta.kind) ? meta.kind : "app";
-  const kind = lockKind && kinds.includes(lockKind) ? lockKind : parsed;
+  const kind = (lockKind && kinds.includes(lockKind) ? lockKind : parsed) as ProjectKind;
 
   const extra = parseProjectFiles(output);
   const files = ingestProjectFiles(extra, { html }).files;
@@ -170,7 +172,7 @@ async function designDirection(apiKey: string, prompt: string, recent?: PaletteR
   }
 }
 
-async function reviewPass(apiKey: string, prompt: string, html: string, spec: string) {
+export async function reviewPass(apiKey: string, prompt: string, html: string, spec: string) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 45_000);
   try {
@@ -190,13 +192,14 @@ async function reviewPass(apiKey: string, prompt: string, html: string, spec: st
           { role: "system", content: QA_PROMPT },
           {
             role: "user",
-            content: `BRIEF:\n${prompt}\n\n${spec ? `DIREZIONE VISIVA:\n${spec}\n\n` : ""}HTML DA RIVEDERE:\n${html.slice(0, 35000)}\n\nRivedi la grafica, tieni le funzioni, META+HTML.`,
+            content: `BRIEF:\n${prompt}\n\n${spec ? `DIREZIONE VISIVA:\n${spec}\n\n` : ""}HTML DA RIVEDERE:\n${artifactContext(html)}\n\nRivedi la grafica, tieni le funzioni, META+HTML.`,
           },
         ],
       }),
     });
     if (!response.ok) return "";
     const json = (await response.json()) as GrokChunk;
+    if (json.choices?.[0]?.finish_reason != null && json.choices[0].finish_reason !== "stop") return "";
     return textValue(json.choices?.[0]?.message?.content);
   } catch {
     return "";
@@ -210,7 +213,7 @@ if (REPAIR_MAX !== CONTRACT_REPAIR_MAX) {
   throw new Error("repair cap drift");
 }
 
-async function repairPass(apiKey: string, prompt: string, html: string, error: string) {
+export async function repairPass(apiKey: string, prompt: string, html: string, error: string) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 45_000);
   try {
@@ -230,13 +233,14 @@ async function repairPass(apiKey: string, prompt: string, html: string, error: s
           { role: "system", content: REPAIR_PROMPT },
           {
             role: "user",
-            content: `BRIEF:\n${prompt}\n\nERRORI:\n${error}\n\nHTML:\n${html.slice(0, 35000)}\n\nRestituisci META + eventuali <<<FILE path="...">>> + <<<HTML>>> + <<<END>>>. Niente server inventato.`,
+            content: `BRIEF:\n${prompt}\n\nERRORI:\n${error}\n\nHTML:\n${artifactContext(html)}\n\nRestituisci META + eventuali <<<FILE path="...">>> + <<<HTML>>> + <<<END>>>. Niente server inventato.`,
           },
         ],
       }),
     });
     if (!response.ok) return "";
     const json = (await response.json()) as GrokChunk;
+    if (json.choices?.[0]?.finish_reason != null && json.choices[0].finish_reason !== "stop") return "";
     return textValue(json.choices?.[0]?.message?.content);
   } catch {
     return "";
@@ -248,10 +252,10 @@ async function repairPass(apiKey: string, prompt: string, html: string, error: s
 async function gateResult(
   apiKey: string,
   prompt: string,
-  result: { html: string; kind?: string; files?: { path: string; content: string }[]; name?: string; tagline?: string; summary?: string; direction?: string; palette?: PaletteHex } | null,
+  result: { html: string; kind?: ProjectKind; files?: { path: string; content: string }[]; name?: string; tagline?: string; summary?: string; direction?: string; palette?: PaletteHex } | null,
   send: (event: StreamEvent) => void,
   contract = planContract(prompt),
-) {
+): Promise<{ error: string; result?: GatedProduct } | { result: GatedProduct }> {
   if (!result?.html) return { error: "Risposta incompleta. Riprova." };
   const gated = await gateIncompleteHtml({
     apiKey,
@@ -259,7 +263,7 @@ async function gateResult(
     result: {
       name: result.name || "Studio",
       tagline: result.tagline || "",
-      kind: (result.kind as "app") || "app",
+      kind: result.kind || "app",
       summary: result.summary || "",
       direction: result.direction || "",
       palette: result.palette || fallbackPaletteFromBrief(prompt),
@@ -274,7 +278,7 @@ async function gateResult(
       return parseResult(fixed, kindFromPrompt(prompt), prompt);
     },
   });
-  if ("error" in gated) return { error: gated.error, result: gated.result };
+  if ("error" in gated) return { error: gated.error || "Verifica del prodotto non superata.", result: gated.result };
   return { result: gated.result };
 }
 
@@ -296,7 +300,13 @@ export default async function build(request: Request) {
     return Response.json({ t: "err", error: "Scrivi cosa vuoi costruire." }, { status: 400 });
   }
   const instruction = (body.instruction ?? "").trim().slice(0, 2500);
-  const currentHtml = (body.html ?? "").slice(0, 90000);
+  const currentHtml = body.html ?? "";
+  if (typeof currentHtml !== "string") {
+    return Response.json({ t: "err", error: "HTML non valido." }, { status: 400 });
+  }
+  if (currentHtml.length > MAX_ARTIFACT_CHARS) {
+    return Response.json({ t: "err", error: "Documento troppo grande per una modifica sicura. La versione precedente resta invariata." }, { status: 413 });
+  }
   const shot =
     typeof body.shot === "string" && body.shot.startsWith("data:image")
       ? body.shot.slice(0, 380000)
@@ -411,11 +421,16 @@ export default async function build(request: Request) {
         let lastStage = "Penso il prodotto";
         let progress = 0;
         const ingest = (payload: string) => {
-          if (!payload || payload === "[DONE]") return;
+          if (terminal || !payload || payload === "[DONE]") return;
           let json: GrokChunk;
           try {
             json = JSON.parse(payload) as GrokChunk;
           } catch {
+            return;
+          }
+          const reason = json.choices?.[0]?.finish_reason;
+          if (reason != null && reason !== "stop") {
+            finish({ t: "err", error: "Risposta del modello incompleta. La versione precedente resta invariata." });
             return;
           }
           const piece = chunkParts(json);
@@ -452,6 +467,10 @@ export default async function build(request: Request) {
         for (const line of tail.split("\n")) {
           const trimmed = line.trim();
           if (trimmed.startsWith("data:")) ingest(trimmed.slice(5).trim());
+        }
+        if (terminal) {
+          await reader.cancel().catch(() => {});
+          return;
         }
         if (!terminal) {
           let result = parseResult(output, lockKind, prompt);
@@ -494,6 +513,7 @@ export default async function build(request: Request) {
           else finish({ t: "ok", result: gated.result });
         }
       } catch (error) {
+        if (terminal) return;
         const salvage = parseResult(output, lockKind, prompt);
         if (salvage) {
           const gated = await gateResult(apiKey, prompt, salvage, send, contract);

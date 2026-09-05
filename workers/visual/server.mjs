@@ -1,9 +1,14 @@
 import { createServer } from "node:http";
+import { readWorkerBody } from "./request-body.mjs";
+import { applyComposedBuildPlan, composedBaseSha, composedBuildPalette, COMPOSED_BUILD_SYSTEM } from "./composed-build.mjs";
+import { restoreHome, keepScripts } from "./artifact-restore.mjs";
+import { isComposedVisualArtifact, VISUAL_STYLE_SELECTORS } from "./visual-style.mjs";
+import { verifyVisualStyleEffect } from "./visual-style-effect.mjs";
+import { artifactContext, completeResponseText, MAX_ARTIFACT_CHARS } from "./artifact-context.mjs";
 import {
   TAB_IDS,
   applyScreenPatch,
   hasScreenTarget,
-  looksLikeCssDump,
   noteAbsent,
   noteSkip,
   resolvePatchTarget,
@@ -90,14 +95,6 @@ function looksPhoneShell(html) {
   return /fk-tab|id=["']t-home["']|id=["']t-new["']/i.test(String(html || ""));
 }
 
-function restoreHome(html) {
-  const m = html.match(/<template[^>]*id=["']t-home["'][^>]*>([\s\S]*?)<\/template>/i);
-  if (!m) return html;
-  if (!/<main\b/i.test(html)) return html;
-  if (looksLikeCssDump(m[1])) return html;
-  return html.replace(/<main\b[^>]*>[\s\S]*?<\/main>/i, `<main class="fk-main">${m[1]}</main>`);
-}
-
 function parseHtml(text) {
   const htmlMatch =
     text.match(/<!DOCTYPE html[\s\S]*?<\/html>/i) || text.match(/<html[\s\S]*?<\/html>/i);
@@ -112,22 +109,6 @@ function parseHtml(text) {
     meta = {};
   }
   return { html, meta };
-}
-
-function keepScripts(from, to) {
-  if (!from || !to) return to;
-  const grab = (html) => [...html.matchAll(/<script\b[\s\S]*?<\/script>/gi)].map((m) => m[0]);
-  const orig = grab(from);
-  if (!orig.length) return to;
-  const next = grab(to);
-  const origLen = orig.join("").length;
-  const nextLen = next.join("").length;
-  if (nextLen >= origLen * 0.85) return to;
-  const stripped = to.replace(/<script\b[\s\S]*?<\/script>/gi, "");
-  const block = orig.join("\n");
-  return /<\/body>/i.test(stripped)
-    ? stripped.replace(/<\/body>/i, `${block}</body>`)
-    : `${stripped}${block}`;
 }
 
 function inferTab(instruction) {
@@ -363,14 +344,36 @@ function stripPhoneChromeFromSite(html) {
   return next;
 }
 
-async function generate(prompt, html, instruction, kind) {
+async function generate(prompt, html, instruction, kind, operation, inputPalette) {
   const apiKey = (process.env.XAI_API_KEY || "").trim();
   if (!apiKey) throw new Error("Manca XAI_API_KEY");
+  if (operation === "create" && ["app", "tool", "game"].includes(kind) && isComposedVisualArtifact(html)) {
+    const palette = composedBuildPalette(inputPalette);
+    const response = await fetch(XAI, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+      body: JSON.stringify({
+        model: MODEL, temperature: 0.4, max_tokens: 8000, stream: false,
+        messages: [
+          { role: "system", content: COMPOSED_BUILD_SYSTEM },
+          { role: "user", content: `BRIEF:\n${prompt}\nDIREZIONE:\n${instruction || ""}\nBASE_SHA256:${composedBaseSha(html)}\nHTML ORIGINALE:\n${artifactContext(html)}` },
+        ],
+      }),
+    });
+    if (!response.ok) throw new Error(`xAI ${response.status}`);
+    const text = completeResponseText(await response.json());
+    let plan;
+    try { plan = JSON.parse(text); } catch { throw new Error("Piano di creazione JSON non valido"); }
+    const result = applyComposedBuildPlan(html, plan);
+    // Syntax and the existing client runtime/ready gates still run afterwards.
+    // Never turn a rejected plan into a full rewrite or another image call.
+    return { html: result, meta: { kind, palette }, files: [], log: ["Creazione mirata sulla composizione", "Head e palette preservati; avvio da verificare"] };
+  }
   const dashboard = looksDashboard(prompt, instruction, kind);
   const site = looksSite(prompt, instruction, kind, html);
   const user = [
     `BRIEF:\n${prompt}`,
-    html ? `HTML ATTUALE:\n${html.slice(0, 20000)}` : "",
+    html ? `HTML ATTUALE:\n${artifactContext(html)}` : "",
     instruction ? `MODIFICA:\n${instruction}` : "",
     dashboard
       ? "META kind=dashboard + HTML gestionale desktop completo ora. Niente nav.fk-tab."
@@ -399,7 +402,7 @@ async function generate(prompt, html, instruction, kind) {
   });
   if (!res.ok) throw new Error(`xAI ${res.status}`);
   const payload = await res.json();
-  const text = payload.choices?.[0]?.message?.content ?? "";
+  const text = completeResponseText(payload);
   const parsed = parseHtml(text);
   if (!parsed?.html) throw new Error("HTML non valido");
   let out = parsed.html;
@@ -460,7 +463,7 @@ async function grok(apiKey, prompt, html, shotB64, pass, instruction, tabId) {
         `GIRO ${pass}/${PASSES}. BRIEF:\n${prompt}`,
         instruction ? `MODIFICA DA TENERE:\n${instruction}\nNon disfare questa modifica.` : "",
         `TAB DA RIFARE: ${tabId || TAB_IDS[pass - 1] || "home"} (è quella nello screenshot).`,
-        `HTML (solo per contesto, NON riscriverlo):\n${html.slice(0, 12000)}`,
+        `HTML (solo per contesto, NON riscriverlo):\n${artifactContext(html)}`,
         `Rispondi con <<<SCREEN id="${tabId || TAB_IDS[pass - 1]}">>> contenuto main di QUESTA tab <<<END>>>. Niente documento intero. Se la tab è vuota, riempila (form / lista / numeri).`,
       ]
         .filter(Boolean)
@@ -489,7 +492,7 @@ async function grok(apiKey, prompt, html, shotB64, pass, instruction, tabId) {
   });
   if (!res.ok) throw new Error(`xAI ${res.status} ${await res.text().then((t) => t.slice(0, 180))}`);
   const json = await res.json();
-  return json.choices?.[0]?.message?.content ?? "";
+  return completeResponseText(json);
 }
 
 const CRAFT_TAB_ICONS = [
@@ -692,11 +695,39 @@ async function auditTab(page, index) {
   });
 }
 
+async function polishComposedStyle(apiKey, prompt, html) {
+  const response = await fetch(XAI, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+    body: JSON.stringify({
+      model: MODEL,
+      temperature: 0.4,
+      max_tokens: 3000,
+      stream: false,
+      messages: [
+        { role: "system", content: `Rifinisci SOLO il ritmo visivo dell'app esistente in base al brief. Non riscrivere HTML, script, copy, icone, palette o famiglia tipografica. Mantieni identità e dati. Non inventare elementi assenti. Rispondi soltanto JSON: {"version":1,"rules":[{"selector":".brand","viewport":"all","declarations":{"font-size":"28px"}}]}.
+Selector ammessi: ${VISUAL_STYLE_SELECTORS.join(", ")}. Usa soltanto target già presenti e visibili nell'HTML statico: elementi creati dagli script non sono verificabili in questo passaggio. Non proporre valori identici allo stile esistente.
+viewport: all, mobile (fino599px), tablet (600–1023px), desktop (da1024px). Massimo24regole, nessun duplicato selector/viewport.
+Proprietà ammesse con valori STRINGA: padding (da1a4misure 0–32px), gap (0–32px), border-radius (0–28px), font-size (14–40px), font-weight (400–750), line-height (1.1–1.7), letter-spacing (-0.03–0.1em), box-shadow (solo none oppure subtle).
+Scegli poche modifiche coerenti col dominio: gerarchia, leggibilità, densità mobile e respiro desktop. Non assegnare lo stesso stile a ogni elemento. Nessuna URL, animazione, regola per nascondere contenuti o riscrittura funzionale.` },
+        { role: "user", content: `BRIEF:\n${prompt}\n\nAPP ESISTENTE:\n${artifactContext(html)}` },
+      ],
+    }),
+  });
+  if (!response.ok) throw new Error(`xAI ${response.status}`);
+  const plan = JSON.parse(completeResponseText(await response.json()));
+  const styled = await verifyVisualStyleEffect(html, plan);
+  return {
+    html: styled, meta: {}, files: [],
+    log: ["Rifinitura visuale strutturata: tipografia e spazi", "HTML, dati, script, icone e palette preservati"],
+  };
+}
+
 async function polish(prompt, html, instruction, kind) {
   if (looksLikeIconInstruction(instruction)) {
     const verdict = applyIconRevision({ html, files: [], instruction });
     if (verdict.status !== "ok") {
-      return { html, meta: {}, log: verdict.log.length ? verdict.log : [verdict.reason], files: [] };
+      throw new Error(verdict.reason || "Modifica icona non applicata. La versione precedente resta invariata.");
     }
     return {
       html: verdict.html,
@@ -741,6 +772,11 @@ async function polish(prompt, html, instruction, kind) {
     }
     current = stripPhoneChromeFromSite(current);
     return { html: current, meta: { kind: "site" }, log, files: [] };
+  }
+  // Automatic refinement only. An explicit functional edit must never be
+  // silently downgraded to a style-only response.
+  if (!instruction && isComposedVisualArtifact(html)) {
+    return polishComposedStyle(apiKey, prompt, html);
   }
   const log = [];
   let current = html;
@@ -1000,17 +1036,23 @@ const server = createServer(async (req, res) => {
     json(res, 404, { error: "POST /polish o POST /build" });
     return;
   }
-  const chunks = [];
-  for await (const c of req) chunks.push(c);
   let body = {};
   try {
-    body = JSON.parse(Buffer.concat(chunks).toString("utf8") || "{}");
-  } catch {
-    json(res, 400, { error: "JSON non valido" });
+    body = await readWorkerBody(req);
+  } catch (error) {
+    json(res, error?.status === 413 ? 413 : 400, { error: error?.status ? error.message : "Richiesta interrotta." });
     return;
   }
   const prompt = String(body.prompt || "").slice(0, 2500);
-  const html = String(body.html || "").slice(0, 120000);
+  if (body.operation !== undefined && !["create", "edit"].includes(body.operation)) {
+    json(res, 400, { error: "Operazione non valida." });
+    return;
+  }
+  const html = String(body.html || "");
+  if (html.length > MAX_ARTIFACT_CHARS) {
+    json(res, 413, { error: "Documento troppo grande per una modifica sicura. La versione precedente resta invariata." });
+    return;
+  }
   const instruction = String(body.instruction || "").slice(0, 2500);
   const kind = String(body.kind || "").slice(0, 32).toLowerCase();
   const projectId = String(body.projectId || "").slice(0, 80);
@@ -1044,23 +1086,14 @@ const server = createServer(async (req, res) => {
     job.log = ["Partito", "grok-build-0.1 · ruoli visivo/codice · repair max 2"];
     try {
       const result = isBuild
-        ? await generate(prompt, html, instruction, kind)
+        ? await generate(prompt, html, instruction, kind, body.operation, body.palette)
         : await polish(prompt, html, instruction, kind);
       const broken = scriptsSyntax(result.html);
       if (broken) {
-        if (isBuild) {
-          job.status = "err";
-          job.error = `HTML non valido: ${broken}`;
-          job.log = [...result.log, job.error];
-          if (projectId && activeByProject.get(projectId) === id) activeByProject.delete(projectId);
-          return;
-        }
-        job.status = "ok";
-        job.html = html;
-        job.meta = result.meta;
-        job.log = [...result.log, `Rifinitura scartata (${broken}). Resta la bozza.`];
-        job.files = [];
-        return;
+        job.log = result.log || [];
+        // A rejected artifact is not a completed edit. The common error path
+        // leaves html unset and still schedules cleanup for this terminal job.
+        throw new Error(`HTML non valido: ${broken}`);
       }
       job.status = "ok";
       job.html = result.html;

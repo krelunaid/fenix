@@ -5,11 +5,13 @@ import {
   countAppleTabIcons,
   craftNavIcon,
   ensureMainElementId,
+  hasRequestedWorkingHome,
   isAppleChromeSvg,
   isLetterAIcon,
   looksLikeAppleTabIcons,
   looksLikeIosWidgetHome,
   looksLikeSitePhoneChrome,
+  applyChromeGuards,
   replaceAppleTabIcons,
   rewriteIosWidgetHome,
   stripPhoneChromeFromSite,
@@ -266,5 +268,54 @@ document.getElementById('main').innerHTML = 'x';
     assert.match(add, /M12 7\.2v9\.6M7\.2 12h9\.6/);
     assert.match(person, /cy="8\.2" r="2\.4"/);
     assert.doesNotMatch(tavolo, /M5 10\.8 12 5\.2/);
+    const elenco = craftNavIcon({ id: "elenco", label: "Elenco" }, 2);
+    assert.match(elenco, /M9\.6 8\.6h4\.8M9\.6 12h4\.8/);
+    assert.notEqual(elenco, craftNavIcon({ id: "home", label: "Home" }));
+    assert.notEqual(elenco, person);
+  });
+
+  it("keeps a requested working home under semantic chrome even if leftover widget markup exists", () => {
+    const useful = `<!DOCTYPE html><html lang="it" data-intent-chrome="semantic"><body>
+<nav class="fk-tab"><button data-view="home">Home</button></nav>
+<script>
+var S={items:[{t:"Pane",n:"forno"}]};
+var views={
+    home:function(){
+      return '<section class="fk-sheet"><h2>'+S.items.length+' in lista</h2><article class="card" data-id="1"><h2>'+S.items[0].t+'</h2></article><button data-act="save">Salva</button></section>';
+    },
+    new:function(){ return 'x'; }
+};
+</script>
+<div class="fk-grid2 leftover"><div class="fk-stat"><b>0</b></div><div class="fk-stat"><b>1</b></div><div class="fk-stat"><b>2</b></div><div class="fk-stat"><b>3</b></div></div>
+<div class="fk-tile"><span>Ultimo</span></div><div class="fk-tile"><span>Stato</span></div>
+</body></html>`;
+    assert.equal(looksLikeIosWidgetHome(useful), true);
+    assert.equal(hasRequestedWorkingHome(useful), true);
+    const kept = applyChromeGuards(useful);
+    assert.match(kept, /S\.items\[0\]\.t/);
+    assert.match(kept, /in lista/);
+    assert.doesNotMatch(kept, /Niente in lista/);
+    assert.doesNotMatch(kept, /Compila e salva la prima riga/);
+  });
+
+  it("still rewrites a dumped 4-tile iPhone home (security gate) even when semantic is stamped", () => {
+    const widget = `<!DOCTYPE html><html lang="it" data-intent-chrome="semantic"><body>
+<nav class="fk-tab"><button data-view="home">Oggi</button></nav>
+<script>
+var S={items:[],limit:100,team:[]};
+var views={
+    home:function(){
+      return '<div class="fk-panel"><h3>Oggi</h3><div class="fk-grid2"><div class="fk-stat"><b>0</b><span>attivita</span></div><div class="fk-stat"><b>4.5</b><span>ore</span></div><div class="fk-stat"><b>0</b><span>pezzi</span></div><div class="fk-stat"><b>65</b><span>%</span></div></div></div><div class="fk-grid2"><div class="fk-tile"><span>Ultimo</span><b>—</b></div><div class="fk-tile"><span>Stato</span><b>In corso</b></div></div>';
+    },
+    new:function(){ return 'x'; }
+};
+</script>
+</body></html>`;
+    assert.equal(looksLikeIosWidgetHome(widget), true);
+    assert.equal(hasRequestedWorkingHome(widget), false);
+    const next = applyChromeGuards(widget);
+    assert.equal(looksLikeIosWidgetHome(next), false);
+    assert.match(next, /Niente in lista|in lista/);
+    assert.doesNotMatch(next, /<span>Ultimo<\/span>/);
   });
 });

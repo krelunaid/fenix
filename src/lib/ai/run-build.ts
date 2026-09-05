@@ -8,8 +8,8 @@ import {
 } from "@/lib/projects/store";
 import { parseBuildOutput, type BuildResult } from "./parse";
 import { isWeakPreview, lookInstruction, resetAudit, waitPreviewAudit, waitPreviewShot, waitPreviewBoot, getPreviewBootError, getPreviewBootOk, rememberBootError } from "./look";
-import { APP_SHELL_HTML, DASHBOARD_POLISH_INSTRUCTION, SITE_POLISH_INSTRUCTION } from "./app-shell";
-import { composeProduct } from "./compose-product";
+import { DASHBOARD_POLISH_INSTRUCTION, SITE_POLISH_INSTRUCTION } from "./app-shell";
+import { createBuildRequest, isComposedCreation } from "./build-request";
 import { CREATE_COST, ITERATE_COST } from "@/lib/projects/credits";
 import { isPhoneKind, resolveProjectKind } from "@/lib/projects/infer";
 import { formatHtmlErrors, validateProductHtml } from "@/lib/projects/validate-html";
@@ -297,7 +297,7 @@ function isIOS() {
 
 async function consumeViaWorker(
   projectId: string,
-  body: { prompt: string; html?: string; instruction?: string; kind?: string },
+  body: { prompt: string; html?: string; instruction?: string; kind?: string; operation?: string },
   quiet = false,
   epoch = 0,
 ): Promise<boolean> {
@@ -320,10 +320,14 @@ async function consumeViaWorker(
       if (base === "/__worker") proxyAnswered = true;
       if (started.status !== 202) {
         lastErr = `Build HTTP ${started.status}`;
+        if (isComposedCreation(body)) throw new Error(lastErr);
         continue;
       }
       const { id } = (await started.json()) as { id?: string };
-      if (!id) continue;
+      if (!id) {
+        if (isComposedCreation(body)) throw new Error("Ricevuta di creazione non valida");
+        continue;
+      }
       store.updateProject(projectId, {
         ...visualJobPatch(id, "run"),
         status: "building",
@@ -371,6 +375,7 @@ async function consumeViaWorker(
       throw new Error(JOB_STILL_RUNNING);
     } catch (err) {
       lastErr = err instanceof Error ? err.message : "Load failed";
+      if (isComposedCreation(body)) throw err instanceof Error ? err : new Error(lastErr);
       if (lastErr === JOB_STILL_RUNNING || lastErr === JOB_GONE) {
         throw err instanceof Error ? err : new Error(lastErr);
       }
@@ -842,19 +847,13 @@ export async function runBuild(projectId: string, instruction?: string) {
     });
     const phone = isPhoneKind(kind);
     const desk = kind === "site" || kind === "landing" || kind === "dashboard";
-    const composed = composeProduct(project.prompt);
-    const payload = {
+    const payload = createBuildRequest({
       prompt: project.prompt,
-      html: instruction
-        ? project.html
-        : composed.spec
-          ? composed.html
-          : phone
-            ? APP_SHELL_HTML
-            : project.html || "",
+      html: project.html,
       kind,
-      instruction: instruction || composed.polish,
-    };
+      instruction,
+      recentPalettes: store.recentPalettes ?? [],
+    });
     try {
       streamed = isIOS() || desk
         ? await consumeViaWorker(projectId, payload, true, epoch)
@@ -863,6 +862,9 @@ export async function runBuild(projectId: string, instruction?: string) {
       const msg = first instanceof Error ? first.message : "";
       if (msg === STALE_JOB) throw first;
       if (msg === JOB_STILL_RUNNING) throw first;
+      // A rejected/uncertain composed worker build must not become a second
+      // POST or a full-document stream rewrite. The outer failure path recovers.
+      if ((isIOS() || desk) && isComposedCreation(payload)) throw first;
       if (isTransientNetwork(msg)) {
         streamed = await consumeViaWorker(projectId, payload, true, epoch);
       } else if (isIOS() || desk) {

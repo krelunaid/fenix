@@ -8,6 +8,7 @@ import { gateBuildResult, repairBuild } from "./repair.ts";
 import { CONTRACT_REPAIR_MAX } from "./build-contract.ts";
 import { prepareSrcDoc } from "../projects/color-scheme.ts";
 import { looksLikeIosWidgetHome } from "../projects/craft-icons.ts";
+import { artifactContext, completeResponseText, MAX_ARTIFACT_CHARS } from "../../../workers/visual/artifact-context.mjs";
 
 /** Recorded polish/repair path. Not live-verified against xAI. */
 export const POLISH_REPAIR_LIVE_VERIFIED = false as const;
@@ -28,6 +29,38 @@ function mockCompletion(content: string): Response {
 }
 
 describe("polish/repair recorded responses (not live-verified)", () => {
+  it("preserves full context at old truncation boundaries and refuses oversize artifacts", () => {
+    for (const size of [12000, 20000, 40000, 90000, MAX_ARTIFACT_CHARS]) {
+      const html = '<html>' + 'x'.repeat(size - 13) + '</html>';
+      assert.equal(html.length, size);
+      assert.equal(artifactContext(html), html);
+    }
+    assert.throws(() => artifactContext('x'.repeat(MAX_ARTIFACT_CHARS + 1)), RangeError);
+    for (const reason of ['length', 'content_filter', 'tool_calls']) {
+      assert.throws(() => completeResponseText({choices:[{finish_reason:reason,message:{content:'partial'}}]}), /incompleta/);
+    }
+    assert.equal(completeResponseText({choices:[{finish_reason:'stop',message:{content:'whole'}}]}), 'whole');
+  });
+
+  it("sends repair the complete 45k document and rejects explicit incomplete responses", async () => {
+    const html = '<html><body>' + ' '.repeat(45000) + '<button id="tail">Save</button><script>window.tail=true</script></body></html>';
+    const prev = globalThis.fetch;
+    let calls = 0;
+    globalThis.fetch = (async (_url, init) => {
+      calls++;
+      const body = JSON.parse(String(init?.body));
+      const user = body.messages.find((m: {role:string}) => m.role === 'user');
+      assert.ok(user.content.includes(html), 'complete document must reach repair');
+      return {ok:true,json:async () => ({choices:[{finish_reason:'length',message:{content:loadRecorded('complete-site.txt')}}]})} as Response;
+    }) as typeof fetch;
+    try {
+      assert.equal(await repairBuild({apiKey:'fixture-unused',prompt:SITE_BRIEF,html,error:'fixture'}), null);
+      assert.equal(calls, 1);
+      assert.equal(await repairBuild({apiKey:'fixture-unused',prompt:SITE_BRIEF,html:'x'.repeat(MAX_ARTIFACT_CHARS + 1),error:'fixture'}), null);
+      assert.equal(calls, 1, 'oversize must not spend a model call');
+    } finally { globalThis.fetch = prev; }
+  });
+
   it("parses a declared worker-shaped payload through parseBuildOutput and gates it without fetching xAI", async () => {
     assert.equal(POLISH_REPAIR_LIVE_VERIFIED, false);
     const manifest = JSON.parse(loadRecorded("manifest.json")) as {
@@ -263,6 +296,133 @@ ${html}
       assert.match(serifSrc, /--display:"Literata"/);
       assert.doesNotMatch(serifSrc, /font:400 16px\/1\.5 system-ui,sans-serif/);
       assert.equal(fetchHits, 2, "declared mock transport only");
+    } finally {
+      globalThis.fetch = prev;
+    }
+  });
+
+  it("enforce after mock repairBuild restores system CSS when the payload has no --body/--display", async () => {
+    assert.equal(POLISH_REPAIR_LIVE_VERIFIED, false);
+    const brief = "FORMATO: app telefono. kind=app. Font system-ui primario. Voglio una app stile iPhone.";
+    const dropped = `<!DOCTYPE html><html lang="it"><head>
+<style>body{font-family:Georgia} h1{font-family:Georgia}</style>
+</head><body><h1>Lista</h1><main id="main"><p>voce</p></main></body></html>`;
+    const complete = `<<<META>>>
+{"name":"Lista","tagline":"intent","kind":"app","summary":"recorded","direction":"intent","palette":{"bg":"#efe6d4","surface":"#f7f1e4","fg":"#1c1712","muted":"#5c5348","accent":"#3d4a1f"}}
+<<<HTML>>>
+${dropped}
+<<<END>>>`;
+    const prev = globalThis.fetch;
+    let fetchHits = 0;
+    globalThis.fetch = (async () => {
+      fetchHits += 1;
+      return mockCompletion(complete);
+    }) as typeof fetch;
+    try {
+      const repaired = await repairBuild({
+        apiKey: "unused",
+        prompt: brief,
+        html: "<p>vuoto</p>",
+        error: "Tipo system perso, CSS senza variabili.",
+      });
+      assert.equal(fetchHits, 1, "declared mock transport only");
+      assert.ok(repaired);
+      assert.match(repaired.html, /data-intent-type="system"/);
+      assert.match(repaired.html, /font-family:ui-sans-serif,system-ui,-apple-system/);
+      assert.doesNotMatch(repaired.html, /font-family:\s*Georgia/);
+      assert.match(repaired.html, /--body:ui-sans-serif,system-ui,-apple-system/);
+      const src = prepareSrcDoc(repaired.html, repaired.palette, "intent-novar", "app");
+      assert.doesNotMatch(src, /font-family:\s*Georgia/);
+      assert.match(src, /data-intent-type="system"/);
+    } finally {
+      globalThis.fetch = prev;
+    }
+  });
+
+  it("declared repairBuild mock rewrites font shorthand and qualified selectors (not a live controller-edit)", async () => {
+    assert.equal(POLISH_REPAIR_LIVE_VERIFIED, false);
+    const brief = "Font system-ui primario. Voglio una app stile iPhone.";
+    const dropped = `<!DOCTYPE html><html lang="it"><head>
+<style>body{font:16px Georgia}h1{font:32px Georgia}body.app,h1.title{font-family:Georgia}p.quote{font-family:Georgia}</style>
+</head><body class="app"><h1 class="title">Lista</h1><p class="quote">Georgia, 1820</p><main id="main"><p>voce</p></main></body></html>`;
+    const complete = `<<<META>>>
+{"name":"Lista","tagline":"intent","kind":"app","summary":"recorded","direction":"intent","palette":{"bg":"#efe6d4","surface":"#f7f1e4","fg":"#1c1712","muted":"#5c5348","accent":"#3d4a1f"}}
+<<<HTML>>>
+${dropped}
+<<<END>>>`;
+    const prev = globalThis.fetch;
+    let fetchHits = 0;
+    globalThis.fetch = (async () => {
+      fetchHits += 1;
+      return mockCompletion(complete);
+    }) as typeof fetch;
+    try {
+      const repaired = await repairBuild({
+        apiKey: "unused",
+        prompt: `${brief}\nAggiungi solo l'icona casa.`,
+        html: "<p>vuoto</p>",
+        error: "Tipo system perso, font shorthand Georgia.",
+      });
+      assert.equal(fetchHits, 1, "declared mock transport only");
+      assert.ok(repaired);
+      assert.match(repaired.html, /data-intent-type="system"/);
+      assert.match(repaired.html, /font:16px ui-sans-serif,system-ui,-apple-system/);
+      assert.match(repaired.html, /font:32px ui-sans-serif,system-ui,-apple-system/);
+      assert.match(repaired.html, /body\.app,h1\.title\{font-family:ui-sans-serif,system-ui,-apple-system/);
+      assert.doesNotMatch(repaired.html, /body\{font:16px Georgia/);
+      assert.match(repaired.html, /p\.quote\{font-family:Georgia/);
+      assert.match(repaired.html, />Georgia, 1820</);
+      const src = prepareSrcDoc(repaired.html, repaired.palette, "intent-shorthand", "app");
+      assert.doesNotMatch(src, /body\{font:16px Georgia/);
+      assert.match(src, /data-intent-type="system"/);
+    } finally {
+      globalThis.fetch = prev;
+    }
+  });
+
+  it("declared repairBuild mock keeps weight/size/line-height on font shorthand (not a live controller-edit)", async () => {
+    assert.equal(POLISH_REPAIR_LIVE_VERIFIED, false);
+    const brief = "Font system-ui primario. Voglio una app stile iPhone.";
+    const dropped = `<!DOCTYPE html><html lang="it"><head>
+<style>
+h1.w{font:700 22px/1.2 Georgia}
+h1.i{font:italic 600 1.5rem/1.3 Georgia}
+h1.b{font:700 22px/ 1.2 Georgia}
+button.cta{font:700 14px/1 Georgia}
+p.quote{font-family:Georgia}
+</style>
+</head><body><h1 class="w">Peso</h1><h1 class="i">Corsivo</h1><button class="cta">Ok</button><p class="quote">Georgia, 1820</p><main id="main"><p>voce</p></main></body></html>`;
+    const complete = `<<<META>>>
+{"name":"Lista","tagline":"intent","kind":"app","summary":"recorded","direction":"intent","palette":{"bg":"#efe6d4","surface":"#f7f1e4","fg":"#1c1712","muted":"#5c5348","accent":"#3d4a1f"}}
+<<<HTML>>>
+${dropped}
+<<<END>>>`;
+    const prev = globalThis.fetch;
+    let fetchHits = 0;
+    globalThis.fetch = (async () => {
+      fetchHits += 1;
+      return mockCompletion(complete);
+    }) as typeof fetch;
+    try {
+      const repaired = await repairBuild({
+        apiKey: "unused",
+        prompt: brief,
+        html: "<p>vuoto</p>",
+        error: "Tipo system perso, font:700 22px/1.2 Georgia.",
+      });
+      assert.equal(fetchHits, 1, "declared mock transport only");
+      assert.ok(repaired);
+      assert.match(repaired.html, /font:700 22px\/1\.2 ui-sans-serif,system-ui,-apple-system/);
+      assert.match(repaired.html, /font:italic 600 1\.5rem\/1\.3 ui-sans-serif,system-ui,-apple-system/);
+      assert.match(repaired.html, /font:700 22px\/ 1\.2 ui-sans-serif,system-ui,-apple-system/);
+      assert.doesNotMatch(repaired.html, /h1\.b\{font:700 22px\/ ui-sans-serif/);
+      assert.doesNotMatch(repaired.html, /h1\.w\{font:700 ui-sans-serif/);
+      assert.doesNotMatch(repaired.html, /h1\.i\{font:italic 600 ui-sans-serif/);
+      assert.match(repaired.html, /button\.cta\{font:700 14px\/1 Georgia/);
+      assert.match(repaired.html, /p\.quote\{font-family:Georgia/);
+      const src = prepareSrcDoc(repaired.html, repaired.palette, "intent-shorthand-weight", "app");
+      assert.match(src, /font:700 22px\/1\.2 ui-sans-serif,system-ui,-apple-system/);
+      assert.doesNotMatch(src, /h1\.w\{font:700 ui-sans-serif/);
     } finally {
       globalThis.fetch = prev;
     }

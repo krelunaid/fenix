@@ -239,7 +239,7 @@ input::placeholder,textarea::placeholder{
 .fk-last{margin:0 0 16px;font-size:14px;color:var(--fg,#1c1712)}
 .fk-hero,.fk-hero-craft{width:100%;height:140px;object-fit:cover;border-radius:0;display:block;margin:8px 0 14px;background:var(--line,#c4b49a)}
 .fk-tab,.tabbar,nav[aria-label]{
-  flex-shrink:0;display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr))!important;
+  flex-shrink:0;display:grid!important;grid-auto-flow:column!important;grid-template-rows:minmax(44px,1fr)!important;grid-template-columns:repeat(5,minmax(0,1fr))!important;
   height:calc(64px + env(safe-area-inset-bottom))!important;min-height:calc(64px + env(safe-area-inset-bottom))!important;max-height:none!important;padding:6px 4px calc(6px + env(safe-area-inset-bottom));
   border-top:1px solid color-mix(in srgb, currentColor 12%, transparent);
   background:color-mix(in srgb,var(--surface,#f7f1e4) 86%,transparent);color:var(--muted,#5c5348);
@@ -253,8 +253,8 @@ input::placeholder,textarea::placeholder{
   font:600 10px/1.1 inherit!important;letter-spacing:.02em;transform:none!important;
 }
 .fk-tab button.on,.tabbar button.on,nav[aria-label] button.on{color:var(--accent,#3d4a1f)!important;background:none!important;box-shadow:none!important}
-.fk-tab svg,.tabbar svg,nav[aria-label] svg,.fk-tab button svg{width:24px!important;height:24px!important;flex:0 0 24px!important;transform:none!important}
-.fk-tab span,.tabbar span,nav[aria-label] span{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fk-tab svg,.tabbar svg,nav[aria-label] svg,.fk-tab button svg{width:24px!important;height:24px!important;flex:0 0 24px!important;transform:none!important;overflow:visible!important}
+.fk-tab span,.tabbar span,nav[aria-label] span{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block;line-height:1.15;min-height:11px}
 img[src=""],img:not([src]){display:none!important}
 main,.fk-main,main p,main li,main b,.fk-tile,.fk-tile b,.fk-hello,.fk-lbl{color:var(--fg,#1c1712)!important;opacity:1!important}
 .fk-role,.fk-date,main .muted,.fk-stat span{color:var(--muted,#5c5348)!important;opacity:1!important}
@@ -278,6 +278,30 @@ main,.fk-main,main p,main li,main b,.fk-tile,.fk-tile b,.fk-hello,.fk-lbl{color:
 }
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
 </style>`;
+
+/** Count real tab buttons so kit-injected apps keep one row. Default 5 when unknown. */
+function countPhoneTabButtons(html: string): number {
+  const chunks = String(html || "").match(
+    /<(?:nav|div|footer)(?=[^>]*\b(?:fk-tab|tabbar)\b|[^>]*aria-label)[^>]*>([\s\S]*?)<\/(?:nav|div|footer)>/gi,
+  );
+  if (!chunks) return 0;
+  let max = 0;
+  for (const chunk of chunks) {
+    const inner = chunk.replace(/^<[^>]+>/, "").replace(/<\/(?:nav|div|footer)>\s*$/i, "");
+    const n = (inner.match(/<button\b/gi) || []).length;
+    if (n > max) max = n;
+  }
+  return max;
+}
+
+function phoneKitFor(html: string): string {
+  const n = countPhoneTabButtons(html);
+  const cols = n >= 2 && n <= 8 ? n : 5;
+  return PHONE_KIT.replace(
+    /grid-template-columns:repeat\(5,minmax\(0,1fr\)\)!important/g,
+    `grid-template-columns:repeat(${cols},minmax(0,1fr))!important`,
+  );
+}
 
 const SITE_KIT = `<style data-fenix-site data-fenix-desk>
 html,body{height:auto!important;min-height:100%;width:100%!important;margin:0;max-width:none!important;overflow:auto!important;overflow-x:hidden!important;-webkit-overflow-scrolling:touch;color:var(--fg,#1c1712);background:var(--bg,#efe6d4);font:400 16px/1.5 var(--body, system-ui, sans-serif)}
@@ -1048,7 +1072,7 @@ export function prepareSrcDoc(
   }
   if (!/data-fenix-phone/.test(next) && !/data-fenix-site/.test(next)) {
     const kit =
-      kind === "dashboard" ? DASHBOARD_KIT : looksLikeSite(next, kind) ? SITE_KIT : PHONE_KIT;
+      kind === "dashboard" ? DASHBOARD_KIT : looksLikeSite(next, kind) ? SITE_KIT : phoneKitFor(next);
     next = /<head[^>]*>/i.test(next)
       ? next.replace(/<head[^>]*>/i, (open) => `${open}${kit}`)
       : `${kit}${next}`;

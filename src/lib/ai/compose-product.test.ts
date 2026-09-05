@@ -20,6 +20,64 @@ import { PALETTE_CORPUS, paletteDistance, CLOSE_DELTA_E } from "../projects/pale
 import { domainIllustration, GEOMETRIC_REGRESSIONS, materialSignature } from "./domain-imagery.ts";
 import { isLetterAIcon, looksLikeIosWidgetHome } from "../projects/craft-icons.ts";
 import { prepareSrcDoc } from "../projects/color-scheme.ts";
+import { createBuildRequest, isComposedCreation } from "./build-request.ts";
+
+describe("controller build request preserves generated artifacts", () => {
+  it("limits the no-rewrite retry policy to explicitly composed initial phone builds", () => {
+    for (const kind of ["app", "tool", "game"]) assert.equal(isComposedCreation({operation:"create",kind}), true);
+    for (const kind of ["app", "tool", "game", "site", "dashboard", "landing"]) {
+      assert.equal(isComposedCreation({operation:"edit",kind}), false);
+      assert.equal(isComposedCreation({kind}), false);
+    }
+    assert.equal(isComposedCreation({operation:"create",kind:"site"}), false);
+  });
+  const briefs = [
+    "Agenda studio: appuntamenti e prenotazioni, stile iPhone.",
+    "Essenza: gestione profumi da vendere, stile iPhone.",
+    "Vesti: abbigliamento e capi da vendere, stile iPhone.",
+    "RepoVoci: note e repository GitHub, stile iPhone.",
+    "Ristorazione: menu e prenotazioni, stile iPhone.",
+    "Un diario per escursioni e sentieri, stile iPhone.",
+  ];
+  for (const brief of briefs) {
+    it(`retains the entire seed for ${brief}`, () => {
+      const prompt = formatPrefix("app") + brief;
+      const composed = composeProduct(prompt);
+      const payload = createBuildRequest({prompt, kind: "app"});
+      assert.equal(payload.html, composed.html);
+      assert.notEqual(payload.html, APP_SHELL_HTML);
+      assert.equal(payload.instruction, composed.polish);
+      assert.equal(payload.kind, "app");
+      assert.equal(payload.operation, "create");
+      assert.deepEqual(payload.palette, composed.tokens.palette);
+      // Both transports serialize this same request; no hidden seed replacement.
+      assert.equal(JSON.parse(JSON.stringify({...payload, projectId:"fixture"})).html, composed.html);
+    });
+  }
+  it("uses the same history for composition and the outgoing payload", () => {
+    const prompt = formatPrefix("app") + briefs[0];
+    const recentPalettes = [composeProduct(prompt).tokens.palette];
+    const expected = composeProduct(prompt, {recent:recentPalettes});
+    const payload = createBuildRequest({prompt, kind:"app", recentPalettes});
+    assert.equal(payload.html, expected.html);
+    assert.equal(payload.instruction, expected.polish);
+    assert.deepEqual(payload.palette, expected.tokens.palette);
+    assert.deepEqual(payload.recentPalettes, recentPalettes);
+  });
+  it("keeps edits byte-identical before transport, including script/data at the end", () => {
+    const html = '<html><body>' + ' '.repeat(45000) + '<script>window.saved="literal $&"</script></body></html>';
+    const request = createBuildRequest({prompt:briefs[0], html, instruction:"Cambia solo icona", kind:"app"});
+    assert.equal(request.html, html);
+    assert.equal(request.instruction, "Cambia solo icona");
+    assert.equal(request.operation, "edit");
+  });
+  it("does not expand this fix into a change of unmatched desktop fallback", () => {
+    const prompt = "FORMATO: sito web. kind=site. atlante delle maree";
+    const c = composeProduct(prompt);
+    const request = createBuildRequest({prompt, html:"existing", kind:"site"});
+    assert.equal(request.html, c.spec ? c.html : "existing");
+  });
+});
 
 const HARD = [
   `${formatPrefix("app")}Essenza: gestione profumi premium, flaconi, note olfattive e guardaroba.`,
@@ -545,5 +603,96 @@ describe("graphic pipeline prompt→plan→generate→visual→QA", () => {
     const sysQa = auditGraphicQuality(system.html, { brief: system.brief, kind: "app" });
     assert.equal(sysQa.findings.some((f) => f.code === "apple-clone"), false);
     assert.doesNotMatch(system.html, /#f5f5f7|#0071e3|SF Pro/);
+    const italian = composeProduct(`${formatPrefix("app")}Voglio una app stile iPhone`);
+    assert.equal(italian.tokens.fonts.display, "system-ui");
+    assert.match(italian.html, /data-intent-type="system"/);
+    assert.notEqual(italian.tokens.fonts.display, perfume.tokens.fonts.display);
+    const visible = system.html.replace(/<style[\s\S]*?<\/style>/gi, "").replace(/<script[\s\S]*?<\/script>/gi, "");
+    assert.doesNotMatch(visible, /anti-clone|glacier|Literata\/Karla|Lista in tasca uno/);
+    assert.match(perfume.html, /<article class="card fragrance"/);
+    const visPerfume = perfume.html.replace(/<style[\s\S]*?<\/style>/gi, "").replace(/<script[\s\S]*?<\/script>/gi, "");
+    assert.doesNotMatch(visPerfume, /Niente in lista/);
+    const agenda = composeProduct(`${formatPrefix("app")}Agenda: appuntamenti, calendario giornaliero, trattamenti e studio.`);
+    assert.match(agenda.html, /Taglio e piega/);
+    assert.doesNotMatch(agenda.html, /Lista in tasca uno/);
+    assert.match(system.html, /Niente in lista/);
+    assert.match(serif.html, /nav\.rail button\.on\{background:var\(--accent\);color:var\(--accent-ink\)/);
+  });
+
+  it("SYSTEM first-run is an honest empty sheet and domain briefs keep distinct composition", async () => {
+    const { INTENT_SYSTEM_PROMPT, INTENT_SERIF_PROMPT } = await import("../projects/graphic-intent.ts");
+    const system = composeProduct(`${formatPrefix("app")}${INTENT_SYSTEM_PROMPT}`);
+    const header = system.html.match(/<header[\s\S]*?<\/header>/)?.[0] || "";
+    const home = system.html.match(/<section class="home-overview"[\s\S]*?<\/section>/)?.[0] || "";
+    assert.equal((header.match(/<h1 /g) || []).length, 1);
+    assert.doesNotMatch(header, /<p class="kicker">/);
+    assert.doesNotMatch(home, /<p class="kicker">Lista<\/p>/);
+    assert.match(home, /class="mark"/);
+    assert.match(system.html, /items:\[\]/);
+    assert.match(system.html, /\.home-first \.btn\{min-height:48px;width:100%/);
+    assert.match(system.html, /pocket-list/);
+    assert.match(system.html, /\.pocket-list\{list-style:none/);
+    assert.match(system.html, /function pocketLine/);
+    assert.doesNotMatch(system.html, /meta:"nuovo"/);
+    assert.doesNotMatch(system.html, /#f5f5f7|#0071e3/);
+    assert.match(system.html, /html\[data-grammar="phone-seed"\] nav\.tabs svg\{width:28px/);
+    const perfume = composeProduct(HARD[0]!);
+    const vesti = composeProduct(HARD[1]!);
+    const food = composeProduct(HARD[3]!);
+    const agenda = composeProduct(
+      `${formatPrefix("app")}Agenda: appuntamenti, calendario giornaliero, trattamenti e studio.`,
+    );
+    const repo = composeProduct(
+      `${formatPrefix("app")}RepoVoci: repository, commit, rami, sync e diff sul nastro.`,
+    );
+    assert.match(perfume.html, /<article class="card fragrance"/);
+    assert.match(perfume.html, /data-imagery="domain"|viewBox/);
+    assert.match(vesti.html, /lookbook/);
+    assert.match(food.html, /plate|passo|comanda/i);
+    assert.match(agenda.html, /day-rail/);
+    assert.match(agenda.html, /Taglio e piega/);
+    assert.match(repo.html, /source-timeline|repo-stage|timeline/);
+    const bgs = [perfume, vesti, food, agenda, repo, system].map((p) => p.tokens.palette.bg.toLowerCase());
+    assert.equal(new Set(bgs).size >= 5, true, `palettes collide ${bgs.join(" ")}`);
+    const serif = composeProduct(`${formatPrefix("app")}${INTENT_SERIF_PROMPT}`);
+    assert.notEqual(serif.tokens.fonts.display, "system-ui");
+    const a = system;
+    const b = composeProduct(
+      `${formatPrefix("app")}Voglio una app stile iPhone. Font system-ui primario, tab Home Aggiungi Persona.`,
+      { recent: [{ bg: a.tokens.palette.bg, surface: a.tokens.palette.surface, accent: a.tokens.palette.accent }] },
+    );
+    const c = composeProduct(
+      `${formatPrefix("app")}Taccuino di bordo: font di sistema primario, tab Home Aggiungi Persona, elenco e CRUD.`,
+      {
+        recent: [
+          { bg: a.tokens.palette.bg, surface: a.tokens.palette.surface, accent: a.tokens.palette.accent },
+          { bg: b.tokens.palette.bg, surface: b.tokens.palette.surface, accent: b.tokens.palette.accent },
+        ],
+      },
+    );
+    const sig = (p: typeof a) =>
+      `${p.tokens.palette.bg}|${p.tokens.palette.accent}`.toLowerCase();
+    assert.notEqual(sig(a), sig(b));
+    assert.notEqual(sig(b), sig(c));
+    assert.notEqual(sig(a), sig(c));
+    const again = composeProduct(`${formatPrefix("app")}${INTENT_SYSTEM_PROMPT}`);
+    assert.equal(sig(a), sig(again));
+    assert.match(system.html, /function renderPocketPersona/);
+    assert.match(system.html, /function renderPocketList/);
+    assert.match(system.html, /data-fenix-pane="home"/);
+    assert.match(system.html, /home-overview/);
+    assert.match(system.html, /Storage locale/);
+    assert.match(system.html, /kind==="wipe"/);
+    assert.match(system.html, /data-act="wipe-ask"/);
+    assert.match(system.html, /data-act="wipe-confirm"/);
+    assert.match(system.html, /data-chroma="/);
+    assert.match(system.html, /minmax\(0,1fr\)/);
+    assert.doesNotMatch(system.html, /min-height:calc\(100dvh - 148px\)/);
+    const bootHome = system.html.match(/<main id="root">([\s\S]*?)<\/main>/)?.[1] || "";
+    assert.match(bootHome, /data-fenix-pane="home"/);
+    assert.match(bootHome, /home-aside/);
+    assert.match(bootHome, /Panoramica/);
+    assert.doesNotMatch(bootHome, /pocket-list/);
+    assert.doesNotMatch(bootHome, /data-fenix-pane="persona"/);
   });
 });

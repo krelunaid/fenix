@@ -75,7 +75,8 @@ export function applyScreenPatch(html, id, inner) {
     `(<template[^>]*\\bid=["']t-${tid}["'][^>]*>)([\\s\\S]*?)(<\\/template>)`,
     "i",
   );
-  const next = String(html).replace(tRe, `$1${inner}$3`);
+  // Model/user HTML is literal data, not a JS replacement template ($&, $1…).
+  const next = String(html).replace(tRe, (_match, open, _old, close) => `${open}${inner}${close}`);
   if (next === html) return { html, applied: false, reason: "unchanged", id: tid };
   return { html: next, applied: true, reason: "ok", id: tid };
 }
