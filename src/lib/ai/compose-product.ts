@@ -619,7 +619,7 @@ function agendaRailMarkup(spec: PipelineSpec, grammar: LayoutGrammar): string {
       return `<article class="slot" data-id="${e.id}" data-state="${state}" data-status="${status}"><time class="time" datetime="${e.kicker}">${e.kicker}</time><div class="slot-body"><h2>${e.title}</h2><p class="notes slot-detail">${e.note} · ${e.meta}</p><span class="chip slot-status ${status}">${AGENDA_STATUS_LABELS[status] || status}</span>${agendaActs(e.id, status)}</div></article>`;
     })
     .join("");
-  return `<div class="day-head"><p class="kicker">${spec.kicker}</p><h2 id="day-label">${spec.rows.length} ${grammar.voice.census}</h2></div><div class="day-rail" data-fenix-rail="day" id="day-rail" role="tabpanel" aria-labelledby="day-label">${slots}</div>`;
+  return `<div class="day-head"><p class="kicker">${spec.kicker}</p><h2 id="day-label">${spec.rows.length} ${grammar.voice.census}</h2></div><div class="day-rail" data-fenix-rail="day" data-fenix-slot="agenda-boot" id="day-rail" role="tabpanel" aria-labelledby="day-label">${slots}</div>`;
 }
 
 function tabSvg(tab: { id: string; label: string }, i: number, campo = false): string {
@@ -1411,10 +1411,10 @@ function productHtml(spec: PipelineSpec, tokens: DesignTokens, grammar: LayoutGr
   const iconMark = campo ? crispWaterDropMarkSvg(spec.id) : premiumMark;
   const markHref = premiumMarkDataUri(iconMark);
   const bootDate = italianLongDate();
-  const pocketEmpty = `<section class="home-overview" data-fenix-pane="home"><div class="home-hero"><p class="kicker">Panoramica</p><p class="fx-date">${bootDate}</p><div class="fx-board" aria-label="Sintesi"><div class="fx-cell"><b>0</b><span>Oggi</span></div><div class="fx-cell"><b>0</b><span>Media</span></div><div class="fx-cell"><b>0</b><span>Voci</span></div><div class="fx-cell" data-warn><b>0</b><span>Aperti</span></div></div><div class="fx-tank"><div class="fx-seg" role="tablist"><button type="button" class="on">Oggi</button><button type="button">Settimana</button><button type="button">Mese</button></div><div class="fx-tank-well"><i style="height:0%"></i><b>0%</b></div><p>0 / 0 · obiettivo</p></div><p class="home-count" data-count="0"><b>0</b><span>voci sul dispositivo</span></p><div class="home-first" data-state="empty"><div class="mark" aria-hidden="true">${POCKET_EMPTY_MARK}</div><h2>Niente in lista</h2><p class="notes">Aggiungi la prima voce. Qui non ci sono dati di prova.</p><button class="btn" type="button" data-view="${spec.tabs[1]!.id}">${spec.cta}</button></div></div><aside class="home-aside"><article class="card"><p class="kicker">Elenco</p><h2>Vuoto</h2><p class="notes">Le azioni restano nella lista.</p></article><article class="card"><p class="kicker">Privacy</p><h2>Solo qui</h2><p class="notes">Storage locale, senza profilo.</p></article></aside></section>`;
+  const pocketEmpty = `<section class="home-overview" data-fenix-pane="home" data-fenix-slot="home-boot"><div class="home-hero"><p class="kicker">Panoramica</p><p class="fx-date">${bootDate}</p><p class="home-count" data-count="0"><b>0</b><span>voci sul dispositivo</span></p><div class="home-first" data-state="empty"><div class="mark" aria-hidden="true">${POCKET_EMPTY_MARK}</div><h2>Niente in lista</h2><p class="notes">Aggiungi la prima voce. Qui non ci sono dati di prova.</p><button class="btn" type="button" data-view="${spec.tabs[1]!.id}">${spec.cta}</button></div></div><aside class="home-aside"><article class="card"><p class="kicker">Elenco</p><h2>Vuoto</h2><p class="notes">Le azioni restano nella lista.</p></article><article class="card"><p class="kicker">Privacy</p><h2>Solo qui</h2><p class="notes">Storage locale, senza profilo.</p></article></aside></section>`;
   const splash = desk
     ? ""
-    : `<div class="fx-splash" id="fx-splash" data-fenix-splash><span class="fx-mark">${premiumMark}</span><strong>${spec.name}</strong><span class="fx-spin" aria-hidden="true"></span><p class="notes">${campo ? "Apertura" : grammar.voice.load}…</p></div>`;
+    : `<div class="fx-splash" id="fx-splash" data-fenix-splash data-fenix-slot="splash"><span class="fx-mark">${premiumMark}</span><strong>${spec.name}</strong><span class="fx-spin" aria-hidden="true"></span><p class="notes">${campo ? "Apertura" : grammar.voice.load}…</p></div>`;
   const bootMain =
     grammar.id === "source-timeline"
       ? `<section class="repo-stage" data-repo-stage="activity"><div class="timeline-art">${hero}</div></section>`
@@ -1488,7 +1488,7 @@ ${splash}
 <div class="app"${deskAttr}>
 <header class="${headerExtra.trim()}">
   <div class="brand-group">
-    ${desk ? "" : `<span class="app-mark" data-fenix-id="icon:app" aria-hidden="true">${premiumMark}</span>`}
+    ${desk ? "" : `<span class="app-mark" data-fenix-id="icon:app" data-fenix-slot="mark" aria-hidden="true">${premiumMark}</span>`}
     <div>
     ${grammar.id === "phone-seed" || grammar.id === "agenda" ? "" : `<p class="kicker">${spec.kicker}</p>`}
     <h1 class="brand">${spec.name}</h1>
@@ -1499,7 +1499,7 @@ ${splash}
 <nav class="${navClass}" id="tabs" aria-label="Navigazione">
 ${navButtons}
 </nav>
-<main id="root">${bootMain}</main>
+<main id="root" data-fenix-slot="root">${bootMain}</main>
 ${grammar.chrome === "masthead" ? `<footer>${spec.name} · lastre originali · niente stock</footer>` : ""}
 </div>
 <div class="toast" id="toast" hidden>${grammar.voice.ok}</div>
@@ -1686,7 +1686,7 @@ function markQueue(){
     else document.documentElement.removeAttribute("data-fenix-queue");
   }catch(err){}
 }
-function saveOnce(){
+/*fenix-slot:save-once*/function saveOnce(){
   if(!window.Fenix || !window.Fenix.save) return Promise.resolve({ok:true});
   var payload=pendingOps.length?payloadForHead():cloneData();
   return Promise.resolve().then(function(){
@@ -1701,7 +1701,7 @@ function saveOnce(){
     return res||{ok:true};
   });
 }
-function save(){
+/*fenix-slot:save*/function save(){
   return saveOnce().catch(function(){
     return new Promise(function(ok){ setTimeout(ok, 180); }).then(saveOnce);
   });
@@ -1796,7 +1796,7 @@ function enqueueOp(op, afterOk, afterFail){
   renderKeepForm();
   return persistThen(afterOk, afterFail);
 }
-function commitForm(f){
+/*fenix-slot:commit*/function commitForm(f){
   if(!f || f.id!=="fnew") return false;
   if(typeof f.checkValidity==="function" && !f.checkValidity()){
     if(typeof f.reportValidity==="function") f.reportValidity();
@@ -1892,7 +1892,7 @@ function ping(ok){
     document.documentElement.removeAttribute("data-fenix-flash");
   }, 1600);
 }
-function renderTabs(){
+/*fenix-slot:tabs*/function renderTabs(){
   var nav=document.getElementById("tabs");
   nav.innerHTML=tabDefs.map(function(t,i){
     return '<button type="button" data-view="'+t.id+'" data-fenix-id="icon:'+t.id+'" class="'+(view===t.id?"on":"")+'">'+glyphs[i]+"<span>"+t.label+"</span></button>";
@@ -1945,7 +1945,7 @@ function paneTab(pane){
   }
   return tabDefs[Math.min(1,tabDefs.length-1)].id;
 }
-function fxBoardMarkup(n){
+/*fenix-slot:board*/function fxBoardMarkup(n){
   var total=data.items.reduce(function(a,e){return a+litersOf(e.meta);},0);
   var open=data.items.filter(function(e){return /pausa|wait|bozza|scadenza/i.test(e.kicker||"");}).length;
   var avg=n?Math.round(total/n):0;
@@ -1956,14 +1956,14 @@ function fxBoardMarkup(n){
   var second=campoProduct?"Media":"Media";
   return '<div class="fx-board" aria-label="Sintesi"><div class="fx-cell"><b>'+(total?fmtLiters(today):String(n))+'</b><span>'+first+'</span></div><div class="fx-cell"><b>'+(total?fmtLiters(avg):"0")+'</b><span>'+second+'</span></div><div class="fx-cell"><b>'+n+'</b><span>'+third+'</span></div><div class="fx-cell"'+(open?' data-warn':'')+'><b>'+open+'</b><span>'+fourth+'</span></div></div>';
 }
-${campo ? `function fxBotteSvg(pct){
+${campo ? `/*fenix-slot:botte*/function fxBotteSvg(pct){
   var p=Math.max(0,Math.min(100,pct));
   var y=Math.round(52+((100-p)/100)*108);
   var wave='M26 '+y+' C58 '+(y-18)+' 88 '+(y+16)+' 120 '+y+' C154 '+(y-16)+' 182 '+(y+14)+' 214 '+y+' L214 176 C214 184 26 184 26 176Z';
   var foam='M26 '+y+' C72 '+(y+12)+' 102 '+(y-14)+' 136 '+y+' C168 '+(y+12)+' 192 '+(y-8)+' 214 '+y+' L214 '+(y+14)+' C184 '+(y+6)+' 68 '+(y+20)+' 26 '+(y+10)+'Z';
   return "<svg class='fx-botte' viewBox='0 0 240 188' aria-hidden='true'><defs><linearGradient id='fx-botte-liq' x1='120' y1='"+y+"' x2='120' y2='180' gradientUnits='userSpaceOnUse'><stop offset='0' stop-color='#F0F9FF'/><stop offset='.1' stop-color='#7DD3FC'/><stop offset='.32' stop-color='#38BDF8'/><stop offset='.58' stop-color='#0EA5E9'/><stop offset='1' stop-color='#075985'/></linearGradient><linearGradient id='fx-botte-glass' x1='26' y1='18' x2='214' y2='18' gradientUnits='userSpaceOnUse'><stop offset='0' stop-color='#fff' stop-opacity='.52'/><stop offset='.14' stop-color='#fff' stop-opacity='.08'/><stop offset='.5' stop-color='#041018' stop-opacity='.08'/><stop offset='.82' stop-color='#041018' stop-opacity='.28'/><stop offset='1' stop-color='#fff' stop-opacity='.3'/></linearGradient><radialGradient id='fx-botte-caustic' cx='84' cy='"+(y+16)+"' r='58' gradientUnits='userSpaceOnUse'><stop offset='0' stop-color='#fff' stop-opacity='.7'/><stop offset='1' stop-color='#fff' stop-opacity='0'/></radialGradient><clipPath id='fx-botte-clip'><path d='M26 36C26 22 214 22 214 36V168C214 182 26 182 26 168Z'/></clipPath><filter id='fx-botte-soft' x='-10%' y='-16%' width='120%' height='132%'><feGaussianBlur stdDeviation='0.7'/></filter></defs><path d='M26 36C26 22 214 22 214 36V168C214 182 26 182 26 168Z' fill='#020617'/><ellipse cx='120' cy='36' rx='94' ry='16' fill='#082f49'/><g clip-path='url(#fx-botte-clip)'><path class='fx-wave' d='"+wave+"' fill='url(#fx-botte-liq)'/><path class='fx-wave' d='"+foam+"' fill='#fff' fill-opacity='.34'/><ellipse class='fx-meniscus' cx='120' cy='"+y+"' rx='92' ry='15' fill='#F0F9FF' fill-opacity='.7'/><ellipse cx='82' cy='"+(y+20)+"' rx='40' ry='12' fill='url(#fx-botte-caustic)'/><path fill='none' stroke='#fff' stroke-opacity='.42' stroke-width='2.2' d='M48 "+(y+8)+" C78 "+(y-6)+" 110 "+(y+10)+" 148 "+(y+2)+"'/></g><path d='M26 36C26 22 214 22 214 36V168C214 182 26 182 26 168Z' fill='url(#fx-botte-glass)'/><ellipse cx='120' cy='36' rx='94' ry='16' fill='none' stroke='#fff' stroke-opacity='.7' stroke-width='2.6'/><ellipse cx='120' cy='36' rx='80' ry='11' fill='none' stroke='#7DD3FC' stroke-opacity='.5' stroke-width='1.6'/><path fill='none' stroke='#fff' stroke-opacity='.2' stroke-width='2.2' d='M28 88C72 100 168 100 212 88'/><path fill='none' stroke='#fff' stroke-opacity='.14' stroke-width='2.2' d='M28 128C72 140 168 140 212 128'/><path fill='none' stroke='#fff' stroke-opacity='.62' stroke-width='5' stroke-linecap='round' d='M46 50c7 26 7 70 0 94'/><path fill='none' stroke='#fff' stroke-opacity='.24' stroke-width='2.2' stroke-linecap='round' d='M196 56c-4 24-4 64 0 86'/></svg>";
-}` : `function fxBotteSvg(pct){ return ""; }`}
-function fxTankMarkup(n){
+}` : `/*fenix-slot:botte*/function fxBotteSvg(pct){ return ""; }`}
+/*fenix-slot:tank*/function fxTankMarkup(n){
   var total=data.items.reduce(function(a,e){return a+litersOf(e.meta);},0);
   var goal=goalOf();
   var pct=goal?Math.min(100,Math.round((total||n)/goal*100)):0;
@@ -1991,11 +1991,11 @@ function fxTaskCard(e){
 function fxSceneCard(e){
   return '<article class="fx-scene" data-id="'+e.id+'"><p class="kicker">'+e.kicker+'</p><h2>'+e.title+'</h2><p class="notes">'+(e.note||"")+'</p><p class="fx-pay">'+(e.meta||"")+"</p></article>";
 }
-function renderPocketHome(){
+/*fenix-slot:home*/function renderPocketHome(){
   var n=data.items.length;
   var formId=paneTab("form");
   var listId=paneTab("list");
-  var html='<section class="home-overview" data-fenix-pane="home"><div class="home-hero">';
+  var html='<section class="home-overview" data-fenix-pane="home" data-fenix-slot="home"><div class="home-hero">';
   if(campoProduct){
     html+='<div class="fx-hello-row"><div><p class="fx-hello">Missioni</p><p class="fx-role">Quadro di controllo</p></div><span class="fx-app-mark" data-fenix-id="icon:app" aria-hidden="true">'+FX_WATER_MARK+"</span></div>";
     html+='<p class="fx-date">'+italianLongDateJs()+'</p><div class="fx-inverse"><p class="fx-shell-kicker">Panoramica — oggi</p>'+fxBoardMarkup(n)+'</div><div class="fx-inverse fx-hero"><p class="fx-shell-kicker">Volume in campo</p>'+fxTankMarkup(n)+"</div>";
@@ -2044,10 +2044,10 @@ function renderPocketHome(){
   }
   return html+"</section>";
 }
-function renderPocketList(){
+/*fenix-slot:list*/function renderPocketList(){
   var n=data.items.length;
   var formId=paneTab("form");
-  var html='<section class="list-pane" data-fenix-pane="elenco">';
+  var html='<section class="list-pane" data-fenix-pane="elenco" data-fenix-slot="list">';
   if(marketProduct){
     html+='<p class="fx-large">Attivit\u00e0</p><p class="fx-sub">'+(n?n+" incarichi aperti":"Nessun incarico")+"</p>";
     html+='<div class="fx-pills"><button type="button" class="fx-pill on">Tutti</button><button type="button" class="fx-pill">Aperti</button><button type="button" class="fx-pill">Fatti</button></div>';
@@ -2107,10 +2107,10 @@ function renderPocketList(){
   });
   return html+"</ul></section>";
 }
-function renderPocketHistory(){
+/*fenix-slot:history*/function renderPocketHistory(){
   var n=data.items.length;
   var total=data.items.reduce(function(a,e){return a+litersOf(e.meta);},0);
-  var html='<section class="list-pane" data-fenix-pane="storico"><div class="fx-toolbar"><div><p class="fx-large">Storico</p><p class="fx-sub">'+(campoProduct?n+" missioni in archivio":n+" "+(n===1?"voce":"voci"))+'</p></div><span class="fx-total">'+(total?fmtLiters(total):n+" voci")+"</span></div>";
+  var html='<section class="list-pane" data-fenix-pane="storico" data-fenix-slot="history"><div class="fx-toolbar"><div><p class="fx-large">Storico</p><p class="fx-sub">'+(campoProduct?n+" missioni in archivio":n+" "+(n===1?"voce":"voci"))+'</p></div><span class="fx-total">'+(total?fmtLiters(total):n+" voci")+"</span></div>";
   html+='<div class="fx-pills"><button type="button" class="fx-pill">Oggi</button><button type="button" class="fx-pill">7 giorni</button><button type="button" class="fx-pill">Mese</button><button type="button" class="fx-pill">Anno</button><button type="button" class="fx-pill on">Tutto</button></div>';
   html+='<div class="fx-filters"><button type="button" class="fx-filter">Dipendente</button><button type="button" class="fx-filter">Mese</button><button type="button" class="fx-filter">Luogo</button></div>';
   if(!n){
@@ -2123,12 +2123,12 @@ function renderPocketHistory(){
   });
   return html+"</section>";
 }
-function renderPocketStats(){
+/*fenix-slot:stats*/function renderPocketStats(){
   var n=data.items.length;
   var total=data.items.reduce(function(a,e){return a+litersOf(e.meta);},0);
   var week=total?Math.round(total*6.2):n*8;
   var avg=n?Math.round((total||n)/n):0;
-  var html='<section class="persona-pane" data-fenix-pane="statistiche"><p class="fx-large">Statistiche</p><p class="fx-sub">'+(campoProduct?"Quadro di controllo in campo":"Quadro di controllo")+'</p>';
+  var html='<section class="persona-pane" data-fenix-pane="statistiche" data-fenix-slot="stats"><p class="fx-large">Statistiche</p><p class="fx-sub">'+(campoProduct?"Quadro di controllo in campo":"Quadro di controllo")+'</p>';
   html+='<div class="fx-jump"><span class="fx-hi-ico" aria-hidden="true">'+FX_DROP_MARK+'</span><div><b>Sintesi personale</b><p class="notes">Apri il dettaglio della tua attivita</p></div>'+FX_CHEVRON_MARK+'</div>';
   html+='<div class="fx-seg"><button type="button" class="on">Panoramica</button><button type="button">Confronto</button><button type="button">Classifica</button></div>';
   html+='<div class="fx-card"><div class="fx-toolbar"><p class="kicker">'+(campoProduct?"Riepilogo — mese corrente":"Riepilogo")+'</p><span class="fx-trend">+'+(n?12:0)+'%</span></div><div class="fx-grid">';
@@ -2149,9 +2149,9 @@ function renderPocketStats(){
   if(!n) html+='<p class="notes">Quando salvi una voce, i numeri si aggiornano da qui.</p>';
   return html+"</div></section>";
 }
-function renderPocketPersona(){
+/*fenix-slot:persona*/function renderPocketPersona(){
   var n=data.items.length;
-  var html='<section class="persona-pane" data-fenix-pane="persona"><p class="kicker">Dispositivo</p><h2>Storage locale</h2><p class="notes">Le voci restano sul dispositivo. Nessun profilo, nessun nome inventato.</p><div class="persona-facts">';
+  var html='<section class="persona-pane" data-fenix-pane="persona" data-fenix-slot="persona"><p class="kicker">Dispositivo</p><h2>Storage locale</h2><p class="notes">Le voci restano sul dispositivo. Nessun profilo, nessun nome inventato.</p><div class="persona-facts">';
   html+='<article class="card"><p class="kicker">Voci salvate</p><p class="home-count" data-count="'+n+'"><b>'+n+"</b></p></article>";
   html+='<article class="card"><p class="kicker">Collezione</p><p class="notes">'+COL+"</p></article>";
   html+='<article class="card"><p class="kicker">Archivio</p><p class="notes">locale, senza account</p></article></div>';
@@ -2267,7 +2267,7 @@ function renderMagazine(){
   return html;
 }`}
 function specName(){ return ${JSON.stringify(spec.name)}; }
-function renderForm(){
+/*fenix-slot:form*/function renderForm(){
 ${
   grammar.id === "agenda"
     ? `  var editing=editId?data.items.find(function(x){return x.id===editId;}):null;
@@ -2281,12 +2281,12 @@ ${
     luogo=parts[0]||"";
     cliente=parts.slice(1).join(" · ");
   }
-  return '<section class="card span" data-fenix-crud data-agenda-form="'+(editing?"edit":"create")+'"><p class="kicker">'+(editing?"Modifica":"Nuovo")+'</p><h2>'+(editing?"Aggiorna slot":formTitle)+'</h2><form id="fnew"><label for="n">Prestazione</label><input class="field" id="n" name="n" required placeholder="Es. Taglio e piega" value="'+title+'"><label for="ora">Ora</label><input class="field" id="ora" name="ora" type="time" required placeholder="09:30" value="'+(ora||"09:00")+'"><label for="data">Data</label><input class="field" id="data" name="data" type="date" required value="'+giorno+'"><label for="luogo">Luogo</label><input class="field" id="luogo" name="luogo" placeholder="Sala 1" value="'+luogo+'"><label for="cliente">Cliente</label><input class="field" id="cliente" name="cliente" placeholder="Nome del cliente" value="'+cliente+'"><p class="notes" data-fenix-form-error role="alert" hidden>Controlla i campi obbligatori.</p><button class="btn" type="button" data-act="save" style="margin-top:14px;width:100%">'+(editing?"Salva modifiche":cta)+'</button></form></section>';`
+  return '<section class="card span" data-fenix-crud data-fenix-slot="form" data-agenda-form="'+(editing?"edit":"create")+'"><p class="kicker">'+(editing?"Modifica":"Nuovo")+'</p><h2>'+(editing?"Aggiorna slot":formTitle)+'</h2><form id="fnew"><label for="n">Prestazione</label><input class="field" id="n" name="n" required placeholder="Es. Taglio e piega" value="'+title+'"><label for="ora">Ora</label><input class="field" id="ora" name="ora" type="time" required placeholder="09:30" value="'+(ora||"09:00")+'"><label for="data">Data</label><input class="field" id="data" name="data" type="date" required value="'+giorno+'"><label for="luogo">Luogo</label><input class="field" id="luogo" name="luogo" placeholder="Sala 1" value="'+luogo+'"><label for="cliente">Cliente</label><input class="field" id="cliente" name="cliente" placeholder="Nome del cliente" value="'+cliente+'"><p class="notes" data-fenix-form-error role="alert" hidden>Controlla i campi obbligatori.</p><button class="btn" type="button" data-act="save" style="margin-top:14px;width:100%">'+(editing?"Salva modifiche":cta)+'</button></form></section>';`
     : `  var editing=editId?data.items.find(function(x){return x.id===editId;}):null;
   var title=editing?editing.title:"";
   var det=editing?editing.kicker:"";
   var nota=editing?editing.note:"";
-  return '<section class="card span" data-fenix-crud><p class="kicker">'+(editing?"Modifica":"Nuovo")+'</p><h2>'+(editing?"Aggiorna voce":formTitle)+'</h2>'+(grammarId==="phone-seed"?'<p class="notes">Campi sul dispositivo. Conferma visibile dopo Salva.</p>':'')+'<form id="fnew"><label for="n">Nome</label><input class="field" id="n" name="n" required placeholder="Nome" value="'+title+'"><label for="k">Dettaglio</label><input class="field" id="k" name="k" placeholder="stato, taglia, ora" value="'+det+'"><label for="note">Nota</label><input class="field" id="note" name="note" placeholder="materia" value="'+nota+'"><p class="notes" data-fenix-form-error role="alert" hidden>Controlla i campi obbligatori.</p><button class="btn" type="button" data-act="save" style="margin-top:14px;width:100%">'+(editing?"Salva modifiche":cta)+'</button></form></section>';`
+  return '<section class="card span" data-fenix-crud data-fenix-slot="form"><p class="kicker">'+(editing?"Modifica":"Nuovo")+'</p><h2>'+(editing?"Aggiorna voce":formTitle)+'</h2>'+(grammarId==="phone-seed"?'<p class="notes">Campi sul dispositivo. Conferma visibile dopo Salva.</p>':'')+'<form id="fnew"><label for="n">Nome</label><input class="field" id="n" name="n" required placeholder="Nome" value="'+title+'"><label for="k">Dettaglio</label><input class="field" id="k" name="k" placeholder="stato, taglia, ora" value="'+det+'"><label for="note">Nota</label><input class="field" id="note" name="note" placeholder="materia" value="'+nota+'"><p class="notes" data-fenix-form-error role="alert" hidden>Controlla i campi obbligatori.</p><button class="btn" type="button" data-act="save" style="margin-top:14px;width:100%">'+(editing?"Salva modifiche":cta)+'</button></form></section>';`
 }
 }
 ${grammar.id === "phone-seed" ? `function renderHome(){ return renderPocketHome(); }` : `function renderList(){
@@ -2305,12 +2305,12 @@ function slotMarkup(e,i){
   var advanceLabel=AGENDA_ACTION_LABELS[st]||"Conferma";
   return '<article class="slot" data-id="'+e.id+'" data-day="'+(e.day||"")+'" data-state="'+(i===0?"on":"idle")+'" data-status="'+st+'"><time class="time" datetime="'+e.kicker+'">'+e.kicker+'</time><div class="slot-body"><h2>'+e.title+'</h2><p class="notes slot-detail">'+e.note+" · "+e.meta+'</p><span class="chip slot-status '+st+'">'+(AGENDA_STATUS_LABELS[st]||st)+'</span><div class="slot-actions"><button class="btn sm ghost" data-act="advance" data-id="'+e.id+'" aria-label="'+advanceLabel+' appuntamento">'+advanceLabel+'</button><button class="btn sm ghost" data-act="edit" data-id="'+e.id+'" aria-label="Modifica">'+AGENDA_EDIT_GLYPH+'</button><button class="btn sm ghost" data-act="del" data-id="'+e.id+'" aria-label="Archivia">'+AGENDA_DEL_GLYPH+'</button></div></div></article>';
 }
-function renderAgenda(){
+/*fenix-slot:agenda*/function renderAgenda(){
   hydrateAgenda();
   var focus=view===tabDefs[2].id?selectedDay:todayIso();
   var rows=data.items.filter(function(e){return e.day===focus;}).slice().sort(function(a,b){return String(a.kicker).localeCompare(String(b.kicker));});
   var html='<div class="day-head"><p class="kicker"><time datetime="'+focus+'">'+agendaDateLabel(focus)+'</time></p><h2 id="day-label">'+rows.length+" "+census+"</h2></div>";
-  html+='<div class="day-rail" data-fenix-rail="day" id="day-rail" role="tabpanel" aria-labelledby="day-label">';
+  html+='<div class="day-rail" data-fenix-rail="day" data-fenix-slot="agenda" id="day-rail" role="tabpanel" aria-labelledby="day-label">';
   if(!rows.length) html+=emptyBox();
   else rows.forEach(function(e,i){ html+=slotMarkup(e,i); });
   return html+"</div>"+renderForm();
@@ -2398,7 +2398,7 @@ function renderTool(){
   });
   return html;
 }`}
-function render(){
+/*fenix-slot:render*/function render(){
   if(grammarId==="agenda") hydrateAgenda();
   ensureSlots();
   renderTabs();
@@ -2427,7 +2427,7 @@ function render(){
 document.getElementById("tabs").addEventListener("click",function(e){
   var b=e.target.closest("[data-view]"); if(!b) return; view=b.getAttribute("data-view"); render();
 });
-document.getElementById("root").addEventListener("click",function(e){
+/*fenix-slot:actions*/document.getElementById("root").addEventListener("click",function(e){
   var chip=e.target.closest(".fx-pills button, .fx-filters button, .fx-seg button, .fx-toggle button");
   if(chip && chip.parentNode){
     var sibs=chip.parentNode.querySelectorAll("button");

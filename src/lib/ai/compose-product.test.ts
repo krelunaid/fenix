@@ -27,7 +27,14 @@ import { contrastRatio } from "../projects/visual-quality.ts";
 import { productIconSvg } from "../projects/product-icon.ts";
 import { MAX_ARTIFACT_CHARS } from "../../../workers/visual/artifact-context.mjs";
 import { nativeStyleAssignsPalette } from "../projects/native-app-style.ts";
-import { COMPOSED_PLAN_DEGRADED_LOG } from "../../../workers/visual/composed-protocol.mjs";
+import {
+  COMPOSED_BUILD_FIND_EXAMPLES,
+  COMPOSED_BUILD_SYSTEM,
+  COMPOSED_PLAN_DEGRADED_LOG,
+  composedFindStatus,
+  composedSeedAnchors,
+} from "../../../workers/visual/composed-protocol.mjs";
+import { applyComposedBuildPlan, composedBaseSha } from "../../../workers/visual/composed-build.mjs";
 import { isComposedVisualArtifact } from "../../../workers/visual/visual-style.mjs";
 import {
   canKeepComposedSeedAfterPolishError,
@@ -827,7 +834,7 @@ describe("graphic pipeline prompt→plan→generate→visual→QA", () => {
     assert.match(system.html, /data-chroma="/);
     assert.match(system.html, /minmax\(0,1fr\)/);
     assert.doesNotMatch(system.html, /min-height:calc\(100dvh - 148px\)/);
-    const bootHome = system.html.match(/<main id="root">([\s\S]*?)<\/main>/)?.[1] || "";
+    const bootHome = system.html.match(/<main id="root"[^>]*>([\s\S]*?)<\/main>/)?.[1] || "";
     assert.match(bootHome, /data-fenix-pane="home"/);
     assert.match(bootHome, /home-aside/);
     assert.match(bootHome, /Panoramica/);
@@ -1059,5 +1066,103 @@ describe("graphic pipeline prompt→plan→generate→visual→QA", () => {
         `${brief.slice(0, 48)}… ${html.length} > ${MAX_ARTIFACT_CHARS}`,
       );
     }
+  });
+});
+
+describe("composed create find/replace anchors", () => {
+  const waterBrief =
+    formatPrefix("app") +
+    "App acqua bottiglia: home con botte/serbatoio acqua, livello, e tab Ordina. Stile iPhone.";
+  const campoBrief =
+    formatPrefix("app") +
+    "NordAcqua: consegne acqua in campo, gestione dipendenti, storico e statistiche, stile Apple.";
+  const phoneBrief =
+    formatPrefix("app") +
+    "Lista in tasca: cose da fare operative, tipo system-ui iPhone-like, font di sistema primario, tab Home Aggiungi Persona, elenco e CRUD.";
+  const agendaBrief = formatPrefix("app") + "Agenda studio: appuntamenti e prenotazioni, stile iPhone.";
+
+  const naiveFinds = [
+    '<div class="fx-board" aria-label="Sintesi">',
+    '<div class="fx-tank">',
+    "data-fenix-pane=\"home\"",
+    "M26 36C26 22 214 22 214 36V168",
+    "M60 26c12.4 17.2 19.4 29.6",
+  ];
+
+  it("stamps unique fenix-slot anchors on water, campo, phone and agenda seeds", () => {
+    for (const brief of [waterBrief, campoBrief, phoneBrief, agendaBrief]) {
+      const html = composeProduct(brief).html;
+      const anchors = composedSeedAnchors(html);
+      assert.ok(anchors.includes("/*fenix-slot:save*/"), brief);
+      assert.ok(anchors.includes("/*fenix-slot:form*/"), brief);
+      assert.ok(anchors.includes("/*fenix-slot:render*/"), brief);
+      assert.ok(anchors.includes('data-fenix-slot="root"'), brief);
+      assert.ok(anchors.includes('data-fenix-slot="form"'), brief);
+      for (const example of COMPOSED_BUILD_FIND_EXAMPLES) {
+        assert.equal(composedFindStatus(html, example).usable, true, `${brief} ${example}`);
+        assert.match(COMPOSED_BUILD_SYSTEM, new RegExp(example.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+      }
+    }
+    const water = composeProduct(waterBrief).html;
+    assert.ok(composedSeedAnchors(water).includes("/*fenix-slot:botte*/"));
+    assert.ok(composedSeedAnchors(water).includes("/*fenix-slot:home*/"));
+    assert.ok(composedSeedAnchors(water).includes('data-fenix-slot="home"'));
+    assert.match(water, /data-fenix-slot="home-boot"/);
+    assert.match(water, /class='fx-botte'/);
+    assert.equal(composedFindStatus(water, "/*fenix-slot:botte*/function fxBotteSvg(pct){").usable, true);
+    const boot = water.match(/<main id="root"[^>]*>([\s\S]*?)<\/main>/)?.[1] || "";
+    assert.doesNotMatch(boot, /fx-board|fx-tank|fx-botte/);
+    assert.match(boot, /Panoramica/);
+    assert.match(boot, /Niente in lista/);
+  });
+
+  it("applies hash-bound slot plans on water/campo without rewriting the botte or falling back to full HTML", () => {
+    for (const brief of [waterBrief, campoBrief]) {
+      const html = composeProduct(brief).html;
+      const find = "/*fenix-slot:commit*/function commitForm(f){";
+      const replace = "/*fenix-slot:commit*/function commitForm(f){ /* acqua: litri dal brief */";
+      const next = applyComposedBuildPlan(html, {
+        version: 1,
+        baseSha256: composedBaseSha(html),
+        changes: [{ find, replace }],
+      });
+      assert.equal(next.split("<body")[0], html.split("<body")[0]);
+      assert.ok(next.includes(replace));
+      assert.match(next, /class='fx-botte'/);
+      assert.match(next, /function fxBotteSvg\(pct\)\{/);
+      assert.doesNotMatch(next, /<!doctype html>[\s\S]*<!doctype html>/i);
+      assert.throws(
+        () => applyComposedBuildPlan(html, {
+          version: 1,
+          baseSha256: composedBaseSha(html),
+          changes: [{ find: "M26 36C26 22 214 22 214 36V168", replace: "M26 36C26 22 214 22 214 36V168 /* no */" }],
+        }),
+        /ambiguo/,
+      );
+    }
+  });
+
+  it("raises usable find rate on water by slimming duplicated boot chrome and exposing slots", () => {
+    const water = composeProduct(waterBrief).html;
+    const slotFinds = [
+      ...COMPOSED_BUILD_FIND_EXAMPLES,
+      "/*fenix-slot:botte*/function fxBotteSvg(pct){",
+      "/*fenix-slot:home*/function renderPocketHome(){",
+      "/*fenix-slot:tank*/function fxTankMarkup(n){",
+      "/*fenix-slot:commit*/function commitForm(f){",
+      'data-fenix-slot="form"',
+    ];
+    const naiveOk = naiveFinds.filter((find) => composedFindStatus(water, find).usable).length;
+    const slotOk = slotFinds.filter((find) => composedFindStatus(water, find).usable).length;
+    assert.equal(slotOk, slotFinds.length, `slot finds ${slotOk}/${slotFinds.length}`);
+    assert.ok(slotOk > naiveOk, `expected slot finds ${slotOk} > naive ${naiveOk}`);
+    assert.equal(composedFindStatus(water, '<div class="fx-board" aria-label="Sintesi">').usable, true);
+    assert.equal(composedFindStatus(water, '<div class="fx-tank">').usable, true);
+    assert.equal(composedFindStatus(water, "M26 36C26 22 214 22 214 36V168").usable, false);
+    assert.equal(composedFindStatus(water, "M60 26c12.4 17.2 19.4 29.6").usable, false);
+    assert.ok(
+      naiveOk / naiveFinds.length <= 0.6,
+      `naive water finds should stay lossy (${naiveOk}/${naiveFinds.length}) so slots remain the reliable path`,
+    );
   });
 });
