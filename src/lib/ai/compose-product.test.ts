@@ -23,6 +23,7 @@ import { appIdentityIcon, appIdentityLabel } from "../projects/app-identity.ts";
 import { prepareSrcDoc } from "../projects/color-scheme.ts";
 import { createBuildRequest, isComposedCreation } from "./build-request.ts";
 import { contrastRatio } from "../projects/visual-quality.ts";
+import { MAX_ARTIFACT_CHARS } from "../../../workers/visual/artifact-context.mjs";
 import { nativeStyleAssignsPalette } from "../projects/native-app-style.ts";
 
 describe("controller build request preserves generated artifacts", () => {
@@ -827,6 +828,9 @@ describe("graphic pipeline prompt→plan→generate→visual→QA", () => {
     assert.match(product.html, /function renderPocketStats/);
     assert.match(product.html, /fx-board/);
     assert.match(product.html, /fx-tank/);
+    assert.match(product.html, /fxBotteSvg/);
+    assert.match(product.html, /fx-botte/);
+    assert.match(product.html, /fx-wave/);
     assert.match(product.html, /fx-inverse/);
     assert.match(product.html, /fx-toggle/);
     assert.match(product.html, /Obiettivo raggiunto\. Bene\./);
@@ -876,5 +880,64 @@ describe("graphic pipeline prompt→plan→generate→visual→QA", () => {
     assert.match(water.html, /data-fenix-campo/);
     assert.doesNotMatch(water.html, /<html[^>]*data-fenix-market/);
     assert.equal(water.tokens.palette.accent.toLowerCase(), "#0ea5e9");
+  });
+
+  it("teaches luxe craft without cloning ActStage or forcing gold on water, market or desk", () => {
+    const product = composeProduct(
+      `${formatPrefix("app")}Palco: scene e recitazione, prove e repertorio, stile Apple.`,
+    );
+    assert.equal(product.grammar.id, "phone-seed");
+    assert.match(product.html, /data-fenix-luxe/);
+    assert.match(product.html, /data-craft-mode="luxe"/);
+    assert.match(product.html, /data-craft-rhythm="luxe"/);
+    assert.match(product.html, /<span>Scena<\/span>/);
+    assert.match(product.html, /<span>Prove<\/span>/);
+    assert.match(product.html, /fx-scene/);
+    assert.match(product.html, /Repertorio/);
+    assert.match(product.html, /#D4AF37/i);
+    assert.match(product.html, /#0[Dd]0[Dd]11/);
+    assert.match(product.html, /--fx-t-display:46px/);
+    assert.match(product.html, /Fraunces/);
+    assert.doesNotMatch(product.html, /<html[^>]*data-fenix-campo/);
+    assert.doesNotMatch(product.html, /<html[^>]*data-fenix-market/);
+    assert.doesNotMatch(product.html, /Ciao/);
+    assert.doesNotMatch(product.html, /ActStage|Teleprompter|Gamification|LikeSwift/);
+    assert.doesNotMatch(product.html, /#f5f5f7|#007aff|#0071e3/i);
+    const water = composeProduct(
+      `${formatPrefix("app")}NordAcqua: consegne acqua in campo, gestione dipendenti, storico e statistiche, stile Apple.`,
+    );
+    assert.match(water.html, /data-craft-mode="utility"/);
+    assert.doesNotMatch(water.html, /<html[^>]*data-fenix-luxe/);
+    assert.equal(water.tokens.palette.accent.toLowerCase(), "#0ea5e9");
+    const market = composeProduct(
+      `${formatPrefix("app")}Vicina: marketplace di lavoretti e bacheca incarichi, stile Apple.`,
+    );
+    assert.match(market.html, /data-craft-mode="marketplace"/);
+    assert.doesNotMatch(market.html, /<html[^>]*data-fenix-luxe/);
+    const desk = composeProduct(
+      `${formatPrefix("dashboard")}Studio Nord: gestionale per commercialisti, fatture e F24.`,
+    );
+    assert.equal(desk.grammar.id, "ops-desk");
+    assert.match(desk.html, /data-craft-mode="desk"/);
+    assert.doesNotMatch(desk.html, /<html[^>]*data-fenix-luxe/);
+    assert.notEqual(desk.tokens.palette.bg.toLowerCase(), "#0d0d11");
+  });
+
+  it("keeps composed phone apps under the Edge artifact cap", () => {
+    const briefs = [
+      "FORMATO: app. kind=app. Agenda studio: appuntamenti e prenotazioni, stile iPhone.",
+      "FORMATO: app telefono 390×844. kind=app. Tab in basso, 5 schermate. NON un sito.\n\nmi crei un app da parrucchieri stile Barber shop",
+      `${formatPrefix("app")}NordAcqua: consegne acqua in campo, gestione dipendenti, storico e statistiche, stile Apple.`,
+      `${formatPrefix("app")}Vicina: marketplace di lavoretti e bacheca incarichi, stile Apple.`,
+      `${formatPrefix("app")}Palco: scene e recitazione, prove e repertorio, stile Apple.`,
+      `${formatPrefix("app")}Emporio Luce: negozio di lampade da tavolo, stile Apple.`,
+    ];
+    for (const brief of briefs) {
+      const html = composeProduct(brief).html;
+      assert.ok(
+        html.length <= MAX_ARTIFACT_CHARS,
+        `${brief.slice(0, 48)}… ${html.length} > ${MAX_ARTIFACT_CHARS}`,
+      );
+    }
   });
 });

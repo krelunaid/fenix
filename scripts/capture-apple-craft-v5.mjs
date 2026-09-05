@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * v5 proofs: water vs marketplace vs shop — shared slots, distinct palettes.
+ * v5 proofs: water vs marketplace vs shop vs luxe — one slot system, four modes.
  * composeProduct + prepareSrcDoc + Playwright. No live Grok.
  */
 import { mkdirSync, writeFileSync } from "node:fs";
@@ -37,6 +37,10 @@ const market = prepare(
 const shop = prepare(
   formatPrefix("app") + "Emporio Luce: negozio di lampade da tavolo, stile Apple.",
   "emporio-v5",
+);
+const luxe = prepare(
+  formatPrefix("app") + "Palco: scene e recitazione, prove e repertorio, stile Apple.",
+  "palco-v5",
 );
 
 async function shot(page, name) {
@@ -75,6 +79,28 @@ try {
   const waterPage = await isolatedPage(browser, { viewport: { width: 390, height: 844 } });
   await boot(waterPage, water, 5);
   await shot(waterPage, "01-water-home.png");
+  const tank = waterPage.locator(".fx-hero");
+  await tank.waitFor({ state: "visible", timeout: 8000 });
+  const box = await tank.boundingBox();
+  if (box) {
+    const file = join(outDir, "06-water-tank-close.png");
+    const buf = await waterPage.screenshot({
+      type: "png",
+      clip: {
+        x: Math.max(0, box.x - 8),
+        y: Math.max(0, box.y - 8),
+        width: Math.min(390, box.width + 16),
+        height: Math.min(844, box.height + 16),
+      },
+    });
+    writeFileSync(file, buf);
+    try {
+      writeFileSync(join(artDir, "06-water-tank-close.png"), buf);
+    } catch {
+      /* artifacts volume can flake */
+    }
+    console.log("shot", file);
+  }
   await waterPage.close();
 
   const marketPage = await isolatedPage(browser, { viewport: { width: 390, height: 844 } });
@@ -90,6 +116,11 @@ try {
   await boot(shopPage, shop, 2);
   await shot(shopPage, "04-shop-home.png");
   await shopPage.close();
+
+  const luxePage = await isolatedPage(browser, { viewport: { width: 390, height: 844 } });
+  await boot(luxePage, luxe, 3);
+  await shot(luxePage, "05-luxe-home.png");
+  await luxePage.close();
 } finally {
   await browser.close();
 }
