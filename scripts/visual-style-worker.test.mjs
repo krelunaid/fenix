@@ -6,7 +6,7 @@ import { setTimeout as delay } from "node:timers/promises";
 import { test } from "node:test";
 import { applyVisualStylePlan } from "../workers/visual/visual-style.mjs";
 
-test("automatic composed polish rejects unsafe, absent and ineffective style plans", { timeout: 30000 }, async () => {
+test("automatic composed polish keeps the seed when style plans stay unsafe, absent or ineffective", { timeout: 30000 }, async () => {
   const reservation = createServer();
   reservation.listen(0, "127.0.0.1");
   await once(reservation, "listening");
@@ -45,11 +45,14 @@ test("automatic composed polish rejects unsafe, absent and ineffective style pla
         if (job.status !== "run") break;
         await delay(50);
       }
-      const success = mode === 'valid' || mode === 'font-recovery';
-      assert.equal(job.status, success ? 'ok' : 'err', mode);
-      if (!success) {
-        assert.match(job.error, mode === 'unsafe' ? /Stile non consentito: display/ : mode === 'absent' ? /Target visuale assente/ : /nessun effetto visibile/);
-        assert.equal(job.html, null);
+      const applied = mode === 'valid' || mode === 'font-recovery';
+      assert.equal(job.status, 'ok', mode);
+      assert.equal(job.error, null);
+      if (!applied) {
+        assert.equal(job.html, artifact, mode);
+        assert.match(job.log.join(" "), /Rifinitura visuale saltata; seed composto invariato/);
+        assert.match(job.log.join(" "), mode === 'unsafe' ? /Stile non consentito: display/ : mode === 'absent' ? /Target visuale assente/ : /nessun effetto visibile/);
+        assert.doesNotMatch(job.html, /data-fenix-visual-style/);
       } else {
         assert.equal(job.html, applyVisualStylePlan(artifact, { version: 1, rules: [{ selector: ".brand", declarations: { "font-size": "28px" } }] }));
         assert.match(job.log.join(" "), /palette preservati/);

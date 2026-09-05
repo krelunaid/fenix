@@ -25,6 +25,12 @@ import { createBuildRequest, isComposedCreation } from "./build-request.ts";
 import { contrastRatio } from "../projects/visual-quality.ts";
 import { MAX_ARTIFACT_CHARS } from "../../../workers/visual/artifact-context.mjs";
 import { nativeStyleAssignsPalette } from "../projects/native-app-style.ts";
+import { COMPOSED_PLAN_DEGRADED_LOG } from "../../../workers/visual/composed-protocol.mjs";
+import { isComposedVisualArtifact } from "../../../workers/visual/visual-style.mjs";
+import {
+  canKeepComposedSeedAfterPolishError,
+  shouldSkipComposedPolish,
+} from "../../../workers/visual/visual-style-keep.mjs";
 
 describe("controller build request preserves generated artifacts", () => {
   it("creates an editable sector app icon in the first phone seed without provider calls", () => {
@@ -135,6 +141,22 @@ describe("controller build request preserves generated artifacts", () => {
       assert.equal(isComposedCreation({kind}), false);
     }
     assert.equal(isComposedCreation({operation:"create",kind:"site"}), false);
+  });
+  it("keeps a usable acqua-bottiglia seed when visual polish rejects font-size after create fallback", () => {
+    const composed = composeProduct(formatPrefix("app") + "App acqua bottiglia: home con botte/serbatoio acqua, livello, e tab Ordina. Stile iPhone.");
+    assert.equal(isComposedVisualArtifact(composed.html), true);
+    assert.equal(shouldSkipComposedPolish({
+      html: composed.html,
+      buildLog: [COMPOSED_PLAN_DEGRADED_LOG, "QA · saltato"],
+    }), true);
+    assert.equal(canKeepComposedSeedAfterPolishError(
+      "Stile non consentito: font-size. Tocca Riprendi rifinitura.",
+      { html: composed.html },
+    ), true);
+    assert.equal(canKeepComposedSeedAfterPolishError(
+      "Stile non consentito: font-size",
+      { instruction: "Cambia la tab Ordina", html: composed.html },
+    ), false);
   });
   const briefs = [
     "Agenda studio: appuntamenti e prenotazioni, stile iPhone.",

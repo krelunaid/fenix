@@ -38,6 +38,11 @@ import {
   looksLikeIconInstruction,
   refundIconFailure,
 } from "../../../workers/visual/icon-patch.mjs";
+import {
+  canKeepComposedSeedAfterPolishError,
+  shouldSkipComposedPolish,
+  VISUAL_STYLE_SKIPPED_LOG,
+} from "../../../workers/visual/visual-style-keep.mjs";
 import { runIconRevisionFlow } from "@/lib/projects/icon-build";
 
 const inflight = new Set<string>();
@@ -591,6 +596,25 @@ async function polishDraft(
       throw err instanceof Error ? err : new Error(workerError);
     }
     if (/Riprendi rifinitura/i.test(workerError)) {
+      if (canKeepComposedSeedAfterPolishError(workerError, { instruction, html: lastValidHtml })) {
+        store.updateProject(projectId, {
+          html: lastValidHtml,
+          status: "building",
+          error: undefined,
+          ...clearVisualJobPatch(),
+          buildLog: uniqueLogs([
+            ...dropLiveJobLogs(useProjectStore.getState().getProject(projectId)?.buildLog ?? []),
+            VISUAL_STYLE_SKIPPED_LOG,
+            workerError.replace(/\.\s*Tocca Riprendi rifinitura\.?$/i, ""),
+          ]),
+        });
+        store.addMessage(projectId, {
+          id: uid(),
+          role: "assistant",
+          content: "Rifinitura visuale non applicata. Resta la bozza valida. Pubblica resta chiusa finché non è pronto.",
+        });
+        return lastValidHtml;
+      }
       abandonVisualJob(projectId, workerError);
       throw err instanceof Error ? err : new Error(workerError);
     }
@@ -925,27 +949,40 @@ export async function runBuild(projectId: string, instruction?: string) {
           });
           return;
         }
+        const polishInstruction =
+          instruction ||
+          (kind === "site" || kind === "landing" ? SITE_POLISH_INSTRUCTION : instruction);
+        const skipComposedPolish = shouldSkipComposedPolish({
+          instruction: polishInstruction,
+          html: latest.html,
+          buildLog: latest.buildLog,
+        });
         store.updateProject(projectId, {
           status: "building",
-          buildLog: [...(useProjectStore.getState().getProject(projectId)?.buildLog ?? []), "Motore visivo in sottofondo"],
+          buildLog: uniqueLogs([
+            ...(useProjectStore.getState().getProject(projectId)?.buildLog ?? []),
+            skipComposedPolish ? VISUAL_STYLE_SKIPPED_LOG : "Motore visivo in sottofondo",
+          ]),
         });
         store.addMessage(projectId, {
           id: uid(),
           role: "assistant",
-          content: instruction
-            ? "Bozza valida in anteprima. Il motore visivo rifinisce (icone, 5–10 min). Pubblica resta chiusa finché non è pronto."
-            : "Bozza valida in anteprima. Il motore visivo rifinisce in sottofondo. Pubblica resta chiusa finché non è pronto.",
+          content: skipComposedPolish
+            ? "Bozza valida in anteprima. Rifinitura visuale saltata. Resta la bozza valida. Pubblica resta chiusa finché non è pronto."
+            : instruction
+              ? "Bozza valida in anteprima. Il motore visivo rifinisce (icone, 5–10 min). Pubblica resta chiusa finché non è pronto."
+              : "Bozza valida in anteprima. Il motore visivo rifinisce in sottofondo. Pubblica resta chiusa finché non è pronto.",
         });
-        let lastValidHtml = await polishDraft(
-          projectId,
-          project.prompt,
-          latest.html,
-          instruction ||
-            (kind === "site" || kind === "landing"
-              ? SITE_POLISH_INSTRUCTION
-              : instruction),
-          epoch,
-        );
+        let lastValidHtml = latest.html;
+        if (!skipComposedPolish) {
+          lastValidHtml = await polishDraft(
+            projectId,
+            project.prompt,
+            latest.html,
+            polishInstruction,
+            epoch,
+          );
+        }
 
         if (!(instruction || isIOS()) && phone) {
           const look = async (label: string) => {

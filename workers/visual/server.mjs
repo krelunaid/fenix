@@ -11,7 +11,7 @@ import {
 } from "./composed-build.mjs";
 import { restoreHome, keepScripts } from "./artifact-restore.mjs";
 import { isComposedVisualArtifact, VISUAL_STYLE_SELECTORS } from "./visual-style.mjs";
-import { repairVisualStyle } from "./visual-style-repair.mjs";
+import { repairVisualStyleOrKeep, VISUAL_STYLE_SKIPPED_LOG } from "./visual-style-repair.mjs";
 import { artifactContext, completeResponseText, MAX_ARTIFACT_CHARS } from "./artifact-context.mjs";
 import {
   TAB_IDS,
@@ -695,7 +695,7 @@ async function auditTab(page, index) {
 }
 
 async function polishComposedStyle(apiKey, prompt, html) {
-  const result = await repairVisualStyle(html, async feedback => {
+  const result = await repairVisualStyleOrKeep(html, async feedback => {
   const response = await fetch(XAI, {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
@@ -721,6 +721,12 @@ Scegli poche modifiche coerenti col dominio: gerarchia, leggibilità, densità m
   if (!response.ok) throw new Error(`xAI ${response.status}`);
   return completeResponseText(await response.json());
   });
+  if (result.skipped) {
+    return {
+      html: result.html, meta: {}, files: [],
+      log: [VISUAL_STYLE_SKIPPED_LOG, result.reason].filter(Boolean),
+    };
+  }
   return {
     html: result.html, meta: {}, files: [],
     log: [...(result.repairs ? [`Piano visuale corretto (${result.repairs}/2 ripari)`] : []), "Rifinitura visuale strutturata: tipografia e spazi", "HTML, dati, script, icone e palette preservati"],
