@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { parseBuildOutput, type BuildResult } from "./parse";
 import { FENIX_MODEL, getXaiApiKey, XAI_CHAT_COMPLETIONS_URL, XAI_MISSING_KEY_ERROR } from "./model";
 import { SYSTEM_PROMPT } from "./prompt";
-import { kindFromPrompt } from "@/lib/projects/infer";
+import { inferKind, isPhoneKind, kindFromPrompt } from "@/lib/projects/infer";
 import { contractInstruction, planContract } from "./build-contract";
 import { composeProduct } from "./compose-product";
 import { sanitizePaletteHistory, type PaletteRecord } from "@/lib/projects/palette-engine";
@@ -42,12 +42,17 @@ export const generateBuild = createServerFn({ method: "POST" })
       return { ok: false, error: XAI_MISSING_KEY_ERROR };
     }
 
-    const composed = composeProduct(data.prompt, { recent: data.recentPalettes });
+    const kind = kindFromPrompt(data.prompt) ?? inferKind(data.prompt);
+    const composed = isPhoneKind(kind) ? composeProduct(data.prompt, { recent: data.recentPalettes }) : null;
     const userParts = [
       `BRIEF:\n${data.prompt}`,
       contractInstruction(planContract(data.prompt)),
-      composed.polish,
-      `VINCOLO UNICITÀ: prodotto visivamente unico, nato dal brief. Token cromatici del contratto. Vietato clone #f5f5f7 + Manrope + hero centrato. Vietato beige/terracotta se il brief non è ceramica. Grammatica ${composed.grammar.id}, non la stessa phone-shell.`,
+      composed
+        ? composed.polish
+        : "Gestionale/sito desktop: elenco, filtri, form, numeri. Niente tabbar iPhone, niente scheletro telefono.",
+      composed
+        ? `VINCOLO UNICITÀ: prodotto visivamente unico, nato dal brief. Token cromatici del contratto. Vietato clone #f5f5f7 + Manrope + hero centrato. Vietato beige/terracotta se il brief non è ceramica. Grammatica ${composed.grammar.id}, non la stessa phone-shell.`
+        : "VINCOLO UNICITÀ: prodotto visivamente unico, nato dal brief. Colori dal mestiere e dal brief esplicito, non una palette di casa. Niente tabbar iPhone.",
     ];
     if (data.html) {
       userParts.push(`HTML ATTUALE:\n${data.html}`);

@@ -10,6 +10,7 @@ import { prepareSrcDoc } from "./color-scheme.ts";
 import { waitForFenixReady } from "../../../scripts/fenix-ready.mjs";
 import { formatPrefix } from "./infer.ts";
 import { composeProduct } from "../ai/compose-product.ts";
+import { parseBuildOutput } from "../ai/parse.ts";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const SHOTS = join(here, "fixtures/shots/agenda-runtime");
@@ -19,6 +20,47 @@ const VIEWPORTS = [
   ["T", { width: 768, height: 1024 }],
   ["M", { width: 390, height: 844 }],
 ] as const;
+
+it("Barber identity survives polish parsing across D/T/M/320 without the rejected raspberry draft", async () => {
+  const brief = formatPrefix("app") + "mi crei un app da parrucchieri stile Barber shop";
+  const product = composeProduct(brief);
+  const parsed = parseBuildOutput(`<<<META>>>\n{}\n<<<HTML>>>\n${product.html}\n<<<END>>>`,"app",brief,{name:"Barber",palette:product.tokens.palette})!;
+  assert.notEqual(parsed.palette.accent.toLowerCase(),"#b51246");
+  assert.doesNotMatch(parsed.html,/#b51246|#b01e47|#a61d4c/i);
+  const browser = await launchChromium();
+  const output = "/tmp/fenix-barber-native-brand-shots";
+  mkdirSync(output,{recursive:true});
+  try {
+    for(const [id,viewport] of [...VIEWPORTS,["S",{width:320,height:568}] as const]) {
+      const page = await isolatedPage(browser,{viewport});const errors:string[]=[];
+      page.on("pageerror",e=>errors.push(e.message));
+      await page.setContent(`<body style="margin:0"><iframe id="f" style="border:0;width:100vw;height:100dvh"></iframe><script>addEventListener('message',e=>{const m=e.data;if(m?.t==='fenix-db')e.source.postMessage({t:'fenix-db',id:m.id,v:m.op==='load'?null:{ok:true}},'*')})</script>`);
+      await page.locator("#f").evaluate((el,src)=>(el as HTMLIFrameElement).srcdoc=src,prepareSrcDoc(parsed.html,parsed.palette,"brand-"+id,"app"));
+      const frame=page.frameLocator("#f");await frame.locator("[data-fenix-ready]").waitFor({timeout:8000});
+      const mark=frame.locator('header [data-fenix-id="icon:app"]');
+      assert.equal(await mark.count(),1);
+      assert.equal(await mark.isVisible(),true);
+      const dimensions=await mark.boundingBox();assert.ok(dimensions && dimensions.width>=44 && dimensions.height>=44);
+      const markBg=await mark.evaluate(el=>getComputedStyle(el).backgroundColor);
+      const accent=await frame.locator("html").evaluate(()=>getComputedStyle(document.documentElement).getPropertyValue("--accent").trim());
+      assert.notEqual(markBg.replace(/\s/g,""),"rgb(181,18,70)");
+      assert.notEqual(accent.toLowerCase(),"#b51246");
+      const timeColor=await frame.locator(".slot .time").first().evaluate(el=>getComputedStyle(el).color);
+      const fg=await frame.locator("html").evaluate(()=>getComputedStyle(document.documentElement).getPropertyValue("--fg").trim());
+      assert.ok(timeColor);
+      assert.ok(fg);
+      assert.equal(await frame.locator("header h1").innerText(),"Barber");
+      await page.screenshot({path:join(output,`${id}-home.png`)});
+      const count=await frame.locator("nav#tabs button").count();
+      for(let i=0;i<count;i++){
+        await frame.locator("nav#tabs button").nth(i).click();
+        assert.equal(await mark.isVisible(),true);
+        assert.equal(await frame.locator("html").evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),false);
+      }
+      assert.deepEqual(errors,[]);await page.close();
+    }
+  } finally {await browser.close();}
+});
 
 it("native agenda titles and action labels fit D/T/M/320 and follow the persisted state cycle", async () => {
   const brief = `${formatPrefix("app")}Agenda appuntamenti e prenotazioni, stile Apple.`;
@@ -212,7 +254,14 @@ describe("Agenda generated runtime D/T/M", () => {
           }
           const expected = Number(await days.nth(2).locator("[data-count]").getAttribute("data-count"));
           assert.equal(slotCount, expected, `${vp} slot count matches day`);
-          assert.match(await page.locator(".day-head .kicker").innerText(), new RegExp(String(thirdIso)));
+          const [y, mo, d] = String(thirdIso).split("-");
+          const italian = new Date(Number(y), Number(mo) - 1, Number(d), 12).toLocaleDateString("it-IT", {
+            weekday: "long",
+            day: "numeric",
+            month: "long",
+          });
+          assert.match(await page.locator(".day-head .kicker").innerText(), new RegExp(italian.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i"));
+          assert.doesNotMatch(await page.locator(".day-head .kicker").innerText(), /\d{4}-\d{2}-\d{2}/);
           await assertLabelledBy(page, `${vp}-week`);
           await waitKitSweep(page);
           await assertEmptyContract(page, slotCount > 0 ? "data" : "empty", `${vp}-week`);
@@ -514,7 +563,8 @@ describe("Agenda calendar edges Fri/Sat/Sun, validation, date keep", () => {
       const satPage = await openClock(2026, 9, 5, "agenda-clock-sat");
       try {
         await satPage.locator('nav button[data-view="oggi"]').click();
-        assert.match(await satPage.locator(".day-head .kicker").innerText(), /2026-09-05/);
+        assert.equal(await satPage.locator(".day-head time").getAttribute("datetime"), "2026-09-05");
+        assert.match(await satPage.locator(".day-head time").innerText(), /sabato 5 settembre/);
         await assertLabelledBy(satPage, "sat-oggi");
         await satPage.locator('nav button[data-view="settimana"]').click();
         assert.equal(await satPage.locator('.week-day[aria-selected="true"]').getAttribute("data-day"), saturdayIso);
@@ -527,7 +577,8 @@ describe("Agenda calendar edges Fri/Sat/Sun, validation, date keep", () => {
       const sunPage = await openClock(2026, 9, 6, "agenda-clock-sun");
       try {
         await sunPage.locator('nav button[data-view="oggi"]').click();
-        assert.match(await sunPage.locator(".day-head .kicker").innerText(), /2026-09-06/);
+        assert.equal(await sunPage.locator(".day-head time").getAttribute("datetime"), "2026-09-06");
+        assert.match(await sunPage.locator(".day-head time").innerText(), /domenica 6 settembre/);
         await sunPage.locator('nav button[data-view="settimana"]').click();
         assert.equal(await sunPage.locator('.week-day[aria-selected="true"]').getAttribute("data-day"), sundayIso);
       } finally {

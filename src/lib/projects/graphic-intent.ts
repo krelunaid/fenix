@@ -122,7 +122,7 @@ export function graphicIntentFromBrief(brief: string): GraphicIntent {
   return { type: "domain", chrome, face: null };
 }
 
-/** Distinguish style requests from Apple Pay, reseller names and font-only briefs. */
+/** Head-only structure layer. Never a domain palette and never a shop-name synonym. */
 export function wantsNativeAppStyle(brief: string): boolean {
   return (kindFromPrompt(brief) ?? inferKind(brief)) === "app" && NATIVE_APP_RE.test(withoutDenied(brief));
 }

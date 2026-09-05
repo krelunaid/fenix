@@ -240,7 +240,7 @@ document.getElementById('main').innerHTML = 'x';
     assert.match(piramide, /data-craft-nav="1"/);
     assert.match(piramide, /data-icon-grid="24"/);
     assert.match(piramide, /overflow="visible"/);
-    assert.match(piramide, /stroke-width="1\.7"/);
+    assert.match(piramide, /stroke-width="1\.9"/);
     const agenda = ["Oggi", "Nuovo", "Settimana", "Archivio"].map((label, i) =>
       craftNavIcon({ id: label.toLowerCase(), label }, i),
     );
@@ -297,6 +297,43 @@ document.getElementById('main').innerHTML = 'x';
     assert.match(elenco, /M9\.6 8\.6h4\.8M9\.6 12h4\.8/);
     assert.notEqual(elenco, craftNavIcon({ id: "home", label: "Home" }));
     assert.notEqual(elenco, person);
+  });
+
+  it("gives field-product tabs four distinct glyphs for home, gestione, storico and stats", () => {
+    const labels = ["Home", "Registra", "Storico", "Statistiche", "Gestione"];
+    const svgs = labels.map((label) => craftNavIcon({ id: "new", label }));
+    assert.equal(new Set(svgs).size, 5);
+    assert.equal(svgs[0], craftNavIcon({ id: "home", label: "Home" }));
+    assert.match(svgs[2]!, /M12 8\.6v4l2\.6 1\.5/);
+    for (const svg of svgs) {
+      assert.equal(isLetterAIcon(svg), false);
+      assert.equal(isAppleChromeSvg(svg), false);
+    }
+  });
+
+  it("gives accountant and shop functions original glyphs, not Barber shears or a generic notebook", () => {
+    const fiscal = ["Fatture", "Clienti", "Bilancio", "Pratiche"].map((label) =>
+      craftNavIcon({ id: "new", label }),
+    );
+    assert.equal(new Set(fiscal).size, 4, "fiscal tabs must be four distinct glyphs");
+    assert.match(fiscal[0]!, /M8\.8 8\.6h6\.4/);
+    assert.match(fiscal[2]!, /M12 5\.4v12\.8/);
+    assert.match(fiscal[3]!, /M5\.4 8\.4h4l1\.5/);
+    const shop = ["Negozio", "Cassa", "Clienti", "Magazzino"].map((label) =>
+      craftNavIcon({ id: "list", label }),
+    );
+    assert.equal(new Set(shop).size, 4, "shop tabs must be four distinct glyphs");
+    assert.match(shop[0]!, /M4\.8 10 6\.6 6\.2h10\.8/);
+    assert.match(shop[3]!, /M5\.4 9 12 5\.6/);
+    const shears = craftNavIcon({ id: "app", label: "Taglio" });
+    assert.notEqual(fiscal[0], shears);
+    assert.notEqual(shop[0], shears);
+    assert.notEqual(fiscal[0], craftNavIcon({ id: "elenco", label: "Elenco" }));
+    for (const svg of [...fiscal, ...shop]) {
+      assert.equal(isLetterAIcon(svg), false);
+      assert.equal(isAppleChromeSvg(svg), false);
+      assert.match(svg, /data-icon-grid="24"/);
+    }
   });
 
   it("keeps a requested working home under semantic chrome even if leftover widget markup exists", () => {

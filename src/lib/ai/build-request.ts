@@ -26,10 +26,21 @@ export function createBuildRequest(input: {
 }) {
   const { prompt, html, instruction, kind, recentPalettes = [] } = input;
   if (instruction) return { prompt, html: html || "", instruction, kind, recentPalettes, operation: "edit" as const };
+  // Desktop gestionale/sito must not start from a phone seed or iPhone tabbar.
+  if (!isPhoneKind(kind)) {
+    return {
+      prompt,
+      html: html || "",
+      instruction: "",
+      kind,
+      recentPalettes,
+      operation: "create" as const,
+    };
+  }
   const composed = composeProduct(prompt, { recent: recentPalettes });
   return {
     prompt,
-    html: composed.spec || isPhoneKind(kind) ? composed.html : html || "",
+    html: composed.html,
     instruction: composed.polish,
     kind,
     recentPalettes,

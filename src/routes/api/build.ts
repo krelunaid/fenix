@@ -21,7 +21,7 @@ import {
   XAI_MISSING_KEY_ERROR,
   FENIX_MODEL,
 } from "@/lib/ai/model";
-import { formatPrefix, kindFromPrompt } from "@/lib/projects/infer";
+import { formatPrefix, isPhoneKind, kindFromPrompt } from "@/lib/projects/infer";
 import { composeProduct } from "@/lib/ai/compose-product";
 import { sanitizePaletteHistory, type PaletteRecord } from "@/lib/projects/palette-engine";
 import { MAX_ARTIFACT_CHARS } from "../../../workers/visual/artifact-context.mjs";
@@ -128,12 +128,14 @@ export const Route = createFileRoute("/api/build")({
         const lockKind = kindFromPrompt(prompt) ?? "app";
         const contract = planContract(prompt);
         const recent = sanitizePaletteHistory(body.recentPalettes);
-        const composed = composeProduct(prompt, { recent });
+        const composed = isPhoneKind(lockKind) ? composeProduct(prompt, { recent }) : null;
         const userParts = [
           `BRIEF:\n${prompt}`,
           formatPrefix(lockKind).trim(),
           contractInstruction(contract),
-          composed.polish,
+          composed
+            ? composed.polish
+            : "Gestionale/sito desktop: elenco, filtri, form, numeri. Niente tabbar iPhone, niente scheletro telefono.",
         ];
         if (lockKind === "dashboard") {
           userParts.push(

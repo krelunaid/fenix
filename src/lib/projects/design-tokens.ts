@@ -24,6 +24,9 @@ import {
   type PaletteRecord,
 } from "./palette-engine.ts";
 import { applyGraphicIntent, graphicIntentFromBrief } from "./graphic-intent.ts";
+import { enrichWaterOpsPalette } from "./water-ops-palette.ts";
+import { enrichMarketPalette } from "./market-ops-palette.ts";
+import { isMarketplaceBrief } from "./app-identity.ts";
 
 export type TokenFamily =
   | "perfume"
@@ -683,6 +686,14 @@ function finishSystemSheet(tokens: DesignTokens, brief: string, recent?: Palette
   return { ...tokens, palette, chroma: classifyPalette(palette) };
 }
 
+function finishFieldSheet(tokens: DesignTokens, brief: string): DesignTokens {
+  let palette = enrichWaterOpsPalette(brief, tokens.palette);
+  palette = enrichMarketPalette(brief, palette);
+  const radius = isMarketplaceBrief(brief) ? "24px" : tokens.radius;
+  if (palette === tokens.palette && radius === tokens.radius) return tokens;
+  return { ...tokens, palette, radius, chroma: classifyPalette(palette) };
+}
+
 export function tokensFromBrief(brief: string, opts?: TokenOptions): DesignTokens {
   const family = familyFromBrief(brief);
   const variant = variantFromBrief(brief);
@@ -699,27 +710,32 @@ export function tokensFromBrief(brief: string, opts?: TokenOptions): DesignToken
     const type = family === "repo" && repoSrc ? repoSrc.type : recipe.type;
     const dont = family === "repo" && repoSrc ? repoSrc.dont : recipe.dont;
     const dna = `${srcFamily}${variant ? `/v${variant}` : ""} · ${adaptive.family} · ${fonts.display}/${fonts.body} · anti-clone`;
-    return finishSystemSheet(
-      applyGraphicIntent(
-        {
-          family: srcFamily,
-          variant,
-          mood,
-          fonts: { ...fonts },
-          radius,
-          type: { ...type },
-          palette: adaptive.palette,
-          dna: dna.slice(0, 80),
-          dont: [...dont],
-          chroma: adaptive.family,
-        },
+    return finishFieldSheet(
+      finishSystemSheet(
+        applyGraphicIntent(
+          {
+            family: srcFamily,
+            variant,
+            mood,
+            fonts: { ...fonts },
+            radius,
+            type: { ...type },
+            palette: adaptive.palette,
+            dna: dna.slice(0, 80),
+            dont: [...dont],
+            chroma: adaptive.family,
+          },
+          brief,
+        ),
         brief,
+        opts?.recent,
       ),
       brief,
-      opts?.recent,
     );
   }
   const src = variant === 1 && VARIANTS[family] ? VARIANTS[family]! : FAMILIES[family];
+  // Colors stay on the domain recipe + explicit user locks. A shop name
+  // (barber, salon, …) is not a palette and must not inject a house accent.
   const applied = applyUserColors(asEngine(src.palette), brief);
   let palette = avoidRecent(applied.palette, opts?.recent, hashBrief(brief), applied.lock);
   palette = ensureAccessible(palette, applied.lock);
@@ -737,24 +753,27 @@ export function tokensFromBrief(brief: string, opts?: TokenOptions): DesignToken
   }
   const chroma = classifyPalette(palette);
   const dna = `${family}${variant ? `/v${variant}` : ""} · ${src.fonts.display}/${src.fonts.body} · anti-clone`;
-  return finishSystemSheet(
-    applyGraphicIntent(
-      {
-        family,
-        variant,
-        mood: src.mood,
-        fonts: { ...src.fonts },
-        radius: src.radius,
-        type: { ...src.type },
-        palette,
-        dna: dna.slice(0, 80),
-        dont: [...src.dont],
-        chroma,
-      },
+  return finishFieldSheet(
+    finishSystemSheet(
+      applyGraphicIntent(
+        {
+          family,
+          variant,
+          mood: src.mood,
+          fonts: { ...src.fonts },
+          radius: src.radius,
+          type: { ...src.type },
+          palette,
+          dna: dna.slice(0, 80),
+          dont: [...src.dont],
+          chroma,
+        },
+        brief,
+      ),
       brief,
+      opts?.recent,
     ),
     brief,
-    opts?.recent,
   );
 }
 

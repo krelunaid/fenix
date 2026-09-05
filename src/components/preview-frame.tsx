@@ -1,5 +1,5 @@
 import { useEffect, useMemo } from "react";
-import { prepareSrcDoc, type SrcPalette } from "@/lib/projects/color-scheme";
+import { isOpaquePreviewError, prepareSrcDoc, type SrcPalette } from "@/lib/projects/color-scheme";
 import { authorizedPreviewHtml } from "@/lib/projects/files";
 import { rememberAudit, rememberBootError, rememberBootOk, rememberShot, type PreviewAudit } from "@/lib/ai/look";
 import { notePreviewBootError } from "@/lib/projects/store";
@@ -69,6 +69,7 @@ export function PreviewFrame({
       }
       if (msg?.t === "fenix-boot-error") {
         const text = String(msg.message || "errore in avvio");
+        if (isOpaquePreviewError(text)) return;
         rememberBootError(text);
         notePreviewBootError(projectId ?? "preview", text);
         return;
