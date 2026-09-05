@@ -24,6 +24,7 @@ import {
 import { formatPrefix, kindFromPrompt } from "@/lib/projects/infer";
 import { composeProduct } from "@/lib/ai/compose-product";
 import { sanitizePaletteHistory, type PaletteRecord } from "@/lib/projects/palette-engine";
+import { MAX_ARTIFACT_CHARS } from "../../../workers/visual/artifact-context.mjs";
 
 type Body = {
   prompt?: string;
@@ -111,7 +112,13 @@ export const Route = createFileRoute("/api/build")({
         }
 
         const instruction = (body.instruction ?? "").trim().slice(0, 2500);
-        const html = (body.html ?? "").slice(0, 90000);
+        const html = body.html ?? "";
+        if (typeof html !== "string") {
+          return Response.json({ t: "err", error: "HTML non valido." }, { status: 400 });
+        }
+        if (html.length > MAX_ARTIFACT_CHARS) {
+          return Response.json({ t: "err", error: "Documento troppo grande per una modifica sicura. La versione precedente resta invariata." }, { status: 413 });
+        }
         const shot =
           typeof body.shot === "string" && body.shot.startsWith("data:image")
             ? body.shot.slice(0, 380000)
@@ -272,7 +279,7 @@ export const Route = createFileRoute("/api/build")({
               let sawReasoning = false;
 
               const ingest = (payload: string) => {
-                if (!payload || payload === "[DONE]") return;
+                if (emitted || !payload || payload === "[DONE]") return;
                 let json: GrokChunk;
                 try {
                   json = JSON.parse(payload) as GrokChunk;
@@ -280,6 +287,10 @@ export const Route = createFileRoute("/api/build")({
                   return;
                 }
                 const piece = grokDelta(json);
+                if (piece.finish != null && piece.finish !== "stop") {
+                  finish({ t: "err", error: "Risposta del modello incompleta. La versione precedente resta invariata." });
+                  return;
+                }
                 if (piece.error) {
                   finish({ t: "err", error: piece.error });
                   return;
@@ -321,7 +332,10 @@ export const Route = createFileRoute("/api/build")({
               const tail = (buffer + decoder.decode()).trim();
               if (tail.startsWith("data:")) ingest(tail.slice(5).trim());
 
-              if (emitted) return;
+              if (emitted) {
+                await reader.cancel().catch(() => {});
+                return;
+              }
 
               const parsed = parseBuildOutput(acc, lockKind, prompt);
               if (!parsed) {
@@ -424,6 +438,7 @@ export const Route = createFileRoute("/api/build")({
                 }
               }
             } catch (err) {
+              if (emitted) return;
               const aborted = err instanceof Error && err.name === "AbortError";
               const salvage = parseBuildOutput(acc, lockKind, prompt);
               if (salvage) {
