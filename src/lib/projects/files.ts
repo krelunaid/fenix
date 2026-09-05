@@ -26,7 +26,7 @@ export type IngestResult = {
 };
 
 const FILE_RE =
-  /<<<FILE path="([^"]+)">>>\s*([\s\S]*?)(?=(?:<<<FILE path=)|(?:<<<END>>>)|$)/g;
+  /<<<FILE path="([^"]+)">>>\s*([\s\S]*?)(?=(?:<<<FILE path=)|(?:<<<HTML>>>)|(?:<<<META>>>)|(?:<<<END>>>)|$)/g;
 
 const ALLOWED_EXT = new Set([
   ".html",

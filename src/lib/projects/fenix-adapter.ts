@@ -77,6 +77,7 @@ export type RepairFn = (input: {
   apiKey: string;
   prompt: string;
   html: string;
+  files?: ProjectFile[];
   error: string;
   signal?: AbortSignal;
 }) => Promise<GatedProduct | null>;
@@ -166,6 +167,7 @@ export async function gateIncompleteHtml(input: {
         apiKey: input.apiKey ?? "",
         prompt: input.prompt,
         html: current.html,
+        files: current.files,
         error,
         signal: ctl.signal,
       });

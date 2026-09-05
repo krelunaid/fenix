@@ -209,17 +209,17 @@ body>:is(.app,.fk-app,#app,#root):has(.fk-tab,.tabbar,nav[aria-label]){display:f
 .fk-tile b{display:block;font-size:18px;margin-top:4px;letter-spacing:-.03em;color:var(--fg,#1c1712)}
 .fk-tile span{font-size:12px;color:var(--muted,#5c5348);letter-spacing:.04em;text-transform:uppercase}
 .fk-seg{display:flex;background:transparent;border:1px solid var(--line,#c4b49a);border-radius:10px;padding:0;gap:0;margin:8px 0 14px;overflow:hidden}
-.fk-seg button{flex:1;border:0;border-right:1px solid var(--line,#c4b49a);background:none;color:var(--fg,#1c1712);border-radius:0;padding:8px 6px;font:600 13px/1 inherit;min-height:44px}
+.fk-seg button{flex:1;border:0;border-right:1px solid var(--line,#c4b49a);background:none;color:var(--fg,#1c1712);border-radius:0;padding:8px 6px;font-family:inherit;font-size:13px;font-weight:600;line-height:1.2;min-height:44px}
 .fk-seg button:last-child{border-right:0}
 .fk-seg button.on{background:var(--fg,#1c1712);color:var(--bg,#efe6d4);box-shadow:none}
-.fk-btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;border:0;border-radius:12px;padding:14px 16px;font:700 15px/1 inherit;background:var(--accent,#3d4a1f);color:#fff;letter-spacing:.02em;min-height:44px;min-width:44px}
+.fk-btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;border:0;border-radius:14px;padding:14px 16px;font-family:inherit!important;font-size:16px!important;font-weight:600!important;line-height:1.25!important;background:var(--accent,#3d4a1f);color:#fff;letter-spacing:-.01em;min-height:48px;min-width:44px}
 .fk-chiprow{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 14px}
-.fk-chip{border:1px solid var(--line,#c4b49a);border-radius:10px;padding:8px 10px;font:650 13px/1 inherit;background:transparent;color:var(--fg,#1c1712);min-height:44px}
+.fk-chip{border:1px solid var(--line,#c4b49a);border-radius:10px;padding:8px 10px;font-family:inherit;font-size:13px;font-weight:650;line-height:1.2;background:transparent;color:var(--fg,#1c1712);min-height:44px}
 .fk-field{display:flex;align-items:center;gap:10px;background:var(--field,var(--elevated,#fbf6ee))!important;border:1px solid var(--line,#c4b49a);border-radius:var(--radius,12px);padding:12px 14px;margin:6px 0 14px;color:var(--field-ink,#1c1712)!important}
 .fk-field input,.fk-field select,.fk-field textarea,
 input:not([type=hidden]):not([type=checkbox]):not([type=radio]):not([type=submit]):not([type=button]),
 textarea,select{
-  flex:1;border:0;background:var(--field,var(--elevated,#fbf6ee))!important;font:400 16px/1.4 inherit!important;
+  flex:1;border:0;background:var(--field,var(--elevated,#fbf6ee))!important;font-family:inherit!important;font-size:17px!important;font-weight:400!important;line-height:1.4!important;
   color:var(--field-ink,#1c1712)!important;-webkit-text-fill-color:var(--field-ink,#1c1712)!important;caret-color:var(--field-ink,#1c1712)!important;
   outline:none;min-width:0;color-scheme:light!important;opacity:1!important
 }
@@ -250,7 +250,7 @@ input::placeholder,textarea::placeholder{
 .fk-tab button,.tabbar button,nav[aria-label] button{
   min-width:0;max-height:56px;display:flex;flex-direction:column;align-items:center;justify-content:center;
   gap:3px;margin:0;padding:0 2px!important;border:0;background:none!important;color:inherit;
-  font:600 10px/1.1 inherit!important;letter-spacing:.02em;transform:none!important;
+  font-family:inherit!important;font-size:12px!important;font-weight:600!important;line-height:1.2!important;letter-spacing:0;transform:none!important;
 }
 .fk-tab button.on,.tabbar button.on,nav[aria-label] button.on{color:var(--accent,#3d4a1f)!important;background:none!important;box-shadow:none!important}
 .fk-tab svg,.tabbar svg,nav[aria-label] svg,.fk-tab button svg{width:24px!important;height:24px!important;flex:0 0 24px!important;transform:none!important;overflow:visible!important}
@@ -271,7 +271,7 @@ main,.fk-main,main p,main li,main b,.fk-tile,.fk-tile b,.fk-hello,.fk-lbl{color:
     box-shadow:none!important;padding:8px 16px!important;justify-content:flex-end;align-items:center;
   }
   .fk-tab button,.tabbar button,nav[aria-label] button{
-    flex-direction:row!important;font:650 13px/1.2 inherit!important;padding:8px 12px!important;max-height:none;min-height:44px;gap:8px;
+    flex-direction:row!important;font-family:inherit!important;font-size:13px!important;font-weight:650!important;line-height:1.2!important;padding:8px 12px!important;max-height:none;min-height:44px;gap:8px;
   }
   .fk-tab svg,.tabbar svg,nav[aria-label] svg,.fk-tab button svg{width:18px!important;height:18px!important;flex:0 0 18px!important}
   .fk-main,body>main,main{overflow:visible!important;flex:none!important}

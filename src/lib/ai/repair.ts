@@ -9,6 +9,7 @@ import {
 import type { BuildContract } from "./build-contract.ts";
 import type { ProjectFile } from "../projects/files.ts";
 import { artifactContext, completeResponseText, MAX_ARTIFACT_CHARS } from "../../../workers/visual/artifact-context.mjs";
+import { repairFilesContext } from "./repair-context.ts";
 
 export { REPAIR_PROMPT } from "./prompts.shared.ts";
 
@@ -19,10 +20,13 @@ export async function repairBuild(input: {
   apiKey: string;
   prompt: string;
   html: string;
+  files?: ProjectFile[];
   error: string;
   signal?: AbortSignal;
 }): Promise<BuildResult | null> {
   if (input.html.length > MAX_ARTIFACT_CHARS) return null;
+  let filesContext: string;
+  try { filesContext = repairFilesContext(input.files); } catch { return null; }
   const res = await fetch(XAI_CHAT_COMPLETIONS_URL, {
     method: "POST",
     headers: {
@@ -39,7 +43,7 @@ export async function repairBuild(input: {
         { role: "system", content: REPAIR_PROMPT },
         {
           role: "user",
-          content: `BRIEF:\n${input.prompt}\n\nERRORI DI VALIDAZIONE:\n${input.error}\n\nHTML DA RIPARARE:\n${artifactContext(input.html)}\n\nRestituisci META + eventuali <<<FILE path="...">>> + <<<HTML>>> + <<<END>>>. Niente server inventato.`,
+          content: `BRIEF:\n${input.prompt}\n\nERRORI DI VALIDAZIONE:\n${input.error}\n\nHTML DA RIPARARE:\n${artifactContext(input.html)}${filesContext}\n\nRestituisci META + eventuali <<<FILE path="...">>> + <<<HTML>>> + <<<END>>>. Niente server inventato.`,
         },
       ],
     }),

@@ -18,6 +18,8 @@ import { grammarFromBrief, grammarInstruction } from "../../src/lib/projects/lay
 import { sanitizePaletteHistory, type PaletteRecord } from "../../src/lib/projects/palette-engine.ts";
 import { artifactContext, MAX_ARTIFACT_CHARS } from "../../workers/visual/artifact-context.mjs";
 import type { ProjectKind } from "../../src/lib/projects/types.ts";
+import { enforceGraphicIntent } from "../../src/lib/projects/graphic-intent.ts";
+import { repairFilesContext } from "../../src/lib/ai/repair-context.ts";
 
 const MODEL = "grok-build-0.1";
 const XAI_URL = "https://api.x.ai/v1/chat/completions";
@@ -86,13 +88,13 @@ function hex(value: unknown, fallback: string) {
     : fallback;
 }
 
-function parseResult(output: string, lockKind?: string, brief?: string) {
+export function parseResult(output: string, lockKind?: string, brief?: string) {
   const htmlMatch = output.match(/<!DOCTYPE html[\s\S]*?<\/html>/i) ?? output.match(/<html[\s\S]*?<\/html>/i);
   if (!htmlMatch) return null;
-  const html = htmlMatch[0].startsWith("<!DOCTYPE") ? htmlMatch[0] : `<!DOCTYPE html>\n${htmlMatch[0]}`;
+  const html = enforceGraphicIntent(htmlMatch[0].startsWith("<!DOCTYPE") ? htmlMatch[0] : `<!DOCTYPE html>\n${htmlMatch[0]}`, brief || "");
   if (html.length < 80) return null;
 
-  const metaMatch = output.match(/<<<META>>>\s*([\s\S]*?)(?:<<<HTML>>>|$)/);
+  const metaMatch = output.match(/<<<META>>>\s*([\s\S]*?)(?:<<<HTML>>>|<<<FILE |<<<END>>>|$)/);
   let meta: Record<string, unknown> = {};
   try {
     meta = JSON.parse(metaMatch?.[1]?.trim() || "{}") as Record<string, unknown>;
@@ -213,10 +215,11 @@ if (REPAIR_MAX !== CONTRACT_REPAIR_MAX) {
   throw new Error("repair cap drift");
 }
 
-export async function repairPass(apiKey: string, prompt: string, html: string, error: string) {
+export async function repairPass(apiKey: string, prompt: string, html: string, error: string, files?: { path: string; content: string }[]) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 45_000);
   try {
+    const filesContext = repairFilesContext(files);
     const response = await fetch(XAI_URL, {
       method: "POST",
       headers: {
@@ -233,7 +236,7 @@ export async function repairPass(apiKey: string, prompt: string, html: string, e
           { role: "system", content: REPAIR_PROMPT },
           {
             role: "user",
-            content: `BRIEF:\n${prompt}\n\nERRORI:\n${error}\n\nHTML:\n${artifactContext(html)}\n\nRestituisci META + eventuali <<<FILE path="...">>> + <<<HTML>>> + <<<END>>>. Niente server inventato.`,
+            content: `BRIEF:\n${prompt}\n\nERRORI:\n${error}\n\nHTML:\n${artifactContext(html)}${filesContext}\n\nRestituisci META + eventuali <<<FILE path="...">>> + <<<HTML>>> + <<<END>>>. Niente server inventato.`,
           },
         ],
       }),
@@ -273,8 +276,8 @@ async function gateResult(
     contract,
     files: result.files,
     onStage: (s) => send({ t: "s", s }),
-    repair: async ({ html, error }) => {
-      const fixed = await repairPass(apiKey, prompt, html, error);
+    repair: async ({ html, error, files }) => {
+      const fixed = await repairPass(apiKey, prompt, html, error, files);
       return parseResult(fixed, kindFromPrompt(prompt), prompt);
     },
   });

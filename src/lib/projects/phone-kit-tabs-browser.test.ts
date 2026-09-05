@@ -156,6 +156,32 @@ async function tabGeometry(page: Page) {
 }
 
 describe("prepareSrcDoc phone kit with 5 tabs and no data-fenix-phone", () => {
+  it("phone control typography is valid CSS and inherits the chosen family at every viewport", async () => {
+    const browser = await launchChromium();
+    try {
+      for (const [vp, viewport] of VIEWPORTS) {
+        const page = await isolatedPage(browser, { viewport });
+        try {
+          const html = FIVE_TAB_APP.replace('<button type="button" data-act="save">', '<button class="fk-btn" type="button" data-act="save">');
+          await page.setContent(prepareSrcDoc(html, "#efe6d4", "phone-type", "app"));
+          await page.locator('nav button[data-view="new"]').click();
+          const metrics = await page.evaluate(() => {
+            const style = (selector: string) => { const s = getComputedStyle(document.querySelector(selector)!); return { family: s.fontFamily, size: s.fontSize, weight: s.fontWeight }; };
+            return { body: style("body"), button: style(".fk-btn"), field: style("#n"), nav: style("nav button") };
+          });
+          assert.equal(metrics.button.family, metrics.body.family, `${vp} button family`);
+          assert.equal(metrics.field.family, metrics.body.family, `${vp} field family`);
+          assert.equal(metrics.nav.family, metrics.body.family, `${vp} navigation family`);
+          assert.equal(metrics.button.size, "16px");
+          assert.equal(metrics.button.weight, "600");
+          assert.equal(metrics.field.size, "17px");
+          assert.equal(metrics.nav.size, viewport.width >= 768 ? "13px" : "12px");
+          await page.screenshot({ path: `/tmp/fenix-phone-type-${vp}.png`, fullPage: true });
+        } finally { await page.close(); }
+      }
+    } finally { await browser.close(); }
+  });
+
   it("keeps five tabs in the bar at 320/390/T/D, fifth clickable, scroll and CRUD", async () => {
     const src = prepareSrcDoc(FIVE_TAB_APP, "#efe6d4", "five-tab-kit", "app");
     assert.match(src, /data-fenix-phone/);
