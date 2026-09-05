@@ -80,6 +80,7 @@ html[data-fenix-campo] .app-mark{width:52px;height:52px;flex:0 0 52px;border:0;b
 html[data-fenix-campo] .app-mark svg{width:52px;height:52px}
 html[data-fenix-campo] nav.tabs{grid-template-columns:repeat(5,minmax(0,1fr))}
 html[data-fenix-campo] nav.tabs button{font-size:11px;padding:6px 2px}
+html[data-fenix-campo] header{padding:12px 16px 10px}
 html[data-fenix-campo] header .place{display:none}
 </style>\n`;
 

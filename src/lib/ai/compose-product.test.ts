@@ -829,6 +829,9 @@ describe("graphic pipeline prompt→plan→generate→visual→QA", () => {
     assert.match(product.html, /fx-tank/);
     assert.match(product.html, /fx-inverse/);
     assert.match(product.html, /fx-toggle/);
+    assert.match(product.html, /Obiettivo raggiunto\. Bene\./);
+    assert.match(product.html, /:has\(nav\.tabs button:first-child\.on\) header/);
+    assert.match(product.html, /#10B981/);
     assert.match(product.html, /fx-splash/);
     assert.match(product.html, /data-fenix-premium-mark/);
     assert.match(product.html, /Cerca per nome/);

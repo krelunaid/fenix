@@ -59,6 +59,7 @@ try {
       const n = document.querySelector(".home-count");
       return n && n.getAttribute("data-count") === "5";
     },
+    undefined,
     { timeout: 12000 },
   );
   await page.waitForTimeout(220);

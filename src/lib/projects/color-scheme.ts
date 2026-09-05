@@ -672,6 +672,7 @@ export function fenixRuntimeScript(projectId: string, kind?: string) {
     if (window.__fenixCrud) return true;
     if (document.querySelector("table thead") && document.querySelector("table tbody")) return true;
     if (document.querySelector("[data-fenix-rail], [data-fenix-week], article.slot, [data-agenda-form]")) return true;
+    if (document.documentElement.hasAttribute("data-fenix-campo")) return true;
     if (document.querySelector("#root article[data-id], #root .state-empty, [data-state=empty]")) return true;
     if (document.querySelector('main #list, main #lista, main #elenco, [data-panel="list"] ul, [data-panel="list"] ol, #view-list ul, #view-list ol')) return true;
     return false;
