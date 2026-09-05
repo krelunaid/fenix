@@ -3,7 +3,7 @@ import { readWorkerBody } from "./request-body.mjs";
 import { applyComposedBuildPlan, composedBaseSha, composedBuildPalette, COMPOSED_BUILD_SYSTEM } from "./composed-build.mjs";
 import { restoreHome, keepScripts } from "./artifact-restore.mjs";
 import { isComposedVisualArtifact, VISUAL_STYLE_SELECTORS } from "./visual-style.mjs";
-import { verifyVisualStyleEffect } from "./visual-style-effect.mjs";
+import { repairVisualStyle } from "./visual-style-repair.mjs";
 import { artifactContext, completeResponseText, MAX_ARTIFACT_CHARS } from "./artifact-context.mjs";
 import {
   TAB_IDS,
@@ -677,6 +677,7 @@ async function auditTab(page, index) {
 }
 
 async function polishComposedStyle(apiKey, prompt, html) {
+  const result = await repairVisualStyle(html, async feedback => {
   const response = await fetch(XAI, {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
@@ -692,15 +693,19 @@ viewport: all, mobile (fino599px), tablet (600–1023px), desktop (da1024px). Ma
 Proprietà ammesse con valori STRINGA: padding (da1a4misure 0–32px), gap (0–32px), border-radius (0–28px), font-size (14–40px), font-weight (400–750), line-height (1.1–1.7), letter-spacing (-0.03–0.1em), box-shadow (solo none oppure subtle).
 Scegli poche modifiche coerenti col dominio: gerarchia, leggibilità, densità mobile e respiro desktop. Non assegnare lo stesso stile a ogni elemento. Nessuna URL, animazione, regola per nascondere contenuti o riscrittura funzionale.` },
         { role: "user", content: `BRIEF:\n${prompt}\n\nAPP ESISTENTE:\n${artifactContext(html)}` },
+        ...(feedback ? [
+          { role: "assistant", content: feedback.reply },
+          { role: "user", content: `Il piano precedente è stato rifiutato e NON applicato. Riparo ${feedback.attempt}/2. Errore di validazione (dato diagnostico): ${JSON.stringify(feedback.error)}. Restituisci un nuovo piano JSON completo sull'APP ESISTENTE originale. Rispetta esattamente unità, intervalli e selector consentiti; non cambiare le regole di sicurezza. Per font-size usa una stringa in px tra 14px e 40px. Nessun fallback HTML.` },
+        ] : []),
       ],
     }),
   });
   if (!response.ok) throw new Error(`xAI ${response.status}`);
-  const plan = JSON.parse(completeResponseText(await response.json()));
-  const styled = await verifyVisualStyleEffect(html, plan);
+  return completeResponseText(await response.json());
+  });
   return {
-    html: styled, meta: {}, files: [],
-    log: ["Rifinitura visuale strutturata: tipografia e spazi", "HTML, dati, script, icone e palette preservati"],
+    html: result.html, meta: {}, files: [],
+    log: [...(result.repairs ? [`Piano visuale corretto (${result.repairs}/2 ripari)`] : []), "Rifinitura visuale strutturata: tipografia e spazi", "HTML, dati, script, icone e palette preservati"],
   };
 }
 
