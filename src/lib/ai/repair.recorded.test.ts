@@ -17,6 +17,39 @@ const here = dirname(fileURLToPath(import.meta.url));
 const RECORDED_DIR = join(here, "fixtures/recorded");
 const SITE_BRIEF = "FORMATO: sito web. kind=site. sito di musica";
 
+describe("refinement metadata continuity", () => {
+  const existing = {
+    name: "Barber", tagline: "Appuntamenti", summary: "La mia barberia", direction: "Blu inchiostro",
+    palette: {bg:"#dee6e9",surface:"#f0f4f5",fg:"#143038",muted:"#4e6a72",accent:"#1b0e8b"},
+  };
+  const brief = "mi crei un app da parrucchieri stile Barber shop";
+  const output = (meta: unknown) => `<<<META>>>\n${JSON.stringify(meta)}\n<<<HTML>>>\n<!DOCTYPE html><html><head><title>Note</title></head><body><main><h1>Barber</h1><p>Prenota il tuo appuntamento.</p></main></body></html>\n<<<END>>>`;
+  it("retains the actual selected palette and identity when polish returns empty META", () => {
+    const result = parseBuildOutput(output({}), "site", brief, existing)!;
+    assert.deepEqual(result.palette, existing.palette);
+    for (const field of ["name","tagline","summary","direction"] as const) assert.equal(result[field],existing[field]);
+  });
+  it("accepts explicit partial metadata without replacing unrelated palette colors", () => {
+    const result = parseBuildOutput(output({name:"Barber Due",palette:{accent:"#195d80"}}), "site", brief, existing)!;
+    assert.equal(result.name,"Barber Due");
+    assert.equal(result.tagline,existing.tagline);
+    assert.deepEqual(result.palette,{...existing.palette,accent:"#195d80"});
+  });
+  it("falls back to validated existing metadata for malformed values and JSON", () => {
+    for(const source of [output({name:7,palette:{accent:"url(bad)"}}),output({}).replace("{}","{broken")]) {
+      const result = parseBuildOutput(source,"site",brief,existing)!;
+      assert.deepEqual(result.palette,existing.palette);
+      assert.equal(result.name,existing.name);
+      assert.equal(result.kind,"site");
+    }
+  });
+  it("does not change the initial-creation fallback without retained metadata", () => {
+    const result = parseBuildOutput(output({}),"site",brief)!;
+    assert.equal(result.name,"Note");
+    assert.notEqual(result.palette.accent,existing.palette.accent);
+  });
+});
+
 function loadRecorded(name: string): string {
   return readFileSync(join(RECORDED_DIR, name), "utf8");
 }

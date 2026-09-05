@@ -541,6 +541,7 @@ async function polishDraft(
         `<<<META>>>\n${JSON.stringify(accepted.meta ?? {})}\n${fileBlocks}\n<<<HTML>>>\n${accepted.html ?? ""}\n<<<END>>>`,
         lockKind,
         existing?.prompt ?? prompt,
+        existing,
       );
     if (result?.html) {
       if (!stillCurrent(projectId, epoch)) throw new Error(STALE_JOB);
