@@ -4,8 +4,11 @@ import {
   CRAFT_RADIUS,
   CRAFT_RADIUS_CONSUMER,
   CRAFT_RADIUS_DESK,
+  CRAFT_RADIUS_LUXE,
+  LUXE_CRAFT,
   MARKET_CRAFT,
   WATER_CRAFT,
+  craftModeOf,
   craftRhythmOf,
   craftTokenCss,
   radiusForRhythm,
@@ -23,7 +26,7 @@ describe("craft surface tokens", () => {
     assert.doesNotMatch(s.brand, /#0ea5e9|#0284c7|#007aff|#0071e3|#1e40af/i);
     assert.match(craftTokenCss(s), /--inverse:/);
     assert.match(craftTokenCss(s), /--shadow-card:/);
-    assert.doesNotMatch(craftTokenCss(s), /#F97316|#1E40AF/i);
+    assert.doesNotMatch(craftTokenCss(s), /#F97316|#1E40AF|#D4AF37|#B31A26/i);
   });
 
   it("keeps official water craft hexes on a field brief", () => {
@@ -49,12 +52,31 @@ describe("craft surface tokens", () => {
     assert.match(craftTokenCss(s, { domain: "market" }), /#F97316/);
   });
 
-  it("uses consumer radii for market, utility for water, desk for gestionali", () => {
+  it("keeps official luxe craft hexes on a recitazione brief", () => {
+    const luxe = tokensFromBrief(
+      `${formatPrefix("app")}Palco: scene e recitazione, prove e repertorio, stile Apple.`,
+    );
+    const s = surfacesFromPalette(luxe.palette, "luxe");
+    assert.equal(luxe.palette.accent.toLowerCase(), LUXE_CRAFT.brand.toLowerCase());
+    assert.equal(luxe.palette.bg.toLowerCase(), LUXE_CRAFT.surface.toLowerCase());
+    assert.equal(s.surfaceInverse.toLowerCase(), "#f5f5fa");
+    assert.match(craftTokenCss(s, { domain: "luxe", rhythm: "luxe" }), /--fx-r3:20px/);
+    assert.match(craftTokenCss(s, { domain: "luxe", rhythm: "luxe" }), /--fx-t-display:46px/);
+    assert.match(craftTokenCss(s, { domain: "luxe" }), /#D4AF37/i);
+  });
+
+  it("uses consumer radii for market, utility for water, luxe 6/12/20, desk for gestionali", () => {
     assert.equal(radiusForRhythm("consumer").lg, CRAFT_RADIUS_CONSUMER.lg);
     assert.equal(radiusForRhythm("utility").lg, CRAFT_RADIUS.lg);
+    assert.equal(radiusForRhythm("luxe").lg, CRAFT_RADIUS_LUXE.lg);
     assert.equal(radiusForRhythm("desk").lg, CRAFT_RADIUS_DESK.lg);
     assert.equal(craftRhythmOf({ field: true }), "utility");
     assert.equal(craftRhythmOf({ market: true }), "consumer");
+    assert.equal(craftRhythmOf({ luxe: true }), "luxe");
     assert.equal(craftRhythmOf({ desk: true }), "desk");
+    assert.equal(craftModeOf({ field: true }), "utility");
+    assert.equal(craftModeOf({ market: true }), "marketplace");
+    assert.equal(craftModeOf({ luxe: true }), "luxe");
+    assert.equal(craftModeOf({ desk: true }), "desk");
   });
 });

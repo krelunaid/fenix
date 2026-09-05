@@ -89,6 +89,9 @@ const NAV_ICONS = {
   glass: navIcon(
     '<path d="M8.2 5.6h7.6l-1.1 7.8a2.8 2.8 0 0 1-5.4 0z"/><path d="M12 13.8v4.6M9.4 18.4h5.2"/>',
   ),
+  stage: navIcon(
+    '<path d="M5 5.4h14v13.2H5z"/><path d="M5 5.4c2.8 3.6 2.8 9.6 0 13.2M19 5.4c-2.8 3.6-2.8 9.6 0 13.2"/><path d="M12 5.4v13.2"/>',
+  ),
   table: navIcon(
     '<path d="M5.4 10.4h13.2"/><path d="M7.2 10.4v7.4M16.8 10.4v7.4M12 10.4v7.4"/>',
   ),
@@ -219,6 +222,8 @@ export function craftNavIcon(tab: { id: string; label: string }, index = 0): str
   else if (/^aggiungi$/.test(label)) svg = NAV_ICONS.add;
   else if (/^registra$/.test(label)) svg = NAV_ICONS.add;
   else if (/^pubblica$/.test(label)) svg = NAV_ICONS.pencil;
+  else if (/^scena$/.test(label)) svg = NAV_ICONS.stage;
+  else if (/^prove$/.test(label)) svg = NAV_ICONS.book;
   else if (/^gestione$/.test(label)) svg = NAV_ICONS.settings;
   else if (/^storico$/.test(label)) svg = NAV_ICONS.clock;
   else if (/^consegne$|^consegna$/.test(label)) svg = NAV_ICONS.drop;

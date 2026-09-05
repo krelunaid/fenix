@@ -51,12 +51,40 @@ export function isMarketplaceBrief(brief: string): boolean {
   );
 }
 
+function asksLuxeDark(brief: string): boolean {
+  return /luxe|midnight|mezzanotte|vetro smerigliato|stile lusso scuro|oro e mezzanotte|glass[\s/-]*luxe/i.test(
+    brief,
+  );
+}
+
+/**
+ * Cinematic / acting / explicit luxe-dark. Not water, market, shop, or fiscal
+ * unless the brief asks for midnight/luxe. Desk stays light without that ask.
+ */
+export function isLuxeBrief(brief: string): boolean {
+  if (isFieldProductBrief(brief) || isBarberBrief(brief) || isShopBrief(brief) || isMarketplaceBrief(brief)) {
+    return false;
+  }
+  if (isAccountantBrief(brief) && !asksLuxeDark(brief)) return false;
+  const t = String(brief || "");
+  if (/gestione\s+profum|lookbook|ristoraz|agenda|parrucchier|commercialist|consegne?\s+acqua|lavoretti|bacheca\s+incarichi/i.test(t)) {
+    return false;
+  }
+  return (
+    asksLuxeDark(t) ||
+    /recitazion|palcoscenic|\bteatro\b|monologo|sceneggiatur|teleprompter|cinematic|\bacting\b|recitare|\battor[ei]\b|\battric|\bprove di scena\b|repertorio|piattaforma per scene/i.test(
+      t,
+    )
+  );
+}
+
 /** Visible sector label used to pick an original pictogram. */
 export function appIdentityLabel(brief: string, family: string): string {
   if (isBarberBrief(brief)) return "Taglio";
   if (isAccountantBrief(brief)) return "Fatture";
   if (isFieldProductBrief(brief)) return "Consegne";
   if (isMarketplaceBrief(brief)) return "Incarichi";
+  if (isLuxeBrief(brief)) return "Scene";
   const labels: Record<string, string> = {
     perfume: "Profumi",
     fashion: "Lookbook",

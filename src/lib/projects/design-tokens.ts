@@ -26,7 +26,8 @@ import {
 import { applyGraphicIntent, graphicIntentFromBrief } from "./graphic-intent.ts";
 import { enrichWaterOpsPalette } from "./water-ops-palette.ts";
 import { enrichMarketPalette } from "./market-ops-palette.ts";
-import { isMarketplaceBrief } from "./app-identity.ts";
+import { enrichLuxePalette } from "./luxe-ops-palette.ts";
+import { isLuxeBrief, isMarketplaceBrief } from "./app-identity.ts";
 
 export type TokenFamily =
   | "perfume"
@@ -686,12 +687,22 @@ function finishSystemSheet(tokens: DesignTokens, brief: string, recent?: Palette
   return { ...tokens, palette, chroma: classifyPalette(palette) };
 }
 
+const LUXE_FONTS = {
+  display: "Fraunces",
+  body: "Figtree",
+  href: "https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,700&display=swap",
+};
+
 function finishFieldSheet(tokens: DesignTokens, brief: string): DesignTokens {
   let palette = enrichWaterOpsPalette(brief, tokens.palette);
   palette = enrichMarketPalette(brief, palette);
-  const radius = isMarketplaceBrief(brief) ? "24px" : tokens.radius;
-  if (palette === tokens.palette && radius === tokens.radius) return tokens;
-  return { ...tokens, palette, radius, chroma: classifyPalette(palette) };
+  palette = enrichLuxePalette(brief, palette);
+  const luxe = isLuxeBrief(brief);
+  const radius = isMarketplaceBrief(brief) ? "24px" : luxe ? "20px" : tokens.radius;
+  const fonts = luxe ? LUXE_FONTS : tokens.fonts;
+  const type = luxe ? { h1: "2.4rem", body: "16px", label: "13px" } : tokens.type;
+  if (palette === tokens.palette && radius === tokens.radius && fonts === tokens.fonts) return tokens;
+  return { ...tokens, palette, radius, fonts, type, chroma: classifyPalette(palette) };
 }
 
 export function tokensFromBrief(brief: string, opts?: TokenOptions): DesignTokens {
