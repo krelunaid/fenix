@@ -23,6 +23,7 @@ import { appIdentityIcon, appIdentityLabel } from "../projects/app-identity.ts";
 import { prepareSrcDoc } from "../projects/color-scheme.ts";
 import { createBuildRequest, isComposedCreation } from "./build-request.ts";
 import { contrastRatio } from "../projects/visual-quality.ts";
+import { MAX_ARTIFACT_CHARS } from "../../../workers/visual/artifact-context.mjs";
 import { nativeStyleAssignsPalette } from "../projects/native-app-style.ts";
 
 describe("controller build request preserves generated artifacts", () => {
@@ -920,5 +921,23 @@ describe("graphic pipeline prompt→plan→generate→visual→QA", () => {
     assert.match(desk.html, /data-craft-mode="desk"/);
     assert.doesNotMatch(desk.html, /<html[^>]*data-fenix-luxe/);
     assert.notEqual(desk.tokens.palette.bg.toLowerCase(), "#0d0d11");
+  });
+
+  it("keeps composed phone apps under the Edge artifact cap", () => {
+    const briefs = [
+      "FORMATO: app. kind=app. Agenda studio: appuntamenti e prenotazioni, stile iPhone.",
+      "FORMATO: app telefono 390×844. kind=app. Tab in basso, 5 schermate. NON un sito.\n\nmi crei un app da parrucchieri stile Barber shop",
+      `${formatPrefix("app")}NordAcqua: consegne acqua in campo, gestione dipendenti, storico e statistiche, stile Apple.`,
+      `${formatPrefix("app")}Vicina: marketplace di lavoretti e bacheca incarichi, stile Apple.`,
+      `${formatPrefix("app")}Palco: scene e recitazione, prove e repertorio, stile Apple.`,
+      `${formatPrefix("app")}Emporio Luce: negozio di lampade da tavolo, stile Apple.`,
+    ];
+    for (const brief of briefs) {
+      const html = composeProduct(brief).html;
+      assert.ok(
+        html.length <= MAX_ARTIFACT_CHARS,
+        `${brief.slice(0, 48)}… ${html.length} > ${MAX_ARTIFACT_CHARS}`,
+      );
+    }
   });
 });

@@ -1175,7 +1175,19 @@ function productChromeCss(): string {
 .app-mark{border-radius:14px;overflow:hidden;padding:0}
 .app-mark svg[data-fenix-premium-mark]{width:44px;height:44px;display:block}
 html[data-grammar="ops-desk"] .table-wrap thead th{background:color-mix(in srgb,var(--accent) 10%,var(--surface));color:var(--accent);font-weight:650}
-html[data-fenix-campo]{--navy:var(--inverse);--water:var(--brand);--ok-loud:var(--ok)}
+html[data-craft-rhythm="consumer"] main{padding-left:16px;padding-right:16px}
+html[data-craft-rhythm="consumer"] .fx-hello{margin:0;font:750 var(--fx-t-display)/1.05 var(--display),system-ui,sans-serif;letter-spacing:-.04em;color:var(--on-surface)}
+html[data-craft-rhythm="consumer"] .fx-role{margin:4px 0 0;font:500 var(--fx-t-14)/1.3 var(--body),system-ui,sans-serif;color:var(--muted)}
+html[data-craft-rhythm="consumer"] .home-hero:has(.fx-hello){background:transparent;border:0;box-shadow:none;padding:0}
+html[data-craft-rhythm="consumer"] .card,html[data-craft-rhythm="consumer"] .fx-card,html[data-craft-rhythm="consumer"] .fx-record,html[data-craft-rhythm="consumer"] .fx-shop{border-radius:var(--fx-r3);box-shadow:var(--shadow-card)}
+html[data-craft-rhythm="consumer"] .fx-shop .fx-pay{margin:10px 0 0;font:750 var(--fx-t-16)/1 var(--body),system-ui,sans-serif;color:var(--brand)}
+html[data-craft-rhythm="desk"] .card,html[data-craft-rhythm="desk"] .kpi,html[data-craft-rhythm="desk"] .fx-table-wrap{border-radius:var(--fx-r2)}
+.fx-board,.fx-tank,.fx-card{border-radius:var(--fx-r3,22px)}
+`;
+}
+
+function campoChromeCss(): string {
+  return `html[data-fenix-campo]{--navy:var(--inverse);--water:var(--brand);--ok-loud:var(--ok)}
 html[data-fenix-campo],html[data-fenix-campo] body{background-color:var(--surface-2);background-image:radial-gradient(120% 56% at 50% -12%,var(--brand-soft) 0%,transparent 58%);color:var(--on-surface)}
 html[data-fenix-campo] header{position:sticky;top:0;z-index:6;padding:12px 16px 10px;background:color-mix(in srgb,var(--surface) 78%,transparent);-webkit-backdrop-filter:saturate(1.6) blur(16px);backdrop-filter:saturate(1.6) blur(16px)}
 html[data-fenix-campo]:has(nav.tabs button:first-child.on) header{display:none}
@@ -1228,14 +1240,6 @@ html[data-fenix-campo] .fx-bars i{flex:1;border-radius:6px 6px 0 0;background:va
 html[data-fenix-campo] .fx-splash{background:var(--surface-2)}
 html[data-fenix-campo] .fx-splash .fx-mark{width:96px;height:96px;border-radius:28px;overflow:visible;box-shadow:var(--shadow-float)}
 html[data-fenix-campo] .fx-splash .fx-mark svg{width:96px;height:96px}
-html[data-craft-rhythm="consumer"] main{padding-left:16px;padding-right:16px}
-html[data-craft-rhythm="consumer"] .fx-hello{margin:0;font:750 var(--fx-t-display)/1.05 var(--display),system-ui,sans-serif;letter-spacing:-.04em;color:var(--on-surface)}
-html[data-craft-rhythm="consumer"] .fx-role{margin:4px 0 0;font:500 var(--fx-t-14)/1.3 var(--body),system-ui,sans-serif;color:var(--muted)}
-html[data-craft-rhythm="consumer"] .home-hero:has(.fx-hello){background:transparent;border:0;box-shadow:none;padding:0}
-html[data-craft-rhythm="consumer"] .card,html[data-craft-rhythm="consumer"] .fx-card,html[data-craft-rhythm="consumer"] .fx-record,html[data-craft-rhythm="consumer"] .fx-shop{border-radius:var(--fx-r3);box-shadow:var(--shadow-card)}
-html[data-craft-rhythm="consumer"] .fx-shop .fx-pay{margin:10px 0 0;font:750 var(--fx-t-16)/1 var(--body),system-ui,sans-serif;color:var(--brand)}
-html[data-craft-rhythm="desk"] .card,html[data-craft-rhythm="desk"] .kpi,html[data-craft-rhythm="desk"] .fx-table-wrap{border-radius:var(--fx-r2)}
-.fx-board,.fx-tank,.fx-card{border-radius:var(--fx-r3,22px)}
 `;
 }
 
@@ -1454,6 +1458,7 @@ main{flex:1;min-height:0;overflow-y:auto;padding:8px 16px 24px;-webkit-overflow-
 .room h2,.room p,.room .notes{flex:0 0 auto}
 ${visualKitCss(tokens, grammar)}
 ${campo ? "html[data-fenix-campo] nav.tabs{grid-template-columns:repeat(5,minmax(0,1fr))}" : ""}
+${campo ? campoChromeCss() : ""}
 ${market ? marketChromeCss() : ""}
 ${luxe ? luxeChromeCss() : ""}
 </style>
@@ -1488,9 +1493,9 @@ let view=${JSON.stringify(homeView)};
 let selectedDay="";
 let editId=null;
 var wipeAsk=false;
-const arts=${JSON.stringify(slices)};
-const meets=${JSON.stringify(meets)};
-const hero=${JSON.stringify(hero)};
+const arts=${JSON.stringify(grammar.id === "phone-seed" || grammar.id === "agenda" ? [] : slices)};
+const meets=${JSON.stringify(grammar.id === "phone-seed" ? [] : meets)};
+const hero=${JSON.stringify(grammar.id === "phone-seed" ? "" : hero)};
 const tabDefs=${JSON.stringify(spec.tabs)};
 const glyphs=${JSON.stringify(spec.tabs.map((t, i) => tabSvg(t, i, campo)))};
 const grammarId=${JSON.stringify(grammar.id)};
@@ -1874,7 +1879,7 @@ function renderTabs(){
   }).join("");
 }
 function emptyBox(){ return '<div class="state-empty" data-state="empty"><p>'+emptyVoice+'</p><button class="btn" type="button" data-view="'+tabDefs[1].id+'">'+cta+"</button></div>"; }
-function pocketLine(e){
+${grammar.id === "phone-seed" ? `function pocketLine(e){
   var parts=[];
   function add(v){
     v=String(v||"").trim();
@@ -1931,13 +1936,13 @@ function fxBoardMarkup(n){
   var second=campoProduct?"Media":"Media";
   return '<div class="fx-board" aria-label="Sintesi"><div class="fx-cell"><b>'+(total?fmtLiters(today):String(n))+'</b><span>'+first+'</span></div><div class="fx-cell"><b>'+(total?fmtLiters(avg):"0")+'</b><span>'+second+'</span></div><div class="fx-cell"><b>'+n+'</b><span>'+third+'</span></div><div class="fx-cell"'+(open?' data-warn':'')+'><b>'+open+'</b><span>'+fourth+'</span></div></div>';
 }
-function fxBotteSvg(pct){
+${campo ? `function fxBotteSvg(pct){
   var p=Math.max(0,Math.min(100,pct));
   var y=Math.round(52+((100-p)/100)*108);
   var wave='M26 '+y+' C58 '+(y-18)+' 88 '+(y+16)+' 120 '+y+' C154 '+(y-16)+' 182 '+(y+14)+' 214 '+y+' L214 176 C214 184 26 184 26 176Z';
   var foam='M26 '+y+' C72 '+(y+12)+' 102 '+(y-14)+' 136 '+y+' C168 '+(y+12)+' 192 '+(y-8)+' 214 '+y+' L214 '+(y+14)+' C184 '+(y+6)+' 68 '+(y+20)+' 26 '+(y+10)+'Z';
   return "<svg class='fx-botte' viewBox='0 0 240 188' aria-hidden='true'><defs><linearGradient id='fx-botte-liq' x1='120' y1='"+y+"' x2='120' y2='180' gradientUnits='userSpaceOnUse'><stop offset='0' stop-color='#F0F9FF'/><stop offset='.12' stop-color='#BAE6FD'/><stop offset='.34' stop-color='#38BDF8'/><stop offset='.62' stop-color='#0EA5E9'/><stop offset='1' stop-color='#0369A1'/></linearGradient><linearGradient id='fx-botte-glass' x1='26' y1='18' x2='214' y2='18' gradientUnits='userSpaceOnUse'><stop offset='0' stop-color='#fff' stop-opacity='.4'/><stop offset='.14' stop-color='#fff' stop-opacity='.06'/><stop offset='.5' stop-color='#041018' stop-opacity='.08'/><stop offset='.82' stop-color='#041018' stop-opacity='.28'/><stop offset='1' stop-color='#fff' stop-opacity='.22'/></linearGradient><radialGradient id='fx-botte-caustic' cx='84' cy='"+(y+16)+"' r='58' gradientUnits='userSpaceOnUse'><stop offset='0' stop-color='#fff' stop-opacity='.55'/><stop offset='1' stop-color='#fff' stop-opacity='0'/></radialGradient><clipPath id='fx-botte-clip'><path d='M26 36C26 22 214 22 214 36V168C214 182 26 182 26 168Z'/></clipPath><filter id='fx-botte-soft' x='-10%' y='-16%' width='120%' height='132%'><feGaussianBlur stdDeviation='0.7'/></filter></defs><path d='M26 36C26 22 214 22 214 36V168C214 182 26 182 26 168Z' fill='#050910'/><ellipse cx='120' cy='36' rx='94' ry='16' fill='#081422'/><g clip-path='url(#fx-botte-clip)'><path class='fx-wave' d='"+wave+"' fill='url(#fx-botte-liq)'/><path class='fx-wave' d='"+foam+"' fill='#fff' fill-opacity='.22'/><ellipse class='fx-meniscus' cx='120' cy='"+y+"' rx='92' ry='15' fill='#F0F9FF' fill-opacity='.55'/><ellipse cx='82' cy='"+(y+20)+"' rx='40' ry='12' fill='url(#fx-botte-caustic)'/><path fill='none' stroke='#fff' stroke-opacity='.28' stroke-width='2' d='M48 "+(y+8)+" C78 "+(y-6)+" 110 "+(y+10)+" 148 "+(y+2)+"'/></g><path d='M26 36C26 22 214 22 214 36V168C214 182 26 182 26 168Z' fill='url(#fx-botte-glass)'/><ellipse cx='120' cy='36' rx='94' ry='16' fill='none' stroke='#fff' stroke-opacity='.55' stroke-width='2.4'/><ellipse cx='120' cy='36' rx='80' ry='11' fill='none' stroke='#7DD3FC' stroke-opacity='.35' stroke-width='1.4'/><path fill='none' stroke='#fff' stroke-opacity='.16' stroke-width='2.2' d='M28 88C72 100 168 100 212 88'/><path fill='none' stroke='#fff' stroke-opacity='.12' stroke-width='2.2' d='M28 128C72 140 168 140 212 128'/><path fill='none' stroke='#fff' stroke-opacity='.5' stroke-width='4' stroke-linecap='round' d='M46 50c7 26 7 70 0 94'/><path fill='none' stroke='#fff' stroke-opacity='.18' stroke-width='2' stroke-linecap='round' d='M196 56c-4 24-4 64 0 86'/></svg>";
-}
+}` : `function fxBotteSvg(pct){ return ""; }`}
 function fxTankMarkup(n){
   var total=data.items.reduce(function(a,e){return a+litersOf(e.meta);},0);
   var goal=goalOf();
@@ -2131,8 +2136,8 @@ function renderPocketPersona(){
     html+='<p class="notes" data-fenix-wipe-empty>Quando salvi una voce, il conteggio sale da qui. Non riempiamo la scheda.</p>';
   }
   return html+"</section>";
-}
-function chip(k){ return '<span class="chip '+k+'">'+k+"</span>"; }
+}` : `function renderPocketHome(){ return ""; }`}
+${grammar.id === "phone-seed" ? "" : `function chip(k){ return '<span class="chip '+k+'">'+k+"</span>"; }
 function renderPerfume(){
   var featured=data.items[0];
   var html='<div class="hero"><div class="stage">'+artOf(featured,"meet")+'</div><div class="caption"><p class="kicker">'+kicker+'</p><h2>'+(featured?featured.title:specName())+'</h2><p class="notes">'+(featured?featured.kicker+(featured.meta?" · "+featured.meta:""):data.items.length+" "+census)+"</p></div></div>";
@@ -2232,7 +2237,7 @@ function renderMagazine(){
   html+=renderForm();
   if(!data.items.length) html+=emptyBox();
   return html;
-}
+}`}
 function specName(){ return ${JSON.stringify(spec.name)}; }
 function renderForm(){
 ${
@@ -2256,7 +2261,7 @@ ${
   return '<section class="card span" data-fenix-crud><p class="kicker">'+(editing?"Modifica":"Nuovo")+'</p><h2>'+(editing?"Aggiorna voce":formTitle)+'</h2>'+(grammarId==="phone-seed"?'<p class="notes">Campi sul dispositivo. Conferma visibile dopo Salva.</p>':'')+'<form id="fnew"><label for="n">Nome</label><input class="field" id="n" name="n" required placeholder="Nome" value="'+title+'"><label for="k">Dettaglio</label><input class="field" id="k" name="k" placeholder="stato, taglia, ora" value="'+det+'"><label for="note">Nota</label><input class="field" id="note" name="note" placeholder="materia" value="'+nota+'"><p class="notes" data-fenix-form-error role="alert" hidden>Controlla i campi obbligatori.</p><button class="btn" type="button" data-act="save" style="margin-top:14px;width:100%">'+(editing?"Salva modifiche":cta)+'</button></form></section>';`
 }
 }
-function renderList(){
+${grammar.id === "phone-seed" ? `function renderHome(){ return renderPocketHome(); }` : `function renderList(){
   var html='<div class="card span"><p class="kicker">Archivio</p><h2>'+data.items.length+" voci</h2></div>";
   if(!data.items.length) html+=emptyBox();
   data.items.forEach(function(e){
@@ -2364,7 +2369,7 @@ function renderTool(){
     html+='<article class="ticket" data-id="'+e.id+'" data-state="'+(i===0?"on":"idle")+'"><div class="thumb">'+artOf(e,"slice")+'</div><div><h2>'+e.title+'</h2><p class="notes">'+e.note+" · "+e.meta+"</p></div>"+chip(e.kicker)+"</article>";
   });
   return html;
-}
+}`}
 function render(){
   if(grammarId==="agenda") hydrateAgenda();
   ensureSlots();
