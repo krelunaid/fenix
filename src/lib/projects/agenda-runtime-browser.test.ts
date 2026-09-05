@@ -21,11 +21,12 @@ const VIEWPORTS = [
   ["M", { width: 390, height: 844 }],
 ] as const;
 
-it("Barber identity and native type survive polish parsing across D/T/M/320 and tab changes", async () => {
+it("Barber identity survives polish parsing across D/T/M/320 without the rejected raspberry draft", async () => {
   const brief = formatPrefix("app") + "mi crei un app da parrucchieri stile Barber shop";
   const product = composeProduct(brief);
   const parsed = parseBuildOutput(`<<<META>>>\n{}\n<<<HTML>>>\n${product.html}\n<<<END>>>`,"app",brief,{name:"Barber",palette:product.tokens.palette})!;
-  assert.equal(parsed.palette.accent,"#b51246");
+  assert.notEqual(parsed.palette.accent.toLowerCase(),"#b51246");
+  assert.doesNotMatch(parsed.html,/#b51246|#b01e47|#a61d4c/i);
   const browser = await launchChromium();
   const output = "/tmp/fenix-barber-native-brand-shots";
   mkdirSync(output,{recursive:true});
@@ -40,8 +41,14 @@ it("Barber identity and native type survive polish parsing across D/T/M/320 and 
       assert.equal(await mark.count(),1);
       assert.equal(await mark.isVisible(),true);
       const dimensions=await mark.boundingBox();assert.ok(dimensions && dimensions.width>=44 && dimensions.height>=44);
-      const fonts=await frame.locator("h1,h2,button").evaluateAll(nodes=>nodes.map(n=>getComputedStyle(n).fontFamily));
-      for(const font of fonts)assert.match(font,/system-ui/,`${id}: ${font}`);
+      const markBg=await mark.evaluate(el=>getComputedStyle(el).backgroundColor);
+      const accent=await frame.locator("html").evaluate(()=>getComputedStyle(document.documentElement).getPropertyValue("--accent").trim());
+      assert.notEqual(markBg.replace(/\s/g,""),"rgb(181,18,70)");
+      assert.notEqual(accent.toLowerCase(),"#b51246");
+      const timeColor=await frame.locator(".slot .time").first().evaluate(el=>getComputedStyle(el).color);
+      const fg=await frame.locator("html").evaluate(()=>getComputedStyle(document.documentElement).getPropertyValue("--fg").trim());
+      assert.ok(timeColor);
+      assert.ok(fg);
       assert.equal(await frame.locator("header h1").innerText(),"Barber");
       await page.screenshot({path:join(output,`${id}-home.png`)});
       const count=await frame.locator("nav#tabs button").count();

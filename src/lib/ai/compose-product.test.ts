@@ -36,15 +36,16 @@ describe("controller build request preserves generated artifacts", () => {
     }
     assert.equal(icons.size,4,"sector icons must not all be the same generic document");
   });
-  it("uses native typography and separated light surfaces for the reported Barber brief", () => {
+  it("keeps Barber activity identity without the rejected raspberry palette or auto-native style", () => {
     const brief = formatPrefix("app") + "mi crei un app da parrucchieri stile Barber shop";
     const product = composeProduct(brief);
     assert.match(product.html,/<title>Barber<\/title>/);
-    assert.match(product.html,/data-fenix-native-style="v1"/);
-    assert.equal(product.tokens.fonts.display,"system-ui");
-    assert.equal(product.tokens.fonts.href,"");
-    assert.equal(product.tokens.palette.surface,"#fbfbfd");
-    assert.equal(product.tokens.palette.accent,"#b51246");
+    assert.match(product.html,/data-fenix-id="icon:app"/);
+    assert.doesNotMatch(product.html,/data-fenix-native-style/);
+    assert.doesNotMatch(product.html,/#b51246|#b01e47|#a61d4c/i);
+    assert.notEqual(product.tokens.fonts.display,"system-ui");
+    assert.equal(product.tokens.family,"booking");
+    assert.notEqual(product.tokens.palette.accent.toLowerCase(),"#b51246");
     assert.notEqual(product.tokens.palette.bg,product.tokens.palette.surface);
     const p = product.tokens.palette;
     for (const bg of [p.bg,p.surface]) {
@@ -52,9 +53,16 @@ describe("controller build request preserves generated artifacts", () => {
       assert.ok(contrastRatio(p.muted,bg)>=4.5);
     }
     assert.ok(contrastRatio(p.accentInk,p.accent)>=4.5);
+    assert.match(product.html,/\.day-rail\{[^}]*border-radius:14px/);
+    assert.doesNotMatch(product.html,/box-shadow:inset 3px 0 0 var\(--accent\)/);
     const explicit = composeProduct(brief + ", serif primario Garamond, accento #006633");
     assert.equal(explicit.tokens.fonts.display,"Garamond");
     assert.equal(explicit.tokens.palette.accent,"#006633");
+    const native = composeProduct(brief + ", stile iPhone");
+    assert.match(native.html,/data-fenix-native-style="v1"/);
+    assert.equal(native.tokens.fonts.display,"system-ui");
+    assert.notEqual(native.tokens.palette.accent.toLowerCase(),"#b51246");
+    assert.equal(native.tokens.palette.accent,product.tokens.palette.accent);
   });
   it("uses complete product names instead of cutting a descriptive brief mid-word", () => {
     for (const [brief, expected] of [

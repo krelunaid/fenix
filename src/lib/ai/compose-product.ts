@@ -636,10 +636,12 @@ function phoneCss(id: GrammarId): string {
               ? `.hero{display:none;min-height:0;height:0;margin:0;border:0}
   .day-head{padding:2px 0 8px}
   .day-head h2{font-family:var(--body),ui-sans-serif,system-ui,sans-serif;font-size:var(--t-large);font-weight:700;letter-spacing:-.03em;line-height:1.12;color:var(--ink-loud)}
-  .day-rail{display:flex;flex-direction:column;gap:8px}
-  .slot{display:grid;grid-template-columns:56px minmax(0,1fr);gap:10px;align-items:start;padding:12px 14px;margin:0;border:1px solid var(--line);border-radius:calc(var(--r) * .45);background:var(--surface);min-height:64px;box-shadow:inset 3px 0 0 var(--accent)}
-  .slot[data-state="on"]{border-color:var(--accent)}
-  .slot .time{font-variant-numeric:tabular-nums;font-feature-settings:"tnum";font-size:var(--t-footnote);font-weight:700;color:var(--accent);padding-top:3px;letter-spacing:-.01em}
+  .day-rail{display:flex;flex-direction:column;gap:0;background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+  .slot{display:grid;grid-template-columns:56px minmax(0,1fr);gap:10px;align-items:start;padding:14px 16px;margin:0;border:0;border-bottom:1px solid var(--line);border-radius:0;background:transparent;min-height:64px;box-shadow:none}
+  .slot:last-child{border-bottom:0}
+  .slot[data-state="on"]{border-color:var(--line);background:transparent}
+  .slot:hover,.slot:active{transform:none;filter:none;box-shadow:none;border-color:var(--line)}
+  .slot .time{font-variant-numeric:tabular-nums;font-feature-settings:"tnum";font-size:15px;font-weight:650;color:var(--fg);padding-top:3px;letter-spacing:-.015em}
   .slot-body h2{font-family:var(--body),ui-sans-serif,system-ui,sans-serif;font-size:var(--t-headline);font-weight:650;letter-spacing:-.022em;margin:0 0 4px;line-height:1.2;color:var(--ink-loud)}
   .slot-actions{display:flex;flex-wrap:nowrap;gap:4px;margin-top:8px;align-items:center;overflow:visible}
   .slot .btn{margin-top:0;flex:0 0 auto;white-space:nowrap;min-height:44px}
@@ -1066,8 +1068,8 @@ header{padding:16px 18px 10px;display:flex;align-items:flex-end;justify-content:
 .brand{font-family:var(--display);font-size:${tokens.type.h1};font-weight:650;letter-spacing:-.04em;line-height:1.1;color:var(--fg);overflow-wrap:anywhere;min-width:0}
 .brand-group{display:flex;align-items:center;gap:12px;min-width:0}
 .brand-group>div{min-width:0}
-.app-mark{width:44px;height:44px;flex:0 0 44px;border-radius:13px;display:grid;place-items:center;background:var(--accent);color:var(--accent-ink);box-shadow:0 3px 8px color-mix(in srgb,var(--accent) 16%,transparent)}
-.app-mark svg{width:28px;height:28px;stroke-width:1.9}
+.app-mark{width:44px;height:44px;flex:0 0 44px;border-radius:12px;display:grid;place-items:center;background:var(--elevated);color:var(--fg);border:1px solid var(--line);box-shadow:none}
+.app-mark svg{width:26px;height:26px;stroke-width:2}
 header .place{color:var(--muted);max-width:42%;overflow:visible;white-space:normal;text-align:right;line-height:1.3}
 main{flex:1;min-height:0;overflow-y:auto;padding:8px 16px 24px;-webkit-overflow-scrolling:touch}
 .hero,.sil,.plate{position:relative;border-radius:var(--r);overflow:hidden;margin-bottom:14px;border:1px solid var(--line);background:var(--elevated);min-height:200px}

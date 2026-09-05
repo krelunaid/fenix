@@ -6,7 +6,6 @@
  */
 import { contrastRatio } from "./visual-quality.ts";
 import type { Palette } from "./types.ts";
-import { isBarberBrief } from "./app-identity.ts";
 import {
   applyUserColors,
   avoidRecent,
@@ -721,11 +720,9 @@ export function tokensFromBrief(brief: string, opts?: TokenOptions): DesignToken
     );
   }
   const src = variant === 1 && VARIANTS[family] ? VARIANTS[family]! : FAMILIES[family];
-  const basePalette = isBarberBrief(brief) ? {
-    ...src.palette, bg:"#f7f7fa", surface:"#ffffff", elevated:"#ffffff",
-    fg:"#191b24", muted:"#626572", accent:"#b51246", line:"#dfe1e8", accentInk:"#ffffff",
-  } : src.palette;
-  const applied = applyUserColors(asEngine(basePalette), brief);
+  // Colors stay on the domain recipe + explicit user locks. A shop name
+  // (barber, salon, …) is not a palette and must not inject a house accent.
+  const applied = applyUserColors(asEngine(src.palette), brief);
   let palette = avoidRecent(applied.palette, opts?.recent, hashBrief(brief), applied.lock);
   palette = ensureAccessible(palette, applied.lock);
   if (contrastRatio(palette.fg, palette.bg) < 4.5) {

@@ -13,7 +13,7 @@ import {
   stampGraphicIntent,
   wantsNativeAppStyle,
 } from "./graphic-intent.ts";
-import { applyNativeAppStyle } from "./native-app-style.ts";
+import { applyNativeAppStyle, nativeStyleAssignsPalette } from "./native-app-style.ts";
 import { composeProduct } from "../ai/compose-product.ts";
 import { prepareSrcDoc } from "./color-scheme.ts";
 import { applyChromeGuards, craftNavIcon, looksLikeAppleTabIcons } from "./craft-icons.ts";
@@ -54,6 +54,28 @@ describe("graphic intent from brief", () => {
     }
     assert.equal(applyNativeAppStyle("<html><head></head><body>Studio</body></html>", true), "<html><head></head><body>Studio</body></html>");
     assert.equal(graphicIntentFromBrief("App stile Apple, invece serif primario Garamond").type, "serif");
+  });
+
+  it("does not treat a shop name as native style or a house accent", () => {
+    const brief = `${formatPrefix("app")}mi crei un app da parrucchieri stile Barber shop`;
+    assert.equal(wantsNativeAppStyle(brief), false);
+    assert.equal(graphicIntentFromBrief(brief).type, "domain");
+    const tokens = tokensFromBrief(brief);
+    assert.equal(tokens.family, "booking");
+    assert.notEqual(tokens.palette.accent.toLowerCase(), "#b51246");
+    assert.notEqual(tokens.fonts.display, "system-ui");
+    const html = composeProduct(brief).html;
+    assert.doesNotMatch(html, /data-fenix-native-style/);
+    assert.doesNotMatch(html, /#b51246|#b01e47|#a61d4c/i);
+    const asked = `${brief}, stile iPhone`;
+    assert.equal(wantsNativeAppStyle(asked), true);
+    assert.equal(graphicIntentFromBrief(asked).type, "system");
+    const native = composeProduct(asked);
+    const layer = native.html.match(/<style data-fenix-native-style="v1">[\s\S]*?<\/style>/)?.[0] || "";
+    assert.equal(nativeStyleAssignsPalette(layer), false);
+    assert.equal(native.tokens.palette.accent, tokens.palette.accent);
+    const locked = tokensFromBrief(`${brief}, accento #006633`);
+    assert.equal(locked.palette.accent, "#006633");
   });
 
   it("keeps parent SHA at 76414c7 and does not invent a score", () => {

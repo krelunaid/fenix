@@ -1,5 +1,6 @@
 import { craftNavIcon } from "./craft-icons.ts";
 
+/** Activity classifier for naming and the sector pictogram. Not a color or style policy. */
 export function isBarberBrief(brief: string): boolean {
   return /parrucchier|barbiere|barbieri|\bbarber(?:\s*shop)?\b|\bhair\s*salon\b/i.test(brief);
 }
