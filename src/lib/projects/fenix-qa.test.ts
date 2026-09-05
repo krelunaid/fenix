@@ -329,6 +329,26 @@ describe("focus-visible and worker model", () => {
       polishFn.indexOf("looksLikeIconInstruction") < polishFn.indexOf("startPolishJob"),
       "icon polish must not POST the visual worker",
     );
+    assert.match(runBuild, /shouldSkipComposedPolish/);
+    assert.match(runBuild, /canKeepComposedSeedAfterPolishError/);
+    assert.match(runBuild, /VISUAL_STYLE_SKIPPED_LOG/);
+    assert.match(runBuild, /Resta la bozza valida/);
+    assert.ok(
+      polishFn.indexOf("canKeepComposedSeedAfterPolishError") < polishFn.indexOf("abandonVisualJob"),
+      "composed seed polish errors must keep the draft instead of BLOCCATO",
+    );
+    const createFn = runBuild.slice(runBuild.indexOf("export async function runBuild"));
+    assert.ok(
+      createFn.indexOf("shouldSkipComposedPolish") < createFn.indexOf("polishDraft("),
+      "seed-fallback create must skip automatic visual polish",
+    );
+    const worker = readFileSync(join(root, "workers/visual/server.mjs"), "utf8");
+    assert.match(worker, /repairVisualStyleOrKeep/);
+    assert.match(worker, /VISUAL_STYLE_SKIPPED_LOG/);
+    const repair = readFileSync(join(root, "workers/visual/visual-style-repair.mjs"), "utf8");
+    assert.match(repair, /export async function repairVisualStyleOrKeep/);
+    assert.match(repair, /isTerminalVisualPolishError/);
+    assert.doesNotMatch(repair, /font-size.: \[13/);
     const compose = readFileSync(join(root, "src/lib/ai/compose-product.ts"), "utf8");
     assert.match(compose, /data-fenix-id="icon:\$\{tab\.id\}"/);
     assert.match(compose, /data-fenix-id="icon:'\+t\.id\+'/);
