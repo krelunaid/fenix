@@ -1120,7 +1120,7 @@ function productChromeCss(): string {
 .fx-board .fx-cell b{display:block;font:750 1.35rem/1.1 var(--display),system-ui,sans-serif;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
 .fx-board .fx-cell span{display:block;margin-top:4px;font-size:12px;opacity:.78}
 .fx-board .fx-cell[data-warn] b{color:color-mix(in srgb,var(--warning) 70%,var(--bg))}
-.fx-tank{margin:0 0 14px;padding:16px 16px 14px;border-radius:22px;background:var(--fg);color:var(--bg);display:flex;flex-direction:column;min-width:0;min-height:0;overflow:hidden}
+.fx-tank{margin:0 0 14px;padding:16px 16px 16px;border-radius:22px;background:var(--fg);color:var(--bg);display:flex;flex-direction:column;min-width:0;min-height:0;overflow:hidden}
 .fx-tank .fx-seg{margin:0 0 14px;border-color:color-mix(in srgb,var(--bg) 22%,transparent);flex:0 0 auto}
 .fx-tank .fx-seg button{color:color-mix(in srgb,var(--bg) 82%,transparent);border-right-color:color-mix(in srgb,var(--bg) 18%,transparent)}
 .fx-tank .fx-seg button.on{background:var(--bg);color:var(--fg)}
@@ -1207,7 +1207,7 @@ html[data-fenix-campo] .fx-role{margin:4px 0 0;font:500 var(--fx-t-14)/1.3 var(-
 html[data-fenix-campo] .fx-date{margin:0 0 16px;font:500 var(--fx-t-14)/1.3 var(--body),system-ui,sans-serif;color:color-mix(in srgb,var(--on-surface) 48%,#94a3b8)}
 html[data-fenix-campo] .fx-exit{width:40px;height:40px;border:0;border-radius:50%;background:var(--brand-soft);color:var(--brand-2);display:grid;place-items:center;flex:0 0 40px}
 html[data-fenix-campo] .fx-exit svg{width:18px;height:18px}
-html[data-fenix-campo] .fx-inverse{margin:0 0 12px;padding:18px 16px 16px;border-radius:24px;background:var(--inverse);color:#f8fafc;overflow:hidden;min-width:0;box-shadow:var(--shadow-card),inset 0 1px 0 rgba(255,255,255,.08)}
+html[data-fenix-campo] .fx-inverse{margin:0 0 12px;padding:18px 16px 20px;border-radius:24px;background:var(--inverse);color:#f8fafc;overflow:hidden;min-width:0;box-shadow:var(--shadow-card),inset 0 1px 0 rgba(255,255,255,.08)}
 html[data-fenix-campo] .fx-hero{box-shadow:var(--shadow-float),inset 0 1px 0 rgba(255,255,255,.1);background:linear-gradient(180deg,color-mix(in srgb,#1e293b 42%,var(--inverse)) 0%,var(--inverse) 36%)}
 html[data-fenix-campo] .fx-shell-kicker{margin:0 0 12px;font:650 var(--fx-t-14)/1.3 var(--body),system-ui,sans-serif;letter-spacing:-.01em;color:color-mix(in srgb,#f8fafc 78%,transparent)}
 html[data-fenix-campo] .fx-inverse .fx-board,html[data-fenix-campo] .fx-inverse .fx-tank{background:transparent;color:inherit;margin:0;padding:0;border-radius:0;box-shadow:none}
@@ -1229,7 +1229,8 @@ html[data-fenix-campo] .fx-tank-well b{color:#fff;font-size:var(--fx-t-display);
 html[data-fenix-campo] .fx-axis{list-style:none;list-style-type:none;margin:0;padding:2px 0;padding-inline-start:0;display:flex;flex-direction:column;justify-content:space-between;font:650 10px/1 var(--body),system-ui,sans-serif;color:color-mix(in srgb,#f8fafc 62%,transparent);text-align:right;min-width:0;overflow:hidden}
 html[data-fenix-campo] .fx-axis li{list-style:none}
 html[data-fenix-campo] .fx-axis li::marker{content:none;font-size:0}
-html[data-fenix-campo] .fx-tank p,html[data-fenix-campo] .fx-tank-meta{min-width:0;max-width:100%;overflow:hidden;overflow-wrap:anywhere}
+html[data-fenix-campo] .fx-tank p,html[data-fenix-campo] .fx-tank-meta{min-width:0;max-width:100%;overflow:hidden;overflow-wrap:anywhere;margin:14px 0 4px}
+html[data-fenix-campo] .fx-ok{margin:12px 0 2px}
 html[data-fenix-campo] .fx-ok{display:flex;margin:12px 0 0;width:100%;background:#10B981;color:#fff;border-radius:var(--fx-pill);min-height:42px;font:700 14px/1.2 var(--body),system-ui,sans-serif;box-shadow:inset 0 1px 0 rgba(255,255,255,.28),0 8px 18px color-mix(in srgb,#10B981 34%,transparent)}
 html[data-fenix-campo] .fx-pills{position:sticky;top:0;z-index:3;padding:2px 0;background:color-mix(in srgb,var(--surface-2) 88%,transparent)}
 html[data-fenix-campo] .fx-pill,html[data-fenix-campo] .fx-filter{border-width:1.5px;border-color:var(--border,var(--line));background:var(--surface);color:var(--on-surface)}
