@@ -827,6 +827,9 @@ describe("graphic pipeline prompt→plan→generate→visual→QA", () => {
     assert.match(product.html, /function renderPocketStats/);
     assert.match(product.html, /fx-board/);
     assert.match(product.html, /fx-tank/);
+    assert.match(product.html, /fxBotteSvg/);
+    assert.match(product.html, /fx-botte/);
+    assert.match(product.html, /fx-wave/);
     assert.match(product.html, /fx-inverse/);
     assert.match(product.html, /fx-toggle/);
     assert.match(product.html, /Obiettivo raggiunto\. Bene\./);

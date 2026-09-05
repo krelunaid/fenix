@@ -6,7 +6,8 @@ Andrea closed the teacher set with ActStage. We distilled **one quality system**
 
 `docs/checkpoints/2026-09-05/apple-craft-v5/`
 
-- `01-water-home.png` — utility light (AcquaGt): sky brand, inverse hero, deeper tank, success `#10B981`
+- `01-water-home.png` — utility light (AcquaGt): sky brand, inverse hero, glass botte, success `#10B981`
+- `06-water-tank-close.png` — close-up of the original glass tank (wave, sheen, depth)
 - `02-market-home.png` — consumer light (LikeSwift): paper `#FAFAFA`, navy `#1E40AF`, category chips, inset 24px cards
 - `03-market-activity.png` — same market tokens on Attività, not Tracking/Chat
 - `04-shop-home.png` — generic consumer: own brand scale, not sky / navy / gold

@@ -79,6 +79,28 @@ try {
   const waterPage = await isolatedPage(browser, { viewport: { width: 390, height: 844 } });
   await boot(waterPage, water, 5);
   await shot(waterPage, "01-water-home.png");
+  const tank = waterPage.locator(".fx-hero");
+  await tank.waitFor({ state: "visible", timeout: 8000 });
+  const box = await tank.boundingBox();
+  if (box) {
+    const file = join(outDir, "06-water-tank-close.png");
+    const buf = await waterPage.screenshot({
+      type: "png",
+      clip: {
+        x: Math.max(0, box.x - 8),
+        y: Math.max(0, box.y - 8),
+        width: Math.min(390, box.width + 16),
+        height: Math.min(844, box.height + 16),
+      },
+    });
+    writeFileSync(file, buf);
+    try {
+      writeFileSync(join(artDir, "06-water-tank-close.png"), buf);
+    } catch {
+      /* artifacts volume can flake */
+    }
+    console.log("shot", file);
+  }
   await waterPage.close();
 
   const marketPage = await isolatedPage(browser, { viewport: { width: 390, height: 844 } });
