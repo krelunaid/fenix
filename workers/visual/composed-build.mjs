@@ -5,11 +5,14 @@ import { applyComposedBuildPlanForDigest } from "./composed-protocol.mjs";
 export {
   composedBuildPalette,
   COMPOSED_BUILD_SYSTEM,
+  COMPOSED_BUILD_FIND_EXAMPLES,
   COMPOSED_PLAN_APPLY_RETRIES,
   COMPOSED_PLAN_DEGRADED_LOG,
   applyComposedBuildPlanOrSeed,
   composedBuildUserContent,
   composedPlanRetryFeedback,
+  composedSeedAnchors,
+  composedFindStatus,
 } from "./composed-protocol.mjs";
 
 /** Synchronous Node entrypoint retained for the existing worker.

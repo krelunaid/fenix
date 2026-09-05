@@ -5,11 +5,17 @@ import {
   applyComposedBuildPlanOrSeed,
   applyComposedBuildPlanWeb,
   composedBaseShaWeb,
+  composedBuildUserContent,
+  composedFindStatus,
+  composedPlanRetryFeedback,
+  composedSeedAnchors,
+  COMPOSED_BUILD_FIND_EXAMPLES,
+  COMPOSED_BUILD_SYSTEM,
   COMPOSED_PLAN_APPLY_RETRIES,
   COMPOSED_PLAN_DEGRADED_LOG,
 } from "../workers/visual/composed-protocol.mjs";
 
-const html = '<!doctype html><html data-grammar="agenda"><head><style data-fenix-craft>:root{--fg:#102030}</style><style data-fenix-native-style="v1">body{font-size:17px}</style></head><body><main id="root"><button id="save">Salva adesso</button><output id="status">In attesa</output></main><nav id="tabs"><button>Home</button></nav><script>window.saved="original";</script></body></html>';
+const html = '<!doctype html><html data-grammar="agenda"><head><style data-fenix-craft>:root{--fg:#102030}</style><style data-fenix-native-style="v1">body{font-size:17px}</style></head><body><main id="root" data-fenix-slot="root"><button id="save">Salva adesso</button><output id="status">In attesa</output></main><nav id="tabs"><button>Home</button></nav><script>/*fenix-slot:save*/window.saved="original";</script></body></html>';
 const plan = (changes, base = html) => ({ version: 1, baseSha256: composedBaseSha(base), changes });
 const edit = {find:'window.saved="original";',replace:'window.saved="literal $& $` $\'";'};
 
@@ -72,10 +78,13 @@ test("first plan with a missing find retries against the original html and then 
     JSON.stringify(missing),
     async (feedback) => {
       retries++;
-      assert.match(feedback, /Target di creazione assente, ambiguo o fuori dal body/);
+      assert.match(feedback, /Target di creazione assente/);
+      assert.match(feedback, /function doesNotExist/);
       assert.match(feedback, /verbatim dall'HTML ORIGINALE/);
       assert.match(feedback, /unico nel body/);
       assert.match(feedback, /head, style o link/);
+      assert.match(feedback, /\/\*fenix-slot:save\*\//);
+      assert.match(feedback, /data-fenix-slot="root"/);
       return JSON.stringify(plan([edit]));
     },
   );
@@ -129,4 +138,34 @@ test("ambiguous finds stay rejected and never become a full rewrite", async () =
   assert.equal(outcome.applied, false);
   assert.equal(outcome.html, repeated);
   assert.match(outcome.error?.message || "", /ambiguo/);
+});
+
+test("system prompt examples are verbatim unique finds and retry names the missed find plus seed anchors", () => {
+  for (const example of COMPOSED_BUILD_FIND_EXAMPLES) {
+    assert.match(COMPOSED_BUILD_SYSTEM, new RegExp(example.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+  }
+  assert.match(COMPOSED_BUILD_SYSTEM, /\/\*fenix-slot:NOME\*\//);
+  assert.match(COMPOSED_BUILD_SYSTEM, /data-fenix-slot="NOME"/);
+  assert.match(COMPOSED_BUILD_SYSTEM, /Non usare come find frammenti SVG/);
+  const missing = new Error("Target di creazione assente: «<svg class='fx-botte'» non compare nel documento");
+  const feedback = composedPlanRetryFeedback(missing, html);
+  assert.match(feedback, /fx-botte/);
+  assert.match(feedback, /Ancore uniche/);
+  assert.match(feedback, /\/\*fenix-slot:save\*\//);
+  assert.match(feedback, /Preferisci \/\*fenix-slot:/);
+  const user = composedBuildUserContent({
+    prompt: "acqua",
+    html,
+    digest: composedBaseSha(html),
+  });
+  assert.match(user, /ANCORE UNICHE:/);
+  assert.match(user, /\/\*fenix-slot:save\*\//);
+  assert.ok(user.endsWith(html));
+  assert.deepEqual(composedSeedAnchors(html), ['data-fenix-slot="root"', "/*fenix-slot:save*/"]);
+  assert.equal(composedFindStatus(html, "/*fenix-slot:save*/window.saved=").usable, true);
+  assert.equal(composedFindStatus(html, "function doesNotExist(){").reason, "assente");
+  assert.throws(
+    () => applyComposedBuildPlan(html, plan([{ find: "function doesNotExist(){", replace: "function exists(){" }])),
+    /Target di creazione assente: «function doesNotExist\(\)\{»/,
+  );
 });
