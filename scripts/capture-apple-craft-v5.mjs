@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * v5 proofs: water vs marketplace vs shop — shared slots, distinct palettes.
+ * v5 proofs: water vs marketplace vs shop vs luxe — one slot system, four modes.
  * composeProduct + prepareSrcDoc + Playwright. No live Grok.
  */
 import { mkdirSync, writeFileSync } from "node:fs";
@@ -37,6 +37,10 @@ const market = prepare(
 const shop = prepare(
   formatPrefix("app") + "Emporio Luce: negozio di lampade da tavolo, stile Apple.",
   "emporio-v5",
+);
+const luxe = prepare(
+  formatPrefix("app") + "Palco: scene e recitazione, prove e repertorio, stile Apple.",
+  "palco-v5",
 );
 
 async function shot(page, name) {
@@ -90,6 +94,11 @@ try {
   await boot(shopPage, shop, 2);
   await shot(shopPage, "04-shop-home.png");
   await shopPage.close();
+
+  const luxePage = await isolatedPage(browser, { viewport: { width: 390, height: 844 } });
+  await boot(luxePage, luxe, 3);
+  await shot(luxePage, "05-luxe-home.png");
+  await luxePage.close();
 } finally {
   await browser.close();
 }

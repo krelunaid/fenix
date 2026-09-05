@@ -877,4 +877,45 @@ describe("graphic pipeline prompt→plan→generate→visual→QA", () => {
     assert.doesNotMatch(water.html, /<html[^>]*data-fenix-market/);
     assert.equal(water.tokens.palette.accent.toLowerCase(), "#0ea5e9");
   });
+
+  it("teaches luxe craft without cloning ActStage or forcing gold on water, market or desk", () => {
+    const product = composeProduct(
+      `${formatPrefix("app")}Palco: scene e recitazione, prove e repertorio, stile Apple.`,
+    );
+    assert.equal(product.grammar.id, "phone-seed");
+    assert.match(product.html, /data-fenix-luxe/);
+    assert.match(product.html, /data-craft-mode="luxe"/);
+    assert.match(product.html, /data-craft-rhythm="luxe"/);
+    assert.match(product.html, /<span>Scena<\/span>/);
+    assert.match(product.html, /<span>Prove<\/span>/);
+    assert.match(product.html, /fx-scene/);
+    assert.match(product.html, /Repertorio/);
+    assert.match(product.html, /#D4AF37/i);
+    assert.match(product.html, /#0[Dd]0[Dd]11/);
+    assert.match(product.html, /--fx-t-display:46px/);
+    assert.match(product.html, /Fraunces/);
+    assert.doesNotMatch(product.html, /<html[^>]*data-fenix-campo/);
+    assert.doesNotMatch(product.html, /<html[^>]*data-fenix-market/);
+    assert.doesNotMatch(product.html, /Ciao/);
+    assert.doesNotMatch(product.html, /ActStage|Teleprompter|Gamification|LikeSwift/);
+    assert.doesNotMatch(product.html, /#f5f5f7|#007aff|#0071e3/i);
+    const water = composeProduct(
+      `${formatPrefix("app")}NordAcqua: consegne acqua in campo, gestione dipendenti, storico e statistiche, stile Apple.`,
+    );
+    assert.match(water.html, /data-craft-mode="utility"/);
+    assert.doesNotMatch(water.html, /<html[^>]*data-fenix-luxe/);
+    assert.equal(water.tokens.palette.accent.toLowerCase(), "#0ea5e9");
+    const market = composeProduct(
+      `${formatPrefix("app")}Vicina: marketplace di lavoretti e bacheca incarichi, stile Apple.`,
+    );
+    assert.match(market.html, /data-craft-mode="marketplace"/);
+    assert.doesNotMatch(market.html, /<html[^>]*data-fenix-luxe/);
+    const desk = composeProduct(
+      `${formatPrefix("dashboard")}Studio Nord: gestionale per commercialisti, fatture e F24.`,
+    );
+    assert.equal(desk.grammar.id, "ops-desk");
+    assert.match(desk.html, /data-craft-mode="desk"/);
+    assert.doesNotMatch(desk.html, /<html[^>]*data-fenix-luxe/);
+    assert.notEqual(desk.tokens.palette.bg.toLowerCase(), "#0d0d11");
+  });
 });
