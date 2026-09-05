@@ -39,4 +39,6 @@ test("controller wiring keeps composed worker failures out of automatic full-doc
   assert.match(worker,/if \(isComposedCreation\(body\)\) throw new Error\(lastErr\)/);
   const guard=controller.indexOf("if ((isIOS() || desk) && isComposedCreation(payload)) throw first");
   assert.ok(guard>0 && guard<controller.indexOf("if (isTransientNetwork(msg))",guard));
+  const edgeGuard=controller.indexOf("if (isAtomicStreamCreation(payload)) throw first");
+  assert.ok(edgeGuard>guard && edgeGuard<controller.indexOf("if (isTransientNetwork(msg))",guard));
 });

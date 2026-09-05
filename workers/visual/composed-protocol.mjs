@@ -46,17 +46,21 @@ Non aggiungere style/link: la direzione grafica è già definita. Mantieni logic
 export function applyComposedBuildPlanForDigest(html, plan, digest) {
   artifactContext(html);
   if (!isComposedVisualArtifact(html)) throw new Error("Composizione iniziale non supportata");
-  if (!/^[a-f0-9]{64}$/.test(digest) || !plan || typeof plan !== "object" || Array.isArray(plan)
-    || Object.keys(plan).some(key => !["version", "baseSha256", "changes"].includes(key))
-    || plan.version !== 1 || plan.baseSha256 !== digest
-    || !Array.isArray(plan.changes) || plan.changes.length < 1 || plan.changes.length > 12) {
+  if (!plan || typeof plan !== "object" || Array.isArray(plan)) {
+    throw new Error("Piano di creazione non valido o riferito a un'altra versione");
+  }
+  const value = /** @type {Record<string, unknown>} */ (plan);
+  if (!/^[a-f0-9]{64}$/.test(digest)
+    || Object.keys(value).some(key => !["version", "baseSha256", "changes"].includes(key))
+    || value.version !== 1 || value.baseSha256 !== digest
+    || !Array.isArray(value.changes) || value.changes.length < 1 || value.changes.length > 12) {
     throw new Error("Piano di creazione non valido o riferito a un'altra versione");
   }
   const bodyOpen = /<body\b[^>]*>/i.exec(html);
   const start = bodyOpen ? bodyOpen.index + bodyOpen[0].length : -1;
   const end = html.toLowerCase().lastIndexOf("</body>");
   if (start < 0 || end < start) throw new Error("Body della composizione non valido");
-  const edits = plan.changes.map(change => {
+  const edits = value.changes.map(change => {
     if (!change || typeof change !== "object" || Array.isArray(change)
       || Object.keys(change).some(key => !["find", "replace"].includes(key))
       || typeof change.find !== "string" || typeof change.replace !== "string"

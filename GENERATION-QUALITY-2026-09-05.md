@@ -94,3 +94,28 @@ parent c1b2f81, so it is NOT an exact-commit release artifact. No Edge/controlle
 wiring, full-suite rerun, GitHub push or deployment is claimed for this slice.
 Logs: /tmp/fenix-composed-protocol-worker.log and
 /tmp/fenix-composed-webcrypto-build.log. No model/network generation was used.
+
+## Edge integration and startup regression discovered by the real gate
+
+The Edge handler now uses the shared atomic protocol for composed initial phone
+apps whose contract requires only index.html. It preserves the original head,
+palette and seed; rejects stale/unsafe plans, truncated streams and missing stop
+signals; and never interprets rejected JSON as a full-document fallback. The
+existing product gate remains active, with at most two atomic repair attempts.
+The controller does not resubmit an uncertain atomic Edge job to the worker.
+Full-stack/login/file-tree requests retain their full-project Edge path. This
+does NOT solve the separate worker/iOS backend contract or prove live auth.
+
+The actual Edge gate test exposed another pre-existing startup failure:
+ensureDomainImagery matched HTML inside JS strings and injected unescaped SVG,
+turning a valid composed Agenda into `Invalid or unexpected token`. Composed
+products now retain their own dynamic imagery; legacy markup enhancement
+protects script/style/comment contents byte-for-byte. Five real composition
+fixtures remain syntactically valid through the adapter, and legacy real hero
+markup still receives imagery. No syntax or quality gate was disabled.
+
+Focused verification: 52/52 tests passed, including actual Edge handler/provider
+mocks, actual worker requests, metadata/files/repair regressions and five-domain
+composition checks. Typecheck/build passed before the final diagnostic wording
+change; complete clean-clone suites, browser verification and exact-commit
+release gates remain required. This is local work, not a 10/10 or deploy claim.

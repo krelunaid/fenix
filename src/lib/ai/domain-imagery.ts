@@ -9,6 +9,7 @@ import {
   variantFromBrief,
   type TokenFamily,
 } from "../projects/design-tokens.ts";
+import { isComposedVisualArtifact } from "../../../workers/visual/visual-style.mjs";
 
 export type ImageryProvenance = {
   id: string;
@@ -1271,12 +1272,22 @@ function markHeroImg(tag: string, alt: string): string {
 /** Generation-time only. Do not call from auditGraphicQuality. */
 export function ensureDomainImagery(html: string, brief: string): string {
   if (!html) return html;
+  // Composed products render their own domain illustrations from JS. Regex
+  // rewriting those quoted templates injects unescaped SVG and breaks startup.
+  // Their quality is checked by the product gate, not fabricated by this adapter.
+  if (isComposedVisualArtifact(html)) return html;
   const family = familyFromBrief(brief);
   if (!isProductFamily(family)) return html;
   const variant = variantFromBrief(brief);
   const alt = altForBrief(brief);
   const art = domainIllustration(family, variant, alt, 0);
-  let next = html;
+  const raw: string[] = [];
+  let prefix = "__FENIX_IMAGERY_RAW_";
+  while (html.includes(prefix)) prefix += "_";
+  let next = html.replace(/<script\b[^>]*>[\s\S]*?<\/script\s*>|<style\b[^>]*>[\s\S]*?<\/style\s*>|<!--[\s\S]*?-->/gi, value => {
+    const index = raw.push(value) - 1;
+    return `${prefix}${index}__`;
+  });
   let slot = 0;
   next = next.replace(/<img\b[^>]*fk-hero[^>]*>/gi, (tag) => markHeroImg(tag, alt));
   next = next.replace(
@@ -1299,7 +1310,7 @@ export function ensureDomainImagery(html: string, brief: string): string {
       next = next.replace(/<main\b[^>]*>/i, (open) => `${open}<div class="hero">${art}</div>`);
     }
   }
-  return next;
+  return next.replace(new RegExp(`${prefix}(\\d+)__`, "g"), (_, index: string) => raw[Number(index)]!);
 }
 
 export function unboxProductCanvas(html: string, brief: string): string {

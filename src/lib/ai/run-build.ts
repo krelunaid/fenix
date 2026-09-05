@@ -9,7 +9,7 @@ import {
 import { parseBuildOutput, type BuildResult } from "./parse";
 import { isWeakPreview, lookInstruction, resetAudit, waitPreviewAudit, waitPreviewShot, waitPreviewBoot, getPreviewBootError, getPreviewBootOk, rememberBootError } from "./look";
 import { DASHBOARD_POLISH_INSTRUCTION, SITE_POLISH_INSTRUCTION } from "./app-shell";
-import { createBuildRequest, isComposedCreation } from "./build-request";
+import { createBuildRequest, isAtomicStreamCreation, isComposedCreation } from "./build-request";
 import { CREATE_COST, ITERATE_COST } from "@/lib/projects/credits";
 import { isPhoneKind, resolveProjectKind } from "@/lib/projects/infer";
 import { formatHtmlErrors, validateProductHtml } from "@/lib/projects/validate-html";
@@ -865,6 +865,9 @@ export async function runBuild(projectId: string, instruction?: string) {
       // A rejected/uncertain composed worker build must not become a second
       // POST or a full-document stream rewrite. The outer failure path recovers.
       if ((isIOS() || desk) && isComposedCreation(payload)) throw first;
+      // A lost/rejected atomic Edge response is uncertain, not authority to
+      // send the same paid creation to a second provider/worker job.
+      if (isAtomicStreamCreation(payload)) throw first;
       if (isTransientNetwork(msg)) {
         streamed = await consumeViaWorker(projectId, payload, true, epoch);
       } else if (isIOS() || desk) {
