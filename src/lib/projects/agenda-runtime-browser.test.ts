@@ -254,7 +254,14 @@ describe("Agenda generated runtime D/T/M", () => {
           }
           const expected = Number(await days.nth(2).locator("[data-count]").getAttribute("data-count"));
           assert.equal(slotCount, expected, `${vp} slot count matches day`);
-          assert.match(await page.locator(".day-head .kicker").innerText(), new RegExp(String(thirdIso)));
+          const [y, mo, d] = String(thirdIso).split("-");
+          const italian = new Date(Number(y), Number(mo) - 1, Number(d), 12).toLocaleDateString("it-IT", {
+            weekday: "long",
+            day: "numeric",
+            month: "long",
+          });
+          assert.match(await page.locator(".day-head .kicker").innerText(), new RegExp(italian.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i"));
+          assert.doesNotMatch(await page.locator(".day-head .kicker").innerText(), /\d{4}-\d{2}-\d{2}/);
           await assertLabelledBy(page, `${vp}-week`);
           await waitKitSweep(page);
           await assertEmptyContract(page, slotCount > 0 ? "data" : "empty", `${vp}-week`);
