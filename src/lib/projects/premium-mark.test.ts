@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { premiumAppMarkSvg, premiumMarkDataUri } from "./premium-mark.ts";
+import { glossyWaterMarkSvg, premiumAppMarkSvg, premiumMarkDataUri } from "./premium-mark.ts";
 
 describe("premium app mark", () => {
   it("paints a squircle ring with the supplied domain colors and never Apple SET blue", () => {
@@ -15,5 +15,19 @@ describe("premium app mark", () => {
     assert.match(svg, /#142033/);
     assert.doesNotMatch(svg, /#007aff|#0071e3|#f5f5f7/i);
     assert.match(premiumMarkDataUri(svg), /^data:image\/svg\+xml/);
+  });
+
+  it("paints an original glossy drop mark for water ops without Apple SET blue", () => {
+    const svg = glossyWaterMarkSvg("nord-acqua", {
+      accent: "#0D73C4",
+      fg: "#0A2F6B",
+      bg: "#F4F7FB",
+    });
+    assert.match(svg, /data-fenix-water-mark="1"/);
+    assert.match(svg, /#0D73C4|#0d73c4/);
+    assert.match(svg, /#0A2F6B|#0a2f6b/);
+    assert.match(svg, /feDropShadow|radialGradient/);
+    assert.doesNotMatch(svg, /#007aff|#0071e3|#f5f5f7/i);
+    assert.equal(premiumAppMarkSvg("nord-acqua", { accent: "#0D73C4", fg: "#0A2F6B", bg: "#F4F7FB" }, "<path/>", { water: true }), svg);
   });
 });

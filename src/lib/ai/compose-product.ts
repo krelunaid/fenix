@@ -28,7 +28,7 @@ import { domainIllustration, altForBrief } from "./domain-imagery.ts";
 import { DASHBOARD_POLISH_INSTRUCTION, SITE_POLISH_INSTRUCTION } from "./app-shell.ts";
 import { craftNavIcon } from "../projects/craft-icons.ts";
 import { appIdentityIcon, isAccountantBrief, isBarberBrief, isFieldProductBrief, isShopBrief } from "../projects/app-identity.ts";
-import { premiumAppMarkSvg, premiumMarkDataUri } from "../projects/premium-mark.ts";
+import { glossyWaterMarkSvg, premiumAppMarkSvg, premiumMarkDataUri } from "../projects/premium-mark.ts";
 import { accentButtonPair, contrastRatio } from "../projects/visual-quality.ts";
 import type { Palette, ProjectKind } from "../projects/types.ts";
 
@@ -428,14 +428,15 @@ function synthesizeSpec(brief: string): PipelineSpec {
       id: `${tokens.family}-campo`,
       name,
       kicker: "Quadro di controllo",
-      place: "Campo",
+      place: "In campo",
       collection: "missioni",
       brief,
       tabs: [
         { id: "home", label: "Home" },
-        { id: "elenco", label: "Gestione" },
-        { id: "archivio", label: "Storico" },
-        { id: "studio", label: "Statistiche" },
+        { id: "form", label: "Registra" },
+        { id: "history", label: "Storico" },
+        { id: "stats", label: "Statistiche" },
+        { id: "list", label: "Gestione" },
       ],
       rows: [
         { id: "d1", title: "Marta Neri", kicker: "Attiva", note: "Operatrice · turno A", meta: "1.200 L", status: "ok" },
@@ -1123,6 +1124,38 @@ function productChromeCss(): string {
 .app-mark{border-radius:14px;overflow:hidden;padding:0}
 .app-mark svg[data-fenix-premium-mark]{width:44px;height:44px;display:block}
 html[data-grammar="ops-desk"] .table-wrap thead th{background:color-mix(in srgb,var(--accent) 10%,var(--surface));color:var(--accent);font-weight:650}
+html[data-fenix-campo]{--navy:var(--fg);--water:var(--accent);--ok-loud:var(--success)}
+html[data-fenix-campo] .home-hero{background:transparent;border:0;box-shadow:none;padding:0}
+html[data-fenix-campo] .home-aside,html[data-fenix-campo] .home-recent{display:none}
+html[data-fenix-campo] .fx-shell{margin:0 0 16px;padding:18px 16px 16px;border-radius:32px;background:var(--navy);color:#f3f7fb;box-shadow:0 18px 40px color-mix(in srgb,var(--navy) 30%,transparent)}
+html[data-fenix-campo] .fx-shell-kicker{margin:0 0 12px;font:650 13px/1.3 var(--body),system-ui,sans-serif;letter-spacing:-.01em;color:color-mix(in srgb,#f3f7fb 78%,transparent)}
+html[data-fenix-campo] .fx-shell .fx-board,html[data-fenix-campo] .fx-shell .fx-tank{background:transparent;color:inherit;margin:0;padding:0;border-radius:0;box-shadow:none}
+html[data-fenix-campo] .fx-shell .fx-board{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:0 0 18px}
+html[data-fenix-campo] .fx-shell .fx-cell{padding:12px 12px 10px;border-radius:16px;min-height:74px;background:color-mix(in srgb,#ffffff 9%,transparent);border:1px solid color-mix(in srgb,#ffffff 14%,transparent)}
+html[data-fenix-campo] .fx-shell .fx-cell b{color:#fff}
+html[data-fenix-campo] .fx-shell .fx-cell span{color:color-mix(in srgb,#f3f7fb 70%,transparent)}
+html[data-fenix-campo] .fx-shell .fx-cell[data-warn] b{color:#f5b942}
+html[data-fenix-campo] .fx-tank .fx-seg{margin:0 0 14px;border-color:color-mix(in srgb,#ffffff 20%,transparent);background:color-mix(in srgb,#041018 35%,transparent)}
+html[data-fenix-campo] .fx-tank .fx-seg button{color:color-mix(in srgb,#f3f7fb 78%,transparent);border-right-color:color-mix(in srgb,#ffffff 16%,transparent);background:transparent}
+html[data-fenix-campo] .fx-tank .fx-seg button.on{background:#fff;color:var(--navy)}
+html[data-fenix-campo] .fx-tank-frame{display:grid;grid-template-columns:minmax(0,1fr) 28px;gap:8px;align-items:stretch}
+html[data-fenix-campo] .fx-tank-well{height:196px;border-radius:20px;overflow:hidden;background:color-mix(in srgb,#041018 42%,transparent);border:1.5px solid color-mix(in srgb,#8fd0f2 42%,transparent);box-shadow:inset 0 1px 0 color-mix(in srgb,#fff 18%,transparent)}
+html[data-fenix-campo] .fx-tank-grid{position:absolute;inset:0;background:repeating-linear-gradient(to bottom,transparent 0 48px,color-mix(in srgb,#fff 14%,transparent) 48px 49px);pointer-events:none}
+html[data-fenix-campo] .fx-tank-well i{background:linear-gradient(180deg,#4fb4ee 0%,var(--water) 52%,#0a4a86 100%);box-shadow:inset 0 10px 18px color-mix(in srgb,#fff 22%,transparent)}
+html[data-fenix-campo] .fx-tank-well b{color:#fff;text-shadow:0 1px 0 color-mix(in srgb,#041018 35%,transparent)}
+html[data-fenix-campo] .fx-axis{list-style:none;margin:0;padding:2px 0;display:flex;flex-direction:column;justify-content:space-between;font:650 10px/1 var(--body),system-ui,sans-serif;color:color-mix(in srgb,#f3f7fb 62%,transparent);text-align:right}
+html[data-fenix-campo] .fx-ok{margin:14px auto 0;background:var(--ok-loud);color:#fff;box-shadow:0 8px 18px color-mix(in srgb,var(--ok-loud) 28%,transparent)}
+html[data-fenix-campo] .fx-pill,html[data-fenix-campo] .fx-filter{border-width:1.5px;border-color:color-mix(in srgb,var(--navy) 16%,var(--line));background:#fff;color:var(--navy)}
+html[data-fenix-campo] .fx-pill.on,html[data-fenix-campo] .fx-filter.on,html[data-fenix-campo] .fx-seg button.on{background:var(--water);color:#fff;border-color:var(--water)}
+html[data-fenix-campo] .fx-card,html[data-fenix-campo] .fx-record,html[data-fenix-campo] .fx-table-wrap,html[data-fenix-campo] .fx-jump{box-shadow:0 10px 28px color-mix(in srgb,var(--navy) 8%,transparent)}
+html[data-fenix-campo] .fx-metric b{color:var(--water)}
+html[data-fenix-campo] .fx-who{margin:4px 0 0;color:var(--water);font:650 14px/1.3 var(--body),system-ui,sans-serif}
+html[data-fenix-campo] .fx-badge{background:color-mix(in srgb,var(--warning) 16%,#fff);border-color:var(--warning);color:#8a7010}
+html[data-fenix-campo] .fx-badge.ok{background:color-mix(in srgb,var(--ok-loud) 12%,#fff);border-color:var(--ok-loud);color:var(--ok-loud)}
+html[data-fenix-campo] .fx-dot{background:var(--ok-loud);box-shadow:0 0 0 3px color-mix(in srgb,var(--ok-loud) 18%,transparent)}
+html[data-fenix-campo] .fx-splash{background:#f7f8fa}
+html[data-fenix-campo] .fx-splash .fx-mark{width:96px;height:96px;border-radius:28px;overflow:visible;box-shadow:0 16px 40px color-mix(in srgb,var(--navy) 16%,transparent)}
+html[data-fenix-campo] .fx-splash .fx-mark svg{width:96px;height:96px}
 `;
 }
 
@@ -1202,13 +1235,16 @@ function productHtml(spec: PipelineSpec, tokens: DesignTokens, grammar: LayoutGr
   const headerExtra = grammar.chrome === "masthead" ? " mast" : "";
   const accentInk = safeAccentInk(tokens);
   const identityGlyph = appIdentityIcon(spec.brief, tokens.family);
-  const premiumMark = premiumAppMarkSvg(spec.id, p, identityGlyph);
+  const campo = isFieldProductBrief(spec.brief) && grammar.id === "phone-seed";
+  const premiumMark = campo
+    ? glossyWaterMarkSvg(spec.id, p)
+    : premiumAppMarkSvg(spec.id, p, identityGlyph);
   const markHref = premiumMarkDataUri(premiumMark);
   const bootDate = italianLongDate();
   const pocketEmpty = `<section class="home-overview" data-fenix-pane="home"><div class="home-hero"><p class="kicker">Panoramica</p><p class="fx-date">${bootDate}</p><div class="fx-board" aria-label="Sintesi"><div class="fx-cell"><b>0</b><span>Oggi</span></div><div class="fx-cell"><b>0</b><span>Media</span></div><div class="fx-cell"><b>0</b><span>Voci</span></div><div class="fx-cell" data-warn><b>0</b><span>Aperti</span></div></div><div class="fx-tank"><div class="fx-seg" role="tablist"><button type="button" class="on">Oggi</button><button type="button">Settimana</button><button type="button">Mese</button></div><div class="fx-tank-well"><i style="height:0%"></i><b>0%</b></div><p>0 / 0 · obiettivo</p></div><p class="home-count" data-count="0"><b>0</b><span>voci sul dispositivo</span></p><div class="home-first" data-state="empty"><div class="mark" aria-hidden="true">${POCKET_EMPTY_MARK}</div><h2>Niente in lista</h2><p class="notes">Aggiungi la prima voce. Qui non ci sono dati di prova.</p><button class="btn" type="button" data-view="${spec.tabs[1]!.id}">${spec.cta}</button></div></div><aside class="home-aside"><article class="card"><p class="kicker">Elenco</p><h2>Vuoto</h2><p class="notes">Le azioni restano nella lista.</p></article><article class="card"><p class="kicker">Privacy</p><h2>Solo qui</h2><p class="notes">Storage locale, senza profilo.</p></article></aside></section>`;
   const splash = desk
     ? ""
-    : `<div class="fx-splash" id="fx-splash" data-fenix-splash><span class="fx-mark">${premiumMark}</span><strong>${spec.name}</strong><span class="fx-spin" aria-hidden="true"></span><p class="notes">${grammar.voice.load}…</p></div>`;
+    : `<div class="fx-splash" id="fx-splash" data-fenix-splash><span class="fx-mark">${premiumMark}</span><strong>${spec.name}</strong><span class="fx-spin" aria-hidden="true"></span><p class="notes">${campo ? "Apertura" : grammar.voice.load}…</p></div>`;
   const bootMain =
     grammar.id === "source-timeline"
       ? `<section class="repo-stage" data-repo-stage="activity"><div class="timeline-art">${hero}</div></section>`
@@ -1235,7 +1271,7 @@ function productHtml(spec: PipelineSpec, tokens: DesignTokens, grammar: LayoutGr
             : "clamp(1.18rem, 2.2vw, 1.55rem)";
   const large = isOperationalApp(tokens) ? "2.125rem" : "1.75rem";
   return `<!DOCTYPE html>
-<html lang="it" data-family="${tokens.family}" data-grammar="${grammar.id}" data-chroma="${tokens.chroma}" data-intent-type="${graphicIntentFromBrief(spec.brief).type}" data-intent-chrome="${graphicIntentFromBrief(spec.brief).chrome}"${desk ? " data-fenix-craft-desk" : ""}>
+<html lang="it" data-family="${tokens.family}" data-grammar="${grammar.id}" data-chroma="${tokens.chroma}" data-intent-type="${graphicIntentFromBrief(spec.brief).type}" data-intent-chrome="${graphicIntentFromBrief(spec.brief).chrome}"${desk ? " data-fenix-craft-desk" : ""}${campo ? " data-fenix-campo" : ""}>
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
@@ -1245,7 +1281,7 @@ function productHtml(spec: PipelineSpec, tokens: DesignTokens, grammar: LayoutGr
 ${tokens.fonts.href ? `<link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="${tokens.fonts.href}" rel="stylesheet"/>` : "<!-- system stack: no Google Fonts -->"}
 <style data-fenix-phone data-fenix-site data-fenix-craft>
-:root{color-scheme:${scheme};--bg:${p.bg};--surface:${p.surface};--elevated:${p.elevated};--fg:${p.fg};--muted:${p.muted};--accent:${p.accent};--line:${p.line};--accent-ink:${accentInk};--success:${p.success};--warning:${p.warning};--r:${tokens.radius};--display:${displayStack(tokens)};--body:${bodyStack(tokens)};--t-h1:${tokens.type.h1};--t-h2:${h2};--t-body:${tokens.type.body};--t-large:${large};--t-headline:1.0625rem;--t-callout:1rem;--t-subhead:.9375rem;--t-footnote:.8125rem;--t-caption:.6875rem;--space:8px;--ink-loud:${p.fg};--ink-quiet:${p.muted}}
+:root{color-scheme:${scheme};--bg:${p.bg};--surface:${p.surface};--elevated:${p.elevated};--fg:${p.fg};--muted:${p.muted};--accent:${p.accent};--line:${p.line};--accent-ink:${accentInk};--success:${p.success};--warning:${p.warning};--navy:${p.fg};--water:${p.accent};--ok-loud:${p.success};--r:${tokens.radius};--display:${displayStack(tokens)};--body:${bodyStack(tokens)};--t-h1:${tokens.type.h1};--t-h2:${h2};--t-body:${tokens.type.body};--t-large:${large};--t-headline:1.0625rem;--t-callout:1rem;--t-subhead:.9375rem;--t-footnote:.8125rem;--t-caption:.6875rem;--space:8px;--ink-loud:${p.fg};--ink-quiet:${p.muted}}
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%;background:var(--bg);color:var(--fg);font:400 ${tokens.type.body}/1.29 var(--body);-webkit-font-smoothing:antialiased}
 body{min-height:100dvh}
@@ -1270,6 +1306,7 @@ main{flex:1;min-height:0;overflow-y:auto;padding:8px 16px 24px;-webkit-overflow-
 .look p{padding-bottom:14px;color:var(--muted)}
 .room h2,.room p,.room .notes{flex:0 0 auto}
 ${visualKitCss(tokens, grammar)}
+${campo ? "html[data-fenix-campo] nav.tabs{grid-template-columns:repeat(5,minmax(0,1fr))}" : ""}
 </style>
 </head>
 <body>
@@ -1316,6 +1353,7 @@ const formTitle=${JSON.stringify(spec.formTitle)};
 const cta=${JSON.stringify(spec.cta)};
 const kicker=${JSON.stringify(spec.kicker)};
 const place=${JSON.stringify(spec.place)};
+const campoProduct=${campo ? "true" : "false"};
 const AGENDA_CYCLE={prenotato:"confermato",confermato:"in-corso","in-corso":"concluso",concluso:"prenotato"};
 const AGENDA_ACTION_LABELS=${JSON.stringify(AGENDA_ACTION_LABELS)};
 const AGENDA_STATUS_LABELS=${JSON.stringify(AGENDA_STATUS_LABELS)};
@@ -1723,12 +1761,20 @@ function phonePane(id){
   if(id===tabDefs[2].id) return "list";
   return "persona";
 }
+function paneTab(pane){
+  for(var i=0;i<tabDefs.length;i++){
+    if(phonePane(tabDefs[i].id)===pane) return tabDefs[i].id;
+  }
+  return tabDefs[Math.min(1,tabDefs.length-1)].id;
+}
 function fxBoardMarkup(n){
   var total=data.items.reduce(function(a,e){return a+litersOf(e.meta);},0);
   var open=data.items.filter(function(e){return /pausa|wait|bozza|scadenza/i.test(e.kicker||"");}).length;
   var avg=n?Math.round(total/n):0;
   var today=total||n;
-  return '<div class="fx-board" aria-label="Sintesi"><div class="fx-cell"><b>'+(total?fmtLiters(today):String(n))+'</b><span>Oggi</span></div><div class="fx-cell"><b>'+(total?fmtLiters(avg):"0")+'</b><span>Media</span></div><div class="fx-cell"><b>'+n+'</b><span>Voci</span></div><div class="fx-cell"'+(open?' data-warn':'')+'><b>'+open+'</b><span>Aperti</span></div></div>';
+  var third=campoProduct?"Squadra":"Voci";
+  var fourth=campoProduct?"Sotto obiettivo":"Aperti";
+  return '<div class="fx-board" aria-label="Sintesi"><div class="fx-cell"><b>'+(total?fmtLiters(today):String(n))+'</b><span>Oggi</span></div><div class="fx-cell"><b>'+(total?fmtLiters(avg):"0")+'</b><span>Media</span></div><div class="fx-cell"><b>'+n+'</b><span>'+third+'</span></div><div class="fx-cell"'+(open?' data-warn':'')+'><b>'+open+'</b><span>'+fourth+'</span></div></div>';
 }
 function fxTankMarkup(n){
   var total=data.items.reduce(function(a,e){return a+litersOf(e.meta);},0);
@@ -1736,25 +1782,39 @@ function fxTankMarkup(n){
   var pct=goal?Math.min(100,Math.round((total||n)/goal*100)):0;
   if(!total && n) pct=Math.min(100,Math.round(n/Math.max(n,4)*100));
   var html='<div class="fx-tank"><div class="fx-seg" role="tablist"><button type="button" class="on">Oggi</button><button type="button">Settimana</button><button type="button">Mese</button></div>';
-  html+='<div class="fx-tank-well"><i style="height:'+pct+'%"></i><b>'+pct+"%</b></div>";
+  html+='<div class="fx-tank-frame"><div class="fx-tank-well"><span class="fx-tank-grid" aria-hidden="true"></span><i style="height:'+pct+'%"></i><b>'+pct+"%</b></div>";
+  html+='<ol class="fx-axis" aria-hidden="true"><li>100</li><li>75</li><li>50</li><li>25</li><li>0</li></ol></div>';
   html+="<p>"+(total?fmtLiters(total)+" / "+fmtLiters(goal):n+" / "+n)+" · obiettivo</p>";
-  if(pct>=100 && n) html+='<p class="fx-ok">Obiettivo raggiunto</p>';
+  if(pct>=100 && n) html+='<p class="fx-ok">'+(campoProduct?"Obiettivo raggiunto. Bene.":"Obiettivo raggiunto")+"</p>";
   return html+"</div>";
 }
 function renderPocketHome(){
   var n=data.items.length;
-  var html='<section class="home-overview" data-fenix-pane="home"><div class="home-hero"><p class="kicker">Panoramica</p><p class="fx-date">'+italianLongDateJs()+"</p>"+fxBoardMarkup(n)+fxTankMarkup(n);
-  html+='<p class="home-count" data-count="'+n+'"><b>'+n+'</b><span>'+(n===1?"voce sul dispositivo":"voci sul dispositivo")+"</span></p>";
+  var formId=paneTab("form");
+  var listId=paneTab("list");
+  var html='<section class="home-overview" data-fenix-pane="home"><div class="home-hero">';
+  if(campoProduct){
+    html+='<p class="fx-date">'+italianLongDateJs()+'</p><div class="fx-shell"><p class="fx-shell-kicker">Panoramica — oggi</p>'+fxBoardMarkup(n)+'<p class="fx-shell-kicker">Volume in campo</p>'+fxTankMarkup(n)+"</div>";
+  } else {
+    html+='<p class="kicker">Panoramica</p><p class="fx-date">'+italianLongDateJs()+"</p>"+fxBoardMarkup(n)+fxTankMarkup(n);
+  }
+  if(campoProduct){
+    html+='<p class="home-count" data-count="'+n+'"><b>'+n+'</b><span>'+(n===1?"dipendente in campo":"dipendenti in campo")+"</span></p>";
+  } else {
+    html+='<p class="home-count" data-count="'+n+'"><b>'+n+'</b><span>'+(n===1?"voce sul dispositivo":"voci sul dispositivo")+"</span></p>";
+  }
   if(!n){
     html+='<div class="home-first" data-state="empty">'+pocketEmptyInner()+"</div></div>";
     html+='<aside class="home-aside"><article class="card"><p class="kicker">Elenco</p><h2>Vuoto</h2><p class="notes">Le azioni restano nella lista.</p></article><article class="card"><p class="kicker">Privacy</p><h2>Solo qui</h2><p class="notes">Storage locale, senza profilo.</p></article></aside>';
+  } else if(campoProduct){
+    html+='<button class="btn" type="button" data-view="'+formId+'">'+cta+"</button></div>";
   } else {
     html+='<p class="notes">Ultime voci dal dispositivo. Niente dati di prova.</p><button class="btn" type="button" data-view="'+tabDefs[1].id+'">'+cta+"</button></div>";
     html+='<aside class="home-aside"><article class="card"><p class="kicker">Elenco</p><h2>'+n+(n===1?" voce":" voci")+'</h2><p class="notes">Apri Elenco per le azioni sulle voci.</p></article><article class="card"><p class="kicker">Privacy</p><h2>Solo qui</h2><p class="notes">Storage locale, senza profilo.</p></article></aside>';
     html+='<div class="home-recent" data-fenix-recent><p class="kicker">Recenti</p>';
     data.items.slice(0,3).forEach(function(e){
       var line=pocketLine(e);
-      html+='<article class="card" data-id="'+e.id+'"><h2>'+e.title+'</h2>'+(line?'<p class="notes">'+line+"</p>":"")+'<button class="btn sm ghost" type="button" data-view="'+tabDefs[2].id+'">Apri elenco</button></article>';
+      html+='<article class="card" data-id="'+e.id+'"><h2>'+e.title+'</h2>'+(line?'<p class="notes">'+line+"</p>":"")+'<button class="btn sm ghost" type="button" data-view="'+listId+'">Apri elenco</button></article>';
     });
     html+="</div>";
   }
@@ -1762,12 +1822,24 @@ function renderPocketHome(){
 }
 function renderPocketList(){
   var n=data.items.length;
-  var html='<section class="list-pane" data-fenix-pane="elenco"><div class="fx-toolbar"><div class="list-head"><p class="kicker">Gestione</p><h2>'+n+" "+(n===1?"voce":"voci")+'</h2></div><button class="fx-nuovo" type="button" data-act="fx-new">+ Nuovo</button></div>';
-  html+='<p class="notes">Archivio completo, con azioni sulle voci.</p>';
+  var formId=paneTab("form");
+  var html='<section class="list-pane" data-fenix-pane="elenco">';
+  if(campoProduct){
+    html+='<p class="fx-large">Gestione</p><div class="fx-pills"><button type="button" class="fx-pill on">Dipendenti</button><button type="button" class="fx-pill">Missioni</button><button type="button" class="fx-pill">Firme</button><button type="button" class="fx-pill">Luoghi</button></div>';
+    html+='<div class="fx-toolbar"><div class="list-head"><h2>Dipendenti ('+n+')</h2></div><button class="fx-nuovo" type="button" data-act="fx-new">+ Nuovo</button></div>';
+  } else {
+    html+='<div class="fx-toolbar"><div class="list-head"><p class="kicker">Gestione</p><h2>'+n+" "+(n===1?"voce":"voci")+'</h2></div><button class="fx-nuovo" type="button" data-act="fx-new">+ Nuovo</button></div>';
+    html+='<p class="notes">Archivio completo, con azioni sulle voci.</p>';
+  }
   html+='<div class="fx-search">'+FX_SEARCH_MARK+'<input type="search" placeholder="Cerca per nome..." aria-label="Cerca"></div>';
-  html+='<div class="fx-pills"><button type="button" class="fx-pill on">Tutti</button><button type="button" class="fx-pill">Attivi</button><button type="button" class="fx-pill">Sospesi</button></div>';
+  if(campoProduct){
+    html+='<div class="fx-pills"><button type="button" class="fx-pill on">Tutti i ruoli</button><button type="button" class="fx-pill">Operatore</button><button type="button" class="fx-pill">Responsabile</button></div>';
+    html+='<div class="fx-pills"><button type="button" class="fx-pill on">Tutti</button><button type="button" class="fx-pill">Attivi</button><button type="button" class="fx-pill">Sospesi</button><button type="button" class="fx-pill on">Ordina: Nome</button></div>';
+  } else {
+    html+='<div class="fx-pills"><button type="button" class="fx-pill on">Tutti</button><button type="button" class="fx-pill">Attivi</button><button type="button" class="fx-pill">Sospesi</button></div>';
+  }
   if(!n){
-    html+='<div class="state-empty" data-state="empty"><p>Nessuna voce in elenco. Compila e salva; non inventiamo righe.</p><button class="btn" type="button" data-view="'+tabDefs[1].id+'">'+cta+"</button></div>";
+    html+='<div class="state-empty" data-state="empty"><p>Nessuna voce in elenco. Compila e salva; non inventiamo righe.</p><button class="btn" type="button" data-view="'+formId+'">'+cta+"</button></div>";
     return html+"</section>";
   }
   html+='<div class="fx-table-wrap"><table class="fx-table"><thead><tr><th>Nome</th><th>Obiettivo</th><th>Stato</th><th>Azioni</th></tr></thead><tbody>';
@@ -1786,7 +1858,7 @@ function renderPocketList(){
 function renderPocketHistory(){
   var n=data.items.length;
   var total=data.items.reduce(function(a,e){return a+litersOf(e.meta);},0);
-  var html='<section class="list-pane" data-fenix-pane="storico"><div class="fx-toolbar"><div><p class="fx-large">Storico</p><p class="fx-sub">'+n+" "+(n===1?"voce":"voci")+'</p></div><span class="fx-total">'+(total?fmtLiters(total):n+" voci")+"</span></div>";
+  var html='<section class="list-pane" data-fenix-pane="storico"><div class="fx-toolbar"><div><p class="fx-large">Storico</p><p class="fx-sub">'+(campoProduct?n+" missioni in archivio":n+" "+(n===1?"voce":"voci"))+'</p></div><span class="fx-total">'+(total?fmtLiters(total):n+" voci")+"</span></div>";
   html+='<div class="fx-pills"><button type="button" class="fx-pill">Oggi</button><button type="button" class="fx-pill">7 giorni</button><button type="button" class="fx-pill">Mese</button><button type="button" class="fx-pill">Anno</button><button type="button" class="fx-pill on">Tutto</button></div>';
   html+='<div class="fx-filters"><button type="button" class="fx-filter">Dipendente</button><button type="button" class="fx-filter">Mese</button><button type="button" class="fx-filter">Luogo</button></div>';
   if(!n){
@@ -1795,7 +1867,7 @@ function renderPocketHistory(){
   }
   data.items.forEach(function(e){
     var wait=/pausa|wait|bozza|scadenza/i.test(e.kicker||"");
-    html+='<article class="fx-record" data-id="'+e.id+'"><span class="fx-ico" aria-hidden="true">'+FX_DROP_MARK+'</span><div><h2>'+(e.meta||e.title)+'</h2><p class="notes">'+italianLongDateJs()+" · "+e.title+(e.note?" · "+e.note:"")+'</p><span class="fx-badge'+(wait?"":" ok")+'">'+(wait?"Da firmare":"Firmata")+'</span></div><div><button class="fx-iconbtn" data-act="edit" data-id="'+e.id+'" aria-label="Modifica">'+FX_EDIT_MARK+'</button> '+FX_CHEVRON_MARK+'</div></article>';
+    html+='<article class="fx-record" data-id="'+e.id+'"><span class="fx-ico" aria-hidden="true">'+FX_DROP_MARK+'</span><div><h2>'+(e.meta||e.title)+'</h2><p class="notes">'+italianLongDateJs()+(e.note?" · "+e.note:"")+'</p><p class="fx-who">'+e.title+'</p><span class="fx-badge'+(wait?"":" ok")+'">'+(wait?"Da firmare":"Firmata")+'</span></div><div><button class="fx-iconbtn" data-act="edit" data-id="'+e.id+'" aria-label="Modifica">'+FX_EDIT_MARK+'</button> '+FX_CHEVRON_MARK+'</div></article>';
   });
   return html+"</section>";
 }
@@ -1804,17 +1876,17 @@ function renderPocketStats(){
   var total=data.items.reduce(function(a,e){return a+litersOf(e.meta);},0);
   var week=total?Math.round(total*6.2):n*8;
   var avg=n?Math.round((total||n)/n):0;
-  var html='<section class="persona-pane" data-fenix-pane="statistiche"><p class="fx-large">Statistiche</p><p class="fx-sub">Quadro di controllo</p>';
+  var html='<section class="persona-pane" data-fenix-pane="statistiche"><p class="fx-large">Statistiche</p><p class="fx-sub">'+(campoProduct?"Quadro di controllo in campo":"Quadro di controllo")+'</p>';
   html+='<div class="fx-jump"><span class="fx-hi-ico" aria-hidden="true">'+FX_DROP_MARK+'</span><div><b>Sintesi personale</b><p class="notes">Apri il dettaglio della tua attivita</p></div>'+FX_CHEVRON_MARK+'</div>';
   html+='<div class="fx-seg"><button type="button" class="on">Panoramica</button><button type="button">Confronto</button><button type="button">Classifica</button></div>';
-  html+='<div class="fx-card"><div class="fx-toolbar"><p class="kicker">Riepilogo</p><span class="fx-trend">+'+(n?12:0)+'%</span></div><div class="fx-grid">';
+  html+='<div class="fx-card"><div class="fx-toolbar"><p class="kicker">'+(campoProduct?"Riepilogo — mese corrente":"Riepilogo")+'</p><span class="fx-trend">+'+(n?12:0)+'%</span></div><div class="fx-grid">';
   html+='<div class="fx-metric"><b>'+(total?fmtLiters(total):n)+'</b><span>Oggi</span></div>';
   html+='<div class="fx-metric"><b>'+(total?fmtLiters(week):week)+'</b><span>Settimana</span></div>';
   html+='<div class="fx-metric"><b>'+(total?fmtLiters(avg):avg)+'</b><span>Media</span></div>';
-  html+='<div class="fx-metric"><b>'+n+'</b><span>Voci</span></div>';
+  html+='<div class="fx-metric"><b>'+n+'</b><span>'+(campoProduct?"Squadra":"Voci")+'</span></div>';
   html+='<div class="fx-metric"><b>'+(n?Math.max(1,n-1):0)+'</b><span>Attivi</span></div>';
   html+='<div class="fx-metric"><b>'+(n?1:0)+'</b><span>In pausa</span></div></div>';
-  html+='<div class="fx-proj"><b>Proiezione di fine mese</b><p class="notes">'+(total?fmtLiters(Math.round((total||1)*22)):n*22)+" se il ritmo resta questo</p></div></div>";
+  html+='<div class="fx-proj"><b>Proiezione fine mese</b><p class="notes">'+(total?fmtLiters(Math.round((total||1)*22)):n*22)+" se il ritmo resta questo</p></div></div>";
   html+='<div class="fx-card"><p class="kicker">In evidenza</p>';
   (n?data.items.slice(0,3):[]).forEach(function(e){
     html+='<div class="fx-hi-row"><span class="fx-hi-ico">'+FX_DROP_MARK+"</span><div><b>"+e.title+'</b><p class="notes">'+(e.meta||e.note||e.kicker)+"</p></div></div>";
@@ -2101,6 +2173,12 @@ document.getElementById("tabs").addEventListener("click",function(e){
   var b=e.target.closest("[data-view]"); if(!b) return; view=b.getAttribute("data-view"); render();
 });
 document.getElementById("root").addEventListener("click",function(e){
+  var chip=e.target.closest(".fx-pills button, .fx-filters button, .fx-seg button");
+  if(chip && chip.parentNode){
+    var sibs=chip.parentNode.querySelectorAll("button");
+    for(var ci=0;ci<sibs.length;ci++) sibs[ci].classList.remove("on");
+    chip.classList.add("on");
+  }
   var jump=e.target.closest("[data-view]");
   if(jump){ view=jump.getAttribute("data-view"); render(); return; }
   var dayBtn=e.target.closest(".week-day[data-day]");

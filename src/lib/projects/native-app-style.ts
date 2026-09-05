@@ -76,6 +76,11 @@ html[data-grammar] :is(.btn,input,select,textarea,nav button):focus-visible{outl
  html[data-grammar] .btn:active{transform:scale(.98)}
 }
 @media(prefers-reduced-motion:reduce){html[data-grammar] .btn{transition:none;transform:none}}
+html[data-fenix-campo] .app-mark{width:52px;height:52px;flex:0 0 52px;border:0;background:transparent;overflow:visible;border-radius:16px;box-shadow:0 10px 24px rgba(18,28,45,.22)}
+html[data-fenix-campo] .app-mark svg{width:52px;height:52px}
+html[data-fenix-campo] nav.tabs{grid-template-columns:repeat(5,minmax(0,1fr))}
+html[data-fenix-campo] nav.tabs button{font-size:11px;padding:6px 2px}
+html[data-fenix-campo] header .place{display:none}
 </style>\n`;
 
 /** Head-only layer for known composed apps: preserve all body/script bytes. */
