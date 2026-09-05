@@ -35,6 +35,15 @@ below proves code defects, not the exact origin of every screenshot finding.
 
 ## Reproduce without model credits
 
+Full verification of commit `3f8aa8b` finished with 534/535 TS/browser tests
+passing and one stale source assertion requiring the former generic `Avanti`
+label. Scripts passed 257 tests with four historical skips; frozen install,
+typecheck and exact build passed. The second complete run did not start.
+The QA assertion now requires all four state-specific labels and their shared
+mapping in both initial markup and runtime, and rejects the former label.
+Runtime action/persistence browser tests remain unchanged. Both complete
+suites must pass again on the resulting commit before release.
+
 ```sh
 node --test scripts/generation-boundaries.test.mjs scripts/edge-artifact-context.test.mjs
 node --experimental-strip-types --test src/lib/projects/files.test.ts src/lib/ai/repair.recorded.test.ts

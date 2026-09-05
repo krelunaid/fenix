@@ -513,7 +513,10 @@ describe("focus-visible and worker model", () => {
     assert.match(compose, /class="collection"/);
     assert.match(compose, /align-items:start/);
     assert.match(compose, /nav\.tabs svg\{[^}]*overflow:visible/);
-    assert.match(compose, />Avanti</);
+    assert.match(compose, /prenotato: "Conferma", confermato: "Inizia", "in-corso": "Concludi", concluso: "Riapri"/);
+    assert.match(compose, /const label = AGENDA_ACTION_LABELS\[status\]/);
+    assert.match(compose, /var advanceLabel=AGENDA_ACTION_LABELS\[st\]/);
+    assert.doesNotMatch(compose, />Avanti</);
     assert.doesNotMatch(compose, /Avanza slot/);
     assert.match(compose, /flex-wrap:nowrap/);
     assert.match(compose, /data-family=/);
