@@ -218,6 +218,7 @@ export function craftNavIcon(tab: { id: string; label: string }, index = 0): str
   if (/^home$/.test(label)) svg = NAV_ICONS.home;
   else if (/^aggiungi$/.test(label)) svg = NAV_ICONS.add;
   else if (/^registra$/.test(label)) svg = NAV_ICONS.add;
+  else if (/^pubblica$/.test(label)) svg = NAV_ICONS.pencil;
   else if (/^gestione$/.test(label)) svg = NAV_ICONS.settings;
   else if (/^storico$/.test(label)) svg = NAV_ICONS.clock;
   else if (/^consegne$|^consegna$/.test(label)) svg = NAV_ICONS.drop;

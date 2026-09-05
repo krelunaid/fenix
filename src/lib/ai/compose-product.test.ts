@@ -851,4 +851,30 @@ describe("graphic pipeline prompt→plan→generate→visual→QA", () => {
     assert.match(system.html, /Niente in lista/);
     assert.doesNotMatch(system.html, /<span>Gestione<\/span>/);
   });
+
+  it("teaches marketplace craft without cloning LikeSwift or forcing water sky", () => {
+    const product = composeProduct(
+      `${formatPrefix("app")}Vicina: marketplace di lavoretti e bacheca incarichi, stile Apple.`,
+    );
+    assert.equal(product.grammar.id, "phone-seed");
+    assert.match(product.html, /data-fenix-market/);
+    assert.match(product.html, /data-craft-rhythm="consumer"/);
+    assert.match(product.html, /<span>Pubblica<\/span>/);
+    assert.match(product.html, /<span>Attivit/);
+    assert.match(product.html, /<span>Profilo<\/span>/);
+    assert.match(product.html, /fx-cats/);
+    assert.match(product.html, /fx-task/);
+    assert.match(product.html, /#1[Ee]40[Aa][Ff]/);
+    assert.match(product.html, /--fx-r3:24px/);
+    assert.doesNotMatch(product.html, /<html[^>]*data-fenix-campo/);
+    assert.doesNotMatch(product.html, /Ciao/);
+    assert.doesNotMatch(product.html, /LikeSwift/);
+    assert.notEqual(product.tokens.palette.accent.toLowerCase(), "#0ea5e9");
+    const water = composeProduct(
+      `${formatPrefix("app")}NordAcqua: consegne acqua in campo, gestione dipendenti, storico e statistiche, stile Apple.`,
+    );
+    assert.match(water.html, /data-fenix-campo/);
+    assert.doesNotMatch(water.html, /<html[^>]*data-fenix-market/);
+    assert.equal(water.tokens.palette.accent.toLowerCase(), "#0ea5e9");
+  });
 });

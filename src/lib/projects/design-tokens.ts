@@ -25,6 +25,8 @@ import {
 } from "./palette-engine.ts";
 import { applyGraphicIntent, graphicIntentFromBrief } from "./graphic-intent.ts";
 import { enrichWaterOpsPalette } from "./water-ops-palette.ts";
+import { enrichMarketPalette } from "./market-ops-palette.ts";
+import { isMarketplaceBrief } from "./app-identity.ts";
 
 export type TokenFamily =
   | "perfume"
@@ -685,9 +687,11 @@ function finishSystemSheet(tokens: DesignTokens, brief: string, recent?: Palette
 }
 
 function finishFieldSheet(tokens: DesignTokens, brief: string): DesignTokens {
-  const palette = enrichWaterOpsPalette(brief, tokens.palette);
-  if (palette === tokens.palette) return tokens;
-  return { ...tokens, palette, chroma: classifyPalette(palette) };
+  let palette = enrichWaterOpsPalette(brief, tokens.palette);
+  palette = enrichMarketPalette(brief, palette);
+  const radius = isMarketplaceBrief(brief) ? "24px" : tokens.radius;
+  if (palette === tokens.palette && radius === tokens.radius) return tokens;
+  return { ...tokens, palette, radius, chroma: classifyPalette(palette) };
 }
 
 export function tokensFromBrief(brief: string, opts?: TokenOptions): DesignTokens {

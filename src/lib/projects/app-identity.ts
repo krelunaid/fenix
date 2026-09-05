@@ -34,11 +34,29 @@ export function isFieldProductBrief(brief: string): boolean {
   );
 }
 
+/**
+ * Micro-task / incarichi marketplace. Not water field, not a shop, not fiscal.
+ * Does not match "consegne acqua" or a generic negozio.
+ */
+export function isMarketplaceBrief(brief: string): boolean {
+  if (isFieldProductBrief(brief) || isAccountantBrief(brief) || isBarberBrief(brief) || isShopBrief(brief)) {
+    return false;
+  }
+  const t = String(brief || "");
+  if (/gestione\s+profum|lookbook|ristoraz|agenda|parrucchier|commercialist|consegne?\s+acqua/i.test(t)) {
+    return false;
+  }
+  return /marketplace|micro[\s-]?task|lavoretti|bacheca\s+incarichi|incarichi\s+(?:vicino|in\s+zona|a\s+ore)|posta\s+un\s+(?:task|incarico)|offri\s+un\s+incarico|\btasker\b|gig\s+econom/i.test(
+    t,
+  );
+}
+
 /** Visible sector label used to pick an original pictogram. */
 export function appIdentityLabel(brief: string, family: string): string {
   if (isBarberBrief(brief)) return "Taglio";
   if (isAccountantBrief(brief)) return "Fatture";
   if (isFieldProductBrief(brief)) return "Consegne";
+  if (isMarketplaceBrief(brief)) return "Incarichi";
   const labels: Record<string, string> = {
     perfume: "Profumi",
     fashion: "Lookbook",

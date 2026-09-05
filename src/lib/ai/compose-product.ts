@@ -27,9 +27,9 @@ import { auditGraphicQuality, type GraphicReport } from "../projects/graphic-qua
 import { domainIllustration, altForBrief } from "./domain-imagery.ts";
 import { DASHBOARD_POLISH_INSTRUCTION, SITE_POLISH_INSTRUCTION } from "./app-shell.ts";
 import { craftNavIcon } from "../projects/craft-icons.ts";
-import { appIdentityIcon, isAccountantBrief, isBarberBrief, isFieldProductBrief, isShopBrief } from "../projects/app-identity.ts";
+import { appIdentityIcon, isAccountantBrief, isBarberBrief, isFieldProductBrief, isMarketplaceBrief, isShopBrief } from "../projects/app-identity.ts";
 import { glossyWaterMarkSvg, premiumAppMarkSvg, premiumMarkDataUri } from "../projects/premium-mark.ts";
-import { craftTokenCss, surfacesFromPalette } from "../projects/craft-tokens.ts";
+import { craftRhythmOf, craftTokenCss, surfacesFromPalette, type CraftDomain } from "../projects/craft-tokens.ts";
 import { accentButtonPair, contrastRatio } from "../projects/visual-quality.ts";
 import type { Palette, ProjectKind } from "../projects/types.ts";
 
@@ -448,6 +448,30 @@ function synthesizeSpec(brief: string): PipelineSpec {
       ],
       formTitle: "Nuova missione",
       cta: "Registra in campo",
+    };
+  }
+  if (isMarketplaceBrief(brief) && grammar.id === "phone-seed") {
+    return {
+      id: `${tokens.family}-incarichi`,
+      name,
+      kicker: "Vicino a te",
+      place: "Zona",
+      collection: "incarichi",
+      brief,
+      tabs: [
+        { id: "home", label: "Home" },
+        { id: "form", label: "Pubblica" },
+        { id: "list", label: "Attività" },
+        { id: "persona", label: "Profilo" },
+      ],
+      rows: [
+        { id: "t1", title: "Sposta un divano", kicker: "Consegne", note: "Centro · oggi pomeriggio", meta: "24 €", status: "ok" },
+        { id: "t2", title: "Pulizia scala", kicker: "Pulizie", note: "Due rampe · mattina", meta: "35 €", status: "ok" },
+        { id: "t3", title: "Annaffia il balcone", kicker: "Giardino", note: "Piante in vaso", meta: "18 €", status: "wait" },
+        { id: "t4", title: "Passeggia Luna", kicker: "Animali", note: "30 minuti · parco", meta: "12 €", status: "ok" },
+      ],
+      formTitle: "Nuovo incarico",
+      cta: "Pubblica",
     };
   }
   if (isShopBrief(brief) && tokens.family !== "fashion" && tokens.family !== "perfume") {
@@ -1180,7 +1204,43 @@ html[data-fenix-campo] .fx-bars i{flex:1;border-radius:6px 6px 0 0;background:va
 html[data-fenix-campo] .fx-splash{background:var(--surface-2)}
 html[data-fenix-campo] .fx-splash .fx-mark{width:96px;height:96px;border-radius:28px;overflow:visible;box-shadow:var(--shadow-float)}
 html[data-fenix-campo] .fx-splash .fx-mark svg{width:96px;height:96px}
+html[data-craft-rhythm="consumer"] main{padding-left:16px;padding-right:16px}
+html[data-craft-rhythm="consumer"] .fx-hello{margin:0;font:750 var(--fx-t-display)/1.05 var(--display),system-ui,sans-serif;letter-spacing:-.04em;color:var(--on-surface)}
+html[data-craft-rhythm="consumer"] .fx-role{margin:4px 0 0;font:500 var(--fx-t-14)/1.3 var(--body),system-ui,sans-serif;color:var(--muted)}
+html[data-craft-rhythm="consumer"] .home-hero:has(.fx-hello){background:transparent;border:0;box-shadow:none;padding:0}
+html[data-craft-rhythm="consumer"] .card,html[data-craft-rhythm="consumer"] .fx-card,html[data-craft-rhythm="consumer"] .fx-record,html[data-craft-rhythm="consumer"] .fx-shop{border-radius:var(--fx-r3);box-shadow:var(--shadow-card)}
+html[data-craft-rhythm="consumer"] .fx-shop .fx-pay{margin:10px 0 0;font:750 var(--fx-t-16)/1 var(--body),system-ui,sans-serif;color:var(--brand)}
+html[data-craft-rhythm="desk"] .card,html[data-craft-rhythm="desk"] .kpi,html[data-craft-rhythm="desk"] .fx-table-wrap{border-radius:var(--fx-r2)}
 .fx-board,.fx-tank,.fx-card{border-radius:var(--fx-r3,22px)}
+`;
+}
+
+function marketChromeCss(): string {
+  return `html[data-fenix-market],html[data-fenix-market] body{background:var(--surface-2);color:var(--on-surface)}
+html[data-fenix-market] header{position:sticky;top:0;z-index:6;background:color-mix(in srgb,var(--surface) 82%,transparent);-webkit-backdrop-filter:saturate(1.5) blur(16px);backdrop-filter:saturate(1.5) blur(16px)}
+html[data-fenix-market] nav.tabs{background:color-mix(in srgb,var(--surface) 88%,transparent);border-top:1px solid var(--border,var(--line));box-shadow:0 -8px 24px rgba(24,24,27,.06);-webkit-backdrop-filter:saturate(1.6) blur(16px);backdrop-filter:saturate(1.6) blur(16px)}
+html[data-fenix-market][data-grammar="phone-seed"] nav.tabs button.on{background:transparent;color:var(--brand);border-radius:0}
+html[data-fenix-market] main{padding:16px 16px 28px}
+html[data-fenix-market] .home-hero{background:transparent;border:0;box-shadow:none;padding:0}
+html[data-fenix-market] .home-aside,html[data-fenix-market] .home-recent{display:none}
+html[data-fenix-market] .home-count,html[data-fenix-market] .home-hero>.btn{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+html[data-fenix-market] .fx-hello{margin:0;font:750 var(--fx-t-display)/1.05 var(--display),system-ui,sans-serif;letter-spacing:-.04em;color:var(--on-surface)}
+html[data-fenix-market] .fx-role{margin:4px 0 0;font:500 var(--fx-t-14)/1.3 var(--body),system-ui,sans-serif;color:var(--muted)}
+html[data-fenix-market] .fx-date{margin:0 0 16px;font:500 var(--fx-t-14)/1.3 var(--body),system-ui,sans-serif;color:var(--muted)}
+html[data-fenix-market] .fx-cats{display:flex;flex-wrap:nowrap;gap:8px;overflow-x:auto;padding:0 0 16px;margin:0}
+html[data-fenix-market] .fx-cat{flex:0 0 auto;border:0;border-radius:var(--fx-pill);min-height:36px;padding:8px 14px;font:650 13px/1.2 var(--body),system-ui,sans-serif;background:var(--brand-soft);color:var(--brand)}
+html[data-fenix-market] .fx-cat[data-cat="1"]{background:color-mix(in srgb,var(--cat-1) 16%,#fff);color:#9a3412}
+html[data-fenix-market] .fx-cat[data-cat="2"]{background:color-mix(in srgb,var(--cat-2) 16%,#fff);color:var(--brand)}
+html[data-fenix-market] .fx-cat[data-cat="3"]{background:color-mix(in srgb,var(--cat-3) 16%,#fff);color:#0369a1}
+html[data-fenix-market] .fx-cat[data-cat="4"]{background:color-mix(in srgb,var(--cat-4) 16%,#fff);color:#92400e}
+html[data-fenix-market] .fx-cat[data-cat="5"]{background:color-mix(in srgb,var(--cat-5) 16%,#fff);color:#047857}
+html[data-fenix-market] .fx-task{margin:0 0 16px;padding:16px;border:1px solid var(--border,var(--line));border-radius:var(--fx-r3);background:var(--surface);box-shadow:var(--shadow-card)}
+html[data-fenix-market] .fx-task h2{margin:0 0 6px;font:700 var(--fx-t-20)/1.2 var(--display),system-ui,sans-serif;color:var(--on-surface)}
+html[data-fenix-market] .fx-task .notes{margin:0;font:500 var(--fx-t-14)/1.35 var(--body),system-ui,sans-serif}
+html[data-fenix-market] .fx-task .fx-pay{margin:10px 0 0;font:750 var(--fx-t-16)/1 var(--body),system-ui,sans-serif;color:var(--brand)}
+html[data-fenix-market] .fx-pill.on,html[data-fenix-market] .fx-filter.on,html[data-fenix-market] .fx-nuovo{background:var(--brand);color:#fff;border-color:var(--brand)}
+html[data-fenix-market] .fx-card,html[data-fenix-market] .fx-record,html[data-fenix-market] .fx-table-wrap{box-shadow:var(--shadow-card);border-radius:var(--fx-r3)}
+html[data-fenix-market] .fx-splash{background:var(--surface-2)}
 `;
 }
 
@@ -1261,6 +1321,15 @@ function productHtml(spec: PipelineSpec, tokens: DesignTokens, grammar: LayoutGr
   const accentInk = safeAccentInk(tokens);
   const identityGlyph = appIdentityIcon(spec.brief, tokens.family);
   const campo = isFieldProductBrief(spec.brief) && grammar.id === "phone-seed";
+  const market = isMarketplaceBrief(spec.brief) && grammar.id === "phone-seed";
+  const shop = isShopBrief(spec.brief) && grammar.id === "phone-seed" && !campo && !market;
+  const craftDomain: CraftDomain = campo ? "water" : market ? "market" : "generic";
+  const craftRhythm = craftRhythmOf({
+    field: campo,
+    market,
+    desk,
+    phone: grammar.id === "phone-seed" && !campo,
+  });
   const premiumMark = campo
     ? glossyWaterMarkSvg(spec.id, p)
     : premiumAppMarkSvg(spec.id, p, identityGlyph);
@@ -1296,7 +1365,7 @@ function productHtml(spec: PipelineSpec, tokens: DesignTokens, grammar: LayoutGr
             : "clamp(1.18rem, 2.2vw, 1.55rem)";
   const large = isOperationalApp(tokens) ? "2.125rem" : "1.75rem";
   return `<!DOCTYPE html>
-<html lang="it" data-family="${tokens.family}" data-grammar="${grammar.id}" data-chroma="${tokens.chroma}" data-intent-type="${graphicIntentFromBrief(spec.brief).type}" data-intent-chrome="${graphicIntentFromBrief(spec.brief).chrome}"${desk ? " data-fenix-craft-desk" : ""}${campo ? " data-fenix-campo" : ""}>
+<html lang="it" data-family="${tokens.family}" data-grammar="${grammar.id}" data-chroma="${tokens.chroma}" data-intent-type="${graphicIntentFromBrief(spec.brief).type}" data-intent-chrome="${graphicIntentFromBrief(spec.brief).chrome}" data-craft-rhythm="${craftRhythm}"${desk ? " data-fenix-craft-desk" : ""}${campo ? " data-fenix-campo" : ""}${market ? " data-fenix-market" : ""}>
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
@@ -1306,7 +1375,7 @@ function productHtml(spec: PipelineSpec, tokens: DesignTokens, grammar: LayoutGr
 ${tokens.fonts.href ? `<link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="${tokens.fonts.href}" rel="stylesheet"/>` : "<!-- system stack: no Google Fonts -->"}
 <style data-fenix-phone data-fenix-site data-fenix-craft>
-:root{color-scheme:${scheme};--bg:${p.bg};--surface:${p.surface};--elevated:${p.elevated};--fg:${p.fg};--muted:${p.muted};--accent:${p.accent};--line:${p.line};--accent-ink:${accentInk};--success:${p.success};--warning:${p.warning};--navy:${p.fg};--water:${p.accent};--ok-loud:${p.success};${craftTokenCss(surfacesFromPalette(p, campo))};--r:${tokens.radius};--display:${displayStack(tokens)};--body:${bodyStack(tokens)};--t-h1:${tokens.type.h1};--t-h2:${h2};--t-body:${tokens.type.body};--t-large:${large};--t-headline:1.0625rem;--t-callout:1rem;--t-subhead:.9375rem;--t-footnote:.8125rem;--t-caption:.6875rem;--space:8px;--ink-loud:${p.fg};--ink-quiet:${p.muted}}
+:root{color-scheme:${scheme};--bg:${p.bg};--surface:${p.surface};--elevated:${p.elevated};--fg:${p.fg};--muted:${p.muted};--accent:${p.accent};--line:${p.line};--accent-ink:${accentInk};--success:${p.success};--warning:${p.warning};--navy:${p.fg};--water:${p.accent};--ok-loud:${p.success};${craftTokenCss(surfacesFromPalette(p, craftDomain), { rhythm: craftRhythm, domain: craftDomain })};--r:${tokens.radius};--display:${displayStack(tokens)};--body:${bodyStack(tokens)};--t-h1:${tokens.type.h1};--t-h2:${h2};--t-body:${tokens.type.body};--t-large:${large};--t-headline:1.0625rem;--t-callout:1rem;--t-subhead:.9375rem;--t-footnote:.8125rem;--t-caption:.6875rem;--space:8px;--ink-loud:${p.fg};--ink-quiet:${p.muted}}
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%;background:var(--bg);color:var(--fg);font:400 ${tokens.type.body}/1.29 var(--body);-webkit-font-smoothing:antialiased}
 body{min-height:100dvh}
@@ -1332,6 +1401,7 @@ main{flex:1;min-height:0;overflow-y:auto;padding:8px 16px 24px;-webkit-overflow-
 .room h2,.room p,.room .notes{flex:0 0 auto}
 ${visualKitCss(tokens, grammar)}
 ${campo ? "html[data-fenix-campo] nav.tabs{grid-template-columns:repeat(5,minmax(0,1fr))}" : ""}
+${market ? marketChromeCss() : ""}
 </style>
 </head>
 <body>
@@ -1379,6 +1449,8 @@ const cta=${JSON.stringify(spec.cta)};
 const kicker=${JSON.stringify(spec.kicker)};
 const place=${JSON.stringify(spec.place)};
 const campoProduct=${campo ? "true" : "false"};
+const marketProduct=${market ? "true" : "false"};
+const shopProduct=${shop ? "true" : "false"};
 const AGENDA_CYCLE={prenotato:"confermato",confermato:"in-corso","in-corso":"concluso",concluso:"prenotato"};
 const AGENDA_ACTION_LABELS=${JSON.stringify(AGENDA_ACTION_LABELS)};
 const AGENDA_STATUS_LABELS=${JSON.stringify(AGENDA_STATUS_LABELS)};
@@ -1779,9 +1851,9 @@ function phonePane(id){
   var key=(tab.id+" "+tab.label).toLowerCase();
   if(/statist|numeri|kpi|bilancio/.test(key)) return "stats";
   if(/storico|cronolog/.test(key)) return "history";
-  if(/nuovo|nuova|aggiungi|registra/.test(key)) return "form";
+  if(/nuovo|nuova|aggiungi|registra|pubblica/.test(key)) return "form";
   if(/persona|profilo|impostaz/.test(key)) return "persona";
-  if(/elenco|lista|gestione|dipendent|clienti/.test(key)) return "list";
+  if(/elenco|lista|gestione|dipendent|clienti|attivit/.test(key)) return "list";
   if(id===tabDefs[0].id) return "home";
   if(id===tabDefs[1].id) return "form";
   if(id===tabDefs[2].id) return "list";
@@ -1816,6 +1888,17 @@ function fxTankMarkup(n){
   if(pct>=100 && n) html+='<p class="fx-ok">'+(campoProduct?"Obiettivo raggiunto. Bene.":"Obiettivo raggiunto")+"</p>";
   return html+"</div>";
 }
+function catOf(kicker){
+  var k=String(kicker||"").toLowerCase();
+  if(/conseg/.test(k)) return "1";
+  if(/puliz/.test(k)) return "3";
+  if(/animal|pet/.test(k)) return "4";
+  if(/giard/.test(k)) return "5";
+  return "2";
+}
+function fxTaskCard(e){
+  return '<article class="fx-task" data-id="'+e.id+'"><button type="button" class="fx-cat" data-cat="'+catOf(e.kicker)+'">'+e.kicker+'</button><h2>'+e.title+'</h2><p class="notes">'+(e.note||"")+'</p><p class="fx-pay">'+(e.meta||"")+"</p></article>";
+}
 function renderPocketHome(){
   var n=data.items.length;
   var formId=paneTab("form");
@@ -1824,18 +1907,32 @@ function renderPocketHome(){
   if(campoProduct){
     html+='<div class="fx-hello-row"><div><p class="fx-hello">Missioni</p><p class="fx-role">Quadro di controllo</p></div><button class="fx-exit" type="button" aria-label="Esci">'+FX_EXIT_MARK+"</button></div>";
     html+='<p class="fx-date">'+italianLongDateJs()+'</p><div class="fx-inverse"><p class="fx-shell-kicker">Panoramica — oggi</p>'+fxBoardMarkup(n)+'</div><div class="fx-inverse fx-hero"><p class="fx-shell-kicker">Volume in campo</p>'+fxTankMarkup(n)+"</div>";
+  } else if(marketProduct){
+    html+='<p class="fx-hello">Incarichi</p><p class="fx-role">Vicino a te</p>';
+    html+='<p class="fx-date">'+italianLongDateJs()+'</p>';
+    html+='<div class="fx-cats" role="list"><button type="button" class="fx-cat" data-cat="1">Consegne</button><button type="button" class="fx-cat" data-cat="2">Casa</button><button type="button" class="fx-cat" data-cat="3">Pulizie</button><button type="button" class="fx-cat" data-cat="4">Animali</button><button type="button" class="fx-cat" data-cat="5">Giardino</button></div>';
+    data.items.forEach(function(e){ html+=fxTaskCard(e); });
+  } else if(shopProduct){
+    html+='<p class="fx-hello">Banco</p><p class="fx-role">In vendita</p><p class="fx-date">'+italianLongDateJs()+'</p>';
+    data.items.forEach(function(e){
+      html+='<article class="card fx-shop" data-id="'+e.id+'"><p class="kicker">'+e.kicker+'</p><h2>'+e.title+'</h2><p class="notes">'+(e.note||"")+'</p><p class="fx-pay">'+(e.meta||"")+"</p></article>";
+    });
   } else {
     html+='<p class="kicker">Panoramica</p><p class="fx-date">'+italianLongDateJs()+"</p>"+fxBoardMarkup(n)+fxTankMarkup(n);
   }
   if(campoProduct){
     html+='<p class="home-count" data-count="'+n+'"><b>'+n+'</b><span>'+(n===1?"dipendente in campo":"dipendenti in campo")+"</span></p>";
+  } else if(marketProduct){
+    html+='<p class="home-count" data-count="'+n+'"><b>'+n+'</b><span>'+(n===1?"incarico vicino":"incarichi vicini")+"</span></p>";
+  } else if(shopProduct){
+    html+='<p class="home-count" data-count="'+n+'"><b>'+n+'</b><span>'+(n===1?"articolo in banco":"articoli in banco")+"</span></p>";
   } else {
     html+='<p class="home-count" data-count="'+n+'"><b>'+n+'</b><span>'+(n===1?"voce sul dispositivo":"voci sul dispositivo")+"</span></p>";
   }
   if(!n){
     html+='<div class="home-first" data-state="empty">'+pocketEmptyInner()+"</div></div>";
     html+='<aside class="home-aside"><article class="card"><p class="kicker">Elenco</p><h2>Vuoto</h2><p class="notes">Le azioni restano nella lista.</p></article><article class="card"><p class="kicker">Privacy</p><h2>Solo qui</h2><p class="notes">Storage locale, senza profilo.</p></article></aside>';
-  } else if(campoProduct){
+  } else if(campoProduct || marketProduct || shopProduct){
     html+='<button class="btn" type="button" data-view="'+formId+'">'+cta+"</button></div>";
   } else {
     html+='<p class="notes">Ultime voci dal dispositivo. Niente dati di prova.</p><button class="btn" type="button" data-view="'+tabDefs[1].id+'">'+cta+"</button></div>";
@@ -1853,6 +1950,16 @@ function renderPocketList(){
   var n=data.items.length;
   var formId=paneTab("form");
   var html='<section class="list-pane" data-fenix-pane="elenco">';
+  if(marketProduct){
+    html+='<p class="fx-large">Attivit\u00e0</p><p class="fx-sub">'+(n?n+" incarichi aperti":"Nessun incarico")+"</p>";
+    html+='<div class="fx-pills"><button type="button" class="fx-pill on">Tutti</button><button type="button" class="fx-pill">Aperti</button><button type="button" class="fx-pill">Fatti</button></div>';
+    if(!n){
+      html+='<div class="state-empty" data-state="empty"><p>Nessun incarico in elenco. Compila e salva; non inventiamo righe.</p><button class="btn" type="button" data-view="'+formId+'">'+cta+"</button></div>";
+      return html+"</section>";
+    }
+    data.items.forEach(function(e){ html+=fxTaskCard(e); });
+    return html+"</section>";
+  }
   if(campoProduct){
     html+='<p class="fx-large">Gestione</p><div class="fx-pills"><button type="button" class="fx-pill on">Dipendenti</button><button type="button" class="fx-pill">Missioni</button><button type="button" class="fx-pill">Firme</button><button type="button" class="fx-pill">Luoghi</button></div>';
     html+='<div class="fx-toolbar"><div class="list-head"><h2>Dipendenti ('+n+')</h2></div><button class="fx-nuovo" type="button" data-act="fx-new">+ Nuovo</button></div>';
