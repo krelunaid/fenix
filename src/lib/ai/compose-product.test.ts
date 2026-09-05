@@ -30,7 +30,7 @@ import { isComposedVisualArtifact } from "../../../workers/visual/visual-style.m
 import {
   canKeepComposedSeedAfterPolishError,
   shouldSkipComposedPolish,
-} from "../../../workers/visual/visual-style-repair.mjs";
+} from "../../../workers/visual/visual-style-keep.mjs";
 
 describe("controller build request preserves generated artifacts", () => {
   it("creates an editable sector app icon in the first phone seed without provider calls", () => {

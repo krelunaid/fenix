@@ -6,7 +6,7 @@ import { setTimeout as delay } from "node:timers/promises";
 import { test } from "node:test";
 import { applyVisualStylePlan } from "../workers/visual/visual-style.mjs";
 
-test("automatic composed polish rejects unsafe, absent and ineffective style plans", { timeout: 30000 }, async () => {
+test("automatic composed polish keeps the seed when style plans stay unsafe, absent or ineffective", { timeout: 30000 }, async () => {
   const reservation = createServer();
   reservation.listen(0, "127.0.0.1");
   await once(reservation, "listening");

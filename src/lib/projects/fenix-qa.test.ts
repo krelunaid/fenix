@@ -347,8 +347,14 @@ describe("focus-visible and worker model", () => {
     assert.match(worker, /VISUAL_STYLE_SKIPPED_LOG/);
     const repair = readFileSync(join(root, "workers/visual/visual-style-repair.mjs"), "utf8");
     assert.match(repair, /export async function repairVisualStyleOrKeep/);
-    assert.match(repair, /isTerminalVisualPolishError/);
-    assert.doesNotMatch(repair, /font-size.: \[13/);
+    assert.match(repair, /from ['"]\.\/visual-style-keep\.mjs['"]/);
+    assert.doesNotMatch(runBuild, /visual-style-repair\.mjs/);
+    assert.doesNotMatch(runBuild, /visual-style-effect\.mjs/);
+    assert.match(runBuild, /visual-style-keep\.mjs/);
+    const keep = readFileSync(join(root, "workers/visual/visual-style-keep.mjs"), "utf8");
+    assert.match(keep, /isTerminalVisualPolishError/);
+    assert.doesNotMatch(keep, /playwright/);
+    assert.doesNotMatch(keep, /font-size.: \[13/);
     const compose = readFileSync(join(root, "src/lib/ai/compose-product.ts"), "utf8");
     assert.match(compose, /data-fenix-id="icon:\$\{tab\.id\}"/);
     assert.match(compose, /data-fenix-id="icon:'\+t\.id\+'/);

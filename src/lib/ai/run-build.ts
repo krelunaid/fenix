@@ -42,7 +42,7 @@ import {
   canKeepComposedSeedAfterPolishError,
   shouldSkipComposedPolish,
   VISUAL_STYLE_SKIPPED_LOG,
-} from "../../../workers/visual/visual-style-repair.mjs";
+} from "../../../workers/visual/visual-style-keep.mjs";
 import { runIconRevisionFlow } from "@/lib/projects/icon-build";
 
 const inflight = new Set<string>();
