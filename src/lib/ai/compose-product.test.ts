@@ -809,6 +809,10 @@ describe("graphic pipeline prompt→plan→generate→visual→QA", () => {
     assert.match(bootHome, /Panoramica/);
     assert.doesNotMatch(bootHome, /pocket-list/);
     assert.doesNotMatch(bootHome, /data-fenix-pane="persona"/);
+    assert.match(system.html, /html\+='<ul class="pocket-list">'/);
+    assert.match(system.html, /slot-actions/);
+    assert.match(system.html, /data-act="edit"/);
+    assert.match(system.html, /data-act="del"/);
   });
 
   it("raises field-product chrome toward a real product without Ciao or a house palette", () => {
@@ -826,6 +830,7 @@ describe("graphic pipeline prompt→plan→generate→visual→QA", () => {
     assert.match(product.html, /data-fenix-water-mark/);
     assert.match(product.html, /function renderPocketHistory/);
     assert.match(product.html, /function renderPocketStats/);
+    assert.match(product.html, /html\+='<ul class="pocket-list" hidden/);
     assert.match(product.html, /fx-board/);
     assert.match(product.html, /fx-tank/);
     assert.match(product.html, /fxBotteSvg/);

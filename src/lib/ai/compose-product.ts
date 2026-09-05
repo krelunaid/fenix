@@ -2066,16 +2066,24 @@ function renderPocketList(){
     html+='<div class="state-empty" data-state="empty"><p>Nessuna voce in elenco. Compila e salva; non inventiamo righe.</p><button class="btn" type="button" data-view="'+formId+'">'+cta+"</button></div>";
     return html+"</section>";
   }
-  html+='<div class="fx-table-wrap"><table class="fx-table"><thead><tr><th>Nome</th><th>Obiettivo</th><th>Stato</th><th>Azioni</th></tr></thead><tbody>';
-  data.items.forEach(function(e){
-    var wait=/pausa|wait|bozza|scadenza/i.test(e.kicker||"");
-    html+='<tr data-id="'+e.id+'"><td class="name"><b>'+e.title+"</b><small>"+(e.note||e.kicker||"")+'</small></td><td>'+(e.meta||"—")+'</td><td><span class="fx-dot'+(wait?" wait":"")+'" title="'+(e.kicker||"")+'"></span></td><td><button class="fx-iconbtn" data-act="edit" data-id="'+e.id+'" aria-label="Modifica">'+FX_EDIT_MARK+'</button> <button class="fx-iconbtn" data-act="del" data-id="'+e.id+'" aria-label="Archivia">'+FX_PAUSE_MARK+"</button></td></tr>";
-  });
-  html+="</tbody></table></div>";
-  html+='<ul class="pocket-list" hidden aria-hidden="true">';
+  if(campoProduct){
+    html+='<div class="fx-table-wrap"><table class="fx-table"><thead><tr><th>Nome</th><th>Obiettivo</th><th>Stato</th><th>Azioni</th></tr></thead><tbody>';
+    data.items.forEach(function(e){
+      var wait=/pausa|wait|bozza|scadenza/i.test(e.kicker||"");
+      html+='<tr data-id="'+e.id+'"><td class="name"><b>'+e.title+"</b><small>"+(e.note||e.kicker||"")+'</small></td><td>'+(e.meta||"—")+'</td><td><span class="fx-dot'+(wait?" wait":"")+'" title="'+(e.kicker||"")+'"></span></td><td><button class="fx-iconbtn" data-act="edit" data-id="'+e.id+'" aria-label="Modifica">'+FX_EDIT_MARK+'</button> <button class="fx-iconbtn" data-act="del" data-id="'+e.id+'" aria-label="Archivia">'+FX_PAUSE_MARK+"</button></td></tr>";
+    });
+    html+="</tbody></table></div>";
+    html+='<ul class="pocket-list" hidden aria-hidden="true">';
+    data.items.forEach(function(e){
+      var line=pocketLine(e);
+      html+='<li class="card" data-id="'+e.id+'"><h2>'+e.title+'</h2>'+(line?'<p class="notes">'+line+"</p>":"")+"</li>";
+    });
+    return html+"</ul></section>";
+  }
+  html+='<ul class="pocket-list">';
   data.items.forEach(function(e){
     var line=pocketLine(e);
-    html+='<li class="card" data-id="'+e.id+'"><h2>'+e.title+'</h2>'+(line?'<p class="notes">'+line+"</p>":"")+"</li>";
+    html+='<li class="card" data-id="'+e.id+'"><h2>'+e.title+'</h2>'+(line?'<p class="notes">'+line+"</p>":"")+'<div class="slot-actions"><button class="btn sm ghost" data-act="edit" data-id="'+e.id+'">Modifica</button><button class="btn sm ghost" data-act="del" data-id="'+e.id+'">Archivia</button></div></li>';
   });
   return html+"</ul></section>";
 }
