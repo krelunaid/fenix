@@ -591,8 +591,12 @@ const FX_PAUSE_MARK =
   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M10 9.2v5.6M14 9.2v5.6"/></svg>';
 const FX_CHEVRON_MARK =
   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>';
-const FX_EXIT_MARK =
-  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 7V5.8A1.8 1.8 0 0 1 11.8 4h6.4A1.8 1.8 0 0 1 20 5.8v12.4A1.8 1.8 0 0 1 18.2 20h-6.4A1.8 1.8 0 0 1 10 18.2V17"/><path d="M4 12h10M11.2 8.8 14.4 12l-3.2 3.2"/></svg>';
+/** Visible campo home mark. Home hides <header>.app-mark, so this must be a drop — never the exit door. */
+export function campoHomeHeaderMark(): string {
+  return craftNavIcon({ id: "app", label: "Acqua" })
+    .replace('data-craft-nav="1"', 'data-craft-app="1"')
+    .replace("<svg ", '<svg data-fenix-water-header="1" ');
+}
 
 function italianLongDate(d = new Date()): string {
   const raw = d.toLocaleDateString("it-IT", {
@@ -1205,8 +1209,8 @@ html[data-fenix-campo] .fx-hello-row{display:flex;align-items:flex-start;justify
 html[data-fenix-campo] .fx-hello{margin:0;font:750 var(--fx-t-display)/1.05 var(--display),system-ui,sans-serif;letter-spacing:-.04em;color:var(--on-surface)}
 html[data-fenix-campo] .fx-role{margin:4px 0 0;font:500 var(--fx-t-14)/1.3 var(--body),system-ui,sans-serif;color:var(--muted)}
 html[data-fenix-campo] .fx-date{margin:0 0 16px;font:500 var(--fx-t-14)/1.3 var(--body),system-ui,sans-serif;color:color-mix(in srgb,var(--on-surface) 48%,#94a3b8)}
-html[data-fenix-campo] .fx-exit{width:40px;height:40px;border:0;border-radius:50%;background:var(--brand-soft);color:var(--brand-2);display:grid;place-items:center;flex:0 0 40px}
-html[data-fenix-campo] .fx-exit svg{width:18px;height:18px}
+html[data-fenix-campo] .fx-app-mark{width:40px;height:40px;border:0;border-radius:50%;background:var(--brand-soft);color:var(--brand-2);display:grid;place-items:center;flex:0 0 40px}
+html[data-fenix-campo] .fx-app-mark svg{width:22px;height:22px}
 html[data-fenix-campo] .fx-inverse{margin:0 0 12px;padding:18px 16px 20px;border-radius:24px;background:var(--inverse);color:#f8fafc;overflow:hidden;min-width:0;box-shadow:var(--shadow-card),inset 0 1px 0 rgba(255,255,255,.08)}
 html[data-fenix-campo] .fx-hero{box-shadow:var(--shadow-float),inset 0 1px 0 rgba(255,255,255,.1);background:linear-gradient(180deg,color-mix(in srgb,#1e293b 42%,var(--inverse)) 0%,var(--inverse) 36%)}
 html[data-fenix-campo] .fx-shell-kicker{margin:0 0 12px;font:650 var(--fx-t-14)/1.3 var(--body),system-ui,sans-serif;letter-spacing:-.01em;color:color-mix(in srgb,#f8fafc 78%,transparent)}
@@ -1528,7 +1532,7 @@ const FX_SEARCH_MARK=${JSON.stringify(FX_SEARCH_MARK)};
 const FX_EDIT_MARK=${JSON.stringify(FX_EDIT_MARK)};
 const FX_PAUSE_MARK=${JSON.stringify(FX_PAUSE_MARK)};
 const FX_CHEVRON_MARK=${JSON.stringify(FX_CHEVRON_MARK)};
-const FX_EXIT_MARK=${JSON.stringify(FX_EXIT_MARK)};
+const FX_WATER_MARK=${JSON.stringify(campo ? campoHomeHeaderMark() : "")};
 const FX_DROP_MARK='<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4.8s5.8 6.6 5.8 10.2a5.8 5.8 0 0 1-11.6 0C6.2 11.4 12 4.8 12 4.8z"/></svg>';
 (function dismissSplash(){
   var splash=document.getElementById("fx-splash");
@@ -1985,7 +1989,7 @@ function renderPocketHome(){
   var listId=paneTab("list");
   var html='<section class="home-overview" data-fenix-pane="home"><div class="home-hero">';
   if(campoProduct){
-    html+='<div class="fx-hello-row"><div><p class="fx-hello">Missioni</p><p class="fx-role">Quadro di controllo</p></div><button class="fx-exit" type="button" aria-label="Esci">'+FX_EXIT_MARK+"</button></div>";
+    html+='<div class="fx-hello-row"><div><p class="fx-hello">Missioni</p><p class="fx-role">Quadro di controllo</p></div><span class="fx-app-mark" data-fenix-id="icon:app" aria-hidden="true">'+FX_WATER_MARK+"</span></div>";
     html+='<p class="fx-date">'+italianLongDateJs()+'</p><div class="fx-inverse"><p class="fx-shell-kicker">Panoramica — oggi</p>'+fxBoardMarkup(n)+'</div><div class="fx-inverse fx-hero"><p class="fx-shell-kicker">Volume in campo</p>'+fxTankMarkup(n)+"</div>";
   } else if(marketProduct){
     html+='<p class="fx-hello">Incarichi</p><p class="fx-role">Vicino a te</p>';
