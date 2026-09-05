@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 import { formatPrefix } from "./infer.ts";
 import { grammarFromBrief } from "./layout-grammar.ts";
 import { familyFromBrief, tokensFromBrief, variantFromBrief } from "./design-tokens.ts";
+import { LIBRARY_IPHONE_BRIEF } from "./app-identity.test.ts";
 
 const BRIEFS = {
   essenza: `${formatPrefix("app")}Essenza: gestione profumi premium, flaconi, note olfattive e guardaroba.`,
@@ -74,5 +75,15 @@ describe("layout grammar from brief", () => {
     assert.equal(docs.id, "magazine");
     assert.equal(pastel.id, "service-board");
     assert.equal(signal.id, "pocket-tool");
+  });
+
+  it("gives a library iPhone brief phone-seed bookstore voice, not magazine or desk", () => {
+    const g = grammarFromBrief(`${formatPrefix("app")}${LIBRARY_IPHONE_BRIEF}`);
+    assert.equal(g.id, "phone-seed");
+    assert.equal(g.chrome, "tabs");
+    assert.equal(g.voice.census, "in prestito");
+    assert.match(g.voice.empty, /Nessun libro in scaffale/);
+    assert.doesNotMatch(g.voice.empty, /ledger|Registrane/i);
+    assert.doesNotMatch(g.desktop, /tabbar/i);
   });
 });

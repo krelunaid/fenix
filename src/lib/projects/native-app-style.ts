@@ -7,8 +7,8 @@ html[data-grammar] header>div{min-width:0;flex:1 1 180px}
 html[data-grammar] .brand{font-size:32px;font-weight:700;font-style:normal;line-height:1.12;letter-spacing:-.03em;text-transform:none;overflow-wrap:anywhere}
 html[data-grammar] header .kicker{font-size:12px;font-weight:600;letter-spacing:.04em;margin-bottom:5px;text-transform:none}
 html[data-grammar] header .place{font-size:13px;line-height:1.4;font-weight:500}
-html[data-grammar] .app-mark{width:44px;height:44px;background:var(--elevated);color:var(--fg);border:1px solid var(--line);box-shadow:none;border-radius:12px}
-html[data-grammar] .app-mark svg{width:26px;height:26px;stroke-width:2}
+html[data-grammar] .app-mark{width:44px;height:44px;background:transparent;color:var(--fg);border:0;box-shadow:0 8px 18px rgba(8,35,56,.28);border-radius:14px;padding:0;overflow:hidden}
+html[data-grammar] .app-mark svg{width:44px;height:44px;display:block}
 html[data-grammar] main{padding-left:20px;padding-right:20px;padding-top:8px;padding-bottom:28px}
 html[data-grammar] :is(.time,.slot .time,.kpi b,.home-count,td:last-child,.week-day b){font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1}
 html[data-grammar] :is(.card,.fragrance,.ticket,.room,.look,.kpi,.measure,.home-hero,.persona-privacy,.wipe-box){border-radius:18px;box-shadow:none}
@@ -29,8 +29,7 @@ html[data-grammar] .fx-large{font-size:var(--fenix-type-large-title);font-weight
 html[data-grammar] .fx-sub{font-size:var(--fenix-type-subhead);color:var(--muted)}
 html[data-grammar] :is(.fx-board,.fx-tank,.fx-card,.fx-record,.fx-table-wrap){border-radius:22px;overflow:hidden;min-width:0}
 html[data-grammar] .fx-pill.on,.fx-filter.on,.fx-nuovo{box-shadow:none}
-html[data-grammar] .app-mark{width:44px;height:44px;padding:0;border:0;border-radius:14px;overflow:hidden}
-html[data-grammar] .app-mark svg{width:44px;height:44px}
+html[data-grammar] .app-mark svg[data-fenix-crisp-mark],html[data-grammar] .app-mark svg[data-fenix-premium-mark]{width:44px;height:44px;display:block}
 html[data-grammar] :is(nav.tabs,nav.rail) svg{width:28px;height:28px;flex:0 0 28px;stroke-width:1.8}
 html[data-grammar] :is(nav.tabs,nav.rail) button.on svg{stroke-width:2.2}
 html[data-grammar] nav.rail button{min-height:44px;border-radius:12px;line-height:1.3}

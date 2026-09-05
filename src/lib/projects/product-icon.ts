@@ -1,7 +1,11 @@
 import type { Palette, ProjectKind } from "@/lib/projects/types";
+import { isBarberBrief, isLibraryBrief } from "./app-identity.ts";
+import { crispBarberMarkSvg, crispBookMarkSvg } from "./premium-mark.ts";
 
 const MOTIFS: { test: RegExp; d: string }[] = [
   { test: /acqua|bottiglia|serbatoio|\bbotte\b|livello|consegne/i, d: "M16 6c5 6.4 7.4 11 7.4 14.6A7.4 7.4 0 1 1 8.6 20.6C8.6 17 11 12.4 16 6z" },
+  { test: /parrucchier|barbiere|barbieri|\bbarber(?:\s*shop)?\b|\bhair\s*salon\b/i, d: "M9.4 16.2 17.6 5.6c.48-.58 1.32-.5 1.72.16l.58.92c.3.48.1 1.12-.4 1.44L10.8 17.5z" },
+  { test: /librer|bibliotec|\bbookstore\b|catalogo\s+libr|\bprestit[oi]\b/i, d: "M8.2 6.2h13.4c1.15 0 1.9.85 1.9 1.9v16.1c0 .72-.62 1.28-1.42 1.28H9.55c-1.55 0-2.45-.92-2.45-2.25V8.15c0-1.08.92-1.95 2.1-1.95z" },
   { test: /caff|coffee|espresso|bar\b|roast/i, d: "M10 12h12v8a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4v-8zm12 2h2a3 3 0 0 1 0 6h-2M12 8c0-2 2-3 4-3" },
   { test: /pane|forno|bakery|bread|pasticc/i, d: "M8 18c0-6 16-6 16 0v2H8v-2zm2-2c1-4 12-4 12 0" },
   { test: /medit|yoga|zen|calm|breath|sleep/i, d: "M16 7a3 3 0 1 1 0 6 3 3 0 0 1 0-6zm-6 14c1-5 5-7 6-7s5 2 6 7" },
@@ -30,6 +34,8 @@ export function productIconSvg(input: {
   prompt?: string;
 }) {
   const seed = `${input.name} ${input.prompt ?? ""} ${input.kind}`;
+  if (isBarberBrief(seed)) return crispBarberMarkSvg("product-icon");
+  if (isLibraryBrief(seed)) return crispBookMarkSvg("product-icon");
   const tile = input.palette.fg || "#efe6d4";
   const mark = input.palette.bg || "#16110c";
   const d = motifPath(seed);

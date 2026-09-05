@@ -27,8 +27,8 @@ import { auditGraphicQuality, type GraphicReport } from "../projects/graphic-qua
 import { domainIllustration, altForBrief } from "./domain-imagery.ts";
 import { DASHBOARD_POLISH_INSTRUCTION, SITE_POLISH_INSTRUCTION } from "./app-shell.ts";
 import { craftNavIcon } from "../projects/craft-icons.ts";
-import { appIdentityIcon, isAccountantBrief, isBarberBrief, isFieldProductBrief, isLuxeBrief, isMarketplaceBrief, isShopBrief } from "../projects/app-identity.ts";
-import { crispWaterDropMarkSvg, glossyWaterMarkSvg, premiumAppMarkSvg, premiumMarkDataUri } from "../projects/premium-mark.ts";
+import { appIdentityIcon, appIdentityLabel, isAccountantBrief, isBarberBrief, isFieldProductBrief, isLibraryBrief, isLuxeBrief, isMarketplaceBrief, isShopBrief, wantsCrispCraftMark } from "../projects/app-identity.ts";
+import { crispAppMarkSvg, crispBarberMarkSvg, crispBookMarkSvg, crispWaterDropMarkSvg, glossyWaterMarkSvg, premiumAppMarkSvg, premiumMarkDataUri } from "../projects/premium-mark.ts";
 import { craftModeOf, craftRhythmOf, craftTokenCss, surfacesFromPalette, type CraftDomain } from "../projects/craft-tokens.ts";
 import { accentButtonPair, contrastRatio } from "../projects/visual-quality.ts";
 import type { Palette, ProjectKind } from "../projects/types.ts";
@@ -316,6 +316,7 @@ export const PIPELINE_SPECS: PipelineSpec[] = [
 function specForBrief(brief: string): PipelineSpec | undefined {
   const exact = PIPELINE_SPECS.find((s) => s.brief === brief);
   if (exact) return exact;
+  if (isLibraryBrief(brief) || isBarberBrief(brief)) return undefined;
   const family = familyFromBrief(brief);
   const variant = variantFromBrief(brief);
   return PIPELINE_SPECS.find((s) => {
@@ -336,13 +337,15 @@ function seedNameFromBrief(brief: string): string {
     .trim();
   const fallback = isBarberBrief(brief)
     ? "Barber"
-    : isAccountantBrief(brief)
-      ? "Contabilità"
-      : isShopBrief(brief)
-        ? "Negozio"
-        : grammarFromBrief(brief).id === "agenda"
-          ? "Agenda"
-          : "Note";
+    : isLibraryBrief(brief)
+      ? "Libreria"
+      : isAccountantBrief(brief)
+        ? "Contabilità"
+        : isShopBrief(brief)
+          ? "Negozio"
+          : grammarFromBrief(brief).id === "agenda"
+            ? "Agenda"
+            : "Note";
   const named = raw.match(/(?:chiamata|chiamala|nome(?: dell.app)?|titolo)\s*[:=]?\s*["«]([^"»]{1,80})["»]/i)?.[1]?.trim();
   if (named) return named;
   const before = raw.split(/[:.]/)[0]!.trim().replace(/[,;]+$/g, "").trim();
@@ -519,13 +522,38 @@ function synthesizeSpec(brief: string): PipelineSpec {
       cta: "Metti in banco",
     };
   }
+  if (isLibraryBrief(brief)) {
+    return {
+      id: `${tokens.family}-libreria`,
+      name,
+      kicker: "In scaffale",
+      place: "Sala lettura",
+      collection: "libri",
+      brief,
+      tabs: [
+        { id: "catalogo", label: "Catalogo" },
+        { id: "prestiti", label: "Prestiti" },
+        { id: "scaffali", label: "Scaffali" },
+        { id: "scheda", label: "Scheda" },
+      ],
+      rows: [
+        { id: "b1", title: "Il nome della rosa", kicker: "In prestito", note: "Umberto Eco · Narrativa A3", meta: "Marta · 12 set", status: "wait" },
+        { id: "b2", title: "Siddhartha", kicker: "In scaffale", note: "Hermann Hesse · Classici B1", meta: "Libero", status: "ok" },
+        { id: "b3", title: "La coscienza di Zeno", kicker: "In prestito", note: "Italo Svevo · Narrativa A1", meta: "Leo · 8 set", status: "wait" },
+        { id: "b4", title: "Cent'anni di solitudine", kicker: "In scaffale", note: "García Márquez · Mondo C2", meta: "Libero", status: "ok" },
+      ],
+      formTitle: "Nuovo libro",
+      cta: "Metti in scaffale",
+    };
+  }
   if (grammar.id === "agenda" || tokens.family === "booking") {
     const clinical = /clinic|medic|pazient|terap|ospedal|dentist/.test(brief);
+    const salon = isBarberBrief(brief);
     const place = clinical ? "Studio" : /lino|tessile|tessuto/.test(brief) ? "Atelier" : "Sala";
     return {
       id: `${tokens.family}-agenda`,
       name,
-      kicker: `Oggi · ${place}`,
+      kicker: salon ? "In sala" : `Oggi · ${place}`,
       place,
       collection: "slot",
       brief,
@@ -596,6 +624,16 @@ export function campoHomeHeaderMark(): string {
   return crispWaterDropMarkSvg("home-header");
 }
 
+/** Visible library Home mark. Home hides <header> — filled book chip, never a desk scrap. */
+export function libraryHomeHeaderMark(): string {
+  return crispBookMarkSvg("home-header");
+}
+
+/** Visible salon Home mark — filled shears chip, never a pale X outline. */
+export function barberHomeHeaderMark(): string {
+  return crispBarberMarkSvg("home-header");
+}
+
 function italianLongDate(d = new Date()): string {
   const raw = d.toLocaleDateString("it-IT", {
     weekday: "long",
@@ -612,6 +650,7 @@ function agendaActs(id: string, status: string): string {
 }
 
 function agendaRailMarkup(spec: PipelineSpec, grammar: LayoutGrammar): string {
+  const todayRows = spec.rows.filter((e) => !e.dayOffset);
   const slots = spec.rows
     .map((e, i) => {
       const state = i === 0 ? "on" : "idle";
@@ -619,7 +658,11 @@ function agendaRailMarkup(spec: PipelineSpec, grammar: LayoutGrammar): string {
       return `<article class="slot" data-id="${e.id}" data-state="${state}" data-status="${status}"><time class="time" datetime="${e.kicker}">${e.kicker}</time><div class="slot-body"><h2>${e.title}</h2><p class="notes slot-detail">${e.note} · ${e.meta}</p><span class="chip slot-status ${status}">${AGENDA_STATUS_LABELS[status] || status}</span>${agendaActs(e.id, status)}</div></article>`;
     })
     .join("");
-  return `<div class="day-head"><p class="kicker">${spec.kicker}</p><h2 id="day-label">${spec.rows.length} ${grammar.voice.census}</h2></div><div class="day-rail" data-fenix-rail="day" data-fenix-slot="agenda-boot" id="day-rail" role="tabpanel" aria-labelledby="day-label">${slots}</div>`;
+  const rail = `<div class="day-head"><p class="kicker">${spec.kicker}</p><h2 id="day-label">${todayRows.length || spec.rows.length} ${grammar.voice.census}</h2></div><div class="day-rail" data-fenix-rail="day" data-fenix-slot="agenda-boot" id="day-rail" role="tabpanel" aria-labelledby="day-label">${slots}</div>`;
+  if (!isBarberBrief(spec.brief)) return rail;
+  const todo = todayRows.filter((e) => e.status === "prenotato").length;
+  const live = todayRows.filter((e) => e.status === "in-corso").length;
+  return `<div class="fx-hello-row"><div><p class="fx-hello">${spec.name}</p><p class="fx-role">In sala</p></div><span class="fx-app-mark" data-fenix-id="icon:app" aria-hidden="true">${barberHomeHeaderMark()}</span></div><p class="fx-date">${italianLongDate()}</p><div class="barber-strip fx-inverse"><article><b>${todayRows.length}</b><span>oggi in sala</span></article><article><b>${todo}</b><span>da confermare</span></article><article><b>${live}</b><span>in corso</span></article></div>${rail}`;
 }
 
 function tabSvg(tab: { id: string; label: string }, i: number, campo = false): string {
@@ -1316,6 +1359,73 @@ html[data-fenix-luxe] .fx-splash .fx-mark{box-shadow:var(--shadow-float)}
 `;
 }
 
+function barberChromeCss(): string {
+  return `html[data-fenix-barber],html[data-fenix-barber] body{background-color:#F6EDE4;background-image:radial-gradient(120% 64% at 50% -8%,#F3D4B8 0%,transparent 58%),radial-gradient(70% 36% at 108% 12%,color-mix(in srgb,#C45C26 16%,transparent),transparent 58%);color:var(--on-surface)}
+html[data-fenix-barber] header{position:sticky;top:0;z-index:6;padding:12px 16px 10px;background:color-mix(in srgb,#FFF7F0 82%,transparent);-webkit-backdrop-filter:saturate(1.5) blur(16px);backdrop-filter:saturate(1.5) blur(16px)}
+html[data-fenix-barber] .app-mark{background:transparent}
+html[data-fenix-barber] nav.tabs{background:color-mix(in srgb,#fff 86%,#F3D4B8);border-top:1px solid var(--border,var(--line));box-shadow:0 -8px 24px rgba(196,92,38,.08);-webkit-backdrop-filter:saturate(1.6) blur(18px);backdrop-filter:saturate(1.6) blur(18px)}
+html[data-fenix-barber] nav.tabs svg{width:24px;height:24px;stroke-width:1.9}
+html[data-fenix-barber][data-grammar="agenda"] nav.tabs button.on{background:color-mix(in srgb,var(--brand-soft) 82%,transparent);color:var(--brand);border-radius:14px}
+html[data-fenix-barber] .fx-hello-row{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin:4px 0 4px}
+html[data-fenix-barber] .fx-hello{margin:0;font:750 var(--fx-t-display)/1.05 var(--display),system-ui,sans-serif;letter-spacing:-.04em;color:var(--on-surface)}
+html[data-fenix-barber] .fx-role{margin:4px 0 0;font:500 var(--fx-t-14)/1.3 var(--body),system-ui,sans-serif;color:var(--muted)}
+html[data-fenix-barber] .fx-date{margin:0 0 14px;font:500 var(--fx-t-14)/1.3 var(--body),system-ui,sans-serif;color:color-mix(in srgb,var(--on-surface) 52%,#7A5A48)}
+html[data-fenix-barber] .fx-app-mark{width:48px;height:48px;border:0;border-radius:14px;background:#3D2314;color:#FDE68A;display:grid;place-items:center;flex:0 0 48px;overflow:hidden;box-shadow:0 10px 22px rgba(61,35,20,.36)}
+html[data-fenix-barber] .fx-app-mark svg{width:48px;height:48px;display:block}
+html[data-fenix-barber] .barber-strip{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:0 0 14px;padding:14px;border-radius:22px;background:linear-gradient(180deg,color-mix(in srgb,#5A3420 28%,var(--inverse)) 0%,var(--inverse) 52%);color:#FFF7F0;box-shadow:var(--shadow-card)}
+html[data-fenix-barber] .barber-strip article{padding:10px 8px;border-radius:14px;background:color-mix(in srgb,#C45C26 22%,transparent);min-width:0}
+html[data-fenix-barber] .barber-strip b{display:block;font:750 var(--fx-t-24)/1 var(--display),system-ui,sans-serif;letter-spacing:-.03em;color:#fff}
+html[data-fenix-barber] .barber-strip span{display:block;margin-top:4px;font:650 11px/1.25 var(--body),system-ui,sans-serif;color:color-mix(in srgb,#F3D4B8 86%,transparent)}
+html[data-fenix-barber] .day-head h2{color:var(--on-surface)}
+html[data-fenix-barber] .day-rail{background:#FFF7F0;border-color:var(--border,var(--line));box-shadow:var(--shadow-card);border-radius:18px}
+html[data-fenix-barber] .slot{padding:16px 16px;background:transparent}
+html[data-fenix-barber] .slot .time{color:var(--brand);font-weight:750}
+html[data-fenix-barber] .slot-body h2{color:var(--on-surface)}
+html[data-fenix-barber] .chip.prenotato{color:#8A4B2E;border-color:color-mix(in srgb,#C45C26 45%,var(--line));background:color-mix(in srgb,#C45C26 12%,#fff)}
+html[data-fenix-barber] .chip.confermato,.chip.in-corso{color:#3D6B4A;border-color:color-mix(in srgb,#3D6B4A 45%,var(--line))}
+html[data-fenix-barber] .slot .btn.ghost{color:var(--brand);border-color:color-mix(in srgb,var(--brand) 28%,var(--line))}
+html[data-fenix-barber] .week-day.on{background:var(--brand);color:#FFF7F0;border-color:var(--brand)}
+html[data-fenix-barber] .week-day.on .kicker,.week-day.on .count{color:#FFF7F0}
+html[data-fenix-barber] .fx-splash{background:#F6EDE4}
+`;
+}
+
+function libraryChromeCss(): string {
+  return `html[data-fenix-libreria],html[data-fenix-libreria] body{background-color:#F6EFE4;background-image:radial-gradient(120% 64% at 50% -8%,#F0D8DC 0%,transparent 58%),radial-gradient(70% 36% at 108% 12%,color-mix(in srgb,#6B2D3C 14%,transparent),transparent 58%);color:var(--on-surface)}
+html[data-fenix-libreria] header{position:sticky;top:0;z-index:6;padding:12px 16px 10px;background:color-mix(in srgb,#FFF8F0 80%,transparent);-webkit-backdrop-filter:saturate(1.5) blur(16px);backdrop-filter:saturate(1.5) blur(16px)}
+html[data-fenix-libreria]:has(nav.tabs button:first-child.on) header{display:none}
+html[data-fenix-libreria] .app-mark{background:transparent}
+html[data-fenix-libreria] .app-mark svg{width:44px;height:44px;display:block}
+html[data-fenix-libreria] .place{letter-spacing:.08em}
+html[data-fenix-libreria] nav.tabs{background:color-mix(in srgb,#fff 86%,#F0D8DC);border-top:1px solid var(--border,var(--line));box-shadow:0 -8px 24px rgba(107,45,60,.08);-webkit-backdrop-filter:saturate(1.6) blur(18px);backdrop-filter:saturate(1.6) blur(18px)}
+html[data-fenix-libreria] nav.tabs svg{width:24px;height:24px;stroke-width:1.9}
+html[data-fenix-libreria][data-grammar="phone-seed"] nav.tabs button.on{background:color-mix(in srgb,var(--brand-soft) 82%,transparent);color:var(--brand);border-radius:14px}
+html[data-fenix-libreria] .home-hero{background:transparent;border:0;box-shadow:none;padding:0}
+html[data-fenix-libreria] .home-aside,html[data-fenix-libreria] .home-recent,html[data-fenix-libreria] .fx-board,html[data-fenix-libreria] .fx-tank{display:none}
+html[data-fenix-libreria] .home-count,html[data-fenix-libreria] .home-hero>.btn{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+html[data-fenix-libreria] .fx-hello-row{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin:4px 0 4px}
+html[data-fenix-libreria] .fx-hello{margin:0;font:600 var(--fx-t-display)/1.05 var(--display),ui-serif,Georgia,serif;letter-spacing:-.03em;color:var(--on-surface)}
+html[data-fenix-libreria] .fx-role{margin:4px 0 0;font:500 var(--fx-t-14)/1.3 var(--body),system-ui,sans-serif;color:var(--muted)}
+html[data-fenix-libreria] .fx-date{margin:0 0 16px;font:500 var(--fx-t-14)/1.3 var(--body),system-ui,sans-serif;color:color-mix(in srgb,var(--on-surface) 50%,#7A6558)}
+html[data-fenix-libreria] .fx-app-mark{width:48px;height:48px;border:0;border-radius:14px;background:#2A1814;color:#F0D8DC;display:grid;place-items:center;flex:0 0 48px;overflow:hidden;box-shadow:0 10px 22px rgba(42,24,20,.36)}
+html[data-fenix-libreria] .fx-app-mark svg{width:48px;height:48px;display:block}
+html[data-fenix-libreria] .fx-inverse{margin:0 0 14px;padding:16px;border-radius:22px;background:linear-gradient(180deg,color-mix(in srgb,#4A1F2A 36%,var(--inverse)) 0%,var(--inverse) 50%);color:#FFF8F0;box-shadow:var(--shadow-card)}
+html[data-fenix-libreria] .lib-board{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+html[data-fenix-libreria] .lib-cell{padding:12px;border-radius:14px;background:color-mix(in srgb,#8B4554 28%,transparent);min-width:0}
+html[data-fenix-libreria] .lib-cell b{display:block;color:#fff;font:750 var(--fx-t-24)/1.05 var(--display),ui-serif,Georgia,serif;letter-spacing:-.03em}
+html[data-fenix-libreria] .lib-cell span{display:block;margin-top:4px;color:color-mix(in srgb,#F0D8DC 86%,transparent);font:650 12px/1.25 var(--body),system-ui,sans-serif}
+html[data-fenix-libreria] .fx-book{margin:0 0 12px;padding:14px 16px;border:1px solid var(--border,var(--line));border-radius:18px;background:var(--surface);box-shadow:var(--shadow-card)}
+html[data-fenix-libreria] .fx-book h2{margin:0 0 4px;font:700 var(--fx-t-20)/1.2 var(--display),ui-serif,Georgia,serif;color:var(--on-surface)}
+html[data-fenix-libreria] .fx-book .fx-loan{margin:8px 0 0;font:750 13px/1.3 var(--body),system-ui,sans-serif;color:var(--brand)}
+html[data-fenix-libreria] .fx-shelves{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 16px}
+html[data-fenix-libreria] .fx-shelf{border:0;border-radius:var(--fx-pill);min-height:36px;padding:8px 14px;font:650 13px/1.2 var(--body),system-ui,sans-serif;background:color-mix(in srgb,var(--brand) 12%,#fff);color:var(--brand)}
+html[data-fenix-libreria] .fx-large{font:600 var(--fx-t-display)/1.05 var(--display),ui-serif,Georgia,serif;color:var(--on-surface)}
+html[data-fenix-libreria] .fx-card,.fx-record{box-shadow:var(--shadow-card);border-radius:18px;background:var(--surface)}
+html[data-fenix-libreria] .fx-splash{background:#F6EFE4}
+html[data-fenix-libreria] .home-first h2{font-family:var(--display),ui-serif,Georgia,serif}
+`;
+}
+
 function visualKitCss(t: DesignTokens, grammar: LayoutGrammar): string {
   const desk = grammar.chrome !== "tabs";
   return `${typeRampCss(t)}
@@ -1395,23 +1505,42 @@ function productHtml(spec: PipelineSpec, tokens: DesignTokens, grammar: LayoutGr
   const campo = isFieldProductBrief(spec.brief) && grammar.id === "phone-seed";
   const market = isMarketplaceBrief(spec.brief) && grammar.id === "phone-seed";
   const luxe = isLuxeBrief(spec.brief) && grammar.id === "phone-seed";
-  const shop = isShopBrief(spec.brief) && grammar.id === "phone-seed" && !campo && !market && !luxe;
-  const craftDomain: CraftDomain = campo ? "water" : market ? "market" : luxe ? "luxe" : "generic";
-  const craftMode = craftModeOf({ field: campo, market, luxe, desk });
+  const library = isLibraryBrief(spec.brief) && grammar.id === "phone-seed";
+  const barber = isBarberBrief(spec.brief) && grammar.id === "agenda";
+  const shop = isShopBrief(spec.brief) && grammar.id === "phone-seed" && !campo && !market && !luxe && !library;
+  const craftDomain: CraftDomain = campo
+    ? "water"
+    : market
+      ? "market"
+      : luxe
+        ? "luxe"
+        : barber
+          ? "barber"
+          : library
+            ? "library"
+            : "generic";
+  const craftMode = craftModeOf({ field: campo, market, luxe, desk, barber, library });
   const craftRhythm = craftRhythmOf({
     field: campo,
     market,
     luxe,
     desk,
+    barber,
+    library,
     phone: grammar.id === "phone-seed" && !campo && !luxe,
   });
+  const identityLabel = appIdentityLabel(spec.brief, tokens.family);
   const premiumMark = campo
     ? glossyWaterMarkSvg(spec.id, p)
-    : premiumAppMarkSvg(spec.id, p, identityGlyph);
+    : wantsCrispCraftMark(spec.brief, tokens.family)
+      ? crispAppMarkSvg(spec.id, identityLabel)
+      : premiumAppMarkSvg(spec.id, p, identityGlyph);
   const iconMark = campo ? crispWaterDropMarkSvg(spec.id) : premiumMark;
   const markHref = premiumMarkDataUri(iconMark);
   const bootDate = italianLongDate();
-  const pocketEmpty = `<section class="home-overview" data-fenix-pane="home" data-fenix-slot="home-boot"><div class="home-hero"><p class="kicker">Panoramica</p><p class="fx-date">${bootDate}</p><p class="home-count" data-count="0"><b>0</b><span>voci sul dispositivo</span></p><div class="home-first" data-state="empty"><div class="mark" aria-hidden="true">${POCKET_EMPTY_MARK}</div><h2>Niente in lista</h2><p class="notes">Aggiungi la prima voce. Qui non ci sono dati di prova.</p><button class="btn" type="button" data-view="${spec.tabs[1]!.id}">${spec.cta}</button></div></div><aside class="home-aside"><article class="card"><p class="kicker">Elenco</p><h2>Vuoto</h2><p class="notes">Le azioni restano nella lista.</p></article><article class="card"><p class="kicker">Privacy</p><h2>Solo qui</h2><p class="notes">Storage locale, senza profilo.</p></article></aside></section>`;
+  const pocketEmpty = library
+    ? `<section class="home-overview" data-fenix-pane="home" data-fenix-slot="home-boot"><div class="home-hero"><div class="fx-hello-row"><div><p class="fx-hello">In scaffale</p><p class="fx-role">Sala lettura</p></div><span class="fx-app-mark" data-fenix-id="icon:app" aria-hidden="true">${libraryHomeHeaderMark()}</span></div><p class="fx-date">${bootDate}</p><div class="home-first" data-state="empty"><h2>Nessun libro in scaffale</h2><p class="notes">Il catalogo si riempie quando metti un titolo in scaffale.</p><button class="btn" type="button" data-act="fx-new">${spec.cta}</button></div></div></section>`
+    : `<section class="home-overview" data-fenix-pane="home" data-fenix-slot="home-boot"><div class="home-hero"><p class="kicker">Panoramica</p><p class="fx-date">${bootDate}</p><p class="home-count" data-count="0"><b>0</b><span>voci sul dispositivo</span></p><div class="home-first" data-state="empty"><div class="mark" aria-hidden="true">${POCKET_EMPTY_MARK}</div><h2>Niente in lista</h2><p class="notes">Aggiungi la prima voce. Qui non ci sono dati di prova.</p><button class="btn" type="button" data-view="${spec.tabs[1]!.id}">${spec.cta}</button></div></div><aside class="home-aside"><article class="card"><p class="kicker">Elenco</p><h2>Vuoto</h2><p class="notes">Le azioni restano nella lista.</p></article><article class="card"><p class="kicker">Privacy</p><h2>Solo qui</h2><p class="notes">Storage locale, senza profilo.</p></article></aside></section>`;
   const splash = desk
     ? ""
     : `<div class="fx-splash" id="fx-splash" data-fenix-splash data-fenix-slot="splash"><span class="fx-mark">${premiumMark}</span><strong>${spec.name}</strong><span class="fx-spin" aria-hidden="true"></span><p class="notes">${campo ? "Apertura" : grammar.voice.load}…</p></div>`;
@@ -1441,7 +1570,7 @@ function productHtml(spec: PipelineSpec, tokens: DesignTokens, grammar: LayoutGr
             : "clamp(1.18rem, 2.2vw, 1.55rem)";
   const large = isOperationalApp(tokens) ? "2.125rem" : "1.75rem";
   return `<!DOCTYPE html>
-<html lang="it" data-family="${tokens.family}" data-grammar="${grammar.id}" data-chroma="${tokens.chroma}" data-intent-type="${graphicIntentFromBrief(spec.brief).type}" data-intent-chrome="${graphicIntentFromBrief(spec.brief).chrome}" data-craft-mode="${craftMode}" data-craft-rhythm="${craftRhythm}" data-craft-domain="${craftDomain}"${desk ? " data-fenix-craft-desk" : ""}${campo ? " data-fenix-campo" : ""}${market ? " data-fenix-market" : ""}${luxe ? " data-fenix-luxe" : ""}>
+<html lang="it" data-family="${tokens.family}" data-grammar="${grammar.id}" data-chroma="${tokens.chroma}" data-intent-type="${graphicIntentFromBrief(spec.brief).type}" data-intent-chrome="${graphicIntentFromBrief(spec.brief).chrome}" data-craft-mode="${craftMode}" data-craft-rhythm="${craftRhythm}" data-craft-domain="${craftDomain}"${desk ? " data-fenix-craft-desk" : ""}${campo ? " data-fenix-campo" : ""}${market ? " data-fenix-market" : ""}${luxe ? " data-fenix-luxe" : ""}${library ? " data-fenix-libreria" : ""}${barber ? " data-fenix-barber" : ""}>
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
@@ -1461,8 +1590,8 @@ header{padding:16px 18px 10px;display:flex;align-items:flex-end;justify-content:
 .brand{font-family:var(--display);font-size:${tokens.type.h1};font-weight:650;letter-spacing:-.04em;line-height:1.1;color:var(--fg);overflow-wrap:anywhere;min-width:0}
 .brand-group{display:flex;align-items:center;gap:12px;min-width:0}
 .brand-group>div{min-width:0}
-.app-mark{width:44px;height:44px;flex:0 0 44px;border-radius:12px;display:grid;place-items:center;background:var(--elevated);color:var(--fg);border:1px solid var(--line);box-shadow:none}
-.app-mark svg{width:26px;height:26px;stroke-width:2;overflow:visible}
+.app-mark{width:44px;height:44px;flex:0 0 44px;border-radius:12px;display:grid;place-items:center;padding:0;overflow:hidden;background:transparent;border:0;box-shadow:0 8px 18px rgba(8,35,56,.28)}
+.app-mark svg{width:44px;height:44px;display:block;overflow:visible}
 header .place{color:var(--muted);max-width:42%;overflow:visible;white-space:normal;text-align:right;line-height:1.3}
 main{flex:1;min-height:0;overflow-y:auto;padding:8px 16px 24px;-webkit-overflow-scrolling:touch}
 .hero,.sil,.plate{position:relative;border-radius:var(--r);overflow:hidden;margin-bottom:14px;border:1px solid var(--line);background:var(--elevated);min-height:200px}
@@ -1481,6 +1610,8 @@ ${campo ? "html[data-fenix-campo] nav.tabs{grid-template-columns:repeat(5,minmax
 ${campo ? campoChromeCss() : ""}
 ${market ? marketChromeCss() : ""}
 ${luxe ? luxeChromeCss() : ""}
+${barber ? barberChromeCss() : ""}
+${library ? libraryChromeCss() : ""}
 </style>
 </head>
 <body>
@@ -1531,6 +1662,8 @@ const campoProduct=${campo ? "true" : "false"};
 const marketProduct=${market ? "true" : "false"};
 const luxeProduct=${luxe ? "true" : "false"};
 const shopProduct=${shop ? "true" : "false"};
+const libraryProduct=${library ? "true" : "false"};
+const barberProduct=${barber ? "true" : "false"};
 const AGENDA_CYCLE={prenotato:"confermato",confermato:"in-corso","in-corso":"concluso",concluso:"prenotato"};
 const AGENDA_ACTION_LABELS=${JSON.stringify(AGENDA_ACTION_LABELS)};
 const AGENDA_STATUS_LABELS=${JSON.stringify(AGENDA_STATUS_LABELS)};
@@ -1541,6 +1674,8 @@ const FX_EDIT_MARK=${JSON.stringify(FX_EDIT_MARK)};
 const FX_PAUSE_MARK=${JSON.stringify(FX_PAUSE_MARK)};
 const FX_CHEVRON_MARK=${JSON.stringify(FX_CHEVRON_MARK)};
 const FX_WATER_MARK=${JSON.stringify(campo ? campoHomeHeaderMark() : "")};
+const FX_BOOK_MARK=${JSON.stringify(library ? libraryHomeHeaderMark() : "")};
+const FX_BARBER_MARK=${JSON.stringify(barber ? barberHomeHeaderMark() : "")};
 const FX_DROP_MARK='<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4.8s5.8 6.6 5.8 10.2a5.8 5.8 0 0 1-11.6 0C6.2 11.4 12 4.8 12 4.8z"/></svg>';
 (function dismissSplash(){
   var splash=document.getElementById("fx-splash");
@@ -1929,6 +2064,13 @@ function goalOf(){
 function phonePane(id){
   var tab=tabDefs.filter(function(t){return t.id===id;})[0]||{};
   var key=(tab.id+" "+tab.label).toLowerCase();
+  if(libraryProduct){
+    if(/catalogo|home|oggi/.test(key) || id===tabDefs[0].id) return "home";
+    if(/prestit|scaffal/.test(key)) return "list";
+    if(/scheda|persona/.test(key)) return "persona";
+    if(id==="nuovo" || id==="form") return "form";
+    return "list";
+  }
   if(/statist|numeri|kpi|bilancio/.test(key)) return "stats";
   if(/storico|cronolog/.test(key)) return "history";
   if(/nuovo|nuova|aggiungi|registra|pubblica|scena/.test(key)) return "form";
@@ -1999,6 +2141,26 @@ function fxSceneCard(e){
   if(campoProduct){
     html+='<div class="fx-hello-row"><div><p class="fx-hello">Missioni</p><p class="fx-role">Quadro di controllo</p></div><span class="fx-app-mark" data-fenix-id="icon:app" aria-hidden="true">'+FX_WATER_MARK+"</span></div>";
     html+='<p class="fx-date">'+italianLongDateJs()+'</p><div class="fx-inverse"><p class="fx-shell-kicker">Panoramica — oggi</p>'+fxBoardMarkup(n)+'</div><div class="fx-inverse fx-hero"><p class="fx-shell-kicker">Volume in campo</p>'+fxTankMarkup(n)+"</div>";
+  } else if(libraryProduct){
+    var loans=data.items.filter(function(e){return /prestito/i.test(e.kicker||"");});
+    var shelves=data.items.filter(function(e){return /scaffale/i.test(e.kicker||"");});
+    var due=data.items.filter(function(e){return /set|scad/i.test(e.meta||"");}).length;
+    html+='<div class="fx-hello-row"><div><p class="fx-hello">In scaffale</p><p class="fx-role">Sala lettura</p></div><span class="fx-app-mark" data-fenix-id="icon:app" aria-hidden="true">'+FX_BOOK_MARK+"</span></div>";
+    html+='<p class="fx-date">'+italianLongDateJs()+"</p>";
+    html+='<div class="fx-inverse"><p class="fx-shell-kicker">Catalogo — sala</p><div class="lib-board" aria-label="Scaffale"><div class="lib-cell"><b>'+loans.length+'</b><span>In prestito</span></div><div class="lib-cell"><b>'+shelves.length+'</b><span>In scaffale</span></div><div class="lib-cell"><b>'+due+'</b><span>In scadenza</span></div><div class="lib-cell"><b>'+n+'</b><span>Titoli</span></div></div></div>';
+    html+='<p class="kicker">Scaffali</p><div class="fx-shelves">';
+    var seen={};
+    data.items.forEach(function(e){
+      var shelf=String(e.note||"").split(" · ").slice(-1)[0]||"Sala";
+      if(seen[shelf]) return;
+      seen[shelf]=1;
+      html+='<button type="button" class="fx-shelf">'+shelf+"</button>";
+    });
+    html+="</div>";
+    html+='<p class="kicker">Prestiti aperti</p>';
+    (loans.length?loans:data.items).slice(0,3).forEach(function(e){
+      html+='<article class="fx-book" data-id="'+e.id+'"><p class="kicker">'+e.kicker+'</p><h2>'+e.title+'</h2><p class="notes">'+(e.note||"")+'</p><p class="fx-loan">'+(e.meta||"")+"</p></article>";
+    });
   } else if(marketProduct){
     html+='<p class="fx-hello">Incarichi</p><p class="fx-role">Vicino a te</p>';
     html+='<p class="fx-date">'+italianLongDateJs()+'</p>';
@@ -2018,6 +2180,8 @@ function fxSceneCard(e){
   }
   if(campoProduct){
     html+='<p class="home-count" data-count="'+n+'"><b>'+n+'</b><span>'+(n===1?"dipendente in campo":"dipendenti in campo")+"</span></p>";
+  } else if(libraryProduct){
+    html+='<p class="home-count" data-count="'+n+'"><b>'+n+'</b><span>'+(n===1?"libro in catalogo":"libri in catalogo")+"</span></p>";
   } else if(marketProduct){
     html+='<p class="home-count" data-count="'+n+'"><b>'+n+'</b><span>'+(n===1?"incarico vicino":"incarichi vicini")+"</span></p>";
   } else if(luxeProduct){
@@ -2028,10 +2192,10 @@ function fxSceneCard(e){
     html+='<p class="home-count" data-count="'+n+'"><b>'+n+'</b><span>'+(n===1?"voce sul dispositivo":"voci sul dispositivo")+"</span></p>";
   }
   if(!n){
-    html+='<div class="home-first" data-state="empty">'+pocketEmptyInner()+"</div></div>";
-    html+='<aside class="home-aside"><article class="card"><p class="kicker">Elenco</p><h2>Vuoto</h2><p class="notes">Le azioni restano nella lista.</p></article><article class="card"><p class="kicker">Privacy</p><h2>Solo qui</h2><p class="notes">Storage locale, senza profilo.</p></article></aside>';
-  } else if(campoProduct || marketProduct || luxeProduct || shopProduct){
-    html+='<button class="btn" type="button" data-view="'+formId+'">'+cta+"</button></div>";
+    html+='<div class="home-first" data-state="empty">'+(libraryProduct?'<h2>Nessun libro in scaffale</h2><p class="notes">Il catalogo si riempie quando metti un titolo in scaffale.</p><button class="btn" type="button" data-view="nuovo">'+cta+"</button>":pocketEmptyInner())+"</div></div>";
+    if(!libraryProduct) html+='<aside class="home-aside"><article class="card"><p class="kicker">Elenco</p><h2>Vuoto</h2><p class="notes">Le azioni restano nella lista.</p></article><article class="card"><p class="kicker">Privacy</p><h2>Solo qui</h2><p class="notes">Storage locale, senza profilo.</p></article></aside>';
+  } else if(campoProduct || marketProduct || luxeProduct || shopProduct || libraryProduct){
+    html+='<button class="btn" type="button" data-view="'+(libraryProduct?"nuovo":formId)+'">'+cta+"</button></div>";
   } else {
     html+='<p class="notes">Ultime voci dal dispositivo. Niente dati di prova.</p><button class="btn" type="button" data-view="'+tabDefs[1].id+'">'+cta+"</button></div>";
     html+='<aside class="home-aside"><article class="card"><p class="kicker">Elenco</p><h2>'+n+(n===1?" voce":" voci")+'</h2><p class="notes">Apri Elenco per le azioni sulle voci.</p></article><article class="card"><p class="kicker">Privacy</p><h2>Solo qui</h2><p class="notes">Storage locale, senza profilo.</p></article></aside>';
@@ -2048,6 +2212,35 @@ function fxSceneCard(e){
   var n=data.items.length;
   var formId=paneTab("form");
   var html='<section class="list-pane" data-fenix-pane="elenco" data-fenix-slot="list">';
+  if(libraryProduct){
+    var tab=tabDefs.filter(function(t){return t.id===view;})[0]||{};
+    var key=(tab.id+" "+tab.label).toLowerCase();
+    var shelves=/scaffal/.test(key);
+    var rows=shelves?data.items.filter(function(e){return /scaffale/i.test(e.kicker||"")||!/prestito/i.test(e.kicker||"");}):data.items.filter(function(e){return /prestito/i.test(e.kicker||"");});
+    if(!shelves && !rows.length) rows=data.items;
+    html+='<p class="fx-large">'+(shelves?"Scaffali":"Prestiti")+'</p><p class="fx-sub">'+(shelves?(n?n+" titoli in sala":"Nessun libro in scaffale"):(rows.length?rows.length+" in prestito":"Nessun prestito aperto"))+"</p>";
+    if(shelves){
+      html+='<div class="fx-shelves">';
+      var seen={};
+      data.items.forEach(function(e){
+        var shelf=String(e.note||"").split(" · ").slice(-1)[0]||"Sala";
+        if(seen[shelf]) { seen[shelf]+=1; return; }
+        seen[shelf]=1;
+      });
+      Object.keys(seen).forEach(function(shelf){
+        html+='<button type="button" class="fx-shelf">'+shelf+" · "+seen[shelf]+"</button>";
+      });
+      html+="</div>";
+    }
+    if(!n){
+      html+='<div class="state-empty" data-state="empty"><p>Nessun libro in scaffale.</p><button class="btn" type="button" data-view="nuovo">'+cta+"</button></div>";
+      return html+"</section>";
+    }
+    (shelves?data.items:rows).forEach(function(e){
+      html+='<article class="fx-book" data-id="'+e.id+'"><p class="kicker">'+e.kicker+'</p><h2>'+e.title+'</h2><p class="notes">'+(e.note||"")+'</p><p class="fx-loan">'+(e.meta||"")+'</p><div class="slot-actions"><button class="btn sm ghost" data-act="edit" data-id="'+e.id+'">Modifica</button><button class="btn sm ghost" data-act="del" data-id="'+e.id+'">Archivia</button></div></article>';
+    });
+    return html+"</section>";
+  }
   if(marketProduct){
     html+='<p class="fx-large">Attivit\u00e0</p><p class="fx-sub">'+(n?n+" incarichi aperti":"Nessun incarico")+"</p>";
     html+='<div class="fx-pills"><button type="button" class="fx-pill on">Tutti</button><button type="button" class="fx-pill">Aperti</button><button type="button" class="fx-pill">Fatti</button></div>';
@@ -2151,6 +2344,15 @@ function fxSceneCard(e){
 }
 /*fenix-slot:persona*/function renderPocketPersona(){
   var n=data.items.length;
+  if(libraryProduct){
+    var loans=data.items.filter(function(e){return /prestito/i.test(e.kicker||"");}).length;
+    var html='<section class="persona-pane" data-fenix-pane="persona" data-fenix-slot="persona"><p class="kicker">Sala lettura</p><h2>Scheda</h2><p class="notes">Tessera e scaffali restano sul dispositivo. Nessun profilo inventato.</p><div class="persona-facts">';
+    html+='<article class="card"><p class="kicker">Titoli</p><p class="home-count" data-count="'+n+'"><b>'+n+"</b></p></article>";
+    html+='<article class="card"><p class="kicker">In prestito</p><p class="notes">'+loans+" aperti</p></article>";
+    html+='<article class="card"><p class="kicker">Collezione</p><p class="notes">'+COL+"</p></article></div>";
+    html+='<article class="persona-privacy card"><p class="kicker">Privacy</p><h2>Solo qui</h2><p class="notes">Catalogo locale, senza account. I prestiti restano in sala lettura.</p></article>';
+    return html+"</section>";
+  }
   var html='<section class="persona-pane" data-fenix-pane="persona" data-fenix-slot="persona"><p class="kicker">Dispositivo</p><h2>Storage locale</h2><p class="notes">Le voci restano sul dispositivo. Nessun profilo, nessun nome inventato.</p><div class="persona-facts">';
   html+='<article class="card"><p class="kicker">Voci salvate</p><p class="home-count" data-count="'+n+'"><b>'+n+"</b></p></article>";
   html+='<article class="card"><p class="kicker">Collezione</p><p class="notes">'+COL+"</p></article>";
@@ -2309,7 +2511,15 @@ function slotMarkup(e,i){
   hydrateAgenda();
   var focus=view===tabDefs[2].id?selectedDay:todayIso();
   var rows=data.items.filter(function(e){return e.day===focus;}).slice().sort(function(a,b){return String(a.kicker).localeCompare(String(b.kicker));});
-  var html='<div class="day-head"><p class="kicker"><time datetime="'+focus+'">'+agendaDateLabel(focus)+'</time></p><h2 id="day-label">'+rows.length+" "+census+"</h2></div>";
+  var html="";
+  if(barberProduct && view===tabDefs[0].id){
+    var todo=rows.filter(function(e){return e.status==="prenotato";}).length;
+    var live=rows.filter(function(e){return e.status==="in-corso";}).length;
+    html+='<div class="fx-hello-row"><div><p class="fx-hello">'+specName()+'</p><p class="fx-role">In sala</p></div><span class="fx-app-mark" data-fenix-id="icon:app" aria-hidden="true">'+FX_BARBER_MARK+"</span></div>";
+    html+='<p class="fx-date">'+agendaDateLabel(focus)+"</p>";
+    html+='<div class="barber-strip fx-inverse"><article><b>'+rows.length+'</b><span>oggi in sala</span></article><article><b>'+todo+'</b><span>da confermare</span></article><article><b>'+live+'</b><span>in corso</span></article></div>';
+  }
+  html+='<div class="day-head"><p class="kicker"><time datetime="'+focus+'">'+agendaDateLabel(focus)+'</time></p><h2 id="day-label">'+rows.length+" "+census+"</h2></div>";
   html+='<div class="day-rail" data-fenix-rail="day" data-fenix-slot="agenda" id="day-rail" role="tabpanel" aria-labelledby="day-label">';
   if(!rows.length) html+=emptyBox();
   else rows.forEach(function(e,i){ html+=slotMarkup(e,i); });
@@ -2587,6 +2797,8 @@ function polishFor(tokens: DesignTokens, grammar: LayoutGrammar, brief = ""): st
       ? "Mantieni tab Home/Aggiungi/Persona e icone semantiche richieste (path originali). Vietato Ciao/Operatore. Non sostituirle solo perché comuni."
       : grammar.id === "source-timeline"
       ? "Chrome da registro di repository: testata + rail, timeline commit, rami, stato sync, diff. Vietato hero grigio, due KPI, empty card, clone GitHub."
+      : isLibraryBrief(brief)
+        ? "Chrome da libreria: catalogo, prestiti, scaffali, scheda. Vietato Tavolo/Registra/Studio, 0-KPI Oggi/Media/Voci/Aperti, e desk STUDIO."
       : grammar.id === "agenda"
         ? "Chrome da agenda: binario orario, tab Oggi/Nuovo/Settimana/Archivio, tipo 17/headline, target 44px. Vietato hero KPI, tab Home/Elenco, riquadri vuoti."
         : grammar.chrome === "desk"

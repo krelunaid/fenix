@@ -10,6 +10,7 @@ import {
 } from "./design-tokens.ts";
 import { extractBriefAxes } from "./palette-engine.ts";
 import { inferKind, kindFromPrompt } from "./infer.ts";
+import { isLibraryBrief } from "./app-identity.ts";
 import type { ProjectKind } from "./types.ts";
 
 export type GrammarId =
@@ -72,6 +73,26 @@ export function grammarFromBrief(brief: string): LayoutGrammar {
   const family = familyFromBrief(brief);
   const kind = kindOf(brief);
   const variant = variantFromBrief(brief);
+  // Bookstore / library is a phone craft — never magazine masthead or desk STUDIO.
+  if (isLibraryBrief(brief) && kind !== "dashboard") {
+    return {
+      id: "phone-seed",
+      family,
+      kind,
+      chrome: "tabs",
+      stage: "seed",
+      desktop: "scaffale editoriale a colonna, prestiti e catalogo, niente hero KPI",
+      tablet: "catalogo e prestiti in colonna",
+      mobile: "tasca libreria 100dvh, tabbar mestiere",
+      voice: {
+        census: "in prestito",
+        empty: "Nessun libro in scaffale.",
+        load: "Apro lo scaffale",
+        ok: "In scaffale",
+        err: "Il libro non è in catalogo.",
+      },
+    };
+  }
   // Desktop gestionale wins over unknown-family phone-seed and domain tab grammars.
   if (kind === "dashboard") return opsDeskGrammar(family, variant);
   if (family === "repo") {

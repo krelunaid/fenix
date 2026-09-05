@@ -25,9 +25,11 @@ import {
 } from "./palette-engine.ts";
 import { applyGraphicIntent, graphicIntentFromBrief } from "./graphic-intent.ts";
 import { enrichWaterOpsPalette } from "./water-ops-palette.ts";
+import { enrichBarberPalette } from "./barber-ops-palette.ts";
+import { enrichLibraryPalette } from "./library-ops-palette.ts";
 import { enrichMarketPalette } from "./market-ops-palette.ts";
 import { enrichLuxePalette } from "./luxe-ops-palette.ts";
-import { isLuxeBrief, isMarketplaceBrief } from "./app-identity.ts";
+import { isBarberBrief, isLibraryBrief, isLuxeBrief, isMarketplaceBrief } from "./app-identity.ts";
 
 export type TokenFamily =
   | "perfume"
@@ -693,15 +695,31 @@ const LUXE_FONTS = {
   href: "https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,700&display=swap",
 };
 
+const LIBRARY_FONTS = {
+  display: "Fraunces",
+  body: "Figtree",
+  href: "https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,700&display=swap",
+};
+
 function finishFieldSheet(tokens: DesignTokens, brief: string): DesignTokens {
   let palette = enrichWaterOpsPalette(brief, tokens.palette);
+  palette = enrichBarberPalette(brief, palette);
+  palette = enrichLibraryPalette(brief, palette);
   palette = enrichMarketPalette(brief, palette);
   palette = enrichLuxePalette(brief, palette);
   const luxe = isLuxeBrief(brief);
-  const radius = isMarketplaceBrief(brief) ? "24px" : luxe ? "20px" : tokens.radius;
-  const fonts = luxe ? LUXE_FONTS : tokens.fonts;
-  const type = luxe ? { h1: "2.4rem", body: "16px", label: "13px" } : tokens.type;
-  if (palette === tokens.palette && radius === tokens.radius && fonts === tokens.fonts) return tokens;
+  const library = isLibraryBrief(brief);
+  const barber = isBarberBrief(brief);
+  const radius = isMarketplaceBrief(brief) ? "24px" : luxe ? "20px" : barber || library ? "16px" : tokens.radius;
+  const fonts = luxe || library ? (luxe ? LUXE_FONTS : LIBRARY_FONTS) : tokens.fonts;
+  const type = luxe
+    ? { h1: "2.4rem", body: "16px", label: "13px" }
+    : library
+      ? { h1: "2.2rem", body: "16px", label: "13px" }
+      : tokens.type;
+  if (palette === tokens.palette && radius === tokens.radius && fonts === tokens.fonts && type === tokens.type) {
+    return tokens;
+  }
   return { ...tokens, palette, radius, fonts, type, chroma: classifyPalette(palette) };
 }
 
