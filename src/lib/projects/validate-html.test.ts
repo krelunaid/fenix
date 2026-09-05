@@ -14,6 +14,8 @@ import {
 import { fenixRuntimeScript, looksLikeSite, prepareSrcDoc, sanitizePreviewHtml, escapeEmbeddedScriptEnds, looksLikeLeakedCss, repairLeakedCss, resolvePalette, paletteHueConflict } from "./color-scheme.ts";
 import { DEMOS } from "./demos.ts";
 import { APP_SHELL_HTML } from "../ai/app-shell.ts";
+import { familyFromBrief } from "./design-tokens.ts";
+import { grammarFromBrief } from "./layout-grammar.ts";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const BROKEN = readFileSync(join(here, "fixtures/broken-flusso.html"), "utf8");
@@ -31,6 +33,31 @@ button.primary{padding:12px 16px;border-radius:8px}
 <script>window.Fenix.load("state");window.Fenix.save("state",{});</script></body></html>`;
 
 describe("validateProductHtml", () => {
+  it("recognizes appointment businesses without requiring the word appuntamenti", () => {
+    for (const brief of ["app per parrucchieri", "Barber shop", "barbiere", "barbieri", "hair salon"]) {
+      assert.equal(familyFromBrief(brief), "booking", brief);
+      assert.equal(grammarFromBrief(`FORMATO: app. kind=app. ${brief}`).id,"agenda",brief);
+    }
+    assert.notEqual(familyFromBrief("app per barbecue"), "booking");
+  });
+  it("locates unexpected tokens and unterminated strings without executing or leaking source", () => {
+    const cases = [
+      ["\n\nconst label = 'Barber\nshop';", 3, 15],
+      ["\nconst label = \\u{INVALID};", 2, 18],
+      ["\nconst icon = '<svg class='mark'></svg>';", 2, 27],
+    ] as const;
+    for (const [source, line, column] of cases) {
+      const report = checkScriptSyntax(source);
+      assert.equal(report.ok, false);
+      assert.equal(report.line, line, source);
+      assert.equal(report.column, column, source);
+      assert.ok(!report.error?.includes(source));
+    }
+    const sentinel = "__fenix_compile_only_sentinel";
+    assert.equal(checkScriptSyntax(`globalThis.${sentinel} = true;`).ok, true);
+    assert.equal(Object.hasOwn(globalThis, sentinel), false);
+    assert.equal(checkScriptSyntax("\nreturn 'valid function body';").ok, true);
+  });
   it("extracts inline scripts and reports the exact syntax error", () => {
     const scripts = extractInlineScripts(BROKEN);
     assert.equal(scripts.length, 1);

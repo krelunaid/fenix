@@ -537,7 +537,7 @@ const PRODUCT: { family: TokenFamily; re: RegExp }[] = [
   { family: "hospitality", re: /ospital|locanda|albergo|\bhotel\b|reception|camera doppia|soggiorno in|check-?in/i },
   { family: "food", re: /ristor|trattoria|osteria|brasserie|chef|cucina di|menu degust|sala da pranzo|\bfood\b|passo cucina/i },
   { family: "editorial", re: /editoriale|rivista di|magazine di|studio fotograf|lastre fotografic| rassegna |portfolio di lastre/i },
-  { family: "booking", re: /prenot|appuntament|trattament|booking/i },
+  { family: "booking", re: /prenot|appuntament|trattament|booking|parrucchier|barbiere|barbieri|\bbarber(?:\s*shop)?\b|\bhair\s*salon\b/i },
   { family: "ceramic", re: /ceram|fornace|argilla|terracotta|kiln|colata|grottaglie|forno/i },
   { family: "ops", re: /nord ledger|orto flusso|kpi di vendita|pipeline vendite|flusso ordini|cruscotto vendite|ledger commerciale/i },
   { family: "utility", re: /taglia foto|ritaglio|metro in tasca|metro tasca|convertitore di misure|misure in tasca/i },

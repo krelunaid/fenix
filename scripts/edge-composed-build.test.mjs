@@ -5,6 +5,7 @@ import { createBuildRequest, isAtomicStreamCreation } from "../src/lib/ai/build-
 import { composedBaseSha, composedBuildPalette } from "../workers/visual/composed-build.mjs";
 import { ensureDomainImagery, upgradeProductChrome } from "../src/lib/ai/domain-imagery.ts";
 import { validateProductHtml } from "../src/lib/projects/validate-html.ts";
+import { grammarFromBrief } from "../src/lib/projects/layout-grammar.ts";
 
 const brief = "FORMATO: app. kind=app. Agenda studio: appuntamenti e prenotazioni, stile iPhone.";
 const request = body => new Request("https://fixture.invalid/api/build", {
@@ -58,6 +59,40 @@ test("actual Edge create preserves composed head and palette through the normal 
     assert.equal(result.at(-1).result.html.split("<body")[0],body.html.split("<body")[0]);
     assert.deepEqual(result.at(-1).result.palette,composedBuildPalette(body.palette));
     assert.match(result.at(-1).result.html,/Atomic transport fixture/);
+  });
+});
+
+test("Barber shop request uses appointments and repairs broken JS string quoting through actual Edge", async () => {
+  const prompt = "FORMATO: app telefono 390×844. kind=app. Tab in basso, 5 schermate. NON un sito.\n\nmi crei un app da parrucchieri stile Barber shop";
+  const body = createBuildRequest({prompt, kind:"app"});
+  assert.equal(grammarFromBrief(prompt).id,"agenda");
+  assert.equal(isAtomicStreamCreation(body),true);
+  assert.match(body.html,/<nav[^>]*id="tabs"/);
+  assert.match(body.html,/data-act="advance"/);
+  const broken = "const barberLabel = 'Barber\nshop';\nboot();";
+  const fixed = "const barberLabel = 'Barber shop';\nboot();";
+  const initial = planFor(body.html);
+  initial.changes[0].replace = broken;
+  const damaged = body.html.replace(initial.changes[0].find,()=>broken);
+  let calls = 0;
+  await withProvider(payload => {
+    calls++;
+    assert.match(payload.messages[0].content,/Rispondi SOLO JSON/);
+    if (calls === 1) return stream(JSON.stringify(initial));
+    assert.equal(calls,2,"one located repair must complete without another generation");
+    assert.match(payload.messages[1].content,/Script 1 \(riga \d+:\d+\)/);
+    assert.ok(payload.messages[1].content.includes(`BASE_SHA256:${composedBaseSha(damaged)}`));
+    const plan = {version:1,baseSha256:composedBaseSha(damaged),changes:[{find:broken,replace:fixed}]};
+    return Response.json({choices:[{finish_reason:"stop",message:{content:JSON.stringify(plan)}}]});
+  }, async () => {
+    const output = await events(await build(request(body)));
+    assert.equal(output.at(-1).t,"ok",JSON.stringify(output.at(-1)));
+    const html = output.at(-1).result.html;
+    assert.equal(validateProductHtml(html,{kind:"app"}).ok,true);
+    assert.ok(html.includes(fixed));
+    assert.equal(html.split("<body")[0],body.html.split("<body")[0]);
+    assert.deepEqual(output.at(-1).result.palette,composedBuildPalette(body.palette));
+    assert.equal(calls,2);
   });
 });
 

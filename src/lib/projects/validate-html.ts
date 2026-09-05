@@ -1,6 +1,7 @@
 import { prepareSrcDoc, looksLikeLeakedCss, type SrcPalette } from "./color-scheme.ts";
 import { looksLikeAppleTabIcons, looksLikeIosWidgetHome } from "./craft-icons.ts";
 import { invalidFenixCollectionError, rewriteFenixCollectionCode } from "./fenix-collection.ts";
+import { parse } from "acorn";
 
 export type ScriptSyntaxError = {
   index: number;
@@ -52,8 +53,9 @@ export function checkScriptSyntax(code: string): {
   line?: number;
   column?: number;
 } {
-  const body = code.replace(/^\uFEFF/, "").trim();
-  if (!body) return { ok: true };
+  // Preserve leading newlines: repair locations refer to the original script.
+  const body = code.replace(/^\uFEFF/, " ");
+  if (!body.trim()) return { ok: true };
   try {
     // Compile only. new Function does not run the body.
     // eslint-disable-next-line no-new-func
@@ -61,6 +63,17 @@ export function checkScriptSyntax(code: string): {
     return { ok: true };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
+    // Engines disagree on SyntaxError locations (new Function often has none).
+    // Parse only failed scripts for portable, source-relative repair coordinates.
+    // Never execute generated code or return a source excerpt to the UI.
+    try {
+      parse(body, { ecmaVersion: "latest", sourceType: "script", locations: true, allowReturnOutsideFunction: true });
+    } catch (syntax) {
+      const loc = (syntax as { loc?: { line?: number; column?: number } }).loc;
+      if (typeof loc?.line === "number" && typeof loc.column === "number") {
+        return { ok: false, error: message.replace(/^.*Error:\s*/, ""), line: loc.line, column: loc.column + 1 };
+      }
+    }
     const at = message.match(/:(\d+)(?::(\d+))?/);
     return {
       ok: false,
