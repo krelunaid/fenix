@@ -1394,6 +1394,8 @@ function libraryChromeCss(): string {
   return `html[data-fenix-libreria],html[data-fenix-libreria] body{background-color:#F6EFE4;background-image:radial-gradient(120% 64% at 50% -8%,#F0D8DC 0%,transparent 58%),radial-gradient(70% 36% at 108% 12%,color-mix(in srgb,#6B2D3C 14%,transparent),transparent 58%);color:var(--on-surface)}
 html[data-fenix-libreria] header{position:sticky;top:0;z-index:6;padding:12px 16px 10px;background:color-mix(in srgb,#FFF8F0 80%,transparent);-webkit-backdrop-filter:saturate(1.5) blur(16px);backdrop-filter:saturate(1.5) blur(16px)}
 html[data-fenix-libreria]:has(nav.tabs button:first-child.on) header{display:none}
+html[data-fenix-libreria] .app-mark{background:transparent}
+html[data-fenix-libreria] .app-mark svg{width:44px;height:44px;display:block}
 html[data-fenix-libreria] .place{letter-spacing:.08em}
 html[data-fenix-libreria] nav.tabs{background:color-mix(in srgb,#fff 86%,#F0D8DC);border-top:1px solid var(--border,var(--line));box-shadow:0 -8px 24px rgba(107,45,60,.08);-webkit-backdrop-filter:saturate(1.6) blur(18px);backdrop-filter:saturate(1.6) blur(18px)}
 html[data-fenix-libreria] nav.tabs svg{width:24px;height:24px;stroke-width:1.9}
