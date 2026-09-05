@@ -25,6 +25,20 @@ html[data-grammar] :is(nav.tabs,nav.rail) svg{width:28px;height:28px;flex:0 0 28
 html[data-grammar] :is(nav.tabs,nav.rail) button.on svg{stroke-width:2.2}
 html[data-grammar] nav.rail button{min-height:44px;border-radius:12px;line-height:1.3}
 html[data-grammar] .week-day{border-radius:12px;min-height:64px}
+html[data-grammar="agenda"] .day-head{padding:2px 0 18px}
+html[data-grammar="agenda"] .day-head .kicker{font-size:14px;letter-spacing:0;margin-bottom:5px;text-transform:none}
+html[data-grammar="agenda"] .day-head .kicker::first-letter{text-transform:uppercase}
+html[data-grammar="agenda"] .day-head h2{font-size:24px;line-height:1.2;letter-spacing:-.025em}
+html[data-grammar="agenda"] .day-rail{gap:12px}
+html[data-grammar="agenda"] .slot-body{min-width:0}
+html[data-grammar="agenda"] .slot-detail{margin:4px 0 9px;overflow-wrap:anywhere}
+html[data-grammar="agenda"] .slot-status{font-family:inherit;font-size:12px;font-weight:600;letter-spacing:0;line-height:1.3;padding:4px 9px;min-height:26px;color:var(--fg);background:var(--surface);border-color:var(--line)}
+html[data-grammar="agenda"] .slot-status::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor;margin-right:6px;flex-shrink:0}
+html[data-grammar="agenda"] .slot-status.in-corso::before{background:var(--accent)}
+html[data-grammar="agenda"] .slot-actions{gap:6px;margin-top:12px}
+html[data-grammar="agenda"] .slot-actions [data-act="advance"]{background:var(--accent);color:var(--accent-ink);border:1px solid var(--accent);box-shadow:none}
+html[data-grammar="agenda"] .slot-actions :is([data-act="edit"],[data-act="del"]){border-color:transparent;background:transparent;display:inline-flex;align-items:center;justify-content:center}
+html[data-grammar="agenda"] .slot-actions svg{width:20px;height:20px;stroke-width:1.7;overflow:visible}
 html[data-grammar] .pocket-list .card,html[data-grammar] .home-recent .card{border-radius:0;box-shadow:none}
 html[data-grammar] :is(.btn,input,select,textarea,nav button):focus-visible{outline:3px solid var(--accent);outline-offset:3px}
 @media(max-width:599px){

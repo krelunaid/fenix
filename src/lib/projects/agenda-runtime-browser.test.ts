@@ -514,7 +514,8 @@ describe("Agenda calendar edges Fri/Sat/Sun, validation, date keep", () => {
       const satPage = await openClock(2026, 9, 5, "agenda-clock-sat");
       try {
         await satPage.locator('nav button[data-view="oggi"]').click();
-        assert.match(await satPage.locator(".day-head .kicker").innerText(), /2026-09-05/);
+        assert.equal(await satPage.locator(".day-head time").getAttribute("datetime"), "2026-09-05");
+        assert.match(await satPage.locator(".day-head time").innerText(), /sabato 5 settembre/);
         await assertLabelledBy(satPage, "sat-oggi");
         await satPage.locator('nav button[data-view="settimana"]').click();
         assert.equal(await satPage.locator('.week-day[aria-selected="true"]').getAttribute("data-day"), saturdayIso);
@@ -527,7 +528,8 @@ describe("Agenda calendar edges Fri/Sat/Sun, validation, date keep", () => {
       const sunPage = await openClock(2026, 9, 6, "agenda-clock-sun");
       try {
         await sunPage.locator('nav button[data-view="oggi"]').click();
-        assert.match(await sunPage.locator(".day-head .kicker").innerText(), /2026-09-06/);
+        assert.equal(await sunPage.locator(".day-head time").getAttribute("datetime"), "2026-09-06");
+        assert.match(await sunPage.locator(".day-head time").innerText(), /domenica 6 settembre/);
         await sunPage.locator('nav button[data-view="settimana"]').click();
         assert.equal(await sunPage.locator('.week-day[aria-selected="true"]').getAttribute("data-day"), sundayIso);
       } finally {
