@@ -833,7 +833,7 @@ describe("graphic pipeline prompt→plan→generate→visual→QA", () => {
     assert.match(system.html, /data-chroma="/);
     assert.match(system.html, /minmax\(0,1fr\)/);
     assert.doesNotMatch(system.html, /min-height:calc\(100dvh - 148px\)/);
-    const bootHome = system.html.match(/<main id="root">([\s\S]*?)<\/main>/)?.[1] || "";
+    const bootHome = system.html.match(/<main id="root"[^>]*>([\s\S]*?)<\/main>/)?.[1] || "";
     assert.match(bootHome, /data-fenix-pane="home"/);
     assert.match(bootHome, /home-aside/);
     assert.match(bootHome, /Panoramica/);

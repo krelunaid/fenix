@@ -108,7 +108,7 @@ test("exhausted plan retries return the composed seed unchanged", async () => {
     "not-json",
     async (feedback) => {
       retries++;
-      assert.match(feedback, /JSON non valido|assente, ambiguo/);
+      assert.match(feedback, /JSON non valido|Target di creazione assente/);
       return JSON.stringify(missing);
     },
   );
@@ -117,7 +117,7 @@ test("exhausted plan retries return the composed seed unchanged", async () => {
   assert.equal(outcome.attempts, COMPOSED_PLAN_APPLY_RETRIES + 1);
   assert.equal(outcome.html, html);
   assert.deepEqual(outcome.log, [COMPOSED_PLAN_DEGRADED_LOG]);
-  assert.match(outcome.error?.message || "", /assente, ambiguo/);
+  assert.match(outcome.error?.message || "", /Target di creazione assente/);
 });
 
 test("ambiguous finds stay rejected and never become a full rewrite", async () => {
