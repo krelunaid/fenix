@@ -8,7 +8,9 @@ The layer is used by composition and reapplied by graphic-intent enforcement in
 the response parser when the composed artifact contract remains present.
 It does not change Fenix Studio, brand identity, data, runtime scripts, routing,
 icon paths, or the selected project palette. Sites/dashboards, denied requests,
-Apple Pay/reseller mentions and font-only briefs do not activate this layer.
+Apple Pay/reseller mentions, font-only briefs, sites and dashboards do not
+activate this layer. A gestionale desktop (elenco, filtri, form, numeri) must
+keep desktop IA — premium craft is not an iPhone tabbar.
 An explicit later serif request remains authoritative for typography.
 
 The direction includes an upright 30–34px headline, 17px form text, consistent
@@ -16,8 +18,12 @@ The direction includes an upright 30–34px headline, 17px form text, consistent
 with stronger selected strokes, visible focus and reduced-motion handling.
 Selected nav text uses foreground-on-surface rather than accent-on-tinted-surface:
 browser testing exposed insufficient contrast in one of the adaptive palettes.
-Colors and domain imagery remain project-specific; this is not an Apple skin
-or a promise that arbitrary model-generated HTML has this quality.
+Agenda rows use a grouped list (hairline separators, times in foreground, tinted
+text actions) instead of boxed cards with inset accent bars. The header mark is
+a surface tile. The layer never assigns `--accent` / `--bg` / `--surface` or a
+shop hex. Colors and domain imagery remain project-specific; this is not an
+Apple skin, a Barber raspberry theme, or a promise that arbitrary model-generated
+HTML has this quality.
 
 ## Reproduce
 
@@ -42,5 +48,7 @@ Full regression/build checks on the final source revision, integration against
 Grok's latest source and live quality checks remain required. The initial worker
 can still replace composed HTML; this slice does not solve that contract or
 silently substitute styling for requested functionality. It is opt-in in the
-app brief, not a new global preference and does not retrofit saved projects.
-Deploy is deferred at the user's request. No production parity claim.
+app brief (`stile Apple` / `stile iPhone` / `interfaccia iOS` / `iPhone-like`),
+not a shop-name synonym, not a new global preference and does not retrofit
+saved projects. Deploy is deferred at the user's request. No production parity
+claim. Do not merge to main until Andrea approves the visuals.

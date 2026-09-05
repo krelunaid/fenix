@@ -37,7 +37,7 @@ export const CRAFT_APP_ICON = `<svg ${ATTR}><path d="M6 3.5h11.5v17H6z"/><path d
 
 /** Nav icons: viewBox 24, content in ~5–19, round joins, no miter spike, no letter-A. */
 const NAV_ATTR =
-  'viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" overflow="visible" aria-hidden="true" data-craft-nav="1" data-icon-grid="24"';
+  'viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" overflow="visible" aria-hidden="true" data-craft-nav="1" data-icon-grid="24"';
 
 function navIcon(paths: string): string {
   return `<svg ${NAV_ATTR}>${paths}</svg>`;
@@ -66,7 +66,7 @@ const NAV_ICONS = {
     '<circle cx="9.2" cy="8.6" r="2.1"/><circle cx="15.2" cy="9.2" r="1.7"/><path d="M5.8 18c.5-3.2 6.2-3.2 6.7 0M12.8 18c.4-2.2 4.8-2.2 5.2 0"/>',
   ),
   shears: navIcon(
-    '<circle cx="8.2" cy="16" r="2"/><circle cx="15.8" cy="16" r="2"/><path d="M9.7 14.6 17.6 6.4M14.3 14.6 6.4 6.4"/>',
+    '<circle cx="7.8" cy="16.2" r="2.15"/><circle cx="16.2" cy="16.2" r="2.15"/><path d="M9.5 14.7 17.8 5.9M14.5 14.7 6.2 5.9"/><path d="M11.2 13.1h1.6"/>',
   ),
   bed: navIcon(
     '<path d="M5.2 16.6V11.6a2.6 2.6 0 0 1 2.6-2.6h10.8v7.6"/><path d="M5.2 16.6h13.8"/><path d="M5.2 11.8h3.2M8.2 9V6.8"/>',

@@ -6,7 +6,6 @@ import type { DesignTokens } from "./design-tokens.ts";
 import { extractUserColors } from "./palette-engine.ts";
 import { inferKind, kindFromPrompt } from "./infer.ts";
 import { applyNativeAppStyle } from "./native-app-style.ts";
-import { isBarberBrief } from "./app-identity.ts";
 
 export type GraphicIntentType = "system" | "serif" | "domain";
 export type GraphicIntentChrome = "semantic" | "domain";
@@ -120,18 +119,12 @@ export function graphicIntentFromBrief(brief: string): GraphicIntent {
       face: titledSerif(named || "Literata"),
     };
   }
-  // Barber apps use the user's requested native direction by default; an
-  // explicit serif request above still wins. Other product domains are unchanged.
-  if ((kindFromPrompt(raw) ?? inferKind(raw)) === "app" && isBarberBrief(raw)) {
-    return { type: "system", chrome, face: null };
-  }
   return { type: "domain", chrome, face: null };
 }
 
-/** Distinguish style requests from Apple Pay, reseller names and font-only briefs. */
+/** Head-only structure layer. Never a domain palette and never a shop-name synonym. */
 export function wantsNativeAppStyle(brief: string): boolean {
-  return (kindFromPrompt(brief) ?? inferKind(brief)) === "app" &&
-    (NATIVE_APP_RE.test(withoutDenied(brief)) || (isBarberBrief(brief) && graphicIntentFromBrief(brief).type !== "serif"));
+  return (kindFromPrompt(brief) ?? inferKind(brief)) === "app" && NATIVE_APP_RE.test(withoutDenied(brief));
 }
 
 function titledSerif(raw: string): string {

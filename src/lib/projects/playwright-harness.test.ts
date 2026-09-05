@@ -62,7 +62,9 @@ describe("playwright harness isolates public network", () => {
   });
 
   it("setContent of a product fixture does not wait on jsdelivr or Google Fonts", async () => {
-    const src = prepareSrcDoc(DEMOS.kiln.html, DEMOS.kiln.palette, "harness-kiln", DEMOS.kiln.kind);
+    const dash = prepareSrcDoc(DEMOS.kiln.html, DEMOS.kiln.palette, "harness-kiln", DEMOS.kiln.kind);
+    assert.doesNotMatch(dash, /jsdelivr|html2canvas/);
+    const src = prepareSrcDoc(DEMOS.grottaglie.html, DEMOS.grottaglie.palette, "harness-phone", "app");
     assert.match(src, /jsdelivr/);
     assert.match(src, /fonts\.googleapis/);
     const browser = await launchChromium();

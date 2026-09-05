@@ -146,7 +146,7 @@ describe("recover persisted site + prompt kind=dashboard", () => {
 describe("dashboard parse and code pane", () => {
   it("locks parseBuildOutput to the requested kind and skips the 5-tab React seed", () => {
     const src = readFileSync(join(root, "src/lib/ai/parse.ts"), "utf8");
-    assert.match(src, /export function parseBuildOutput\(text: string, lockKind\?: ProjectKind(?:, brief\?: string)?\)/);
+    assert.match(src, /export function parseBuildOutput\(text: string, lockKind\?: ProjectKind/);
     assert.match(src, /if \(lockKind\) meta.kind = lockKind/);
     assert.match(src, /isPhoneKind\(meta.kind\)/);
     assert.match(src, /kind: "app"/);

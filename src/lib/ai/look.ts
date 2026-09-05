@@ -1,3 +1,5 @@
+import { isOpaquePreviewError } from "../projects/opaque-preview-error.ts";
+
 export type PreviewAudit = {
   svgs: number;
   tabs: number;
@@ -32,7 +34,7 @@ export function rememberShot(dataUrl: string) {
 
 export function rememberBootError(message: string) {
   const msg = String(message || "").slice(0, 400);
-  if (!msg) return;
+  if (!msg || isOpaquePreviewError(msg)) return;
   lastBootError = { message: msg };
   lastBootOk = false;
 }
@@ -90,6 +92,7 @@ export function waitPreviewBoot(ms = BOOT_CANARY_MS): Promise<PreviewBoot> {
       const msg = ev.data as { t?: string; message?: string };
       if (msg?.t === "fenix-boot-error") {
         const text = String(msg.message || lastBootError?.message || "errore in avvio");
+        if (isOpaquePreviewError(text)) return;
         rememberBootError(text);
         finish(text, false);
         return;
