@@ -33,6 +33,15 @@ const APPLE_APP = `<!DOCTYPE html><html><body>
 </body></html>`;
 
 describe("craft icons vs Apple chrome", () => {
+  it("maps water vessel labels to the drop, not a briefcase scrap", () => {
+    const drop = craftNavIcon({ id: "app", label: "Acqua" });
+    assert.equal(drop, craftNavIcon({ id: "home", label: "Bottiglia" }));
+    assert.equal(drop, craftNavIcon({ id: "app", label: "Serbatoio" }));
+    assert.notEqual(drop, craftNavIcon({ id: "app", label: "Ufficio" }));
+    assert.match(drop, /M12 4\.4c3\.8/);
+    assert.doesNotMatch(craftNavIcon({ id: "app", label: "Ufficio" }), /M5\.2 8\.6h13\.6/);
+  });
+
   it("maps appointment roles by visible label, independently of legacy ids and order", () => {
     const labels = ["Agenda", "Prenota", "Prenotazioni", "Statistiche", "Team", "Messaggi", "Impostazioni"];
     const svgs = labels.map(label => craftNavIcon({ id: "new", label }, 0));

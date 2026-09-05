@@ -621,7 +621,7 @@ function agendaRailMarkup(spec: PipelineSpec, grammar: LayoutGrammar): string {
 }
 
 function tabSvg(tab: { id: string; label: string }, i: number, campo = false): string {
-  if (campo && /^home$/i.test(tab.label)) return craftNavIcon({ id: "home", label: "Consegne" });
+  if (campo && /^home$/i.test(tab.label)) return craftNavIcon({ id: "home", label: "Acqua" });
   return craftNavIcon(tab, i);
 }
 
@@ -809,8 +809,8 @@ function phoneCss(id: GrammarId): string {
             : id === "phone-seed"
               ? `.hero{display:none;min-height:0;height:0;margin:0;border:0}
   .home-overview,.list-pane,.persona-pane{display:flex;flex-direction:column;gap:12px;padding:0;max-width:40rem;width:100%;margin:0 auto}
-  .home-hero,.home-aside .card,.persona-pane .card,.persona-privacy,[data-fenix-pane="nuovo"] [data-fenix-crud],.wipe-box{background:color-mix(in srgb,var(--surface) 88%,var(--accent) 8%);border:1px solid var(--line);border-radius:16px;box-shadow:0 1px 0 color-mix(in srgb,var(--fg) 4%,transparent),0 8px 22px color-mix(in srgb,var(--fg) 6%,transparent)}
-  .home-hero{padding:16px 16px 14px}
+  .home-hero,.home-aside .card,.persona-pane .card,.persona-privacy,[data-fenix-pane="nuovo"] [data-fenix-crud],.wipe-box{background:color-mix(in srgb,var(--surface) 88%,var(--accent) 8%);border:1px solid var(--line);border-radius:16px;overflow:hidden;min-width:0;box-shadow:0 1px 0 color-mix(in srgb,var(--fg) 4%,transparent),0 8px 22px color-mix(in srgb,var(--fg) 6%,transparent)}
+  .home-hero{padding:16px 16px 14px;display:flex;flex-direction:column;min-width:0;overflow:hidden}
   .home-count{font-family:var(--display);font-size:2.05rem;font-weight:700;letter-spacing:-.05em;line-height:1;margin:2px 0 8px;color:var(--accent);font-variant-numeric:tabular-nums}
   .home-count b{font:inherit}
   .home-count span{display:block;font-family:var(--body);font-size:13px;font-weight:650;letter-spacing:.02em;color:var(--muted);margin-top:6px}
@@ -1120,14 +1120,18 @@ function productChromeCss(): string {
 .fx-board .fx-cell b{display:block;font:750 1.35rem/1.1 var(--display),system-ui,sans-serif;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
 .fx-board .fx-cell span{display:block;margin-top:4px;font-size:12px;opacity:.78}
 .fx-board .fx-cell[data-warn] b{color:color-mix(in srgb,var(--warning) 70%,var(--bg))}
-.fx-tank{margin:0 0 14px;padding:16px 16px 14px;border-radius:22px;background:var(--fg);color:var(--bg)}
-.fx-tank .fx-seg{margin:0 0 14px;border-color:color-mix(in srgb,var(--bg) 22%,transparent)}
+.fx-tank{margin:0 0 14px;padding:16px 16px 16px;border-radius:22px;background:var(--fg);color:var(--bg);display:flex;flex-direction:column;min-width:0;min-height:0;overflow:hidden}
+.fx-tank .fx-seg{margin:0 0 14px;border-color:color-mix(in srgb,var(--bg) 22%,transparent);flex:0 0 auto}
 .fx-tank .fx-seg button{color:color-mix(in srgb,var(--bg) 82%,transparent);border-right-color:color-mix(in srgb,var(--bg) 18%,transparent)}
 .fx-tank .fx-seg button.on{background:var(--bg);color:var(--fg)}
-.fx-tank-well{position:relative;height:168px;border-radius:18px;overflow:hidden;background:color-mix(in srgb,var(--bg) 10%,transparent);border:1px solid color-mix(in srgb,var(--bg) 16%,transparent)}
+.fx-tank-frame{display:grid;grid-template-columns:minmax(0,1fr) 26px;gap:8px;align-items:stretch;min-width:0;min-height:168px;overflow:hidden}
+.fx-tank-well{position:relative;height:168px;border-radius:18px;overflow:hidden;background:color-mix(in srgb,var(--bg) 10%,transparent);border:1px solid color-mix(in srgb,var(--bg) 16%,transparent);min-width:0}
 .fx-tank-well i{position:absolute;left:0;right:0;bottom:0;background:var(--accent);border-radius:0}
 .fx-tank-well b{position:absolute;inset:0;display:grid;place-items:center;font:750 2.1rem/1 var(--display),system-ui,sans-serif;letter-spacing:-.04em;font-variant-numeric:tabular-nums}
-.fx-tank p{margin:12px 0 0;font:650 15px/1.3 var(--body),system-ui,sans-serif;font-variant-numeric:tabular-nums}
+.fx-axis{list-style:none;list-style-type:none;margin:0;padding:2px 0;padding-inline-start:0;display:flex;flex-direction:column;justify-content:space-between;min-height:0;overflow:hidden;font:650 10px/1 var(--body),system-ui,sans-serif;text-align:right}
+.fx-axis li{list-style:none;list-style-type:none;min-width:0;overflow:hidden}
+.fx-axis li::marker{content:none;font-size:0}
+.fx-tank p,.fx-tank-meta{margin:12px 0 0;font:650 15px/1.3 var(--body),system-ui,sans-serif;font-variant-numeric:tabular-nums;min-width:0;max-width:100%;overflow:hidden;overflow-wrap:anywhere;word-break:break-word}
 .fx-ok{display:inline-flex;align-items:center;justify-content:center;margin:12px auto 0;min-height:36px;padding:8px 14px;border-radius:999px;background:color-mix(in srgb,var(--success) 22%,var(--fg));color:var(--bg);font:650 13px/1.2 var(--body),system-ui,sans-serif}
 .fx-seg{display:flex;overflow:hidden;margin:0 0 14px;border:1px solid var(--line);border-radius:12px}
 .fx-seg button{flex:1;border:0;border-right:1px solid var(--line);background:var(--surface);color:var(--fg);min-height:44px;padding:8px 6px;font:650 13px/1.2 var(--body),system-ui,sans-serif}
@@ -1182,7 +1186,7 @@ html[data-craft-rhythm="consumer"] .home-hero:has(.fx-hello){background:transpar
 html[data-craft-rhythm="consumer"] .card,html[data-craft-rhythm="consumer"] .fx-card,html[data-craft-rhythm="consumer"] .fx-record,html[data-craft-rhythm="consumer"] .fx-shop{border-radius:var(--fx-r3);box-shadow:var(--shadow-card)}
 html[data-craft-rhythm="consumer"] .fx-shop .fx-pay{margin:10px 0 0;font:750 var(--fx-t-16)/1 var(--body),system-ui,sans-serif;color:var(--brand)}
 html[data-craft-rhythm="desk"] .card,html[data-craft-rhythm="desk"] .kpi,html[data-craft-rhythm="desk"] .fx-table-wrap{border-radius:var(--fx-r2)}
-.fx-board,.fx-tank,.fx-card{border-radius:var(--fx-r3,22px)}
+.fx-board,.fx-tank,.fx-card{border-radius:var(--fx-r3,22px);overflow:hidden;min-width:0}
 `;
 }
 
@@ -1203,7 +1207,7 @@ html[data-fenix-campo] .fx-role{margin:4px 0 0;font:500 var(--fx-t-14)/1.3 var(-
 html[data-fenix-campo] .fx-date{margin:0 0 16px;font:500 var(--fx-t-14)/1.3 var(--body),system-ui,sans-serif;color:color-mix(in srgb,var(--on-surface) 48%,#94a3b8)}
 html[data-fenix-campo] .fx-exit{width:40px;height:40px;border:0;border-radius:50%;background:var(--brand-soft);color:var(--brand-2);display:grid;place-items:center;flex:0 0 40px}
 html[data-fenix-campo] .fx-exit svg{width:18px;height:18px}
-html[data-fenix-campo] .fx-inverse{margin:0 0 12px;padding:18px 16px 16px;border-radius:24px;background:var(--inverse);color:#f8fafc;box-shadow:var(--shadow-card),inset 0 1px 0 rgba(255,255,255,.08)}
+html[data-fenix-campo] .fx-inverse{margin:0 0 12px;padding:18px 16px 20px;border-radius:24px;background:var(--inverse);color:#f8fafc;overflow:hidden;min-width:0;box-shadow:var(--shadow-card),inset 0 1px 0 rgba(255,255,255,.08)}
 html[data-fenix-campo] .fx-hero{box-shadow:var(--shadow-float),inset 0 1px 0 rgba(255,255,255,.1);background:linear-gradient(180deg,color-mix(in srgb,#1e293b 42%,var(--inverse)) 0%,var(--inverse) 36%)}
 html[data-fenix-campo] .fx-shell-kicker{margin:0 0 12px;font:650 var(--fx-t-14)/1.3 var(--body),system-ui,sans-serif;letter-spacing:-.01em;color:color-mix(in srgb,#f8fafc 78%,transparent)}
 html[data-fenix-campo] .fx-inverse .fx-board,html[data-fenix-campo] .fx-inverse .fx-tank{background:transparent;color:inherit;margin:0;padding:0;border-radius:0;box-shadow:none}
@@ -1215,14 +1219,18 @@ html[data-fenix-campo] .fx-inverse .fx-cell[data-warn] b{color:var(--warn)}
 html[data-fenix-campo] .fx-toggle{display:flex;margin:0 0 14px;padding:4px;border-radius:var(--fx-pill);background:rgba(255,255,255,.1);border:0;overflow:hidden}
 html[data-fenix-campo] .fx-toggle button{flex:1;border:0;background:transparent;color:color-mix(in srgb,#f8fafc 78%,transparent);min-height:36px;border-radius:var(--fx-pill);font:650 var(--fx-t-14)/1.2 var(--body),system-ui,sans-serif}
 html[data-fenix-campo] .fx-toggle button.on{background:#fff;color:var(--inverse)}
-html[data-fenix-campo] .fx-tank-frame{display:grid;grid-template-columns:minmax(0,1fr) 26px;gap:8px;align-items:stretch}
+html[data-fenix-campo] .fx-tank-frame{display:grid;grid-template-columns:minmax(0,1fr) 26px;gap:8px;align-items:stretch;min-width:0;overflow:hidden}
 html[data-fenix-campo] .fx-tank-well{position:relative;height:188px;border-radius:22px;overflow:hidden;background:radial-gradient(80% 50% at 50% 112%,rgba(2,8,20,.55),transparent 62%),linear-gradient(180deg,#0b1728,#050910);border:1.5px solid color-mix(in srgb,#fff 28%,transparent);box-shadow:inset 0 1px 0 rgba(255,255,255,.2),inset 0 -18px 26px rgba(2,8,20,.4)}
 html[data-fenix-campo] .fx-tank-well::before,html[data-fenix-campo] .fx-tank-well::after,html[data-fenix-campo] .fx-tank-grid{display:none}
 html[data-fenix-campo] .fx-botte{display:block;width:100%;height:188px}
 html[data-fenix-campo] .fx-wave{filter:url(#fx-botte-soft)}
 html[data-fenix-campo] .fx-tank-well b{color:#fff;font-size:var(--fx-t-display);text-shadow:0 2px 10px rgba(2,8,20,.45);z-index:3;pointer-events:none}
 @media(prefers-reduced-motion:no-preference){html[data-fenix-campo] .fx-wave{transform-box:fill-box;transform-origin:center;animation:fx-botte-wave 3.6s ease-in-out infinite}html[data-fenix-campo] .fx-meniscus{animation:fx-botte-lip 3.6s ease-in-out infinite}@keyframes fx-botte-wave{50%{transform:translateX(-6px)}}@keyframes fx-botte-lip{50%{transform:translateX(4px)}}}
-html[data-fenix-campo] .fx-axis{list-style:none;margin:0;padding:2px 0;display:flex;flex-direction:column;justify-content:space-between;font:650 10px/1 var(--body),system-ui,sans-serif;color:color-mix(in srgb,#f8fafc 62%,transparent);text-align:right}
+html[data-fenix-campo] .fx-axis{list-style:none;list-style-type:none;margin:0;padding:2px 0;padding-inline-start:0;display:flex;flex-direction:column;justify-content:space-between;font:650 10px/1 var(--body),system-ui,sans-serif;color:color-mix(in srgb,#f8fafc 62%,transparent);text-align:right;min-width:0;overflow:hidden}
+html[data-fenix-campo] .fx-axis li{list-style:none}
+html[data-fenix-campo] .fx-axis li::marker{content:none;font-size:0}
+html[data-fenix-campo] .fx-tank p,html[data-fenix-campo] .fx-tank-meta{min-width:0;max-width:100%;overflow:hidden;overflow-wrap:anywhere;margin:14px 0 4px}
+html[data-fenix-campo] .fx-ok{margin:12px 0 2px}
 html[data-fenix-campo] .fx-ok{display:flex;margin:12px 0 0;width:100%;background:#10B981;color:#fff;border-radius:var(--fx-pill);min-height:42px;font:700 14px/1.2 var(--body),system-ui,sans-serif;box-shadow:inset 0 1px 0 rgba(255,255,255,.28),0 8px 18px color-mix(in srgb,#10B981 34%,transparent)}
 html[data-fenix-campo] .fx-pills{position:sticky;top:0;z-index:3;padding:2px 0;background:color-mix(in srgb,var(--surface-2) 88%,transparent)}
 html[data-fenix-campo] .fx-pill,html[data-fenix-campo] .fx-filter{border-width:1.5px;border-color:var(--border,var(--line));background:var(--surface);color:var(--on-surface)}
@@ -1422,7 +1430,7 @@ function productHtml(spec: PipelineSpec, tokens: DesignTokens, grammar: LayoutGr
             : "clamp(1.18rem, 2.2vw, 1.55rem)";
   const large = isOperationalApp(tokens) ? "2.125rem" : "1.75rem";
   return `<!DOCTYPE html>
-<html lang="it" data-family="${tokens.family}" data-grammar="${grammar.id}" data-chroma="${tokens.chroma}" data-intent-type="${graphicIntentFromBrief(spec.brief).type}" data-intent-chrome="${graphicIntentFromBrief(spec.brief).chrome}" data-craft-mode="${craftMode}" data-craft-rhythm="${craftRhythm}"${desk ? " data-fenix-craft-desk" : ""}${campo ? " data-fenix-campo" : ""}${market ? " data-fenix-market" : ""}${luxe ? " data-fenix-luxe" : ""}>
+<html lang="it" data-family="${tokens.family}" data-grammar="${grammar.id}" data-chroma="${tokens.chroma}" data-intent-type="${graphicIntentFromBrief(spec.brief).type}" data-intent-chrome="${graphicIntentFromBrief(spec.brief).chrome}" data-craft-mode="${craftMode}" data-craft-rhythm="${craftRhythm}" data-craft-domain="${craftDomain}"${desk ? " data-fenix-craft-desk" : ""}${campo ? " data-fenix-campo" : ""}${market ? " data-fenix-market" : ""}${luxe ? " data-fenix-luxe" : ""}>
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
@@ -1953,7 +1961,7 @@ function fxTankMarkup(n){
   html+=campoProduct?fxBotteSvg(pct):('<span class="fx-tank-grid" aria-hidden="true"></span><i style="height:'+pct+'%"></i>');
   html+='<b>'+pct+"%</b></div>";
   html+='<ol class="fx-axis" aria-hidden="true"><li>100</li><li>75</li><li>50</li><li>25</li><li>0</li></ol></div>';
-  html+="<p>"+(total?fmtLiters(total)+" / "+fmtLiters(goal):n+" / "+n)+(campoProduct?" — "+pct+"%":" · obiettivo")+"</p>";
+  html+='<p class="fx-tank-meta">'+(campoProduct?("Serbatoio: "+(total?fmtLiters(total)+" / "+fmtLiters(goal):n+" / "+n)+" · livello"):((total?fmtLiters(total)+" / "+fmtLiters(goal):n+" / "+n)+" · obiettivo"))+"</p>";
   if(pct>=100 && n) html+='<p class="fx-ok">'+(campoProduct?"Obiettivo raggiunto. Bene.":"Obiettivo raggiunto")+"</p>";
   return html+"</div>";
 }

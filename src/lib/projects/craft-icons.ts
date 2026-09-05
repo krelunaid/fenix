@@ -33,7 +33,7 @@ export const CRAFT_TAB_ICONS: CraftTabIcon[] = [
   },
 ];
 
-export const CRAFT_APP_ICON = `<svg ${ATTR}><path d="M6 3.5h11.5v17H6z"/><path d="M9 3.5v17"/><path d="M12 8h4.2M12 12h4.2"/></svg>`;
+export const CRAFT_APP_ICON = `<svg ${ATTR}><rect x="5.4" y="3.6" width="13.2" height="16.8" rx="2.2"/><path d="M8.8 3.6v16.8"/><path d="M11.6 8.2h4.4M11.6 11.6h4.4M11.6 15h3.2"/></svg>`;
 
 /** Nav icons: viewBox 24, content in ~5–19, round joins, no miter spike, no letter-A. */
 const NAV_ATTR =
@@ -170,7 +170,7 @@ const NAV_ICONS = {
     '<circle cx="12" cy="12.2" r="7"/><path d="M12 8.6v4l2.6 1.5"/>',
   ),
   drop: navIcon(
-    '<path d="M12 4.8s5.8 6.6 5.8 10.2a5.8 5.8 0 0 1-11.6 0C6.2 11.4 12 4.8 12 4.8z"/><path d="M9.6 14.2c.6 1.4 2 2.2 3.6 2.2"/>',
+    '<path d="M12 4.4c3.8 4.8 5.6 8.2 5.6 11a5.6 5.6 0 0 1-11.2 0C6.4 12.6 8.2 9.2 12 4.4z"/><path d="M9.4 14.6c.7 1.6 2.2 2.5 4 2.5"/><path d="M10.2 11.2c.4-1 1.2-2 1.8-3"/>',
   ),
   home: navIcon(
     '<path d="M5 10.8 12 5.2 19 10.8V19.2H5z"/><path d="M10.2 19.2v-6.2h3.6v6.2"/>',
@@ -198,7 +198,10 @@ const NAV_ICONS = {
     '<path d="M5.4 9 12 5.6 18.6 9v8.6L12 20.6 5.4 17.6z"/><path d="M5.4 9 12 12.4 18.6 9M12 12.4V20.6"/>',
   ),
   briefcase: navIcon(
-    '<rect x="5.2" y="8.6" width="13.6" height="9" rx="1.2"/><path d="M9.2 8.6V7h5.6v1.6M5.2 12.4h13.6"/>',
+    '<rect x="4.8" y="8.8" width="14.4" height="9.4" rx="2"/><path d="M9 8.8V7.2a1.4 1.4 0 0 1 1.4-1.4h3.2A1.4 1.4 0 0 1 15 7.2v1.6"/><path d="M4.8 12.6h14.4"/><path d="M11.1 13.4h1.8v1.6h-1.8z"/>',
+  ),
+  appTile: navIcon(
+    '<rect x="5.2" y="5.2" width="13.6" height="13.6" rx="3.2"/><circle cx="12" cy="12" r="2.8"/><path d="M12 7.4v1.4M12 15.2v1.4M7.4 12h1.4M15.2 12h1.4"/>',
   ),
 } as const;
 
@@ -226,7 +229,8 @@ export function craftNavIcon(tab: { id: string; label: string }, index = 0): str
   else if (/^prove$/.test(label)) svg = NAV_ICONS.book;
   else if (/^gestione$/.test(label)) svg = NAV_ICONS.settings;
   else if (/^storico$/.test(label)) svg = NAV_ICONS.clock;
-  else if (/^consegne$|^consegna$/.test(label)) svg = NAV_ICONS.drop;
+  else if (/^consegne$|^consegna$|^acqua$|^bottiglia$|^serbatoio$|^botte$|^livello$/.test(label)) svg = NAV_ICONS.drop;
+  else if (/^ufficio$/.test(label)) svg = NAV_ICONS.appTile;
   else if (/^persona$|^profilo$/.test(label)) svg = NAV_ICONS.person;
   else if (/^elenco$|^lista$/.test(label)) svg = NAV_ICONS.book;
   else if (/^fatture$|^fattura$/.test(label)) svg = NAV_ICONS.invoice;
@@ -235,7 +239,6 @@ export function craftNavIcon(tab: { id: string; label: string }, index = 0): str
   else if (/^pratiche$|^fascicolo$/.test(label)) svg = NAV_ICONS.folder;
   else if (/^magazzino$/.test(label)) svg = NAV_ICONS.crate;
   else if (/^contabilit[aà]$|^fiscale$/.test(label)) svg = NAV_ICONS.ledger;
-  else if (/^ufficio$/.test(label)) svg = NAV_ICONS.briefcase;
   else if (/\b(check-in|checkin)\b/.test(label)) svg = NAV_ICONS.key;
   else if (/\b(prenotazioni|appuntamenti)\b/.test(label)) svg = NAV_ICONS.appointments;
   else if (/\b(prenota|prenotare)\b/.test(label)) svg = NAV_ICONS.bookAppointment;
@@ -251,7 +254,7 @@ export function craftNavIcon(tab: { id: string; label: string }, index = 0): str
   else if (/pratiche|fascicol/.test(key)) svg = NAV_ICONS.folder;
   else if (/magazzino/.test(key)) svg = NAV_ICONS.crate;
   else if (/commercialist|contabil|fiscal|partita/.test(key)) svg = NAV_ICONS.ledger;
-  else if (/ufficio|briefcase/.test(key)) svg = NAV_ICONS.briefcase;
+  else if (/ufficio|briefcase/.test(key)) svg = NAV_ICONS.appTile;
   else if (/collezione|vetrina|essenz|profum/.test(key)) svg = NAV_ICONS.bottle;
   else if (/pelle|polso/.test(key)) svg = NAV_ICONS.wrist;
   else if (/lookbook|look|tela/.test(key)) svg = NAV_ICONS.hanger;
@@ -289,7 +292,7 @@ export function craftNavIcon(tab: { id: string; label: string }, index = 0): str
   else if (/resa|ritorno/.test(key)) svg = NAV_ICONS.back;
   else if (/settimana/.test(key)) svg = NAV_ICONS.week;
   else if (/storico|cronolog/.test(key)) svg = NAV_ICONS.clock;
-  else if (/consegne|acqua|autobot/.test(key)) svg = NAV_ICONS.drop;
+  else if (/consegne|acqua|autobot|bottiglia|serbatoio|\bbotte\b|livello/.test(key)) svg = NAV_ICONS.drop;
   else if (/gestione/.test(key)) svg = NAV_ICONS.settings;
   else if (/atelier|laboratorio|studio/.test(key)) svg = NAV_ICONS.atelier;
   if (isLetterAIcon(svg)) svg = NAV_ICONS.book;
