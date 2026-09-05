@@ -19,9 +19,11 @@ import { hueBucket } from "../projects/design-tokens.ts";
 import { PALETTE_CORPUS, paletteDistance, CLOSE_DELTA_E } from "../projects/palette-engine.ts";
 import { domainIllustration, GEOMETRIC_REGRESSIONS, materialSignature } from "./domain-imagery.ts";
 import { isLetterAIcon, looksLikeIosWidgetHome } from "../projects/craft-icons.ts";
+import { appIdentityIcon, appIdentityLabel } from "../projects/app-identity.ts";
 import { prepareSrcDoc } from "../projects/color-scheme.ts";
 import { createBuildRequest, isComposedCreation } from "./build-request.ts";
 import { contrastRatio } from "../projects/visual-quality.ts";
+import { nativeStyleAssignsPalette } from "../projects/native-app-style.ts";
 
 describe("controller build request preserves generated artifacts", () => {
   it("creates an editable sector app icon in the first phone seed without provider calls", () => {
@@ -35,6 +37,55 @@ describe("controller build request preserves generated artifacts", () => {
       icons.add(icon);
     }
     assert.equal(icons.size,4,"sector icons must not all be the same generic document");
+  });
+  it("keeps sector marks distinct for accountant, shop, barber and perfume without a house palette", () => {
+    const rows = [
+      ["mi crei un app da parrucchieri stile Barber shop", "booking", "Taglio"],
+      ["Profumi e fragranze", "perfume", "Profumi"],
+      ["Abbigliamento e lookbook", "fashion", "Lookbook"],
+      ["Agenda appuntamenti", "booking", "Agenda"],
+      ["gestionale per commercialisti, fatture e pratiche", "paper", "Fatture"],
+      ["negozio di alimentari, cassa e magazzino", "paper", "Negozio"],
+    ] as const;
+    const icons = rows.map(([brief, family, label]) => {
+      assert.equal(appIdentityLabel(brief, family), label, brief);
+      return appIdentityIcon(brief, family);
+    });
+    assert.equal(new Set(icons).size, rows.length, "each activity needs its own mark");
+    assert.match(icons[4]!, /data-craft-app="1"/);
+    assert.match(icons[5]!, /data-craft-app="1"/);
+    const barber = composeProduct(formatPrefix("app") + rows[0][0]);
+    const shop = composeProduct(formatPrefix("app") + rows[5][0]);
+    const fiscal = composeProduct(formatPrefix("app") + rows[4][0]);
+    assert.doesNotMatch(barber.html, /#b51246|#b01e47|#a61d4c/i);
+    assert.doesNotMatch(shop.html, /#b51246|#b01e47|#a61d4c/i);
+    assert.doesNotMatch(fiscal.html, /#b51246|#b01e47|#a61d4c/i);
+    assert.notEqual(shop.tokens.palette.accent.toLowerCase(), barber.tokens.palette.accent.toLowerCase());
+    assert.match(fiscal.html, /<span>Fatture<\/span>/);
+    assert.match(fiscal.html, /<span>Bilancio<\/span>/);
+    assert.match(shop.html, /<span>Negozio<\/span>/);
+    assert.match(shop.html, /<span>Magazzino<\/span>/);
+    assert.match(fiscal.html, /--t-callout:/);
+    assert.match(fiscal.html, /--space:8px/);
+    assert.match(shop.html, /font-variant-numeric:tabular-nums/);
+  });
+  it("keeps a commercialisti gestionale on desk chrome with fiscal tabs, never a phone seed or raspberry", () => {
+    const brief = formatPrefix("dashboard") + "mi crei un gestionale per commercialisti";
+    const product = composeProduct(brief);
+    const payload = createBuildRequest({ prompt: brief, kind: "dashboard" });
+    assert.equal(product.grammar.id, "ops-desk");
+    assert.equal(product.grammar.chrome, "desk");
+    assert.doesNotMatch(product.html, /data-fenix-native-style/);
+    assert.doesNotMatch(product.html, /\bfk-tab\b/);
+    assert.doesNotMatch(product.html, /#b51246|#0071e3|#f5f5f7/i);
+    assert.match(product.html, /data-fenix-craft-desk/);
+    assert.match(product.html, /<span>Fatture<\/span>/);
+    assert.match(product.html, /<span>Pratiche<\/span>/);
+    assert.match(product.html, /\.kpis\{[^}]*border-radius:12px/);
+    assert.match(product.html, /--t-callout:1rem/);
+    assert.equal(payload.html, "");
+    assert.equal(payload.instruction, "");
+    assert.equal(payload.kind, "dashboard");
   });
   it("keeps Barber activity identity without the rejected raspberry palette or auto-native style", () => {
     const brief = formatPrefix("app") + "mi crei un app da parrucchieri stile Barber shop";

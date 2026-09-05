@@ -170,6 +170,27 @@ const NAV_ICONS = {
   person: navIcon(
     '<circle cx="12" cy="8.2" r="2.4"/><path d="M7.2 19.2c.6-3.4 9-3.4 9.6 0"/>',
   ),
+  ledger: navIcon(
+    '<path d="M5.8 6.2h5.4v12.2H7.4A1.6 1.6 0 0 1 5.8 16.8z"/><path d="M18.2 6.2h-5.4v12.2h3.8a1.6 1.6 0 0 0 1.6-1.6z"/><path d="M11.2 6.2v12.2"/><path d="M7.4 9.4h2M7.4 12h2M14.6 9.4h2M14.6 12h2"/>',
+  ),
+  invoice: navIcon(
+    '<rect x="6.6" y="4.8" width="10.8" height="14.4" rx="1.2"/><path d="M8.8 8.6h6.4M8.8 11.6h6.4M8.8 14.6h4.2"/>',
+  ),
+  scale: navIcon(
+    '<path d="M12 5.4v12.8"/><path d="M8 18.8h8"/><path d="M12 7.2 6.6 12.2H9.8z"/><path d="M12 7.2 17.4 12.2H14.2z"/>',
+  ),
+  storefront: navIcon(
+    '<path d="M5.2 10.2 6.8 6.4h10.4l1.6 3.8z"/><path d="M6.2 10.2v7.6h11.6v-7.6"/><path d="M10.2 17.8v-4.2h3.6v4.2"/><path d="M5.2 10.2h13.6"/>',
+  ),
+  folder: navIcon(
+    '<path d="M5.4 8.4h4l1.5 1.6H18.6v8.2H5.4z"/><path d="M5.4 8.4V7.2h3.4l1.2 1.2"/>',
+  ),
+  crate: navIcon(
+    '<path d="M5.4 9 12 5.6 18.6 9v8.6L12 20.6 5.4 17.6z"/><path d="M5.4 9 12 12.4 18.6 9M12 12.4V20.6"/>',
+  ),
+  briefcase: navIcon(
+    '<rect x="5.2" y="8.6" width="13.6" height="9" rx="1.2"/><path d="M9.2 8.6V7h5.6v1.6M5.2 12.4h13.6"/>',
+  ),
 } as const;
 
 const NAV_FALLBACKS = [NAV_ICONS.book, NAV_ICONS.pencil, NAV_ICONS.atelier, NAV_ICONS.kanban] as const;
@@ -192,6 +213,13 @@ export function craftNavIcon(tab: { id: string; label: string }, index = 0): str
   else if (/^aggiungi$/.test(label)) svg = NAV_ICONS.add;
   else if (/^persona$|^profilo$/.test(label)) svg = NAV_ICONS.person;
   else if (/^elenco$|^lista$/.test(label)) svg = NAV_ICONS.book;
+  else if (/^fatture$|^fattura$/.test(label)) svg = NAV_ICONS.invoice;
+  else if (/^bilancio$/.test(label)) svg = NAV_ICONS.scale;
+  else if (/^negozio$/.test(label)) svg = NAV_ICONS.storefront;
+  else if (/^pratiche$|^fascicolo$/.test(label)) svg = NAV_ICONS.folder;
+  else if (/^magazzino$/.test(label)) svg = NAV_ICONS.crate;
+  else if (/^contabilit[aà]$|^fiscale$/.test(label)) svg = NAV_ICONS.ledger;
+  else if (/^ufficio$/.test(label)) svg = NAV_ICONS.briefcase;
   else if (/\b(check-in|checkin)\b/.test(label)) svg = NAV_ICONS.key;
   else if (/\b(prenotazioni|appuntamenti)\b/.test(label)) svg = NAV_ICONS.appointments;
   else if (/\b(prenota|prenotare)\b/.test(label)) svg = NAV_ICONS.bookAppointment;
@@ -201,6 +229,13 @@ export function craftNavIcon(tab: { id: string; label: string }, index = 0): str
   else if (/\b(messaggi|chat|conversazioni)\b/.test(label)) svg = NAV_ICONS.messages;
   else if (/\b(impostazioni|preferenze|settings)\b/.test(label)) svg = NAV_ICONS.settings;
   else if (/piramide|accordi/.test(key)) svg = NAV_ICONS.pyramid;
+  else if (/fattur/.test(key)) svg = NAV_ICONS.invoice;
+  else if (/bilancio/.test(key)) svg = NAV_ICONS.scale;
+  else if (/negozio|emporio/.test(key)) svg = NAV_ICONS.storefront;
+  else if (/pratiche|fascicol/.test(key)) svg = NAV_ICONS.folder;
+  else if (/magazzino/.test(key)) svg = NAV_ICONS.crate;
+  else if (/commercialist|contabil|fiscal|partita/.test(key)) svg = NAV_ICONS.ledger;
+  else if (/ufficio|briefcase/.test(key)) svg = NAV_ICONS.briefcase;
   else if (/collezione|vetrina|essenz|profum/.test(key)) svg = NAV_ICONS.bottle;
   else if (/pelle|polso/.test(key)) svg = NAV_ICONS.wrist;
   else if (/lookbook|look|tela/.test(key)) svg = NAV_ICONS.hanger;

@@ -299,6 +299,31 @@ document.getElementById('main').innerHTML = 'x';
     assert.notEqual(elenco, person);
   });
 
+  it("gives accountant and shop functions original glyphs, not Barber shears or a generic notebook", () => {
+    const fiscal = ["Fatture", "Clienti", "Bilancio", "Pratiche"].map((label) =>
+      craftNavIcon({ id: "new", label }),
+    );
+    assert.equal(new Set(fiscal).size, 4, "fiscal tabs must be four distinct glyphs");
+    assert.match(fiscal[0]!, /M8\.8 8\.6h6\.4/);
+    assert.match(fiscal[2]!, /M12 5\.4v12\.8/);
+    assert.match(fiscal[3]!, /M5\.4 8\.4h4l1\.5/);
+    const shop = ["Negozio", "Cassa", "Clienti", "Magazzino"].map((label) =>
+      craftNavIcon({ id: "list", label }),
+    );
+    assert.equal(new Set(shop).size, 4, "shop tabs must be four distinct glyphs");
+    assert.match(shop[0]!, /M5\.2 10\.2 6\.8 6\.4/);
+    assert.match(shop[3]!, /M5\.4 9 12 5\.6/);
+    const shears = craftNavIcon({ id: "app", label: "Taglio" });
+    assert.notEqual(fiscal[0], shears);
+    assert.notEqual(shop[0], shears);
+    assert.notEqual(fiscal[0], craftNavIcon({ id: "elenco", label: "Elenco" }));
+    for (const svg of [...fiscal, ...shop]) {
+      assert.equal(isLetterAIcon(svg), false);
+      assert.equal(isAppleChromeSvg(svg), false);
+      assert.match(svg, /data-icon-grid="24"/);
+    }
+  });
+
   it("keeps a requested working home under semantic chrome even if leftover widget markup exists", () => {
     const useful = `<!DOCTYPE html><html lang="it" data-intent-chrome="semantic"><body>
 <nav class="fk-tab"><button data-view="home">Home</button></nav>

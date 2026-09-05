@@ -59,6 +59,15 @@ describe("graphic intent from brief", () => {
     assert.doesNotMatch(composeProduct(commercialisti).html, /\bfk-tab\b/);
     assert.equal(applyNativeAppStyle("<html><head></head><body>Studio</body></html>", true), "<html><head></head><body>Studio</body></html>");
     assert.equal(graphicIntentFromBrief("App stile Apple, invece serif primario Garamond").type, "serif");
+    const nativeLayer = composeProduct(`${formatPrefix("app")}Agenda appuntamenti, stile Apple`).html.match(
+      /<style data-fenix-native-style="v1">[\s\S]*?<\/style>/,
+    )?.[0] || "";
+    assert.match(nativeLayer, /--fenix-type-large-title:34px/);
+    assert.match(nativeLayer, /--fenix-type-body:17px/);
+    assert.match(nativeLayer, /--fenix-space:8px/);
+    assert.match(nativeLayer, /font-variant-numeric:tabular-nums/);
+    assert.equal(nativeStyleAssignsPalette(nativeLayer), false);
+    assert.doesNotMatch(nativeLayer, /#b51246|#0071e3|#f5f5f7/);
   });
 
   it("does not treat a shop-name fixture as native style or a house accent", () => {
