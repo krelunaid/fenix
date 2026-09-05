@@ -274,6 +274,10 @@ describe("focus-visible and worker model", () => {
     assert.doesNotMatch(scheme, /max-width:32vw/);
     assert.doesNotMatch(scheme, /\.logo,\.brand[^}]*text-overflow:ellipsis/);
     assert.doesNotMatch(scheme, /nav[^}]*flex-wrap:nowrap!important/);
+    assert.match(scheme, /isOpaquePreviewError/);
+    assert.match(scheme, /script error/);
+    const opaque = readFileSync(join(root, "src/lib/projects/opaque-preview-error.ts"), "utf8");
+    assert.match(opaque, /script error/);
     assert.match(scheme, /fenix-boot-error/);
     assert.match(scheme, /fenix-boot-ok/);
     assert.match(scheme, /ev\.target !== window/);
@@ -577,6 +581,8 @@ describe("focus-visible and worker model", () => {
     assert.match(buildApi, /materializeHero/);
     assert.match(buildApi, /SITE_PROMPT/);
     assert.match(buildApi, /const desk = lockKind === "site"/);
+    assert.match(buildApi, /isPhoneKind\(lockKind\) \? composeProduct/);
+    assert.match(buildApi, /Niente tabbar iPhone, niente scheletro telefono/);
     const prompts = readFileSync(join(root, "src/lib/ai/prompts.shared.ts"), "utf8");
     assert.match(prompts, /export const SITE_PROMPT/);
     assert.match(prompts, /kind":"site"/);

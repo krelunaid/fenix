@@ -8,7 +8,9 @@ The layer is used by composition and reapplied by graphic-intent enforcement in
 the response parser when the composed artifact contract remains present.
 It does not change Fenix Studio, brand identity, data, runtime scripts, routing,
 icon paths, or the selected project palette. Sites/dashboards, denied requests,
-Apple Pay/reseller mentions and font-only briefs do not activate this layer.
+Apple Pay/reseller mentions, font-only briefs, sites and dashboards do not
+activate this layer. A gestionale desktop (elenco, filtri, form, numeri) must
+keep desktop IA — premium craft is not an iPhone tabbar.
 An explicit later serif request remains authoritative for typography.
 
 The direction includes an upright 30–34px headline, 17px form text, consistent

@@ -39,8 +39,22 @@ Focused suites on this repair: graphic-intent (including shop-name vs palette), 
 
 Production was verified unchanged at 9beca8cc25973a6e8955449df8ba913fdad39743 during the original backup, Netlify deploy 6a9c2deada0f7100085eace5. Only main is enabled for Netlify branch builds. No main push or deploy is part of this work.
 
+## Mastro Fiscale / Script error (2026-09-05 follow-up)
+
+Live production on fenix.kreluna.it blocked «Mastro Fiscale» with `Errore in avvio: Script error.` after visual direction + UI + preview; QA skipped and the credit was refunded.
+
+Root cause (two stacked faults, not a Barber palette):
+
+1. **Opaque Safari error treated as fatal.** `srcdoc` previews have an opaque origin. Cross-origin `html2canvas` (jsDelivr) and any sanitized throw become `Script error.`. The runtime `onerror` / capture `error` listener reported that string as `fenix-boot-error`, so polish refunded instead of ignoring noise. Real messages such as `null.orders` still block.
+2. **Desktop creates were seeded with a phone composition.** `createBuildRequest` used `composed.spec || isPhoneKind(kind) ? composed.html : html`, and `composed.spec` is always set. Gestionale/sito creates therefore shipped a phone seed + polish instruction into the worker. Leftover phone JS on a desktop DOM throws; Safari hides it as `Script error.`
+3. **Unknown-family dashboards fell through to `phone-seed`.** `grammarFromBrief` returned the phone seed before it could reach `kind === "dashboard"`. A commercialisti gestionale (not perfume/ops/fashion) therefore composed a phone skeleton. Fixed: dashboard kind selects `ops-desk` first.
+
+Visual-policy work was **not** forcing an iPhone tabbar onto dashboards: `wantsNativeAppStyle` stays app-only and keyword-opt-in. A commercialisti/gestionale brief stays `ops-desk` + desk chrome. The phone seed on dashboard creates *was* the wrong IA. Fixed: desk kinds send empty/existing HTML, `/api/build` no longer attaches phone polish, no native layer, no html2canvas CDN on dashboard srcdoc.
+
+Barber remains only a fixture for the palette-policy tests. The same craft bar applies to accountant, perfume, fashion, or any other brief. Colors still follow activity + explicit hex.
+
 ## Remaining work
 
-Validate real generated results (not only fixtures) before claiming completion. The recovered Barber project still has older generated visuals and four generic runtime tabs; this slice changes future composition, not silent storage replacement. Five-tab brief fidelity, live Grok quality and a full clean-clone suite are still open. Andrea must approve visuals before any merge to main.
+Validate real generated results (not only fixtures) before claiming completion. The recovered Barber project still has older generated visuals and four generic runtime tabs; this slice changes future composition, not silent storage replacement. Five-tab brief fidelity, live Grok quality and a full clean-clone suite are still open. Andrea must approve visuals before any merge to main. No production deploy from this branch.
 
 No paid generations were started for this repair.

@@ -11,7 +11,7 @@ import {
   validateProductHtml,
   validatePublishable,
 } from "./validate-html.ts";
-import { fenixRuntimeScript, looksLikeSite, prepareSrcDoc, sanitizePreviewHtml, escapeEmbeddedScriptEnds, looksLikeLeakedCss, repairLeakedCss, resolvePalette, paletteHueConflict } from "./color-scheme.ts";
+import { fenixRuntimeScript, isOpaquePreviewError, looksLikeSite, prepareSrcDoc, sanitizePreviewHtml, escapeEmbeddedScriptEnds, looksLikeLeakedCss, repairLeakedCss, resolvePalette, paletteHueConflict } from "./color-scheme.ts";
 import { DEMOS } from "./demos.ts";
 import { APP_SHELL_HTML } from "../ai/app-shell.ts";
 import { familyFromBrief } from "./design-tokens.ts";
@@ -140,6 +140,24 @@ describe("validateProductHtml", () => {
     assert.match(fenixRuntimeScript("p", "site"), /unwrapLoad/);
     assert.match(fenixRuntimeScript("p", "site"), /var unwrapBoxes = true/);
     assert.match(fenixRuntimeScript("p", "dashboard"), /var unwrapBoxes = false/);
+  });
+
+  it("does not treat Safari Script error as a blocking boot failure", () => {
+    assert.equal(isOpaquePreviewError("Script error."), true);
+    assert.equal(isOpaquePreviewError("Script error"), true);
+    assert.equal(isOpaquePreviewError("error"), true);
+    assert.equal(isOpaquePreviewError(""), true);
+    assert.equal(isOpaquePreviewError("Cannot read properties of null (reading 'orders')"), false);
+    const dash = fenixRuntimeScript("mastro", "dashboard");
+    assert.match(dash, /isOpaque/);
+    assert.match(dash, /script error/);
+    assert.doesNotMatch(dash, /html2canvas/);
+    assert.doesNotMatch(dash, /jsdelivr/);
+    const phone = fenixRuntimeScript("note", "app");
+    assert.match(phone, /html2canvas/);
+    const src = prepareSrcDoc(VALID, "#ffffff", "mastro", "dashboard");
+    assert.doesNotMatch(src, /html2canvas/);
+    assert.doesNotMatch(src, /jsdelivr/);
   });
 });
 

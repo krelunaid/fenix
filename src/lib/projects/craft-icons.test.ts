@@ -240,7 +240,7 @@ document.getElementById('main').innerHTML = 'x';
     assert.match(piramide, /data-craft-nav="1"/);
     assert.match(piramide, /data-icon-grid="24"/);
     assert.match(piramide, /overflow="visible"/);
-    assert.match(piramide, /stroke-width="1\.7"/);
+    assert.match(piramide, /stroke-width="1\.9"/);
     const agenda = ["Oggi", "Nuovo", "Settimana", "Archivio"].map((label, i) =>
       craftNavIcon({ id: label.toLowerCase(), label }, i),
     );

@@ -9,6 +9,7 @@ import { scrubCraftMedia } from "../ai/hero-image.ts";
 import { accentButtonPair, contrastRatio } from "./visual-quality.ts";
 import { FENIX_DATA_API_RUNTIME } from "./fenix-data-api.ts";
 import { rewriteFenixCollections } from "./fenix-collection.ts";
+export { isOpaquePreviewError } from "./opaque-preview-error.ts";
 
 export function isLightHex(hex: string) {
   const h = hex.replace("#", "").trim();
@@ -392,9 +393,14 @@ export function fenixRuntimeScript(projectId: string, kind?: string) {
     key: function(index){ return Object.keys(memoryStorage)[index] || null; },
     get length(){ return Object.keys(memoryStorage).length; }
   };
+  function isOpaque(msg){
+    msg = String(msg || "").trim();
+    return !msg || /^error$/i.test(msg) || /^script error\\.?$/i.test(msg);
+  }
   function reportBootError(err, kind){
     var msg = "";
     try { msg = err && err.message ? String(err.message) : String(err || "errore"); } catch (e) { msg = "errore"; }
+    if (isOpaque(msg)) return;
     try { document.documentElement.setAttribute("data-fenix-boot-error", msg.slice(0, 240)); } catch (e) {}
     try {
       window.parent && window.parent.postMessage({
@@ -425,9 +431,8 @@ export function fenixRuntimeScript(projectId: string, kind?: string) {
   } catch (e) {}
   window.onerror = function(m, _s, _l, _c, err){
     var msg = err && err.message ? String(err.message) : String(m || "");
-    if (!msg || /^error$/i.test(msg.trim()) || msg === "Script error.") {
-      if (!(err && err.message && err.message !== "error" && msg !== "Script error.")) return true;
-    }
+    if (isOpaque(msg) && isOpaque(err && err.message)) return true;
+    if (isOpaque(msg)) return true;
     reportBootError(err || new Error(msg || "errore in avvio"), "error");
     return true;
   };
@@ -444,13 +449,18 @@ export function fenixRuntimeScript(projectId: string, kind?: string) {
     }
     var err = ev && ev.error;
     var msg = err && err.message ? String(err.message) : String((ev && ev.message) || "");
-    if (!msg || /^error$/i.test(msg.trim())) return;
+    if (isOpaque(msg) && isOpaque(err && err.message)) return;
+    if (isOpaque(msg)) return;
     reportBootError(err || new Error(msg), "error");
     try { ev.preventDefault(); } catch (e) {}
   }, true);
   window.addEventListener("unhandledrejection", function(ev){
     var r = ev.reason;
     var msg = r && r.message ? String(r.message) : String(r || "unhandledrejection");
+    if (isOpaque(msg)) {
+      try { ev.preventDefault(); } catch (e) {}
+      return;
+    }
     reportBootError(r instanceof Error ? r : new Error(msg), "unhandledrejection");
     try { ev.preventDefault(); } catch (e) {}
   });
@@ -612,38 +622,42 @@ export function fenixRuntimeScript(projectId: string, kind?: string) {
   function sendShot(data){
     try { window.parent && window.parent.postMessage({ t: "fenix-shot", data: data || "" }, "*"); } catch (e) {}
   }
-  function shoot(){
-    try {
-      if (!window.html2canvas) { sendShot(""); return; }
-      window.html2canvas(document.documentElement, {
-        scale: 1,
-        width: 390,
-        windowWidth: 390,
-        windowHeight: 844,
-        useCORS: true,
-        logging: false,
-        backgroundColor: null
-      }).then(function(c){
-        sendShot(c.toDataURL("image/jpeg", 0.62));
-      }).catch(function(){ sendShot(""); });
-    } catch (e) { sendShot(""); }
+  ${
+    kind === "site" || kind === "landing" || kind === "dashboard"
+      ? `sendShot("");`
+      : `function shoot(){
+      try {
+        if (!window.html2canvas) { sendShot(""); return; }
+        window.html2canvas(document.documentElement, {
+          scale: 1,
+          width: 390,
+          windowWidth: 390,
+          windowHeight: 844,
+          useCORS: true,
+          logging: false,
+          backgroundColor: null
+        }).then(function(c){
+          sendShot(c.toDataURL("image/jpeg", 0.62));
+        }).catch(function(){ sendShot(""); });
+      } catch (e) { sendShot(""); }
+    }
+    function waitReady(cb){
+      if (document.documentElement.getAttribute("data-fenix-ready")) { cb(); return; }
+      var n = 0;
+      var t = setInterval(function(){
+        n += 1;
+        if (document.documentElement.getAttribute("data-fenix-ready") || n > 40) {
+          clearInterval(t);
+          cb();
+        }
+      }, 50);
+    }
+    var hs = document.createElement("script");
+    hs.src = "https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js";
+    hs.onload = function(){ waitReady(function(){ shoot(); }); };
+    hs.onerror = function(){ sendShot(""); };
+    document.head.appendChild(hs);`
   }
-  function waitReady(cb){
-    if (document.documentElement.getAttribute("data-fenix-ready")) { cb(); return; }
-    var n = 0;
-    var t = setInterval(function(){
-      n += 1;
-      if (document.documentElement.getAttribute("data-fenix-ready") || n > 40) {
-        clearInterval(t);
-        cb();
-      }
-    }, 50);
-  }
-  var hs = document.createElement("script");
-  hs.src = "https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js";
-  hs.onload = function(){ waitReady(function(){ shoot(); }); };
-  hs.onerror = function(){ sendShot(""); };
-  document.head.appendChild(hs);
   document.querySelectorAll("nav button, .fk-tab button, .tabbar button").forEach(function(b){
     b.setAttribute("type", "button");
   });

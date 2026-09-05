@@ -18,6 +18,7 @@ import { composeProduct } from "../ai/compose-product.ts";
 import { prepareSrcDoc } from "./color-scheme.ts";
 import { applyChromeGuards, craftNavIcon, looksLikeAppleTabIcons } from "./craft-icons.ts";
 import { contrastRatio } from "./visual-quality.ts";
+import { grammarFromBrief } from "./layout-grammar.ts";
 
 const SYSTEM = `${formatPrefix("app")}${INTENT_SYSTEM_PROMPT}`;
 const SERIF = `${formatPrefix("app")}${INTENT_SERIF_PROMPT}`;
@@ -48,15 +49,19 @@ describe("graphic intent from brief", () => {
       assert.equal(plain.slice(plain.indexOf("</head>")), composed.html.slice(composed.html.indexOf("</head>")));
       assert.deepEqual([...plain.matchAll(/--(?:bg|surface|fg|accent):([^;]+)/g)].map(m => m[0]), [...composed.html.matchAll(/--(?:bg|surface|fg|accent):([^;]+)/g)].map(m => m[0]));
     }
-    for (const brief of ["App con Apple Pay", "App rivenditore Apple", "App caratteri di sistema", `${formatPrefix("site")}Portfolio stile Apple`, `${formatPrefix("dashboard")}CRM stile iPhone`]) {
+    const commercialisti = `${formatPrefix("dashboard")}mi crei un gestionale per commercialisti`;
+    for (const brief of ["App con Apple Pay", "App rivenditore Apple", "App caratteri di sistema", `${formatPrefix("site")}Portfolio stile Apple`, `${formatPrefix("dashboard")}CRM stile iPhone`, commercialisti]) {
       assert.equal(wantsNativeAppStyle(brief), false, brief);
       assert.doesNotMatch(composeProduct(brief).html, /data-fenix-native-style/);
     }
+    assert.equal(grammarFromBrief(commercialisti).id, "ops-desk");
+    assert.equal(grammarFromBrief(commercialisti).chrome, "desk");
+    assert.doesNotMatch(composeProduct(commercialisti).html, /\bfk-tab\b/);
     assert.equal(applyNativeAppStyle("<html><head></head><body>Studio</body></html>", true), "<html><head></head><body>Studio</body></html>");
     assert.equal(graphicIntentFromBrief("App stile Apple, invece serif primario Garamond").type, "serif");
   });
 
-  it("does not treat a shop name as native style or a house accent", () => {
+  it("does not treat a shop-name fixture as native style or a house accent", () => {
     const brief = `${formatPrefix("app")}mi crei un app da parrucchieri stile Barber shop`;
     assert.equal(wantsNativeAppStyle(brief), false);
     assert.equal(graphicIntentFromBrief(brief).type, "domain");

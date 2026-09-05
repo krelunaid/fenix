@@ -48,10 +48,32 @@ function kindOf(brief: string): ProjectKind {
   return kindFromPrompt(brief) ?? inferKind(brief);
 }
 
+function opsDeskGrammar(family: TokenFamily | "unknown", variant: number): LayoutGrammar {
+  return {
+    id: "ops-desk",
+    family,
+    kind: "dashboard",
+    chrome: "desk",
+    stage: "table",
+    desktop: "header operativo + KPI + kanban 4 + tabella, niente rail tagliata e niente tabbar",
+    tablet: "header + KPI 4 + kanban 2 + tabella scrollabile",
+    mobile: "KPI 2×2, lane in colonna, tabella in overflow-x, nav in testata",
+    voice: {
+      census: variant ? "in flusso" : "in pipeline",
+      empty: "Nessuna riga in ledger. Registrane una.",
+      load: "Apro il ledger",
+      ok: "In ledger",
+      err: "La riga non è registrata.",
+    },
+  };
+}
+
 export function grammarFromBrief(brief: string): LayoutGrammar {
   const family = familyFromBrief(brief);
   const kind = kindOf(brief);
   const variant = variantFromBrief(brief);
+  // Desktop gestionale wins over unknown-family phone-seed and domain tab grammars.
+  if (kind === "dashboard") return opsDeskGrammar(family, variant);
   if (family === "repo") {
     return {
       id: "source-timeline",
@@ -174,7 +196,7 @@ export function grammarFromBrief(brief: string): LayoutGrammar {
       id: "phone-seed",
       family,
       kind,
-      chrome: kind === "dashboard" || kind === "site" || kind === "landing" ? "desk" : "tabs",
+      chrome: kind === "site" || kind === "landing" ? "desk" : "tabs",
       stage: "seed",
       desktop: "scheletro di mestiere, non boxed 1080",
       tablet: "colonna utile",
@@ -283,25 +305,7 @@ export function grammarFromBrief(brief: string): LayoutGrammar {
       },
     };
   }
-  if (family === "ops" || kind === "dashboard") {
-    return {
-      id: "ops-desk",
-      family,
-      kind: "dashboard",
-      chrome: "desk",
-      stage: "table",
-      desktop: "header operativo + KPI + kanban 4 + tabella, niente rail tagliata e niente tabbar",
-      tablet: "header + KPI 4 + kanban 2 + tabella scrollabile",
-      mobile: "KPI 2×2, lane in colonna, tabella in overflow-x, nav in testata",
-      voice: {
-        census: variant ? "in flusso" : "in pipeline",
-        empty: "Nessuna riga in ledger. Registrane una.",
-        load: "Apro il ledger",
-        ok: "In ledger",
-        err: "La riga non è registrata.",
-      },
-    };
-  }
+  if (family === "ops") return opsDeskGrammar(family, variant);
   if (family === "utility") {
     return {
       id: "pocket-tool",

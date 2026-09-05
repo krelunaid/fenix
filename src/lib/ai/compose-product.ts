@@ -444,9 +444,9 @@ function synthesizeSpec(brief: string): PipelineSpec {
 }
 
 const AGENDA_EDIT_GLYPH =
-  '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m14.5 5.5 4 4M4.5 19.5l4.7-1.1L19 8.6a2.8 2.8 0 0 0-4-4l-9.4 9.8z"/><path d="m5.6 14.4 3.6 4"/></svg>';
+  '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m14.5 5.5 4 4M4.5 19.5l4.7-1.1L19 8.6a2.8 2.8 0 0 0-4-4l-9.4 9.8z"/><path d="m5.6 14.4 3.6 4"/></svg>';
 const AGENDA_DEL_GLYPH =
-  '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4.5" width="16" height="4" rx="1.2"/><path d="M5.5 8.5v10a1 1 0 0 0 1 1h11a1 1 0 0 0 1-1v-10M9.5 12h5"/></svg>';
+  '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4.5" width="16" height="4" rx="1.2"/><path d="M5.5 8.5v10a1 1 0 0 0 1 1h11a1 1 0 0 0 1-1v-10M9.5 12h5"/></svg>';
 const AGENDA_ACTION_LABELS: Record<string, string> = {
   prenotato: "Conferma", confermato: "Inizia", "in-corso": "Concludi", concluso: "Riapri",
 };

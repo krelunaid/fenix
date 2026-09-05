@@ -124,11 +124,19 @@ describe("controller build request preserves generated artifacts", () => {
     assert.equal(request.instruction, "Cambia solo icona");
     assert.equal(request.operation, "edit");
   });
-  it("does not expand this fix into a change of unmatched desktop fallback", () => {
-    const prompt = "FORMATO: sito web. kind=site. atlante delle maree";
-    const c = composeProduct(prompt);
-    const request = createBuildRequest({prompt, html:"existing", kind:"site"});
-    assert.equal(request.html, c.spec ? c.html : "existing");
+  it("does not seed desktop site or dashboard creates with a phone composition", () => {
+    const sitePrompt = "FORMATO: sito web. kind=site. atlante delle maree";
+    const site = createBuildRequest({prompt: sitePrompt, html:"existing", kind:"site"});
+    assert.equal(site.html, "existing");
+    assert.equal(site.instruction, "");
+    assert.doesNotMatch(site.html, /fk-tab|data-grammar=/);
+    const dashPrompt = formatPrefix("dashboard") + "mi crei un gestionale per commercialisti";
+    const dash = createBuildRequest({prompt: dashPrompt, kind: "dashboard"});
+    assert.equal(dash.html, "");
+    assert.equal(dash.instruction, "");
+    assert.equal(dash.kind, "dashboard");
+    assert.equal(dash.operation, "create");
+    assert.equal("palette" in dash, false);
   });
 });
 

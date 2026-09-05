@@ -42,6 +42,16 @@ describe("layout grammar from brief", () => {
     assert.notEqual(a.fonts.display, b.fonts.display);
   });
 
+  it("keeps a commercialisti gestionale on ops-desk, not phone-seed or iPhone tabbar", () => {
+    const brief = `${formatPrefix("dashboard")}mi crei un gestionale per commercialisti`;
+    const g = grammarFromBrief(brief);
+    assert.equal(g.id, "ops-desk");
+    assert.equal(g.kind, "dashboard");
+    assert.equal(g.chrome, "desk");
+    assert.doesNotMatch(g.mobile, /tabbar/i);
+    assert.match(g.desktop, /niente tabbar/i);
+  });
+
   it("gives a repository brief the source-timeline grammar, not a phone seed", () => {
     const brief = `${formatPrefix("app")}RepoVoci: registro delle voci di un repository, commit, rami, stato di sync e timeline/diff.`;
     const g = grammarFromBrief(brief);
