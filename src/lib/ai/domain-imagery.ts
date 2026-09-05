@@ -1248,12 +1248,11 @@ export function heroPromptForBrief(brief: string): string {
 }
 
 export const HERO_IMAGE_CREDIT = {
-  model: "grok-imagine-image-2.0",
-  quality: "low" as const,
-  trigger: "user-initiated build only",
-  purpose: "family-specific photoreal still-life of the craft",
+  model: null,
+  trigger: "disabled: grok-build-0.1-only policy",
+  purpose: "preserve existing local imagery without secondary model calls",
   fallback: "repository-native SVG (0 credits)",
-  authorized: true,
+  authorized: false,
 };
 
 function markHeroImg(tag: string, alt: string): string {

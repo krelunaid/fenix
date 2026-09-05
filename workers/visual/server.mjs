@@ -196,28 +196,9 @@ function looksSite(prompt, instruction, kind, html) {
   return /<nav\b/i.test(h) && sections >= 3 && /<footer\b/i.test(h);
 }
 
-async function generateHero(apiKey, prompt, aspect) {
-  try {
-    const res = await fetch("https://api.x.ai/v1/images/generations", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: "grok-imagine-image-2.0",
-        prompt: `Photorealistic close-up of the craft itself (clay, kiln, tools, hands, vessels). No text, no logo, no watermark, no website, no UI, no screenshot, no browser chrome, no navbar, no form, no page collage. Subject: ${String(prompt).slice(0, 280)}`,
-        aspect_ratio: aspect || "16:9",
-        quality: "low",
-        n: 1,
-      }),
-    });
-    if (!res.ok) return null;
-    const json = await res.json();
-    return json.data?.[0]?.url || null;
-  } catch {
-    return null;
-  }
+async function generateHero(_apiKey, _prompt, _aspect) {
+  // Preserve existing imagery: no secondary image model is authorized.
+  return null;
 }
 
 function injectHero(html, url) {

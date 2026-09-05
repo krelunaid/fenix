@@ -38,7 +38,8 @@ describe("domain imagery", () => {
       const next = domainIllustration(row.family, row.variant, row.subject, 1);
       assert.notEqual(svg, next, row.id);
     }
-    assert.equal(HERO_IMAGE_CREDIT.authorized, true);
+    assert.equal(HERO_IMAGE_CREDIT.authorized, false);
+    assert.equal(HERO_IMAGE_CREDIT.model, null);
     assert.match(HERO_IMAGE_CREDIT.fallback, /SVG/);
   });
 

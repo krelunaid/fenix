@@ -1,7 +1,4 @@
 import { CRAFT_GALLERY_FILES } from "./craft-media.ts";
-import { heroPromptForBrief } from "./domain-imagery.ts";
-
-const XAI_IMAGES = "https://api.x.ai/v1/images/generations";
 const HERO_MAX_BYTES = 900_000;
 
 /** Versioned ceramic still-life in /public. Never a page screenshot, never a remote CDN. */
@@ -26,30 +23,14 @@ const DEAD_UNSPLASH: Array<[RegExp, string]> = [
 ];
 
 export async function generateHeroUrl(
-  apiKey: string,
-  prompt: string,
-  signal?: AbortSignal,
-  aspect: "16:9" | "1:1" = "16:9",
-) {
-  const res = await fetch(XAI_IMAGES, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
-    },
-    signal,
-    body: JSON.stringify({
-      model: "grok-imagine-image-2.0",
-      prompt: heroPromptForBrief(prompt),
-      aspect_ratio: aspect,
-      quality: "low",
-      n: 1,
-    }),
-  });
-  if (!res.ok) return null;
-  const json = (await res.json()) as { data?: { url?: string }[] };
-  const url = json.data?.[0]?.url?.trim();
-  return url || null;
+  _apiKey: string,
+  _prompt: string,
+  _signal?: AbortSignal,
+  _aspect: "16:9" | "1:1" = "16:9",
+): Promise<string | null> {
+  // Only grok-build-0.1 is authorized. It is not an image-generation endpoint.
+  // Keep the caller's existing local/SVG imagery instead of calling another model.
+  return null;
 }
 
 function isPhoneApp(html: string) {
