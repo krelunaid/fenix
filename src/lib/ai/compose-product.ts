@@ -28,7 +28,7 @@ import { domainIllustration, altForBrief } from "./domain-imagery.ts";
 import { DASHBOARD_POLISH_INSTRUCTION, SITE_POLISH_INSTRUCTION } from "./app-shell.ts";
 import { craftNavIcon } from "../projects/craft-icons.ts";
 import { appIdentityIcon, isAccountantBrief, isBarberBrief, isFieldProductBrief, isLuxeBrief, isMarketplaceBrief, isShopBrief } from "../projects/app-identity.ts";
-import { glossyWaterMarkSvg, premiumAppMarkSvg, premiumMarkDataUri } from "../projects/premium-mark.ts";
+import { crispWaterDropMarkSvg, glossyWaterMarkSvg, premiumAppMarkSvg, premiumMarkDataUri } from "../projects/premium-mark.ts";
 import { craftModeOf, craftRhythmOf, craftTokenCss, surfacesFromPalette, type CraftDomain } from "../projects/craft-tokens.ts";
 import { accentButtonPair, contrastRatio } from "../projects/visual-quality.ts";
 import type { Palette, ProjectKind } from "../projects/types.ts";
@@ -591,12 +591,9 @@ const FX_PAUSE_MARK =
   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M10 9.2v5.6M14 9.2v5.6"/></svg>';
 const FX_CHEVRON_MARK =
   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>';
-/** Visible campo home mark. Home hides <header>.app-mark, so this must be a drop — never the exit door. */
+/** Visible campo Home mark. Home hides <header>.app-mark — filled drop chip, never the exit door or a 18% wash. */
 export function campoHomeHeaderMark(): string {
-  return craftNavIcon({ id: "app", label: "Acqua" })
-    .replace('data-craft-nav="1"', 'data-craft-app="1"')
-    .replace("<svg ", '<svg data-fenix-water-header="1" ')
-    .replace('fill="none"', 'fill="currentColor" fill-opacity=".18"');
+  return crispWaterDropMarkSvg("home-header");
 }
 
 function italianLongDate(d = new Date()): string {
@@ -1217,8 +1214,8 @@ html[data-fenix-campo] .fx-hello-row{display:flex;align-items:flex-start;justify
 html[data-fenix-campo] .fx-hello{margin:0;font:750 var(--fx-t-display)/1.05 var(--display),system-ui,sans-serif;letter-spacing:-.04em;color:var(--on-surface)}
 html[data-fenix-campo] .fx-role{margin:4px 0 0;font:500 var(--fx-t-14)/1.3 var(--body),system-ui,sans-serif;color:var(--muted)}
 html[data-fenix-campo] .fx-date{margin:0 0 16px;font:500 var(--fx-t-14)/1.3 var(--body),system-ui,sans-serif;color:color-mix(in srgb,var(--on-surface) 48%,#94a3b8)}
-html[data-fenix-campo] .fx-app-mark{width:44px;height:44px;border:0;border-radius:50%;background:linear-gradient(180deg,#E0F2FE,#BAE6FD);color:#0369A1;display:grid;place-items:center;flex:0 0 44px;box-shadow:0 8px 18px color-mix(in srgb,#0EA5E9 24%,transparent)}
-html[data-fenix-campo] .fx-app-mark svg{width:24px;height:24px}
+html[data-fenix-campo] .fx-app-mark{width:48px;height:48px;border:0;border-radius:14px;background:#082338;color:#E0F2FE;display:grid;place-items:center;flex:0 0 48px;overflow:hidden;box-shadow:0 10px 22px rgba(8,35,56,.38)}
+html[data-fenix-campo] .fx-app-mark svg{width:48px;height:48px;display:block}
 html[data-fenix-campo] .fx-inverse{margin:0 0 12px;padding:18px 16px 20px;border-radius:24px;background:linear-gradient(180deg,color-mix(in srgb,#0c4a6e 40%,var(--inverse)) 0%,var(--inverse) 46%);color:#f8fafc;overflow:hidden;min-width:0;box-shadow:var(--shadow-card),inset 0 1px 0 rgba(186,230,253,.26)}
 html[data-fenix-campo] .fx-hero{box-shadow:var(--shadow-float),inset 0 1px 0 rgba(224,242,254,.32);background:linear-gradient(180deg,color-mix(in srgb,#0369A1 48%,var(--inverse)) 0%,var(--inverse) 52%)}
 html[data-fenix-campo] .fx-shell-kicker{margin:0 0 12px;font:650 var(--fx-t-14)/1.3 var(--body),system-ui,sans-serif;letter-spacing:-.01em;color:color-mix(in srgb,#e0f2fe 82%,transparent)}
@@ -1411,7 +1408,8 @@ function productHtml(spec: PipelineSpec, tokens: DesignTokens, grammar: LayoutGr
   const premiumMark = campo
     ? glossyWaterMarkSvg(spec.id, p)
     : premiumAppMarkSvg(spec.id, p, identityGlyph);
-  const markHref = premiumMarkDataUri(premiumMark);
+  const iconMark = campo ? crispWaterDropMarkSvg(spec.id) : premiumMark;
+  const markHref = premiumMarkDataUri(iconMark);
   const bootDate = italianLongDate();
   const pocketEmpty = `<section class="home-overview" data-fenix-pane="home"><div class="home-hero"><p class="kicker">Panoramica</p><p class="fx-date">${bootDate}</p><div class="fx-board" aria-label="Sintesi"><div class="fx-cell"><b>0</b><span>Oggi</span></div><div class="fx-cell"><b>0</b><span>Media</span></div><div class="fx-cell"><b>0</b><span>Voci</span></div><div class="fx-cell" data-warn><b>0</b><span>Aperti</span></div></div><div class="fx-tank"><div class="fx-seg" role="tablist"><button type="button" class="on">Oggi</button><button type="button">Settimana</button><button type="button">Mese</button></div><div class="fx-tank-well"><i style="height:0%"></i><b>0%</b></div><p>0 / 0 · obiettivo</p></div><p class="home-count" data-count="0"><b>0</b><span>voci sul dispositivo</span></p><div class="home-first" data-state="empty"><div class="mark" aria-hidden="true">${POCKET_EMPTY_MARK}</div><h2>Niente in lista</h2><p class="notes">Aggiungi la prima voce. Qui non ci sono dati di prova.</p><button class="btn" type="button" data-view="${spec.tabs[1]!.id}">${spec.cta}</button></div></div><aside class="home-aside"><article class="card"><p class="kicker">Elenco</p><h2>Vuoto</h2><p class="notes">Le azioni restano nella lista.</p></article><article class="card"><p class="kicker">Privacy</p><h2>Solo qui</h2><p class="notes">Storage locale, senza profilo.</p></article></aside></section>`;
   const splash = desk
@@ -1450,6 +1448,7 @@ function productHtml(spec: PipelineSpec, tokens: DesignTokens, grammar: LayoutGr
 <meta name="color-scheme" content="${scheme}"/>
 <title>${spec.name}</title>
 <link rel="icon" type="image/svg+xml" href="${markHref}"/>
+<link rel="apple-touch-icon" href="${markHref}"/>
 ${tokens.fonts.href ? `<link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="${tokens.fonts.href}" rel="stylesheet"/>` : "<!-- system stack: no Google Fonts -->"}
 <style data-fenix-phone data-fenix-site data-fenix-craft>
