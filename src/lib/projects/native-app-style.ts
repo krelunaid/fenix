@@ -1,8 +1,9 @@
 /** Original native-inspired controls. No brand assets, palette or data rewrites. */
 const STYLE = `<style data-fenix-native-style="v1">
 html[data-grammar] body{font-size:17px;line-height:1.45}
-html[data-grammar] header{padding:24px 20px 16px;align-items:center;gap:16px;background:var(--bg);border-bottom:0}
-html[data-grammar] .brand{font-size:32px;font-weight:700;font-style:normal;line-height:1.12;letter-spacing:-.03em;text-transform:none}
+html[data-grammar] header{padding:24px 20px 16px;align-items:center;gap:16px;background:var(--bg);border-bottom:0;flex-wrap:wrap}
+html[data-grammar] header>div{min-width:0;flex:1 1 180px}
+html[data-grammar] .brand{font-size:32px;font-weight:700;font-style:normal;line-height:1.12;letter-spacing:-.03em;text-transform:none;overflow-wrap:anywhere}
 html[data-grammar] header .kicker{font-size:12px;letter-spacing:.06em;margin-bottom:5px}
 html[data-grammar] header .place{font-size:13px;line-height:1.4}
 html[data-grammar] main{padding-left:20px;padding-right:20px}

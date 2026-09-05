@@ -446,6 +446,44 @@ describe("intent preservation D/T/M after compose+repair path+prepareSrcDoc", ()
     } finally {await browser.close();}
   });
 
+  it("native headers wrap at 320px with wide fallback fonts and unbroken titles", async () => {
+    const browser = await launchChromium();
+    const page = await isolatedPage(browser, { viewport: NARROW });
+    try {
+      const composed = composeProduct(`${formatPrefix("app")}App abbigliamento, catalogo capi e taglie, stile Apple`);
+      await page.setContent(PERSIST_HOST);
+      await page.locator("#f").evaluate((el, doc) => { (el as HTMLIFrameElement).srcdoc = doc; },
+        prepareSrcDoc(composed.html, composed.tokens.palette, "native-header-fallback", "app"));
+      await restFrame(page);
+      const frame = page.frameLocator("#f");
+      const title = await frame.locator(".brand").textContent();
+      for (const font of ["system-ui", "Arial", "Verdana", "sans-serif", "monospace"]) {
+        await frame.locator("body").evaluate((el, family) => {
+          el.style.setProperty("--body", family);
+          el.style.setProperty("--display", family);
+          el.style.fontFamily = family;
+        }, font);
+        for (const text of [title || "Catalogo", "AbbigliamentoPersonalizzatoSenzaSpazi"]) {
+          await frame.locator(".brand").evaluate((el, value) => { el.textContent = value; }, text);
+          const layout = await frame.locator("html").evaluate(el => ({
+            overflow: el.scrollWidth - innerWidth,
+            hidden: [el, document.body, document.querySelector("header")!, document.querySelector(".brand")!]
+              .some(node => ["hidden", "clip"].includes(getComputedStyle(node).overflowX)),
+            titleOverflow: document.querySelector(".brand")!.scrollWidth - document.querySelector(".brand")!.clientWidth,
+            nav: [...document.querySelectorAll("#tabs button")].every(node => {
+              const rect = node.getBoundingClientRect();
+              return rect.left >= 0 && rect.right <= innerWidth + 2 && rect.width >= 44 && rect.height >= 44;
+            }),
+          }));
+          assert.ok(layout.overflow <= 2, `${font}/${text}: viewport overflow ${layout.overflow}`);
+          assert.ok(layout.titleOverflow <= 2, `${font}: title must wrap, not clip`);
+          assert.equal(layout.hidden, false, "do not hide overflow to pass the gate");
+          assert.equal(layout.nav, true, "navigation remains in bounds and touchable");
+        }
+      }
+    } finally { await page.close(); await browser.close(); }
+  });
+
   it("native app style paints across domains and viewports without changing navigation or data", async () => {
     const output = process.env.FENIX_NATIVE_SHOTS || "/tmp/fenix-native-app-shots";
     mkdirSync(output, { recursive: true });
