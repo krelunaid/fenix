@@ -21,8 +21,41 @@ import { domainIllustration, GEOMETRIC_REGRESSIONS, materialSignature } from "./
 import { isLetterAIcon, looksLikeIosWidgetHome } from "../projects/craft-icons.ts";
 import { prepareSrcDoc } from "../projects/color-scheme.ts";
 import { createBuildRequest, isComposedCreation } from "./build-request.ts";
+import { contrastRatio } from "../projects/visual-quality.ts";
 
 describe("controller build request preserves generated artifacts", () => {
+  it("creates an editable sector app icon in the first phone seed without provider calls", () => {
+    const icons = new Set<string>();
+    for (const brief of ["mi crei un app da parrucchieri stile Barber shop", "Profumi e fragranze", "Abbigliamento e lookbook", "Agenda appuntamenti"]) {
+      const product = composeProduct(formatPrefix("app") + brief);
+      const icon = product.html.match(/<span class="app-mark"[^>]*>([\s\S]*?)<\/span>/)?.[1];
+      assert.ok(icon,brief);
+      assert.match(product.html,/data-fenix-id="icon:app"/);
+      assert.match(icon,/data-craft-app="1"/);
+      icons.add(icon);
+    }
+    assert.equal(icons.size,4,"sector icons must not all be the same generic document");
+  });
+  it("uses native typography and separated light surfaces for the reported Barber brief", () => {
+    const brief = formatPrefix("app") + "mi crei un app da parrucchieri stile Barber shop";
+    const product = composeProduct(brief);
+    assert.match(product.html,/<title>Barber<\/title>/);
+    assert.match(product.html,/data-fenix-native-style="v1"/);
+    assert.equal(product.tokens.fonts.display,"system-ui");
+    assert.equal(product.tokens.fonts.href,"");
+    assert.equal(product.tokens.palette.surface,"#fbfbfd");
+    assert.equal(product.tokens.palette.accent,"#b51246");
+    assert.notEqual(product.tokens.palette.bg,product.tokens.palette.surface);
+    const p = product.tokens.palette;
+    for (const bg of [p.bg,p.surface]) {
+      assert.ok(contrastRatio(p.fg,bg)>=4.5);
+      assert.ok(contrastRatio(p.muted,bg)>=4.5);
+    }
+    assert.ok(contrastRatio(p.accentInk,p.accent)>=4.5);
+    const explicit = composeProduct(brief + ", serif primario Garamond, accento #006633");
+    assert.equal(explicit.tokens.fonts.display,"Garamond");
+    assert.equal(explicit.tokens.palette.accent,"#006633");
+  });
   it("uses complete product names instead of cutting a descriptive brief mid-word", () => {
     for (const [brief, expected] of [
       ["Agenda appuntamenti e prenotazioni, stile Apple.", "Agenda"],

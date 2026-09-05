@@ -27,6 +27,7 @@ import { auditGraphicQuality, type GraphicReport } from "../projects/graphic-qua
 import { domainIllustration, altForBrief } from "./domain-imagery.ts";
 import { DASHBOARD_POLISH_INSTRUCTION, SITE_POLISH_INSTRUCTION } from "./app-shell.ts";
 import { craftNavIcon } from "../projects/craft-icons.ts";
+import { appIdentityIcon, isBarberBrief } from "../projects/app-identity.ts";
 import { accentButtonPair, contrastRatio } from "../projects/visual-quality.ts";
 import type { Palette, ProjectKind } from "../projects/types.ts";
 
@@ -331,7 +332,7 @@ function seedNameFromBrief(brief: string): string {
     )
     .replace(/\s+/g, " ")
     .trim();
-  const fallback = grammarFromBrief(brief).id === "agenda" ? "Agenda" : "Note";
+  const fallback = isBarberBrief(brief) ? "Barber" : grammarFromBrief(brief).id === "agenda" ? "Agenda" : "Note";
   const named = raw.match(/(?:chiamata|chiamala|nome(?: dell.app)?|titolo)\s*[:=]?\s*["«]([^"»]{1,80})["»]/i)?.[1]?.trim();
   if (named) return named;
   const before = raw.split(/[:.]/)[0]!.trim().replace(/[,;]+$/g, "").trim();
@@ -443,11 +444,14 @@ function synthesizeSpec(brief: string): PipelineSpec {
 }
 
 const AGENDA_EDIT_GLYPH =
-  '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13.6 6.2 18.2 10.8 10.4 18.6H6.4v-4z"/><path d="M12.8 7.2l4.2 4.2"/></svg>';
+  '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m14.5 5.5 4 4M4.5 19.5l4.7-1.1L19 8.6a2.8 2.8 0 0 0-4-4l-9.4 9.8z"/><path d="m5.6 14.4 3.6 4"/></svg>';
 const AGENDA_DEL_GLYPH =
-  '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6.2 8.2h11.6v10.2H6.2z"/><path d="M5.6 5.8h12.8v2.4H5.6z"/><path d="M10.2 12.4h3.6"/></svg>';
+  '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4.5" width="16" height="4" rx="1.2"/><path d="M5.5 8.5v10a1 1 0 0 0 1 1h11a1 1 0 0 0 1-1v-10M9.5 12h5"/></svg>';
 const AGENDA_ACTION_LABELS: Record<string, string> = {
   prenotato: "Conferma", confermato: "Inizia", "in-corso": "Concludi", concluso: "Riapri",
+};
+const AGENDA_STATUS_LABELS: Record<string, string> = {
+  prenotato: "Da confermare", confermato: "Confermato", "in-corso": "In corso", concluso: "Concluso",
 };
 const POCKET_EMPTY_MARK =
   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="4.5" width="14" height="15" rx="2"/><path d="M8.2 9.2h7.6M8.2 12.4h7.6M8.2 15.6h5"/></svg>';
@@ -462,7 +466,7 @@ function agendaRailMarkup(spec: PipelineSpec, grammar: LayoutGrammar): string {
     .map((e, i) => {
       const state = i === 0 ? "on" : "idle";
       const status = e.status || "prenotato";
-      return `<article class="slot" data-id="${e.id}" data-state="${state}" data-status="${status}"><time class="time" datetime="${e.kicker}">${e.kicker}</time><div class="slot-body"><h2>${e.title}</h2><p class="notes"><span class="chip ${status}">${status}</span> · ${e.note} · ${e.meta}</p>${agendaActs(e.id, status)}</div></article>`;
+      return `<article class="slot" data-id="${e.id}" data-state="${state}" data-status="${status}"><time class="time" datetime="${e.kicker}">${e.kicker}</time><div class="slot-body"><h2>${e.title}</h2><p class="notes slot-detail">${e.note} · ${e.meta}</p><span class="chip slot-status ${status}">${AGENDA_STATUS_LABELS[status] || status}</span>${agendaActs(e.id, status)}</div></article>`;
     })
     .join("");
   return `<div class="day-head"><p class="kicker">${spec.kicker}</p><h2 id="day-label">${spec.rows.length} ${grammar.voice.census}</h2></div><div class="day-rail" data-fenix-rail="day" id="day-rail" role="tabpanel" aria-labelledby="day-label">${slots}</div>`;
@@ -1060,6 +1064,10 @@ body{min-height:100dvh}
 .app{min-height:100dvh;display:flex;flex-direction:column;width:100%}
 header{padding:16px 18px 10px;display:flex;align-items:flex-end;justify-content:space-between;gap:12px}
 .brand{font-family:var(--display);font-size:${tokens.type.h1};font-weight:650;letter-spacing:-.04em;line-height:1.1;color:var(--fg);overflow-wrap:anywhere;min-width:0}
+.brand-group{display:flex;align-items:center;gap:12px;min-width:0}
+.brand-group>div{min-width:0}
+.app-mark{width:44px;height:44px;flex:0 0 44px;border-radius:13px;display:grid;place-items:center;background:var(--accent);color:var(--accent-ink);box-shadow:0 3px 8px color-mix(in srgb,var(--accent) 16%,transparent)}
+.app-mark svg{width:28px;height:28px;stroke-width:1.9}
 header .place{color:var(--muted);max-width:42%;overflow:visible;white-space:normal;text-align:right;line-height:1.3}
 main{flex:1;min-height:0;overflow-y:auto;padding:8px 16px 24px;-webkit-overflow-scrolling:touch}
 .hero,.sil,.plate{position:relative;border-radius:var(--r);overflow:hidden;margin-bottom:14px;border:1px solid var(--line);background:var(--elevated);min-height:200px}
@@ -1079,9 +1087,12 @@ ${visualKitCss(tokens, grammar)}
 <body>
 <div class="app"${deskAttr}>
 <header class="${headerExtra.trim()}">
-  <div>
-    ${grammar.id === "phone-seed" ? "" : `<p class="kicker">${spec.kicker}</p>`}
+  <div class="brand-group">
+    ${desk ? "" : `<span class="app-mark" data-fenix-id="icon:app" aria-hidden="true">${appIdentityIcon(spec.brief,tokens.family)}</span>`}
+    <div>
+    ${grammar.id === "phone-seed" || grammar.id === "agenda" ? "" : `<p class="kicker">${spec.kicker}</p>`}
     <h1 class="brand">${spec.name}</h1>
+    </div>
   </div>
   <p class="place">${spec.place}</p>
 </header>
@@ -1118,6 +1129,7 @@ const kicker=${JSON.stringify(spec.kicker)};
 const place=${JSON.stringify(spec.place)};
 const AGENDA_CYCLE={prenotato:"confermato",confermato:"in-corso","in-corso":"concluso",concluso:"prenotato"};
 const AGENDA_ACTION_LABELS=${JSON.stringify(AGENDA_ACTION_LABELS)};
+const AGENDA_STATUS_LABELS=${JSON.stringify(AGENDA_STATUS_LABELS)};
 const AGENDA_EDIT_GLYPH=${JSON.stringify(AGENDA_EDIT_GLYPH)};
 const AGENDA_DEL_GLYPH=${JSON.stringify(AGENDA_DEL_GLYPH)};
 const KICKER_CYCLE={scouting:"trattativa",trattativa:"firma",firma:"chiuso",chiuso:"scouting","in-forno":"al-passo","al-passo":"in-sala","in-sala":"in-forno",arrivo:"in-house","in-house":"partenza",partenza:"arrivo"};
@@ -1141,6 +1153,12 @@ function nowDate(){
   return n!=null && isFinite(Number(n))?new Date(Number(n)):new Date();
 }
 function todayIso(){ return isoDay(nowDate()); }
+function agendaDateLabel(iso){
+  var p=String(iso).split("-");
+  var date=new Date(Number(p[0]),Number(p[1])-1,Number(p[2]),12);
+  if(!isFinite(date.getTime())) return iso;
+  return date.toLocaleDateString("it-IT",{weekday:"long",day:"numeric",month:"long"});
+}
 function isIsoDay(s){
   if(!s || String(s).length!==10) return false;
   var p=String(s).split("-");
@@ -1664,13 +1682,13 @@ function renderStats(){
 function slotMarkup(e,i){
   var st=e.status||"prenotato";
   var advanceLabel=AGENDA_ACTION_LABELS[st]||"Conferma";
-  return '<article class="slot" data-id="'+e.id+'" data-day="'+(e.day||"")+'" data-state="'+(i===0?"on":"idle")+'" data-status="'+st+'"><time class="time" datetime="'+e.kicker+'">'+e.kicker+'</time><div class="slot-body"><h2>'+e.title+'</h2><p class="notes">'+chip(st)+" · "+e.note+" · "+e.meta+'</p><div class="slot-actions"><button class="btn sm ghost" data-act="advance" data-id="'+e.id+'" aria-label="'+advanceLabel+' appuntamento">'+advanceLabel+'</button><button class="btn sm ghost" data-act="edit" data-id="'+e.id+'" aria-label="Modifica">'+AGENDA_EDIT_GLYPH+'</button><button class="btn sm ghost" data-act="del" data-id="'+e.id+'" aria-label="Archivia">'+AGENDA_DEL_GLYPH+'</button></div></div></article>';
+  return '<article class="slot" data-id="'+e.id+'" data-day="'+(e.day||"")+'" data-state="'+(i===0?"on":"idle")+'" data-status="'+st+'"><time class="time" datetime="'+e.kicker+'">'+e.kicker+'</time><div class="slot-body"><h2>'+e.title+'</h2><p class="notes slot-detail">'+e.note+" · "+e.meta+'</p><span class="chip slot-status '+st+'">'+(AGENDA_STATUS_LABELS[st]||st)+'</span><div class="slot-actions"><button class="btn sm ghost" data-act="advance" data-id="'+e.id+'" aria-label="'+advanceLabel+' appuntamento">'+advanceLabel+'</button><button class="btn sm ghost" data-act="edit" data-id="'+e.id+'" aria-label="Modifica">'+AGENDA_EDIT_GLYPH+'</button><button class="btn sm ghost" data-act="del" data-id="'+e.id+'" aria-label="Archivia">'+AGENDA_DEL_GLYPH+'</button></div></div></article>';
 }
 function renderAgenda(){
   hydrateAgenda();
   var focus=view===tabDefs[2].id?selectedDay:todayIso();
   var rows=data.items.filter(function(e){return e.day===focus;}).slice().sort(function(a,b){return String(a.kicker).localeCompare(String(b.kicker));});
-  var html='<div class="day-head"><p class="kicker">'+kicker+" · "+focus+'</p><h2 id="day-label">'+rows.length+" "+census+"</h2></div>";
+  var html='<div class="day-head"><p class="kicker"><time datetime="'+focus+'">'+agendaDateLabel(focus)+'</time></p><h2 id="day-label">'+rows.length+" "+census+"</h2></div>";
   html+='<div class="day-rail" data-fenix-rail="day" id="day-rail" role="tabpanel" aria-labelledby="day-label">';
   if(!rows.length) html+=emptyBox();
   else rows.forEach(function(e,i){ html+=slotMarkup(e,i); });

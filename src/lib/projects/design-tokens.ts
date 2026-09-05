@@ -6,6 +6,7 @@
  */
 import { contrastRatio } from "./visual-quality.ts";
 import type { Palette } from "./types.ts";
+import { isBarberBrief } from "./app-identity.ts";
 import {
   applyUserColors,
   avoidRecent,
@@ -720,7 +721,11 @@ export function tokensFromBrief(brief: string, opts?: TokenOptions): DesignToken
     );
   }
   const src = variant === 1 && VARIANTS[family] ? VARIANTS[family]! : FAMILIES[family];
-  const applied = applyUserColors(asEngine(src.palette), brief);
+  const basePalette = isBarberBrief(brief) ? {
+    ...src.palette, bg:"#f7f7fa", surface:"#ffffff", elevated:"#ffffff",
+    fg:"#191b24", muted:"#626572", accent:"#b51246", line:"#dfe1e8", accentInk:"#ffffff",
+  } : src.palette;
+  const applied = applyUserColors(asEngine(basePalette), brief);
   let palette = avoidRecent(applied.palette, opts?.recent, hashBrief(brief), applied.lock);
   palette = ensureAccessible(palette, applied.lock);
   if (contrastRatio(palette.fg, palette.bg) < 4.5) {
