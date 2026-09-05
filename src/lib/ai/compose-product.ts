@@ -29,6 +29,7 @@ import { DASHBOARD_POLISH_INSTRUCTION, SITE_POLISH_INSTRUCTION } from "./app-she
 import { craftNavIcon } from "../projects/craft-icons.ts";
 import { appIdentityIcon, isAccountantBrief, isBarberBrief, isFieldProductBrief, isShopBrief } from "../projects/app-identity.ts";
 import { glossyWaterMarkSvg, premiumAppMarkSvg, premiumMarkDataUri } from "../projects/premium-mark.ts";
+import { craftTokenCss, surfacesFromPalette } from "../projects/craft-tokens.ts";
 import { accentButtonPair, contrastRatio } from "../projects/visual-quality.ts";
 import type { Palette, ProjectKind } from "../projects/types.ts";
 
@@ -543,6 +544,8 @@ const FX_PAUSE_MARK =
   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M10 9.2v5.6M14 9.2v5.6"/></svg>';
 const FX_CHEVRON_MARK =
   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>';
+const FX_EXIT_MARK =
+  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 7V5.8A1.8 1.8 0 0 1 11.8 4h6.4A1.8 1.8 0 0 1 20 5.8v12.4A1.8 1.8 0 0 1 18.2 20h-6.4A1.8 1.8 0 0 1 10 18.2V17"/><path d="M4 12h10M11.2 8.8 14.4 12l-3.2 3.2"/></svg>';
 
 function italianLongDate(d = new Date()): string {
   const raw = d.toLocaleDateString("it-IT", {
@@ -570,7 +573,8 @@ function agendaRailMarkup(spec: PipelineSpec, grammar: LayoutGrammar): string {
   return `<div class="day-head"><p class="kicker">${spec.kicker}</p><h2 id="day-label">${spec.rows.length} ${grammar.voice.census}</h2></div><div class="day-rail" data-fenix-rail="day" id="day-rail" role="tabpanel" aria-labelledby="day-label">${slots}</div>`;
 }
 
-function tabSvg(tab: { id: string; label: string }, i: number): string {
+function tabSvg(tab: { id: string; label: string }, i: number, campo = false): string {
+  if (campo && /^home$/i.test(tab.label)) return craftNavIcon({ id: "home", label: "Consegne" });
   return craftNavIcon(tab, i);
 }
 
@@ -1124,39 +1128,54 @@ function productChromeCss(): string {
 .app-mark{border-radius:14px;overflow:hidden;padding:0}
 .app-mark svg[data-fenix-premium-mark]{width:44px;height:44px;display:block}
 html[data-grammar="ops-desk"] .table-wrap thead th{background:color-mix(in srgb,var(--accent) 10%,var(--surface));color:var(--accent);font-weight:650}
-html[data-fenix-campo]{--navy:var(--fg);--water:var(--accent);--ok-loud:var(--success)}
+html[data-fenix-campo]{--navy:var(--inverse);--water:var(--brand);--ok-loud:var(--ok)}
+html[data-fenix-campo],html[data-fenix-campo] body{background:var(--surface-2);color:var(--on-surface)}
+html[data-fenix-campo] header{position:sticky;top:0;z-index:6;background:color-mix(in srgb,var(--surface) 78%,transparent);-webkit-backdrop-filter:saturate(1.6) blur(16px);backdrop-filter:saturate(1.6) blur(16px)}
+html[data-fenix-campo] nav.tabs{background:color-mix(in srgb,var(--surface) 82%,transparent);-webkit-backdrop-filter:saturate(1.8) blur(18px);backdrop-filter:saturate(1.8) blur(18px)}
 html[data-fenix-campo] .home-hero{background:transparent;border:0;box-shadow:none;padding:0}
 html[data-fenix-campo] .home-aside,html[data-fenix-campo] .home-recent{display:none}
-html[data-fenix-campo] .fx-shell{margin:0 0 16px;padding:18px 16px 16px;border-radius:32px;background:var(--navy);color:#f3f7fb;box-shadow:0 18px 40px color-mix(in srgb,var(--navy) 30%,transparent)}
-html[data-fenix-campo] .fx-shell-kicker{margin:0 0 12px;font:650 13px/1.3 var(--body),system-ui,sans-serif;letter-spacing:-.01em;color:color-mix(in srgb,#f3f7fb 78%,transparent)}
-html[data-fenix-campo] .fx-shell .fx-board,html[data-fenix-campo] .fx-shell .fx-tank{background:transparent;color:inherit;margin:0;padding:0;border-radius:0;box-shadow:none}
-html[data-fenix-campo] .fx-shell .fx-board{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:0 0 18px}
-html[data-fenix-campo] .fx-shell .fx-cell{padding:12px 12px 10px;border-radius:16px;min-height:74px;background:color-mix(in srgb,#ffffff 9%,transparent);border:1px solid color-mix(in srgb,#ffffff 14%,transparent)}
-html[data-fenix-campo] .fx-shell .fx-cell b{color:#fff}
-html[data-fenix-campo] .fx-shell .fx-cell span{color:color-mix(in srgb,#f3f7fb 70%,transparent)}
-html[data-fenix-campo] .fx-shell .fx-cell[data-warn] b{color:#f5b942}
-html[data-fenix-campo] .fx-tank .fx-seg{margin:0 0 14px;border-color:color-mix(in srgb,#ffffff 20%,transparent);background:color-mix(in srgb,#041018 35%,transparent)}
-html[data-fenix-campo] .fx-tank .fx-seg button{color:color-mix(in srgb,#f3f7fb 78%,transparent);border-right-color:color-mix(in srgb,#ffffff 16%,transparent);background:transparent}
-html[data-fenix-campo] .fx-tank .fx-seg button.on{background:#fff;color:var(--navy)}
+html[data-fenix-campo] .home-count,html[data-fenix-campo] .home-hero>.btn{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+html[data-fenix-campo] .fx-hello-row{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin:0 0 8px}
+html[data-fenix-campo] .fx-hello{margin:0;font:750 var(--fx-t-24)/1.1 var(--display),system-ui,sans-serif;letter-spacing:-.03em;color:var(--on-surface)}
+html[data-fenix-campo] .fx-role{margin:4px 0 0;font:500 var(--fx-t-14)/1.3 var(--body),system-ui,sans-serif;color:var(--muted)}
+html[data-fenix-campo] .fx-exit{width:40px;height:40px;border:0;border-radius:50%;background:var(--brand-soft);color:var(--brand-2);display:grid;place-items:center;flex:0 0 40px}
+html[data-fenix-campo] .fx-exit svg{width:18px;height:18px}
+html[data-fenix-campo] .fx-inverse{margin:0 0 16px;padding:20px 16px 16px;border-radius:var(--fx-r3);background:var(--inverse);color:#f8fafc;box-shadow:var(--shadow-card)}
+html[data-fenix-campo] .fx-hero{box-shadow:var(--shadow-float)}
+html[data-fenix-campo] .fx-shell-kicker{margin:0 0 12px;font:650 var(--fx-t-14)/1.3 var(--body),system-ui,sans-serif;letter-spacing:-.01em;color:color-mix(in srgb,#f8fafc 78%,transparent)}
+html[data-fenix-campo] .fx-inverse .fx-board,html[data-fenix-campo] .fx-inverse .fx-tank{background:transparent;color:inherit;margin:0;padding:0;border-radius:0;box-shadow:none}
+html[data-fenix-campo] .fx-inverse .fx-board{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+html[data-fenix-campo] .fx-inverse .fx-cell{padding:12px;border-radius:var(--fx-r2);min-height:74px;background:var(--tile);border:0}
+html[data-fenix-campo] .fx-inverse .fx-cell b{color:#fff;font-size:var(--fx-t-20)}
+html[data-fenix-campo] .fx-inverse .fx-cell span{color:color-mix(in srgb,#f8fafc 70%,transparent)}
+html[data-fenix-campo] .fx-inverse .fx-cell[data-warn] b{color:var(--warn)}
+html[data-fenix-campo] .fx-toggle{display:flex;margin:0 0 16px;padding:4px;border-radius:var(--fx-pill);background:rgba(255,255,255,.1);border:0;overflow:hidden}
+html[data-fenix-campo] .fx-toggle button{flex:1;border:0;background:transparent;color:color-mix(in srgb,#f8fafc 78%,transparent);min-height:36px;border-radius:var(--fx-pill);font:650 var(--fx-t-14)/1.2 var(--body),system-ui,sans-serif}
+html[data-fenix-campo] .fx-toggle button.on{background:#fff;color:var(--inverse)}
 html[data-fenix-campo] .fx-tank-frame{display:grid;grid-template-columns:minmax(0,1fr) 28px;gap:8px;align-items:stretch}
-html[data-fenix-campo] .fx-tank-well{height:196px;border-radius:20px;overflow:hidden;background:color-mix(in srgb,#041018 42%,transparent);border:1.5px solid color-mix(in srgb,#8fd0f2 42%,transparent);box-shadow:inset 0 1px 0 color-mix(in srgb,#fff 18%,transparent)}
-html[data-fenix-campo] .fx-tank-grid{position:absolute;inset:0;background:repeating-linear-gradient(to bottom,transparent 0 48px,color-mix(in srgb,#fff 14%,transparent) 48px 49px);pointer-events:none}
-html[data-fenix-campo] .fx-tank-well i{background:linear-gradient(180deg,#4fb4ee 0%,var(--water) 52%,#0a4a86 100%);box-shadow:inset 0 10px 18px color-mix(in srgb,#fff 22%,transparent)}
-html[data-fenix-campo] .fx-tank-well b{color:#fff;text-shadow:0 1px 0 color-mix(in srgb,#041018 35%,transparent)}
-html[data-fenix-campo] .fx-axis{list-style:none;margin:0;padding:2px 0;display:flex;flex-direction:column;justify-content:space-between;font:650 10px/1 var(--body),system-ui,sans-serif;color:color-mix(in srgb,#f3f7fb 62%,transparent);text-align:right}
-html[data-fenix-campo] .fx-ok{margin:14px auto 0;background:var(--ok-loud);color:#fff;box-shadow:0 8px 18px color-mix(in srgb,var(--ok-loud) 28%,transparent)}
-html[data-fenix-campo] .fx-pill,html[data-fenix-campo] .fx-filter{border-width:1.5px;border-color:color-mix(in srgb,var(--navy) 16%,var(--line));background:#fff;color:var(--navy)}
-html[data-fenix-campo] .fx-pill.on,html[data-fenix-campo] .fx-filter.on,html[data-fenix-campo] .fx-seg button.on{background:var(--water);color:#fff;border-color:var(--water)}
-html[data-fenix-campo] .fx-card,html[data-fenix-campo] .fx-record,html[data-fenix-campo] .fx-table-wrap,html[data-fenix-campo] .fx-jump{box-shadow:0 10px 28px color-mix(in srgb,var(--navy) 8%,transparent)}
-html[data-fenix-campo] .fx-metric b{color:var(--water)}
-html[data-fenix-campo] .fx-who{margin:4px 0 0;color:var(--water);font:650 14px/1.3 var(--body),system-ui,sans-serif}
-html[data-fenix-campo] .fx-badge{background:color-mix(in srgb,var(--warning) 22%,#fff);border-color:var(--warning);color:#8a7010}
-html[data-fenix-campo] .fx-badge.ok{background:color-mix(in srgb,var(--ok-loud) 20%,#fff);border-color:var(--ok-loud);color:#0f6b36}
-html[data-fenix-campo] .fx-trend{background:color-mix(in srgb,var(--ok-loud) 18%,#fff);color:#0f6b36}
-html[data-fenix-campo] .fx-dot{background:var(--ok-loud);box-shadow:0 0 0 3px color-mix(in srgb,var(--ok-loud) 18%,transparent)}
-html[data-fenix-campo] .fx-splash{background:#f7f8fa}
-html[data-fenix-campo] .fx-splash .fx-mark{width:96px;height:96px;border-radius:28px;overflow:visible;box-shadow:0 16px 40px color-mix(in srgb,var(--navy) 16%,transparent)}
+html[data-fenix-campo] .fx-tank-well{height:196px;border-radius:var(--fx-r3);overflow:hidden;background:rgba(2,8,20,.35);border:1.5px solid color-mix(in srgb,#fff 28%,transparent);box-shadow:inset 0 1px 0 color-mix(in srgb,#fff 22%,transparent)}
+html[data-fenix-campo] .fx-tank-grid{position:absolute;inset:0;background:repeating-linear-gradient(to bottom,transparent 0 24%,color-mix(in srgb,#fff 16%,transparent) 24% calc(24% + 1px));pointer-events:none}
+html[data-fenix-campo] .fx-tank-well i{background:linear-gradient(180deg,var(--brand-3) 0%,var(--brand) 48%,var(--brand-2) 100%);box-shadow:inset 0 12px 20px color-mix(in srgb,#fff 24%,transparent)}
+html[data-fenix-campo] .fx-tank-well b{color:#fff;font-size:var(--fx-t-display);text-shadow:0 1px 0 rgba(15,23,42,.35)}
+html[data-fenix-campo] .fx-axis{list-style:none;margin:0;padding:2px 0;display:flex;flex-direction:column;justify-content:space-between;font:650 10px/1 var(--body),system-ui,sans-serif;color:color-mix(in srgb,#f8fafc 62%,transparent);text-align:right}
+html[data-fenix-campo] .fx-ok{margin:14px auto 0;background:var(--ok);color:#fff;box-shadow:0 8px 18px color-mix(in srgb,var(--ok) 28%,transparent)}
+html[data-fenix-campo] .fx-pills{position:sticky;top:0;z-index:3;padding:2px 0;background:color-mix(in srgb,var(--surface-2) 88%,transparent)}
+html[data-fenix-campo] .fx-pill,html[data-fenix-campo] .fx-filter{border-width:1.5px;border-color:var(--border,var(--line));background:var(--surface);color:var(--on-surface)}
+html[data-fenix-campo] .fx-pill.on,html[data-fenix-campo] .fx-filter.on{background:var(--brand);color:#fff;border-color:var(--brand)}
+html[data-fenix-campo] .fx-card,html[data-fenix-campo] .fx-record,html[data-fenix-campo] .fx-table-wrap,html[data-fenix-campo] .fx-jump{box-shadow:var(--shadow-card);border-color:var(--border,var(--line))}
+html[data-fenix-campo] .fx-metric{background:var(--surface-3)}
+html[data-fenix-campo] .fx-metric b{color:var(--brand-2)}
+html[data-fenix-campo] .fx-who{margin:4px 0 0;color:var(--brand-2);font:650 var(--fx-t-14)/1.3 var(--body),system-ui,sans-serif}
+html[data-fenix-campo] .fx-badge{background:color-mix(in srgb,var(--warn) 18%,#fff);border-color:var(--warn);color:#92400e}
+html[data-fenix-campo] .fx-badge.ok{background:color-mix(in srgb,var(--ok) 16%,#fff);border-color:var(--ok);color:#047857}
+html[data-fenix-campo] .fx-trend{background:color-mix(in srgb,var(--ok) 16%,#fff);color:#047857}
+html[data-fenix-campo] .fx-dot{background:var(--ok);box-shadow:0 0 0 3px color-mix(in srgb,var(--ok) 18%,transparent)}
+html[data-fenix-campo] .fx-bars{display:flex;align-items:flex-end;gap:8px;height:88px;margin:12px 0 0;padding:10px 10px 0;border-radius:var(--fx-r2);background:var(--surface-3)}
+html[data-fenix-campo] .fx-bars i{flex:1;border-radius:6px 6px 0 0;background:var(--brand-2);min-height:8px}
+html[data-fenix-campo] .fx-splash{background:var(--surface-2)}
+html[data-fenix-campo] .fx-splash .fx-mark{width:96px;height:96px;border-radius:28px;overflow:visible;box-shadow:var(--shadow-float)}
 html[data-fenix-campo] .fx-splash .fx-mark svg{width:96px;height:96px}
+.fx-board,.fx-tank,.fx-card{border-radius:var(--fx-r3,22px)}
 `;
 }
 
@@ -1257,7 +1276,7 @@ function productHtml(spec: PipelineSpec, tokens: DesignTokens, grammar: LayoutGr
   const navButtons = spec.tabs
     .map(
       (tab, i) =>
-        `  <button type="button" data-view="${tab.id}" data-fenix-id="icon:${tab.id}"${i === 0 ? ' class="on"' : ""}>${tabSvg(tab, i)}<span>${tab.label}</span></button>`,
+        `  <button type="button" data-view="${tab.id}" data-fenix-id="icon:${tab.id}"${i === 0 ? ' class="on"' : ""}>${tabSvg(tab, i, campo)}<span>${tab.label}</span></button>`,
     )
     .join("\n");
   const h2 =
@@ -1282,7 +1301,7 @@ function productHtml(spec: PipelineSpec, tokens: DesignTokens, grammar: LayoutGr
 ${tokens.fonts.href ? `<link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="${tokens.fonts.href}" rel="stylesheet"/>` : "<!-- system stack: no Google Fonts -->"}
 <style data-fenix-phone data-fenix-site data-fenix-craft>
-:root{color-scheme:${scheme};--bg:${p.bg};--surface:${p.surface};--elevated:${p.elevated};--fg:${p.fg};--muted:${p.muted};--accent:${p.accent};--line:${p.line};--accent-ink:${accentInk};--success:${p.success};--warning:${p.warning};--navy:${p.fg};--water:${p.accent};--ok-loud:${p.success};--r:${tokens.radius};--display:${displayStack(tokens)};--body:${bodyStack(tokens)};--t-h1:${tokens.type.h1};--t-h2:${h2};--t-body:${tokens.type.body};--t-large:${large};--t-headline:1.0625rem;--t-callout:1rem;--t-subhead:.9375rem;--t-footnote:.8125rem;--t-caption:.6875rem;--space:8px;--ink-loud:${p.fg};--ink-quiet:${p.muted}}
+:root{color-scheme:${scheme};--bg:${p.bg};--surface:${p.surface};--elevated:${p.elevated};--fg:${p.fg};--muted:${p.muted};--accent:${p.accent};--line:${p.line};--accent-ink:${accentInk};--success:${p.success};--warning:${p.warning};--navy:${p.fg};--water:${p.accent};--ok-loud:${p.success};${craftTokenCss(surfacesFromPalette(p, campo))};--r:${tokens.radius};--display:${displayStack(tokens)};--body:${bodyStack(tokens)};--t-h1:${tokens.type.h1};--t-h2:${h2};--t-body:${tokens.type.body};--t-large:${large};--t-headline:1.0625rem;--t-callout:1rem;--t-subhead:.9375rem;--t-footnote:.8125rem;--t-caption:.6875rem;--space:8px;--ink-loud:${p.fg};--ink-quiet:${p.muted}}
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%;background:var(--bg);color:var(--fg);font:400 ${tokens.type.body}/1.29 var(--body);-webkit-font-smoothing:antialiased}
 body{min-height:100dvh}
@@ -1344,7 +1363,7 @@ const arts=${JSON.stringify(slices)};
 const meets=${JSON.stringify(meets)};
 const hero=${JSON.stringify(hero)};
 const tabDefs=${JSON.stringify(spec.tabs)};
-const glyphs=${JSON.stringify(spec.tabs.map((t, i) => tabSvg(t, i)))};
+const glyphs=${JSON.stringify(spec.tabs.map((t, i) => tabSvg(t, i, campo)))};
 const grammarId=${JSON.stringify(grammar.id)};
 const tokenVariant=${tokens.variant};
 const chroma=${JSON.stringify(tokens.chroma)};
@@ -1364,6 +1383,7 @@ const FX_SEARCH_MARK=${JSON.stringify(FX_SEARCH_MARK)};
 const FX_EDIT_MARK=${JSON.stringify(FX_EDIT_MARK)};
 const FX_PAUSE_MARK=${JSON.stringify(FX_PAUSE_MARK)};
 const FX_CHEVRON_MARK=${JSON.stringify(FX_CHEVRON_MARK)};
+const FX_EXIT_MARK=${JSON.stringify(FX_EXIT_MARK)};
 const FX_DROP_MARK='<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4.8s5.8 6.6 5.8 10.2a5.8 5.8 0 0 1-11.6 0C6.2 11.4 12 4.8 12 4.8z"/></svg>';
 (function dismissSplash(){
   var splash=document.getElementById("fx-splash");
@@ -1773,20 +1793,22 @@ function fxBoardMarkup(n){
   var open=data.items.filter(function(e){return /pausa|wait|bozza|scadenza/i.test(e.kicker||"");}).length;
   var avg=n?Math.round(total/n):0;
   var today=total||n;
-  var third=campoProduct?"Squadra":"Voci";
+  var third=campoProduct?"Dipendenti":"Voci";
   var fourth=campoProduct?"Sotto obiettivo":"Aperti";
-  return '<div class="fx-board" aria-label="Sintesi"><div class="fx-cell"><b>'+(total?fmtLiters(today):String(n))+'</b><span>Oggi</span></div><div class="fx-cell"><b>'+(total?fmtLiters(avg):"0")+'</b><span>Media</span></div><div class="fx-cell"><b>'+n+'</b><span>'+third+'</span></div><div class="fx-cell"'+(open?' data-warn':'')+'><b>'+open+'</b><span>'+fourth+'</span></div></div>';
+  var first=campoProduct?"Totale oggi":"Oggi";
+  var second=campoProduct?"Media":"Media";
+  return '<div class="fx-board" aria-label="Sintesi"><div class="fx-cell"><b>'+(total?fmtLiters(today):String(n))+'</b><span>'+first+'</span></div><div class="fx-cell"><b>'+(total?fmtLiters(avg):"0")+'</b><span>'+second+'</span></div><div class="fx-cell"><b>'+n+'</b><span>'+third+'</span></div><div class="fx-cell"'+(open?' data-warn':'')+'><b>'+open+'</b><span>'+fourth+'</span></div></div>';
 }
 function fxTankMarkup(n){
   var total=data.items.reduce(function(a,e){return a+litersOf(e.meta);},0);
   var goal=goalOf();
   var pct=goal?Math.min(100,Math.round((total||n)/goal*100)):0;
   if(!total && n) pct=Math.min(100,Math.round(n/Math.max(n,4)*100));
-  var html='<div class="fx-tank"><div class="fx-seg" role="tablist"><button type="button" class="on">Oggi</button><button type="button">Settimana</button><button type="button">Mese</button></div>';
+  var html='<div class="fx-tank"><div class="'+(campoProduct?"fx-toggle":"fx-seg")+'" role="tablist"><button type="button" class="on">Oggi</button><button type="button">Settimana</button><button type="button">Mese</button></div>';
   html+='<div class="fx-tank-frame"><div class="fx-tank-well"><span class="fx-tank-grid" aria-hidden="true"></span><i style="height:'+pct+'%"></i><b>'+pct+"%</b></div>";
   html+='<ol class="fx-axis" aria-hidden="true"><li>100</li><li>75</li><li>50</li><li>25</li><li>0</li></ol></div>';
-  html+="<p>"+(total?fmtLiters(total)+" / "+fmtLiters(goal):n+" / "+n)+" · obiettivo</p>";
-  if(pct>=100 && n) html+='<p class="fx-ok">'+(campoProduct?"Obiettivo raggiunto. Bene.":"Obiettivo raggiunto")+"</p>";
+  html+="<p>"+(total?fmtLiters(total)+" / "+fmtLiters(goal):n+" / "+n)+(campoProduct?" — "+pct+"%":" · obiettivo")+"</p>";
+  if(pct>=100 && n) html+='<p class="fx-ok">'+(campoProduct?"Obiettivo raggiunto":"Obiettivo raggiunto")+"</p>";
   return html+"</div>";
 }
 function renderPocketHome(){
@@ -1795,7 +1817,8 @@ function renderPocketHome(){
   var listId=paneTab("list");
   var html='<section class="home-overview" data-fenix-pane="home"><div class="home-hero">';
   if(campoProduct){
-    html+='<p class="fx-date">'+italianLongDateJs()+'</p><div class="fx-shell"><p class="fx-shell-kicker">Panoramica — oggi</p>'+fxBoardMarkup(n)+'<p class="fx-shell-kicker">Volume in campo</p>'+fxTankMarkup(n)+"</div>";
+    html+='<div class="fx-hello-row"><div><p class="fx-hello">Missioni</p><p class="fx-role">Quadro di controllo</p></div><button class="fx-exit" type="button" aria-label="Esci">'+FX_EXIT_MARK+"</button></div>";
+    html+='<p class="fx-date">'+italianLongDateJs()+'</p><div class="fx-inverse"><p class="fx-shell-kicker">Panoramica — oggi</p>'+fxBoardMarkup(n)+'</div><div class="fx-inverse fx-hero"><p class="fx-shell-kicker">Volume in campo</p>'+fxTankMarkup(n)+"</div>";
   } else {
     html+='<p class="kicker">Panoramica</p><p class="fx-date">'+italianLongDateJs()+"</p>"+fxBoardMarkup(n)+fxTankMarkup(n);
   }
@@ -1887,6 +1910,9 @@ function renderPocketStats(){
   html+='<div class="fx-metric"><b>'+n+'</b><span>'+(campoProduct?"Squadra":"Voci")+'</span></div>';
   html+='<div class="fx-metric"><b>'+(n?Math.max(1,n-1):0)+'</b><span>Attivi</span></div>';
   html+='<div class="fx-metric"><b>'+(n?1:0)+'</b><span>In pausa</span></div></div>';
+  if(campoProduct){
+    html+='<div class="fx-bars" aria-hidden="true"><i style="height:42%"></i><i style="height:68%"></i><i style="height:54%"></i><i style="height:88%"></i><i style="height:61%"></i><i style="height:74%"></i></div>';
+  }
   html+='<div class="fx-proj"><b>Proiezione fine mese</b><p class="notes">'+(total?fmtLiters(Math.round((total||1)*22)):n*22)+" se il ritmo resta questo</p></div></div>";
   html+='<div class="fx-card"><p class="kicker">In evidenza</p>';
   (n?data.items.slice(0,3):[]).forEach(function(e){
@@ -2174,7 +2200,7 @@ document.getElementById("tabs").addEventListener("click",function(e){
   var b=e.target.closest("[data-view]"); if(!b) return; view=b.getAttribute("data-view"); render();
 });
 document.getElementById("root").addEventListener("click",function(e){
-  var chip=e.target.closest(".fx-pills button, .fx-filters button, .fx-seg button");
+  var chip=e.target.closest(".fx-pills button, .fx-filters button, .fx-seg button, .fx-toggle button");
   if(chip && chip.parentNode){
     var sibs=chip.parentNode.querySelectorAll("button");
     for(var ci=0;ci<sibs.length;ci++) sibs[ci].classList.remove("on");

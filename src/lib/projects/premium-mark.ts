@@ -20,9 +20,10 @@ export type PremiumMarkColors = {
 /** Glossy water-ops mark: original drop + beveled ring. Not a cloned 3D asset, not Apple SET. */
 export function glossyWaterMarkSvg(id: string, colors: PremiumMarkColors): string {
   const uid = esc(id) || "mark";
-  const accent = colors.accent || "#0D73C4";
-  const fg = colors.fg || "#121C2D";
-  const lift = colors.elevated || "#F4F7FB";
+  const accent = colors.accent || "#0EA5E9";
+  const fg = colors.fg || "#0F172A";
+  const lift = colors.elevated || "#F8FAFC";
+  const track = "#E8EEF4";
   return `<svg viewBox="0 0 120 120" width="120" height="120" role="img" aria-hidden="true" data-craft-app="1" data-fenix-premium-mark="1" data-fenix-water-mark="1" overflow="visible">
 <defs>
   <linearGradient id="wm-plate-${uid}" x1="16" y1="6" x2="108" y2="118" gradientUnits="userSpaceOnUse">
@@ -61,18 +62,16 @@ export function glossyWaterMarkSvg(id: string, colors: PremiumMarkColors): strin
 <rect x="2" y="2" width="116" height="116" rx="32" fill="url(#wm-plate-${uid})"/>
 <rect x="2" y="2" width="116" height="116" rx="32" fill="url(#wm-sheen-${uid})"/>
 <rect x="2" y="2" width="116" height="116" rx="32" fill="url(#wm-well-${uid})"/>
-<circle cx="60" cy="62" r="41.5" fill="none" stroke="#040910" stroke-opacity=".4" stroke-width="10"/>
-<circle cx="60" cy="59.2" r="40" fill="none" stroke="#fff" stroke-opacity=".55" stroke-width="3.2"/>
-<circle cx="60" cy="60" r="40" fill="none" stroke="${lift}" stroke-opacity=".2" stroke-width="8"/>
-<circle cx="60" cy="60" r="40" fill="none" stroke="${lift}" stroke-opacity=".96" stroke-width="8" stroke-linecap="round" stroke-dasharray="92 160" transform="rotate(-88 60 60)"/>
-<circle cx="60" cy="60" r="40" fill="none" stroke="${accent}" stroke-width="8" stroke-linecap="round" stroke-dasharray="58 194" transform="rotate(-12 60 60)"/>
-<ellipse cx="61" cy="89" rx="14" ry="5.5" fill="#041018" opacity=".32"/>
+<circle cx="60" cy="62" r="38" fill="none" stroke="#020617" stroke-opacity=".45" stroke-width="11"/>
+<circle cx="60" cy="60" r="37" fill="none" stroke="${track}" stroke-width="9"/>
+<circle cx="60" cy="58.6" r="37" fill="none" stroke="#fff" stroke-opacity=".55" stroke-width="2.4"/>
+<circle cx="60" cy="60" r="37" fill="none" stroke="${accent}" stroke-width="9" stroke-linecap="round" stroke-dasharray="58 174" transform="rotate(-20 60 60)"/>
+<ellipse cx="61" cy="90" rx="15" ry="6" fill="#020617" opacity=".34"/>
 <path filter="url(#wm-soft-${uid})" fill="url(#wm-drop-${uid})" d="M60 26c12.4 17.2 19.4 29.6 19.4 40.6A19.4 19.4 0 0 1 40.6 66.6C40.6 55.6 47.6 43.2 60 26z"/>
 <path fill="url(#wm-glass-${uid})" d="M60 26c12.4 17.2 19.4 29.6 19.4 40.6A19.4 19.4 0 0 1 40.6 66.6C40.6 55.6 47.6 43.2 60 26z"/>
 <ellipse cx="51.5" cy="41" rx="6.2" ry="8.4" fill="url(#wm-spec-${uid})"/>
-<path fill="none" stroke="#EAF7FF" stroke-opacity=".55" stroke-width="1.6" stroke-linecap="round" d="M47.8 46c2.4-6.4 8.6-10.2 14.2-8.4"/>
-<path fill="none" stroke="#083056" stroke-width="1.4" stroke-linecap="round" d="M50.2 73.2c3.4 2.3 7.6 3.5 12 3.2 3.8-.2 7.1-1.5 9.8-3.4"/>
-<path fill="none" stroke="#0B4A86" stroke-width="1.2" stroke-linecap="round" opacity=".85" d="M52 78.4c2.9 1.6 6.4 2.4 10 2.2 2.9-.1 5.6-1 7.9-2.4"/>
+<path fill="none" stroke="#0369A1" stroke-width="1.5" stroke-linecap="round" d="M49.6 70.8c3.6 2.2 8.2 3.3 12.8 2.9 3.6-.3 6.8-1.4 9.4-3.1"/>
+<path fill="none" stroke="#075985" stroke-width="1.25" stroke-linecap="round" d="M51.2 76.6c3.2 1.7 7.2 2.5 11.2 2.2 3-.2 5.8-1.1 8.2-2.5"/>
 </svg>`;
 }
 

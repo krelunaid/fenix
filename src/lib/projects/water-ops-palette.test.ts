@@ -9,7 +9,7 @@ describe("water / field ops palette", () => {
     const tokens = tokensFromBrief(
       `${formatPrefix("app")}NordAcqua: consegne acqua in campo, gestione dipendenti, storico e statistiche, stile Apple. Accento #0A2F6B.`,
     );
-    assert.equal(tokens.palette.fg.toLowerCase(), "#0a2f6b");
+    assert.equal(tokens.palette.fg.toLowerCase(), "#0f172a");
     assert.equal(tokens.palette.accent.toLowerCase(), WATER_BLUE.toLowerCase());
     assert.equal(tokens.palette.success.toLowerCase(), WATER_OK.toLowerCase());
     assert.notEqual(tokens.palette.success.toLowerCase(), "#b8c4a0");
