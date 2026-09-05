@@ -809,4 +809,30 @@ describe("graphic pipeline prompt→plan→generate→visual→QA", () => {
     assert.doesNotMatch(bootHome, /pocket-list/);
     assert.doesNotMatch(bootHome, /data-fenix-pane="persona"/);
   });
+
+  it("raises field-product chrome toward a real product without Ciao or a house palette", () => {
+    const brief =
+      formatPrefix("app") +
+      "NordAcqua: consegne acqua in campo, gestione dipendenti, storico e statistiche, stile Apple. Accento #0A2F6B.";
+    const product = composeProduct(brief);
+    assert.equal(product.grammar.id, "phone-seed");
+    assert.match(product.html, /<span>Gestione<\/span>/);
+    assert.match(product.html, /<span>Storico<\/span>/);
+    assert.match(product.html, /<span>Statistiche<\/span>/);
+    assert.match(product.html, /function renderPocketHistory/);
+    assert.match(product.html, /function renderPocketStats/);
+    assert.match(product.html, /fx-board/);
+    assert.match(product.html, /fx-tank/);
+    assert.match(product.html, /fx-splash/);
+    assert.match(product.html, /data-fenix-premium-mark/);
+    assert.match(product.html, /Cerca per nome/);
+    assert.doesNotMatch(product.html, /Ciao/);
+    assert.doesNotMatch(product.html, /#b51246|#0071e3|#f5f5f7|#007aff/i);
+    assert.notEqual(product.tokens.palette.accent.toLowerCase(), "#b51246");
+    const system = composeProduct(`${formatPrefix("app")}Lista in tasca: cose da fare operative, tipo system-ui iPhone-like, font di sistema primario, tab Home Aggiungi Persona, elenco e CRUD. Non clonare marchi o schermate Apple.`);
+    assert.match(system.html, /<span>Home<\/span>/);
+    assert.match(system.html, /<span>Aggiungi<\/span>/);
+    assert.match(system.html, /Niente in lista/);
+    assert.doesNotMatch(system.html, /<span>Gestione<\/span>/);
+  });
 });

@@ -260,6 +260,10 @@ img[src=""],img:not([src]){display:none!important}
 main,.fk-main,main p,main li,main b,.fk-tile,.fk-tile b,.fk-hello,.fk-lbl{color:var(--fg,#1c1712)!important;opacity:1!important}
 .fk-role,.fk-date,main .muted,.fk-stat span{color:var(--muted,#5c5348)!important;opacity:1!important}
 .fk-btn{color:var(--btn-ink,#fff)!important}
+.fk-hello{letter-spacing:-.04em}
+.fk-panel{border-radius:20px;padding:18px 16px}
+.fk-chip{border-radius:999px;padding:8px 14px}
+.fk-seg{border-radius:12px}
 @media (min-width:768px){
   html,body{height:auto!important;max-height:none!important;overflow:auto!important}
   body{padding-bottom:0!important;max-height:none!important}

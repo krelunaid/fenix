@@ -299,6 +299,18 @@ document.getElementById('main').innerHTML = 'x';
     assert.notEqual(elenco, person);
   });
 
+  it("gives field-product tabs four distinct glyphs for home, gestione, storico and stats", () => {
+    const labels = ["Home", "Gestione", "Storico", "Statistiche"];
+    const svgs = labels.map((label) => craftNavIcon({ id: "new", label }));
+    assert.equal(new Set(svgs).size, 4);
+    assert.equal(svgs[0], craftNavIcon({ id: "home", label: "Home" }));
+    assert.match(svgs[2]!, /M12 8\.6v4l2\.6 1\.5/);
+    for (const svg of svgs) {
+      assert.equal(isLetterAIcon(svg), false);
+      assert.equal(isAppleChromeSvg(svg), false);
+    }
+  });
+
   it("gives accountant and shop functions original glyphs, not Barber shears or a generic notebook", () => {
     const fiscal = ["Fatture", "Clienti", "Bilancio", "Pratiche"].map((label) =>
       craftNavIcon({ id: "new", label }),

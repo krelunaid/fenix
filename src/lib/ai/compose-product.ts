@@ -27,7 +27,8 @@ import { auditGraphicQuality, type GraphicReport } from "../projects/graphic-qua
 import { domainIllustration, altForBrief } from "./domain-imagery.ts";
 import { DASHBOARD_POLISH_INSTRUCTION, SITE_POLISH_INSTRUCTION } from "./app-shell.ts";
 import { craftNavIcon } from "../projects/craft-icons.ts";
-import { appIdentityIcon, isAccountantBrief, isBarberBrief, isShopBrief } from "../projects/app-identity.ts";
+import { appIdentityIcon, isAccountantBrief, isBarberBrief, isFieldProductBrief, isShopBrief } from "../projects/app-identity.ts";
+import { premiumAppMarkSvg, premiumMarkDataUri } from "../projects/premium-mark.ts";
 import { accentButtonPair, contrastRatio } from "../projects/visual-quality.ts";
 import type { Palette, ProjectKind } from "../projects/types.ts";
 
@@ -422,6 +423,31 @@ function synthesizeSpec(brief: string): PipelineSpec {
       cta: "Registra in studio",
     };
   }
+  if (isFieldProductBrief(brief) && grammar.id === "phone-seed") {
+    return {
+      id: `${tokens.family}-campo`,
+      name,
+      kicker: "Quadro di controllo",
+      place: "Campo",
+      collection: "missioni",
+      brief,
+      tabs: [
+        { id: "home", label: "Home" },
+        { id: "elenco", label: "Gestione" },
+        { id: "archivio", label: "Storico" },
+        { id: "studio", label: "Statistiche" },
+      ],
+      rows: [
+        { id: "d1", title: "Marta Neri", kicker: "Attiva", note: "Operatrice · turno A", meta: "1.200 L", status: "ok" },
+        { id: "d2", title: "Leo Bianchi", kicker: "Attiva", note: "Operatore · turno B", meta: "980 L", status: "ok" },
+        { id: "d3", title: "Noa Greco", kicker: "Pausa", note: "Operatrice · turno A", meta: "640 L", status: "wait" },
+        { id: "d4", title: "Pietro Sala", kicker: "Attiva", note: "Responsabile", meta: "1.480 L", status: "ok" },
+        { id: "d5", title: "Eva Conti", kicker: "Attiva", note: "Operatrice · turno C", meta: "720 L", status: "ok" },
+      ],
+      formTitle: "Nuova missione",
+      cta: "Registra in campo",
+    };
+  }
   if (isShopBrief(brief) && tokens.family !== "fashion" && tokens.family !== "perfume") {
     return {
       id: `${tokens.family}-negozio`,
@@ -508,6 +534,24 @@ const AGENDA_STATUS_LABELS: Record<string, string> = {
 };
 const POCKET_EMPTY_MARK =
   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="4.5" width="14" height="15" rx="2"/><path d="M8.2 9.2h7.6M8.2 12.4h7.6M8.2 15.6h5"/></svg>';
+const FX_SEARCH_MARK =
+  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6.2"/><path d="M15.6 15.6 20 20"/></svg>';
+const FX_EDIT_MARK =
+  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m14.2 5.6 4.2 4.2M5 19l1.2-4.8L16.6 3.8a2 2 0 0 1 2.8 0l.8.8a2 2 0 0 1 0 2.8L9.8 17.8z"/></svg>';
+const FX_PAUSE_MARK =
+  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M10 9.2v5.6M14 9.2v5.6"/></svg>';
+const FX_CHEVRON_MARK =
+  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>';
+
+function italianLongDate(d = new Date()): string {
+  const raw = d.toLocaleDateString("it-IT", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+  return raw ? raw.charAt(0).toUpperCase() + raw.slice(1) : "";
+}
 
 function agendaActs(id: string, status: string): string {
   const label = AGENDA_ACTION_LABELS[status] || "Conferma";
@@ -1002,10 +1046,91 @@ td:last-child{font-variant-numeric:tabular-nums;font-feature-settings:"tnum";fon
 @media(min-width:1024px){header,nav.rail,main{padding-left:32px;padding-right:32px}main{padding-top:24px}}`;
 }
 
+function productChromeCss(): string {
+  return `/* product-chrome: cards, pills, board, tank, splash — tokens only */
+.fx-date{margin:0 0 12px;font-size:15px;font-weight:500;color:var(--muted);letter-spacing:-.01em}
+.fx-date::first-letter{text-transform:uppercase}
+.fx-large{font-family:var(--display);font-size:1.85rem;font-weight:750;letter-spacing:-.04em;line-height:1.1;margin:0 0 4px;color:var(--fg)}
+.fx-sub{margin:0 0 14px;font-size:15px;line-height:1.4;color:var(--muted)}
+.fx-toolbar{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin:0 0 12px}
+.fx-toolbar h2{margin:0}
+.fx-nuovo{appearance:none;border:0;cursor:pointer;display:inline-flex;align-items:center;gap:6px;min-height:40px;padding:8px 14px;border-radius:999px;background:var(--accent);color:var(--accent-ink);font:650 14px/1.2 var(--body),system-ui,sans-serif}
+.fx-search{display:flex;align-items:center;gap:10px;min-height:48px;padding:0 14px;margin:0 0 12px;border:1px solid var(--line);border-radius:14px;background:var(--elevated);color:var(--muted)}
+.fx-search svg{width:18px;height:18px;flex:0 0 18px}
+.fx-search input{border:0;background:transparent;color:var(--fg);font:400 17px/1.4 var(--body),system-ui,sans-serif;min-height:46px;width:100%;outline:none}
+.fx-pills,.fx-filters{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 12px}
+.fx-pill,.fx-filter{appearance:none;border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:999px;min-height:36px;padding:6px 13px;font:650 13px/1.2 var(--body),system-ui,sans-serif}
+.fx-filter{border-radius:12px;min-height:40px;display:inline-flex;align-items:center;gap:6px}
+.fx-filter svg{width:16px;height:16px}
+.fx-pill.on,.fx-filter.on,.fx-seg button.on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.fx-board{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:14px;margin:0 0 14px;border-radius:22px;background:var(--fg);color:var(--bg)}
+.fx-board .fx-cell{padding:12px 12px 10px;border-radius:14px;background:color-mix(in srgb,var(--bg) 12%,transparent);min-height:72px}
+.fx-board .fx-cell b{display:block;font:750 1.35rem/1.1 var(--display),system-ui,sans-serif;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.fx-board .fx-cell span{display:block;margin-top:4px;font-size:12px;opacity:.78}
+.fx-board .fx-cell[data-warn] b{color:color-mix(in srgb,var(--warning) 70%,var(--bg))}
+.fx-tank{margin:0 0 14px;padding:16px 16px 14px;border-radius:22px;background:var(--fg);color:var(--bg)}
+.fx-tank .fx-seg{margin:0 0 14px;border-color:color-mix(in srgb,var(--bg) 22%,transparent)}
+.fx-tank .fx-seg button{color:color-mix(in srgb,var(--bg) 82%,transparent);border-right-color:color-mix(in srgb,var(--bg) 18%,transparent)}
+.fx-tank .fx-seg button.on{background:var(--bg);color:var(--fg)}
+.fx-tank-well{position:relative;height:168px;border-radius:18px;overflow:hidden;background:color-mix(in srgb,var(--bg) 10%,transparent);border:1px solid color-mix(in srgb,var(--bg) 16%,transparent)}
+.fx-tank-well i{position:absolute;left:0;right:0;bottom:0;background:var(--accent);border-radius:0}
+.fx-tank-well b{position:absolute;inset:0;display:grid;place-items:center;font:750 2.1rem/1 var(--display),system-ui,sans-serif;letter-spacing:-.04em;font-variant-numeric:tabular-nums}
+.fx-tank p{margin:12px 0 0;font:650 15px/1.3 var(--body),system-ui,sans-serif;font-variant-numeric:tabular-nums}
+.fx-ok{display:inline-flex;align-items:center;justify-content:center;margin:12px auto 0;min-height:36px;padding:8px 14px;border-radius:999px;background:color-mix(in srgb,var(--success) 22%,var(--fg));color:var(--bg);font:650 13px/1.2 var(--body),system-ui,sans-serif}
+.fx-seg{display:flex;overflow:hidden;margin:0 0 14px;border:1px solid var(--line);border-radius:12px}
+.fx-seg button{flex:1;border:0;border-right:1px solid var(--line);background:var(--surface);color:var(--fg);min-height:44px;padding:8px 6px;font:650 13px/1.2 var(--body),system-ui,sans-serif}
+.fx-seg button:last-child{border-right:0}
+.fx-card{background:var(--surface);border:1px solid var(--line);border-radius:22px;padding:16px;margin:0 0 14px}
+.fx-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.fx-metric{padding:12px;border-radius:14px;background:color-mix(in srgb,var(--accent) 8%,var(--elevated));min-height:72px}
+.fx-metric b{display:block;font:750 1.2rem/1.15 var(--display),system-ui,sans-serif;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.fx-metric:first-child b{color:var(--accent)}
+.fx-metric span{display:block;margin-top:4px;font-size:12px;color:var(--muted)}
+.fx-trend{display:inline-flex;align-items:center;min-height:26px;padding:4px 10px;border-radius:999px;background:color-mix(in srgb,var(--success) 16%,var(--surface));color:var(--success);font:650 12px/1 var(--body),system-ui,sans-serif;font-variant-numeric:tabular-nums}
+.fx-proj{margin-top:12px;padding:12px 14px;border-radius:14px;background:color-mix(in srgb,var(--accent) 10%,var(--surface));color:var(--fg)}
+.fx-proj b{color:var(--accent)}
+.fx-hi-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)}
+.fx-hi-row:last-child{border-bottom:0}
+.fx-hi-ico{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;background:color-mix(in srgb,var(--accent) 14%,var(--surface));color:var(--accent);flex:0 0 36px}
+.fx-hi-ico svg{width:18px;height:18px}
+.fx-table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:16px;background:var(--surface)}
+.fx-table{width:100%;border-collapse:collapse;min-width:320px}
+.fx-table th,.fx-table td{text-align:left;padding:12px 10px;border-bottom:1px solid var(--line);font-size:14px;vertical-align:middle}
+.fx-table th{font-size:12px;font-weight:650;color:var(--accent);background:color-mix(in srgb,var(--accent) 10%,var(--surface))}
+.fx-table tr:last-child td{border-bottom:0}
+.fx-table .name b{display:block;font-size:15px;letter-spacing:-.02em}
+.fx-table .name small{display:block;margin-top:2px;color:var(--muted);font-size:12px}
+.fx-dot{display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--success);vertical-align:middle}
+.fx-dot.wait{background:var(--warning)}
+.fx-iconbtn{appearance:none;border:1px solid var(--accent);background:transparent;color:var(--accent);width:36px;height:36px;border-radius:10px;display:inline-grid;place-items:center;padding:0}
+.fx-iconbtn svg{width:16px;height:16px}
+.fx-record{display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:12px;align-items:start;padding:14px;margin:0 0 10px;border:1px solid var(--line);border-radius:16px;background:var(--surface)}
+.fx-record h2{font-size:1.15rem;margin:0 0 4px}
+.fx-ico{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:color-mix(in srgb,var(--accent) 14%,var(--surface));color:var(--accent)}
+.fx-ico svg{width:22px;height:22px}
+.fx-badge{display:inline-flex;margin-top:8px;min-height:22px;padding:2px 8px;border-radius:999px;border:1px solid var(--warning);color:var(--warning);font:650 11px/1.2 var(--body),system-ui,sans-serif}
+.fx-badge.ok{border-color:var(--success);color:var(--success)}
+.fx-total{display:inline-flex;align-items:center;gap:6px;min-height:32px;padding:4px 10px;border-radius:999px;background:color-mix(in srgb,var(--accent) 12%,var(--surface));color:var(--accent);font:650 13px/1 var(--body),system-ui,sans-serif;font-variant-numeric:tabular-nums}
+.fx-jump{display:flex;align-items:center;gap:12px;padding:14px;margin:0 0 14px;border:1px solid var(--accent);border-radius:18px;background:var(--surface);color:var(--fg)}
+.fx-jump svg:last-child{margin-left:auto;width:18px;height:18px;color:var(--muted)}
+.fx-splash{position:fixed;inset:0;z-index:80;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:var(--bg);color:var(--fg)}
+.fx-splash[hidden]{display:none}
+.fx-splash .fx-mark{width:88px;height:88px;border-radius:26px;overflow:hidden;box-shadow:0 12px 32px color-mix(in srgb,var(--fg) 12%,transparent)}
+.fx-splash .fx-mark svg{width:88px;height:88px;display:block}
+.fx-splash strong{font:750 1.45rem/1.1 var(--display),system-ui,sans-serif;letter-spacing:-.03em}
+.fx-spin{width:22px;height:22px;border:2px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:fenix-spin .8s linear infinite}
+.fx-splash .notes{font-size:14px;color:var(--muted)}
+.app-mark{border-radius:14px;overflow:hidden;padding:0}
+.app-mark svg[data-fenix-premium-mark]{width:44px;height:44px;display:block}
+html[data-grammar="ops-desk"] .table-wrap thead th{background:color-mix(in srgb,var(--accent) 10%,var(--surface));color:var(--accent);font-weight:650}
+`;
+}
+
 function visualKitCss(t: DesignTokens, grammar: LayoutGrammar): string {
   const desk = grammar.chrome !== "tabs";
   return `${typeRampCss(t)}
 ${kickerCss(t)}
+${productChromeCss()}
 .toast,.state-load,.state-err{position:fixed;left:16px;right:16px;bottom:calc(80px + env(safe-area-inset-bottom));padding:12px 14px;border-radius:var(--r);background:var(--elevated);border:1px solid var(--line);z-index:30;box-shadow:0 18px 40px color-mix(in srgb,var(--fg) 16%,transparent)}
 @media(min-width:768px){.toast,.state-load,.state-err{bottom:24px;left:auto;right:24px;width:min(360px,calc(100vw - 48px))}}
 .state-load[hidden],.toast[hidden],.state-err[hidden]{display:none}
@@ -1076,7 +1201,14 @@ function productHtml(spec: PipelineSpec, tokens: DesignTokens, grammar: LayoutGr
   const navClass = desk ? (grammar.chrome === "masthead" ? "rail" : "rail") : "tabs";
   const headerExtra = grammar.chrome === "masthead" ? " mast" : "";
   const accentInk = safeAccentInk(tokens);
-  const pocketEmpty = `<section class="home-overview" data-fenix-pane="home"><div class="home-hero"><p class="kicker">Panoramica</p><p class="home-count" data-count="0"><b>0</b><span>voci sul dispositivo</span></p><div class="home-first" data-state="empty"><div class="mark" aria-hidden="true">${POCKET_EMPTY_MARK}</div><h2>Niente in lista</h2><p class="notes">Aggiungi la prima voce. Qui non ci sono dati di prova.</p><button class="btn" type="button" data-view="${spec.tabs[1]!.id}">${spec.cta}</button></div></div><aside class="home-aside"><article class="card"><p class="kicker">Elenco</p><h2>Vuoto</h2><p class="notes">Le azioni restano nella lista.</p></article><article class="card"><p class="kicker">Privacy</p><h2>Solo qui</h2><p class="notes">Storage locale, senza profilo.</p></article></aside></section>`;
+  const identityGlyph = appIdentityIcon(spec.brief, tokens.family);
+  const premiumMark = premiumAppMarkSvg(spec.id, p, identityGlyph);
+  const markHref = premiumMarkDataUri(premiumMark);
+  const bootDate = italianLongDate();
+  const pocketEmpty = `<section class="home-overview" data-fenix-pane="home"><div class="home-hero"><p class="kicker">Panoramica</p><p class="fx-date">${bootDate}</p><div class="fx-board" aria-label="Sintesi"><div class="fx-cell"><b>0</b><span>Oggi</span></div><div class="fx-cell"><b>0</b><span>Media</span></div><div class="fx-cell"><b>0</b><span>Voci</span></div><div class="fx-cell" data-warn><b>0</b><span>Aperti</span></div></div><div class="fx-tank"><div class="fx-seg" role="tablist"><button type="button" class="on">Oggi</button><button type="button">Settimana</button><button type="button">Mese</button></div><div class="fx-tank-well"><i style="height:0%"></i><b>0%</b></div><p>0 / 0 · obiettivo</p></div><p class="home-count" data-count="0"><b>0</b><span>voci sul dispositivo</span></p><div class="home-first" data-state="empty"><div class="mark" aria-hidden="true">${POCKET_EMPTY_MARK}</div><h2>Niente in lista</h2><p class="notes">Aggiungi la prima voce. Qui non ci sono dati di prova.</p><button class="btn" type="button" data-view="${spec.tabs[1]!.id}">${spec.cta}</button></div></div><aside class="home-aside"><article class="card"><p class="kicker">Elenco</p><h2>Vuoto</h2><p class="notes">Le azioni restano nella lista.</p></article><article class="card"><p class="kicker">Privacy</p><h2>Solo qui</h2><p class="notes">Storage locale, senza profilo.</p></article></aside></section>`;
+  const splash = desk
+    ? ""
+    : `<div class="fx-splash" id="fx-splash" data-fenix-splash><span class="fx-mark">${premiumMark}</span><strong>${spec.name}</strong><span class="fx-spin" aria-hidden="true"></span><p class="notes">${grammar.voice.load}…</p></div>`;
   const bootMain =
     grammar.id === "source-timeline"
       ? `<section class="repo-stage" data-repo-stage="activity"><div class="timeline-art">${hero}</div></section>`
@@ -1109,6 +1241,7 @@ function productHtml(spec: PipelineSpec, tokens: DesignTokens, grammar: LayoutGr
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
 <meta name="color-scheme" content="${scheme}"/>
 <title>${spec.name}</title>
+<link rel="icon" type="image/svg+xml" href="${markHref}"/>
 ${tokens.fonts.href ? `<link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="${tokens.fonts.href}" rel="stylesheet"/>` : "<!-- system stack: no Google Fonts -->"}
 <style data-fenix-phone data-fenix-site data-fenix-craft>
@@ -1140,10 +1273,11 @@ ${visualKitCss(tokens, grammar)}
 </style>
 </head>
 <body>
+${splash}
 <div class="app"${deskAttr}>
 <header class="${headerExtra.trim()}">
   <div class="brand-group">
-    ${desk ? "" : `<span class="app-mark" data-fenix-id="icon:app" aria-hidden="true">${appIdentityIcon(spec.brief,tokens.family)}</span>`}
+    ${desk ? "" : `<span class="app-mark" data-fenix-id="icon:app" aria-hidden="true">${premiumMark}</span>`}
     <div>
     ${grammar.id === "phone-seed" || grammar.id === "agenda" ? "" : `<p class="kicker">${spec.kicker}</p>`}
     <h1 class="brand">${spec.name}</h1>
@@ -1187,6 +1321,17 @@ const AGENDA_ACTION_LABELS=${JSON.stringify(AGENDA_ACTION_LABELS)};
 const AGENDA_STATUS_LABELS=${JSON.stringify(AGENDA_STATUS_LABELS)};
 const AGENDA_EDIT_GLYPH=${JSON.stringify(AGENDA_EDIT_GLYPH)};
 const AGENDA_DEL_GLYPH=${JSON.stringify(AGENDA_DEL_GLYPH)};
+const FX_SEARCH_MARK=${JSON.stringify(FX_SEARCH_MARK)};
+const FX_EDIT_MARK=${JSON.stringify(FX_EDIT_MARK)};
+const FX_PAUSE_MARK=${JSON.stringify(FX_PAUSE_MARK)};
+const FX_CHEVRON_MARK=${JSON.stringify(FX_CHEVRON_MARK)};
+const FX_DROP_MARK='<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4.8s5.8 6.6 5.8 10.2a5.8 5.8 0 0 1-11.6 0C6.2 11.4 12 4.8 12 4.8z"/></svg>';
+(function dismissSplash(){
+  var splash=document.getElementById("fx-splash");
+  if(!splash) return;
+  if(document.documentElement.getAttribute("data-fx-splash")==="hold") return;
+  setTimeout(function(){ splash.setAttribute("hidden",""); }, 720);
+})();
 const KICKER_CYCLE={scouting:"trattativa",trattativa:"firma",firma:"chiuso",chiuso:"scouting","in-forno":"al-passo","al-passo":"in-sala","in-sala":"in-forno",arrivo:"in-house","in-house":"partenza",partenza:"arrivo"};
 function artOf(item, fit){
   var slot=0;
@@ -1551,9 +1696,55 @@ function pocketLine(e){
 function pocketEmptyInner(){
   return '<div class="mark" aria-hidden="true">${POCKET_EMPTY_MARK}</div><h2>Niente in lista</h2><p class="notes">Aggiungi la prima voce. Qui non ci sono dati di prova.</p><button class="btn" type="button" data-view="'+tabDefs[1].id+'">'+cta+"</button>";
 }
+function italianLongDateJs(){
+  var raw=nowDate().toLocaleDateString("it-IT",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
+  return raw?raw.charAt(0).toUpperCase()+raw.slice(1):"";
+}
+function litersOf(meta){
+  var n=Number(String(meta||"").replace(/[^0-9]/g,""));
+  return isFinite(n)?n:0;
+}
+function fmtLiters(n){
+  return n.toLocaleString("it-IT")+" L";
+}
+function goalOf(){
+  return Math.max(1500, data.items.length*300);
+}
+function phonePane(id){
+  var tab=tabDefs.filter(function(t){return t.id===id;})[0]||{};
+  var key=(tab.id+" "+tab.label).toLowerCase();
+  if(/statist|numeri|kpi|bilancio/.test(key)) return "stats";
+  if(/storico|cronolog/.test(key)) return "history";
+  if(/nuovo|nuova|aggiungi|registra/.test(key)) return "form";
+  if(/persona|profilo|impostaz/.test(key)) return "persona";
+  if(/elenco|lista|gestione|dipendent|clienti/.test(key)) return "list";
+  if(id===tabDefs[0].id) return "home";
+  if(id===tabDefs[1].id) return "form";
+  if(id===tabDefs[2].id) return "list";
+  return "persona";
+}
+function fxBoardMarkup(n){
+  var total=data.items.reduce(function(a,e){return a+litersOf(e.meta);},0);
+  var open=data.items.filter(function(e){return /pausa|wait|bozza|scadenza/i.test(e.kicker||"");}).length;
+  var avg=n?Math.round(total/n):0;
+  var today=total||n;
+  return '<div class="fx-board" aria-label="Sintesi"><div class="fx-cell"><b>'+(total?fmtLiters(today):String(n))+'</b><span>Oggi</span></div><div class="fx-cell"><b>'+(total?fmtLiters(avg):"0")+'</b><span>Media</span></div><div class="fx-cell"><b>'+n+'</b><span>Voci</span></div><div class="fx-cell"'+(open?' data-warn':'')+'><b>'+open+'</b><span>Aperti</span></div></div>';
+}
+function fxTankMarkup(n){
+  var total=data.items.reduce(function(a,e){return a+litersOf(e.meta);},0);
+  var goal=goalOf();
+  var pct=goal?Math.min(100,Math.round((total||n)/goal*100)):0;
+  if(!total && n) pct=Math.min(100,Math.round(n/Math.max(n,4)*100));
+  var html='<div class="fx-tank"><div class="fx-seg" role="tablist"><button type="button" class="on">Oggi</button><button type="button">Settimana</button><button type="button">Mese</button></div>';
+  html+='<div class="fx-tank-well"><i style="height:'+pct+'%"></i><b>'+pct+"%</b></div>";
+  html+="<p>"+(total?fmtLiters(total)+" / "+fmtLiters(goal):n+" / "+n)+" · obiettivo</p>";
+  if(pct>=100 && n) html+='<p class="fx-ok">Obiettivo raggiunto</p>';
+  return html+"</div>";
+}
 function renderPocketHome(){
   var n=data.items.length;
-  var html='<section class="home-overview" data-fenix-pane="home"><div class="home-hero"><p class="kicker">Panoramica</p><p class="home-count" data-count="'+n+'"><b>'+n+'</b><span>'+(n===1?"voce sul dispositivo":"voci sul dispositivo")+"</span></p>";
+  var html='<section class="home-overview" data-fenix-pane="home"><div class="home-hero"><p class="kicker">Panoramica</p><p class="fx-date">'+italianLongDateJs()+"</p>"+fxBoardMarkup(n)+fxTankMarkup(n);
+  html+='<p class="home-count" data-count="'+n+'"><b>'+n+'</b><span>'+(n===1?"voce sul dispositivo":"voci sul dispositivo")+"</span></p>";
   if(!n){
     html+='<div class="home-first" data-state="empty">'+pocketEmptyInner()+"</div></div>";
     html+='<aside class="home-aside"><article class="card"><p class="kicker">Elenco</p><h2>Vuoto</h2><p class="notes">Le azioni restano nella lista.</p></article><article class="card"><p class="kicker">Privacy</p><h2>Solo qui</h2><p class="notes">Storage locale, senza profilo.</p></article></aside>';
@@ -1571,17 +1762,65 @@ function renderPocketHome(){
 }
 function renderPocketList(){
   var n=data.items.length;
-  var html='<section class="list-pane" data-fenix-pane="elenco"><div class="list-head"><p class="kicker">Elenco</p><h2>'+n+" "+(n===1?"voce":"voci")+'</h2><p class="notes">Archivio completo, con azioni sulle voci.</p></div>';
+  var html='<section class="list-pane" data-fenix-pane="elenco"><div class="fx-toolbar"><div class="list-head"><p class="kicker">Gestione</p><h2>'+n+" "+(n===1?"voce":"voci")+'</h2></div><button class="fx-nuovo" type="button" data-act="fx-new">+ Nuovo</button></div>';
+  html+='<p class="notes">Archivio completo, con azioni sulle voci.</p>';
+  html+='<div class="fx-search">'+FX_SEARCH_MARK+'<input type="search" placeholder="Cerca per nome..." aria-label="Cerca"></div>';
+  html+='<div class="fx-pills"><button type="button" class="fx-pill on">Tutti</button><button type="button" class="fx-pill">Attivi</button><button type="button" class="fx-pill">Sospesi</button></div>';
   if(!n){
     html+='<div class="state-empty" data-state="empty"><p>Nessuna voce in elenco. Compila e salva; non inventiamo righe.</p><button class="btn" type="button" data-view="'+tabDefs[1].id+'">'+cta+"</button></div>";
     return html+"</section>";
   }
-  html+='<ul class="pocket-list" aria-label="Elenco voci">';
+  html+='<div class="fx-table-wrap"><table class="fx-table"><thead><tr><th>Nome</th><th>Obiettivo</th><th>Stato</th><th>Azioni</th></tr></thead><tbody>';
+  data.items.forEach(function(e){
+    var wait=/pausa|wait|bozza|scadenza/i.test(e.kicker||"");
+    html+='<tr data-id="'+e.id+'"><td class="name"><b>'+e.title+"</b><small>"+(e.note||e.kicker||"")+'</small></td><td>'+(e.meta||"—")+'</td><td><span class="fx-dot'+(wait?" wait":"")+'" title="'+(e.kicker||"")+'"></span></td><td><button class="fx-iconbtn" data-act="edit" data-id="'+e.id+'" aria-label="Modifica">'+FX_EDIT_MARK+'</button> <button class="fx-iconbtn" data-act="del" data-id="'+e.id+'" aria-label="Archivia">'+FX_PAUSE_MARK+"</button></td></tr>";
+  });
+  html+="</tbody></table></div>";
+  html+='<ul class="pocket-list" hidden aria-hidden="true">';
   data.items.forEach(function(e){
     var line=pocketLine(e);
-    html+='<li class="card" data-id="'+e.id+'"><h2>'+e.title+'</h2>'+(line?'<p class="notes">'+line+"</p>":"")+'<div class="slot-actions"><button class="btn sm ghost" data-act="edit" data-id="'+e.id+'">Modifica</button><button class="btn sm ghost" data-act="del" data-id="'+e.id+'">Archivia</button></div></li>';
+    html+='<li class="card" data-id="'+e.id+'"><h2>'+e.title+'</h2>'+(line?'<p class="notes">'+line+"</p>":"")+"</li>";
   });
   return html+"</ul></section>";
+}
+function renderPocketHistory(){
+  var n=data.items.length;
+  var total=data.items.reduce(function(a,e){return a+litersOf(e.meta);},0);
+  var html='<section class="list-pane" data-fenix-pane="storico"><div class="fx-toolbar"><div><p class="fx-large">Storico</p><p class="fx-sub">'+n+" "+(n===1?"voce":"voci")+'</p></div><span class="fx-total">'+(total?fmtLiters(total):n+" voci")+"</span></div>";
+  html+='<div class="fx-pills"><button type="button" class="fx-pill">Oggi</button><button type="button" class="fx-pill">7 giorni</button><button type="button" class="fx-pill">Mese</button><button type="button" class="fx-pill">Anno</button><button type="button" class="fx-pill on">Tutto</button></div>';
+  html+='<div class="fx-filters"><button type="button" class="fx-filter">Dipendente</button><button type="button" class="fx-filter">Mese</button><button type="button" class="fx-filter">Luogo</button></div>';
+  if(!n){
+    html+='<div class="state-empty" data-state="empty"><p>Nessuna voce in elenco. Compila e salva; non inventiamo righe.</p></div>';
+    return html+"</section>";
+  }
+  data.items.forEach(function(e){
+    var wait=/pausa|wait|bozza|scadenza/i.test(e.kicker||"");
+    html+='<article class="fx-record" data-id="'+e.id+'"><span class="fx-ico" aria-hidden="true">'+FX_DROP_MARK+'</span><div><h2>'+(e.meta||e.title)+'</h2><p class="notes">'+italianLongDateJs()+" · "+e.title+(e.note?" · "+e.note:"")+'</p><span class="fx-badge'+(wait?"":" ok")+'">'+(wait?"Da firmare":"Firmata")+'</span></div><div><button class="fx-iconbtn" data-act="edit" data-id="'+e.id+'" aria-label="Modifica">'+FX_EDIT_MARK+'</button> '+FX_CHEVRON_MARK+'</div></article>';
+  });
+  return html+"</section>";
+}
+function renderPocketStats(){
+  var n=data.items.length;
+  var total=data.items.reduce(function(a,e){return a+litersOf(e.meta);},0);
+  var week=total?Math.round(total*6.2):n*8;
+  var avg=n?Math.round((total||n)/n):0;
+  var html='<section class="persona-pane" data-fenix-pane="statistiche"><p class="fx-large">Statistiche</p><p class="fx-sub">Quadro di controllo</p>';
+  html+='<div class="fx-jump"><span class="fx-hi-ico" aria-hidden="true">'+FX_DROP_MARK+'</span><div><b>Sintesi personale</b><p class="notes">Apri il dettaglio della tua attivita</p></div>'+FX_CHEVRON_MARK+'</div>';
+  html+='<div class="fx-seg"><button type="button" class="on">Panoramica</button><button type="button">Confronto</button><button type="button">Classifica</button></div>';
+  html+='<div class="fx-card"><div class="fx-toolbar"><p class="kicker">Riepilogo</p><span class="fx-trend">+'+(n?12:0)+'%</span></div><div class="fx-grid">';
+  html+='<div class="fx-metric"><b>'+(total?fmtLiters(total):n)+'</b><span>Oggi</span></div>';
+  html+='<div class="fx-metric"><b>'+(total?fmtLiters(week):week)+'</b><span>Settimana</span></div>';
+  html+='<div class="fx-metric"><b>'+(total?fmtLiters(avg):avg)+'</b><span>Media</span></div>';
+  html+='<div class="fx-metric"><b>'+n+'</b><span>Voci</span></div>';
+  html+='<div class="fx-metric"><b>'+(n?Math.max(1,n-1):0)+'</b><span>Attivi</span></div>';
+  html+='<div class="fx-metric"><b>'+(n?1:0)+'</b><span>In pausa</span></div></div>';
+  html+='<div class="fx-proj"><b>Proiezione di fine mese</b><p class="notes">'+(total?fmtLiters(Math.round((total||1)*22)):n*22)+" se il ritmo resta questo</p></div></div>";
+  html+='<div class="fx-card"><p class="kicker">In evidenza</p>';
+  (n?data.items.slice(0,3):[]).forEach(function(e){
+    html+='<div class="fx-hi-row"><span class="fx-hi-ico">'+FX_DROP_MARK+"</span><div><b>"+e.title+'</b><p class="notes">'+(e.meta||e.note||e.kicker)+"</p></div></div>";
+  });
+  if(!n) html+='<p class="notes">Quando salvi una voce, i numeri si aggiornano da qui.</p>';
+  return html+"</div></section>";
 }
 function renderPocketPersona(){
   var n=data.items.length;
@@ -1843,10 +2082,18 @@ function render(){
     else if(id===tabDefs[1].id) root.innerHTML=renderSource("branches");
     else if(id===tabDefs[2].id) root.innerHTML=renderSource("sync");
     else root.innerHTML=renderSource("diff");
+  } else if(grammarId==="phone-seed"){
+    var pane=phonePane(id);
+    if(pane==="home") root.innerHTML=renderHome();
+    else if(pane==="form") root.innerHTML='<div data-fenix-pane="nuovo">'+renderForm()+"</div>";
+    else if(pane==="history") root.innerHTML=renderPocketHistory();
+    else if(pane==="stats") root.innerHTML=renderPocketStats();
+    else if(pane==="list") root.innerHTML=renderPocketList();
+    else root.innerHTML=renderPocketPersona();
   } else if(id===tabDefs[0].id) root.innerHTML=renderHome();
-  else if(id===tabDefs[1].id) root.innerHTML=grammarId==="phone-seed"?('<div data-fenix-pane="nuovo">'+renderForm()+"</div>"):renderForm();
-  else if(id===tabDefs[2].id) root.innerHTML=grammarId==="phone-seed"?renderPocketList():grammarId==="ops-desk"?renderDesk():grammarId==="agenda"?renderWeek():renderList();
-  else root.innerHTML=grammarId==="phone-seed"?renderPocketPersona():grammarId==="magazine"?renderForm():renderStats();
+  else if(id===tabDefs[1].id) root.innerHTML=renderForm();
+  else if(id===tabDefs[2].id) root.innerHTML=grammarId==="ops-desk"?renderDesk():grammarId==="agenda"?renderWeek():renderList();
+  else root.innerHTML=grammarId==="magazine"?renderForm():renderStats();
   root.setAttribute("data-state", data.items.length?"ready":"empty");
   root.setAttribute("data-fenix-view", view);
 }
@@ -1875,6 +2122,13 @@ document.getElementById("root").addEventListener("click",function(e){
     render();
     var focusedWeek=document.querySelector('[data-day="'+selectedDay+'"]');
     if(focusedWeek) focusedWeek.focus();
+    return;
+  }
+  if(act==="fx-new"){
+    var formTab=tabDefs.filter(function(t){return /nuovo|aggiungi|registra/i.test(t.id+" "+t.label);})[0];
+    if(formTab){ view=formTab.id; render(); return; }
+    var rootNew=document.getElementById("root");
+    if(rootNew) rootNew.innerHTML='<div data-fenix-pane="nuovo">'+renderForm()+"</div>";
     return;
   }
   if(act==="save"){ commitForm(b.closest("form") || document.getElementById("fnew")); return; }

@@ -24,7 +24,13 @@ html[data-grammar] :is(input,select,textarea){min-height:48px;padding:12px 14px;
 html[data-grammar] label{font-size:14px;font-weight:600;line-height:1.4;letter-spacing:0;margin-top:18px;margin-bottom:7px}
 html[data-grammar] nav.tabs{background:var(--surface);border-top:1px solid var(--line);box-shadow:none;padding-bottom:env(safe-area-inset-bottom)}
 html[data-grammar] nav.tabs button{min-height:48px;gap:5px;font-size:12px;font-weight:600;line-height:1.2;padding:6px 4px}
-html[data-grammar] nav.tabs button.on{background:var(--surface);color:var(--fg);border-radius:12px;box-shadow:inset 0 -2px 0 var(--accent)}
+html[data-grammar] nav.tabs button.on{background:transparent;color:var(--accent);border-radius:12px;box-shadow:none}
+html[data-grammar] .fx-large{font-size:var(--fenix-type-large-title);font-weight:700;letter-spacing:-.035em}
+html[data-grammar] .fx-sub{font-size:var(--fenix-type-subhead);color:var(--muted)}
+html[data-grammar] :is(.fx-board,.fx-tank,.fx-card,.fx-record,.fx-table-wrap){border-radius:22px}
+html[data-grammar] .fx-pill.on,.fx-filter.on,.fx-nuovo{box-shadow:none}
+html[data-grammar] .app-mark{width:44px;height:44px;padding:0;border:0;border-radius:14px;overflow:hidden}
+html[data-grammar] .app-mark svg{width:44px;height:44px}
 html[data-grammar] :is(nav.tabs,nav.rail) svg{width:28px;height:28px;flex:0 0 28px;stroke-width:1.8}
 html[data-grammar] :is(nav.tabs,nav.rail) button.on svg{stroke-width:2.2}
 html[data-grammar] nav.rail button{min-height:44px;border-radius:12px;line-height:1.3}

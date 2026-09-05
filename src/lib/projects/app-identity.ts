@@ -19,10 +19,26 @@ export function isShopBrief(brief: string): boolean {
   return /\bnegozio\b|\bretail\b|\bemporio\b|\bshop\b/i.test(brief);
 }
 
+/**
+ * Field / workforce product (consegne, dipendenti, storico+statistiche).
+ * Not a palette. Does not match "gestione profumi" or a generic diario.
+ */
+export function isFieldProductBrief(brief: string): boolean {
+  if (isBarberBrief(brief) || isAccountantBrief(brief)) return false;
+  const t = String(brief || "");
+  if (/gestione\s+profum|lookbook|ristoraz|agenda|parrucchier|commercialist/i.test(t)) return false;
+  return (
+    /consegne?\b|dipendenti|forza\s*lavoro|gestione\s+dipendent|squadra\s+operativ/i.test(t) ||
+    (/\bstorico\b/i.test(t) && /\bstatistiche\b/i.test(t)) ||
+    /\bacqua\b.+\b(consegne|dipendenti|campo|automez)/i.test(t)
+  );
+}
+
 /** Visible sector label used to pick an original pictogram. */
 export function appIdentityLabel(brief: string, family: string): string {
   if (isBarberBrief(brief)) return "Taglio";
   if (isAccountantBrief(brief)) return "Fatture";
+  if (isFieldProductBrief(brief)) return "Consegne";
   const labels: Record<string, string> = {
     perfume: "Profumi",
     fashion: "Lookbook",

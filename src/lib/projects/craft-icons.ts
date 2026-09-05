@@ -163,6 +163,12 @@ const NAV_ICONS = {
   pot: navIcon(
     '<path d="M12 4.6v1.6"/><path d="M6.8 7.4h10.4"/><path d="M7.2 7.4h9.6v8.2a2.2 2.2 0 0 1-2.2 2.2H9.4a2.2 2.2 0 0 1-2.2-2.2z"/><path d="M7.2 10.2H4.6c-.8 0-1.4.6-1.4 1.4s.6 1.4 1.4 1.4H7.2"/><path d="M16.8 10.2h2.6c.8 0 1.4.6 1.4 1.4s-.6 1.4-1.4 1.4H16.8"/>',
   ),
+  clock: navIcon(
+    '<circle cx="12" cy="12.2" r="7"/><path d="M12 8.6v4l2.6 1.5"/>',
+  ),
+  drop: navIcon(
+    '<path d="M12 4.8s5.8 6.6 5.8 10.2a5.8 5.8 0 0 1-11.6 0C6.2 11.4 12 4.8 12 4.8z"/><path d="M9.6 14.2c.6 1.4 2 2.2 3.6 2.2"/>',
+  ),
   home: navIcon(
     '<path d="M5 10.8 12 5.2 19 10.8V19.2H5z"/><path d="M10.2 19.2v-6.2h3.6v6.2"/>',
   ),
@@ -211,6 +217,10 @@ export function craftNavIcon(tab: { id: string; label: string }, index = 0): str
   let svg = NAV_FALLBACKS[index % NAV_FALLBACKS.length];
   if (/^home$/.test(label)) svg = NAV_ICONS.home;
   else if (/^aggiungi$/.test(label)) svg = NAV_ICONS.add;
+  else if (/^registra$/.test(label)) svg = NAV_ICONS.add;
+  else if (/^gestione$/.test(label)) svg = NAV_ICONS.settings;
+  else if (/^storico$/.test(label)) svg = NAV_ICONS.clock;
+  else if (/^consegne$|^consegna$/.test(label)) svg = NAV_ICONS.drop;
   else if (/^persona$|^profilo$/.test(label)) svg = NAV_ICONS.person;
   else if (/^elenco$|^lista$/.test(label)) svg = NAV_ICONS.book;
   else if (/^fatture$|^fattura$/.test(label)) svg = NAV_ICONS.invoice;
@@ -272,6 +282,9 @@ export function craftNavIcon(tab: { id: string; label: string }, index = 0): str
   else if (/clima|meteo/.test(key)) svg = NAV_ICONS.climate;
   else if (/resa|ritorno/.test(key)) svg = NAV_ICONS.back;
   else if (/settimana/.test(key)) svg = NAV_ICONS.week;
+  else if (/storico|cronolog/.test(key)) svg = NAV_ICONS.clock;
+  else if (/consegne|acqua|autobot/.test(key)) svg = NAV_ICONS.drop;
+  else if (/gestione/.test(key)) svg = NAV_ICONS.settings;
   else if (/atelier|laboratorio|studio/.test(key)) svg = NAV_ICONS.atelier;
   if (isLetterAIcon(svg)) svg = NAV_ICONS.book;
   return svg;
