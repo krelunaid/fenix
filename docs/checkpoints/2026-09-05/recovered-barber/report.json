@@ -1,0 +1,104 @@
+{
+  "source": "Actual recovered project; isolated mock storage; no real writes",
+  "results": [
+    {
+      "name": "mobile",
+      "ready": true,
+      "tabs": [
+        "Tavolo",
+        "Registra",
+        "Archivio",
+        "Studio"
+      ],
+      "views": [
+        {
+          "text": "Barber\n\nBARBERIA\n\nTavolo\nRegistra\nArchivio\nStudio\n\nOGGI\n\n0\nappuntamenti oggi\n\nNessun appuntamento\n\nAggiungi il primo cliente. Qui non ci sono dati di prova.\n\nPrenota\n\nCLIENTI\n\nVuoto\n\nGli appuntamenti restano nella lista.\n\nPRIVACY\n\nSolo qui\n\nStorage locale, senza profilo.",
+          "overflow": false,
+          "undefinedText": false
+        },
+        {
+          "text": "Barber\n\nBARBERIA\n\nTavolo\nRegistra\nArchivio\nStudio\n\nNUOVO\n\nNuovo appuntamento\n\nDati sul dispositivo. Conferma visibile dopo Prenota.\n\nCliente\nOra\nServizio\nPrenota",
+          "overflow": false,
+          "undefinedText": false
+        },
+        {
+          "text": "Barber\n\nBARBERIA\n\nTavolo\nRegistra\nArchivio\nStudio\n\nCLIENTI\n\n0 clienti\n\nArchivio clienti, con azioni.\n\nNessun cliente in elenco. Prenota e salva.\n\nPrenota",
+          "overflow": false,
+          "undefinedText": false
+        },
+        {
+          "text": "Barber\n\nBARBERIA\n\nTavolo\nRegistra\nArchivio\nStudio\n\nSERVIZI\n\nBarberia\n\nServizi offerti. Storage locale.\n\nTAGLIO\n\n25€\n\nBARBA\n\n15€\n\nTAGLIO+BARBA\n\n35€\n\nINFO\n\nAppuntamenti\n\nI servizi sono fissi. Prenota dal tab Prenota.\n\nQuando prenoti, il conteggio sale da qui.",
+          "overflow": false,
+          "undefinedText": false
+        }
+      ],
+      "errors": []
+    },
+    {
+      "name": "tablet",
+      "ready": true,
+      "tabs": [
+        "Tavolo",
+        "Registra",
+        "Archivio",
+        "Studio"
+      ],
+      "views": [
+        {
+          "text": "Barber\n\nBARBERIA\n\nTavolo\nRegistra\nArchivio\nStudio\n\nOGGI\n\n0\nappuntamenti oggi\n\nNessun appuntamento\n\nAggiungi il primo cliente. Qui non ci sono dati di prova.\n\nPrenota\n\nCLIENTI\n\nVuoto\n\nGli appuntamenti restano nella lista.\n\nPRIVACY\n\nSolo qui\n\nStorage locale, senza profilo.",
+          "overflow": false,
+          "undefinedText": false
+        },
+        {
+          "text": "Barber\n\nBARBERIA\n\nTavolo\nRegistra\nArchivio\nStudio\n\nNUOVO\n\nNuovo appuntamento\n\nDati sul dispositivo. Conferma visibile dopo Prenota.\n\nCliente\nOra\nServizio\nPrenota",
+          "overflow": false,
+          "undefinedText": false
+        },
+        {
+          "text": "Barber\n\nBARBERIA\n\nTavolo\nRegistra\nArchivio\nStudio\n\nCLIENTI\n\n0 clienti\n\nArchivio clienti, con azioni.\n\nNessun cliente in elenco. Prenota e salva.\n\nPrenota",
+          "overflow": false,
+          "undefinedText": false
+        },
+        {
+          "text": "Barber\n\nBARBERIA\n\nTavolo\nRegistra\nArchivio\nStudio\n\nSERVIZI\n\nBarberia\n\nServizi offerti. Storage locale.\n\nTAGLIO\n\n25€\n\nBARBA\n\n15€\n\nTAGLIO+BARBA\n\n35€\n\nINFO\n\nAppuntamenti\n\nI servizi sono fissi. Prenota dal tab Prenota.\n\nQuando prenoti, il conteggio sale da qui.",
+          "overflow": false,
+          "undefinedText": false
+        }
+      ],
+      "errors": []
+    },
+    {
+      "name": "desktop",
+      "ready": true,
+      "tabs": [
+        "Tavolo",
+        "Registra",
+        "Archivio",
+        "Studio"
+      ],
+      "views": [
+        {
+          "text": "Barber\n\nBARBERIA\n\nTavolo\nRegistra\nArchivio\nStudio\n\nOGGI\n\n0\nappuntamenti oggi\n\nNessun appuntamento\n\nAggiungi il primo cliente. Qui non ci sono dati di prova.\n\nPrenota\n\nCLIENTI\n\nVuoto\n\nGli appuntamenti restano nella lista.\n\nPRIVACY\n\nSolo qui\n\nStorage locale, senza profilo.",
+          "overflow": false,
+          "undefinedText": false
+        },
+        {
+          "text": "Barber\n\nBARBERIA\n\nTavolo\nRegistra\nArchivio\nStudio\n\nNUOVO\n\nNuovo appuntamento\n\nDati sul dispositivo. Conferma visibile dopo Prenota.\n\nCliente\nOra\nServizio\nPrenota",
+          "overflow": false,
+          "undefinedText": false
+        },
+        {
+          "text": "Barber\n\nBARBERIA\n\nTavolo\nRegistra\nArchivio\nStudio\n\nCLIENTI\n\n0 clienti\n\nArchivio clienti, con azioni.\n\nNessun cliente in elenco. Prenota e salva.\n\nPrenota",
+          "overflow": false,
+          "undefinedText": false
+        },
+        {
+          "text": "Barber\n\nBARBERIA\n\nTavolo\nRegistra\nArchivio\nStudio\n\nSERVIZI\n\nBarberia\n\nServizi offerti. Storage locale.\n\nTAGLIO\n\n25€\n\nBARBA\n\n15€\n\nTAGLIO+BARBA\n\n35€\n\nINFO\n\nAppuntamenti\n\nI servizi sono fissi. Prenota dal tab Prenota.\n\nQuando prenoti, il conteggio sale da qui.",
+          "overflow": false,
+          "undefinedText": false
+        }
+      ],
+      "errors": []
+    }
+  ]
+}
