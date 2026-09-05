@@ -39,6 +39,91 @@ Rispondi SOLO JSON: {"version":1,"baseSha256":"SHA fornito","changes":[{"find":"
 Da 1 a 12 cambiamenti disgiunti sul documento ORIGINALE; find 12–12000 caratteri, replace massimo 24000. Nessuna sostituzione del body intero, del root o della navigazione.
 Non aggiungere style/link: la direzione grafica è già definita. Mantieni logica, dati e schermate non interessati. Output atomico: niente markdown o META/HTML.`;
 
+export const COMPOSED_PLAN_APPLY_RETRIES = 2;
+export const COMPOSED_PLAN_DEGRADED_LOG = "Piano di creazione non applicato; seed composto invariato";
+
+const RETRYABLE_COMPOSED_PLAN = /JSON non valido|Piano di creazione non valido|Target di creazione assente|ambiguo o fuori dal body|Modifica di creazione non valida|Modifiche di creazione sovrapposte/;
+
+/** @param {unknown} error */
+export function composedPlanError(error) {
+  if (error instanceof SyntaxError) return new Error("Piano di creazione JSON non valido");
+  if (error instanceof Error) return error;
+  return new Error(String(error));
+}
+
+/** @param {unknown} error */
+export function isRetryableComposedPlanError(error) {
+  return RETRYABLE_COMPOSED_PLAN.test(composedPlanError(error).message);
+}
+
+/** @param {unknown} error */
+export function composedPlanRetryFeedback(error) {
+  return `ERRORE SUL PIANO PRECEDENTE:\n${composedPlanError(error).message}\nCopia i find come sottostringhe verbatim dall'HTML ORIGINALE. Ogni find deve essere unico nel body. Non sostituire head, style o link. Non cambiare BASE_SHA256. Rispondi SOLO JSON.`;
+}
+
+/**
+ * @param {{prompt: string, instruction?: string, html: string, digest: string, feedback?: string}} input
+ */
+export function composedBuildUserContent(input) {
+  return [
+    `BRIEF:\n${input.prompt}`,
+    `DIREZIONE:\n${input.instruction || ""}`,
+    input.feedback || "",
+    `BASE_SHA256:${input.digest}`,
+    `HTML ORIGINALE:\n${artifactContext(input.html)}`,
+  ].filter(Boolean).join("\n");
+}
+
+/** @param {string} text */
+export function parseComposedBuildPlan(text) {
+  try {
+    return JSON.parse(text);
+  } catch (error) {
+    throw composedPlanError(error);
+  }
+}
+
+/**
+ * Parse+apply against the original html. Retryable plan errors call retryPlan
+ * at most COMPOSED_PLAN_APPLY_RETRIES times with the same seed. Exhausted
+ * retries return the seed unchanged — never a full rewrite.
+ * @param {string} html
+ * @param {(plan: unknown) => string | Promise<string>} applyPlan
+ * @param {string} text
+ * @param {(feedback: string) => Promise<string>} [retryPlan]
+ * @returns {Promise<{html: string, applied: boolean, attempts: number, log: string[], error?: Error}>}
+ */
+export async function applyComposedBuildPlanOrSeed(html, applyPlan, text, retryPlan) {
+  let lastError;
+  let current = text;
+  let attempts = 0;
+  for (let attempt = 0; attempt <= COMPOSED_PLAN_APPLY_RETRIES; attempt++) {
+    attempts = attempt + 1;
+    try {
+      const result = await applyPlan(parseComposedBuildPlan(current));
+      return { html: result, applied: true, attempts, log: [] };
+    } catch (error) {
+      lastError = composedPlanError(error);
+      if (attempt === COMPOSED_PLAN_APPLY_RETRIES || !retryPlan || !isRetryableComposedPlanError(lastError)) {
+        break;
+      }
+      try {
+        current = await retryPlan(composedPlanRetryFeedback(lastError));
+      } catch (retryError) {
+        lastError = composedPlanError(retryError);
+        break;
+      }
+    }
+  }
+  return {
+    html,
+    applied: false,
+    attempts,
+    log: [COMPOSED_PLAN_DEGRADED_LOG],
+    error: lastError,
+  };
+}
+
 /** Atomic, hash-bound literal edits. Not a functional/visual success gate.
  * Internal shared validator: digest must be computed from html by the runtime wrapper.
  * @param {string} html @param {unknown} plan @param {string} digest

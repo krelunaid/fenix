@@ -107,14 +107,14 @@ test("a syntactically invalid atomic result gets at most two atomic repairs, nev
       plan.changes[0].replace="const = ;";
       return stream(JSON.stringify(plan));
     }
-    assert.ok(calls<=3,"two repairs maximum");
+    assert.ok(calls<=7,"two repairs, each with up to two apply retries");
     assert.equal(payload.stream,false);
-    assert.match(payload.messages[1].content,/ERRORI:/);
+    assert.match(payload.messages[1].content,/ERRORI:|ERRORE SUL PIANO PRECEDENTE/);
     return Response.json({choices:[{finish_reason:"stop",message:{content:JSON.stringify({...planFor(body.html),baseSha256:"0".repeat(64)})}}]});
   },async()=>{
     const output=await events(await build(request(body)));
     assert.equal(output.at(-1).t,"err");
-    assert.equal(calls,3);
+    assert.ok(calls>=3 && calls<=7);
     assert.equal(output.some(event=>event.t==="ok"),false);
   });
 });
@@ -136,21 +136,82 @@ test("imagery adaptation cannot rewrite JS templates or break a composed app at 
   assert.equal(validateProductHtml(result,{kind:"app"}).syntaxOk,true);
 });
 
-test("invalid atomic plans and incomplete streams cannot fall back to HTML, QA or repairs", async () => {
+test("first atomic plan with a missing find retries on the original html and then applies", async () => {
+  const body = createBuildRequest({prompt:brief,kind:"app"});
+  let calls = 0;
+  await withProvider(payload => {
+    calls++;
+    assert.match(payload.messages[0].content,/Rispondi SOLO JSON/);
+    assert.ok(payload.messages[1].content.includes(`BASE_SHA256:${composedBaseSha(body.html)}`));
+    assert.ok(payload.messages[1].content.includes(body.html));
+    if (calls === 1) {
+      const plan = planFor(body.html);
+      plan.changes[0].find = "function doesNotExist(){";
+      return stream(JSON.stringify(plan));
+    }
+    assert.equal(payload.stream, false);
+    assert.match(payload.messages[1].content, /ERRORE SUL PIANO PRECEDENTE/);
+    assert.match(payload.messages[1].content, /verbatim dall'HTML ORIGINALE/);
+    assert.match(payload.messages[1].content, /unico nel body/);
+    return Response.json({choices:[{finish_reason:"stop",message:{content:JSON.stringify(planFor(body.html))}}]});
+  }, async () => {
+    const result = await events(await build(request(body)));
+    assert.equal(result.at(-1).t,"ok",JSON.stringify(result.at(-1)));
+    assert.match(result.at(-1).result.html,/Atomic transport fixture/);
+    assert.equal(result.at(-1).result.html.split("<body")[0],body.html.split("<body")[0]);
+    assert.equal(calls,2);
+  });
+});
+
+test("exhausted composed plan retries keep the seed and never rewrite the document", async () => {
+  const body = createBuildRequest({prompt:brief,kind:"app"});
+  let calls = 0;
+  await withProvider(payload => {
+    calls++;
+    assert.ok(payload.messages[1].content.includes(body.html));
+    assert.ok(payload.messages[1].content.includes(`BASE_SHA256:${composedBaseSha(body.html)}`));
+    const plan = planFor(body.html);
+    plan.changes[0].find = "function doesNotExist(){";
+    if (calls === 1) return stream(JSON.stringify(plan));
+    assert.equal(payload.stream, false);
+    assert.match(payload.messages[1].content, /ERRORE SUL PIANO PRECEDENTE/);
+    return Response.json({choices:[{finish_reason:"stop",message:{content:JSON.stringify(plan)}}]});
+  }, async () => {
+    const output = await events(await build(request(body)));
+    assert.equal(output.at(-1).t,"ok",JSON.stringify(output.at(-1)));
+    assert.equal(output.at(-1).result.html, body.html);
+    assert.ok(output.some(event => event.t==="s" && /seed composto invariato/.test(event.s)));
+    assert.equal(calls,3);
+  });
+});
+
+test("invalid atomic plans retry then keep the seed; incomplete streams still fail closed", async () => {
   const body = createBuildRequest({prompt:brief,kind:"app"});
   for (const mode of ["stale","rewrite","length","missing-stop","oversize"]) {
     let calls = 0;
-    await withProvider(() => {
+    await withProvider(payload => {
       calls++;
-      assert.equal(calls,1,mode);
       const plan = planFor(body.html);
       if (mode === "stale") plan.baseSha256="0".repeat(64);
-      return stream(mode === "rewrite" ? body.html : mode === "oversize" ? "x".repeat(120001) : JSON.stringify(plan),
-        mode === "length" ? "length" : mode === "missing-stop" ? "" : "stop");
+      const content = mode === "rewrite" ? body.html : mode === "oversize" ? "x".repeat(120001) : JSON.stringify(plan);
+      if (calls === 1) {
+        return stream(content, mode === "length" ? "length" : mode === "missing-stop" ? "" : "stop");
+      }
+      assert.ok(mode === "stale" || mode === "rewrite", mode);
+      assert.equal(payload.stream, false);
+      assert.match(payload.messages[1].content, /ERRORE SUL PIANO PRECEDENTE/);
+      return Response.json({choices:[{finish_reason:"stop",message:{content}}]});
     }, async () => {
       const output = await events(await build(request(body)));
-      assert.equal(output.filter(event=>event.t==="ok").length,0,mode);
-      assert.equal(output.filter(event=>event.t==="err").length,1,mode);
+      if (mode === "stale" || mode === "rewrite") {
+        assert.equal(output.at(-1).t,"ok",mode);
+        assert.equal(output.at(-1).result.html, body.html, mode);
+        assert.equal(calls,3,mode);
+      } else {
+        assert.equal(output.filter(event=>event.t==="ok").length,0,mode);
+        assert.equal(output.filter(event=>event.t==="err").length,1,mode);
+        assert.equal(calls,1,mode);
+      }
     });
   }
   await withProvider(()=>assert.fail("invalid palette must fail before provider call"),async()=>{

@@ -1,6 +1,14 @@
 import { createServer } from "node:http";
 import { readWorkerBody } from "./request-body.mjs";
-import { applyComposedBuildPlan, composedBaseSha, composedBuildPalette, COMPOSED_BUILD_SYSTEM } from "./composed-build.mjs";
+import {
+  applyComposedBuildPlan,
+  applyComposedBuildPlanOrSeed,
+  composedBaseSha,
+  composedBuildPalette,
+  composedBuildUserContent,
+  COMPOSED_BUILD_SYSTEM,
+  COMPOSED_PLAN_DEGRADED_LOG,
+} from "./composed-build.mjs";
 import { restoreHome, keepScripts } from "./artifact-restore.mjs";
 import { isComposedVisualArtifact, VISUAL_STYLE_SELECTORS } from "./visual-style.mjs";
 import { repairVisualStyle } from "./visual-style-repair.mjs";
@@ -330,25 +338,35 @@ async function generate(prompt, html, instruction, kind, operation, inputPalette
   if (!apiKey) throw new Error("Manca XAI_API_KEY");
   if (operation === "create" && ["app", "tool", "game"].includes(kind) && isComposedVisualArtifact(html)) {
     const palette = composedBuildPalette(inputPalette);
-    const response = await fetch(XAI, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-      body: JSON.stringify({
-        model: MODEL, temperature: 0.4, max_tokens: 8000, stream: false,
-        messages: [
-          { role: "system", content: COMPOSED_BUILD_SYSTEM },
-          { role: "user", content: `BRIEF:\n${prompt}\nDIREZIONE:\n${instruction || ""}\nBASE_SHA256:${composedBaseSha(html)}\nHTML ORIGINALE:\n${artifactContext(html)}` },
-        ],
-      }),
-    });
-    if (!response.ok) throw new Error(`xAI ${response.status}`);
-    const text = completeResponseText(await response.json());
-    let plan;
-    try { plan = JSON.parse(text); } catch { throw new Error("Piano di creazione JSON non valido"); }
-    const result = applyComposedBuildPlan(html, plan);
+    const digest = composedBaseSha(html);
+    const requestPlan = async (feedback) => {
+      const response = await fetch(XAI, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+        body: JSON.stringify({
+          model: MODEL, temperature: 0.4, max_tokens: 8000, stream: false,
+          messages: [
+            { role: "system", content: COMPOSED_BUILD_SYSTEM },
+            { role: "user", content: composedBuildUserContent({ prompt, instruction, html, digest, feedback }) },
+          ],
+        }),
+      });
+      if (!response.ok) throw new Error(`xAI ${response.status}`);
+      return completeResponseText(await response.json());
+    };
+    const outcome = await applyComposedBuildPlanOrSeed(
+      html,
+      (plan) => applyComposedBuildPlan(html, plan),
+      await requestPlan(),
+      requestPlan,
+    );
     // Syntax and the existing client runtime/ready gates still run afterwards.
     // Never turn a rejected plan into a full rewrite or another image call.
-    return { html: result, meta: { kind, palette }, files: [], log: ["Creazione mirata sulla composizione", "Head e palette preservati; avvio da verificare"] };
+    // Exhausted apply retries keep the composed seed instead of BLOCCATO.
+    const log = outcome.applied
+      ? ["Creazione mirata sulla composizione", "Head e palette preservati; avvio da verificare"]
+      : [COMPOSED_PLAN_DEGRADED_LOG, "Head e palette preservati; avvio da verificare"];
+    return { html: outcome.html, meta: { kind, palette }, files: [], log };
   }
   const dashboard = looksDashboard(prompt, instruction, kind);
   const site = looksSite(prompt, instruction, kind, html);
