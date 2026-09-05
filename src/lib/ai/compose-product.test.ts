@@ -970,6 +970,12 @@ describe("graphic pipeline prompt→plan→generate→visual→QA", () => {
     assert.match(product.html, /\.fx-axis\{[^}]*list-style:none/);
     assert.match(product.html, /overflow-wrap:anywhere/);
     assert.match(product.html, /\.home-hero\{[^}]*overflow:hidden/);
+    assert.match(product.html, /background-color:#F0F9FF/);
+    assert.match(product.html, /#BAE6FD|#7DD3FC|#0EA5E9/);
+    assert.match(product.html, /\.fx-inverse \.fx-board\{[^}]*gap:12px/);
+    assert.match(product.html, /\.fx-tank-well\{[^}]*height:176px/);
+    assert.match(product.html, /\.fx-botte\{[^}]*max-height:176px/);
+    assert.match(product.html, /data-craft-nav="1"/);
     assert.equal(product.tokens.palette.accent.toLowerCase(), "#0ea5e9");
     assert.doesNotMatch(product.html, /Ciao/);
     const perfume = composeProduct(
