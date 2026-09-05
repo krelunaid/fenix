@@ -119,3 +119,24 @@ mocks, actual worker requests, metadata/files/repair regressions and five-domain
 composition checks. Typecheck/build passed before the final diagnostic wording
 change; complete clean-clone suites, browser verification and exact-commit
 release gates remain required. This is local work, not a 10/10 or deploy claim.
+
+## Agenda naming and semantic actions
+
+Visual inspection of the previous worker screenshot found `Agenda appuntamenti
+e prenot`: a descriptive brief was cut mid-word at 28 characters. Descriptive
+long agenda requests now use `Agenda`; explicit names before a colon or quoted
+after a naming instruction are retained, including names longer than28.
+Long unbroken names wrap without overflowing instead of being silently cut.
+The appointment status cycle is unchanged, but each action now describes its
+effect: Conferma, Inizia, Concludi, Riapri. Initial and JS-rendered controls use
+the same labels and accessible names. No palette, identity or Studio changes.
+
+37/37 focused composition/Edge/calendar regression tests passed before the final
+long-name wrapping addition; its focused naming/browser tests2/2 and typecheck
+then passed. Browser checks cover1280/768/390/320, 44px targets, complete labels,
+four status transitions and persistence across remount, long explicit brands,
+and no page errors. Screenshots: /tmp/fenix-agenda-labels-shots/{D,T,M,S}-initial.png
+and -after-cycle.png, reproducible by the new test in agenda-runtime-browser.
+Inspected desktop390/320 images: names and actions are clearer; repeated Sala
+metadata and generic sample contents remain, so this is not a10/10 claim.
+Full clean-clone regression and release verification for this slice are pending.

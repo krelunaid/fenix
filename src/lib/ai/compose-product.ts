@@ -331,9 +331,15 @@ function seedNameFromBrief(brief: string): string {
     )
     .replace(/\s+/g, " ")
     .trim();
-  const before = raw.split(/[:.]/)[0]!.trim().replace(/[,;]+$/g, "").trim().slice(0, 28);
-  if (!before || /^(voglio|vorrei|una app|app stile)/i.test(before)) return "Note";
-  return before;
+  const fallback = grammarFromBrief(brief).id === "agenda" ? "Agenda" : "Note";
+  const named = raw.match(/(?:chiamata|chiamala|nome(?: dell.app)?|titolo)\s*[:=]?\s*["«]([^"»]{1,80})["»]/i)?.[1]?.trim();
+  if (named) return named;
+  const before = raw.split(/[:.]/)[0]!.trim().replace(/[,;]+$/g, "").trim();
+  if (!before || /^(voglio|vorrei|una app|app stile|mi crei|crea(?:mi)?\b)/i.test(before)) return fallback;
+  // A short title before ':' is an explicit product name, not a brief to cut.
+  // Long descriptive requests get a concise domain name, never half a word.
+  if (before.length <= 80 && raw.startsWith(`${before}:`)) return before;
+  return before.length <= 28 ? before : fallback;
 }
 
 function synthesizeSpec(brief: string): PipelineSpec {
@@ -440,11 +446,15 @@ const AGENDA_EDIT_GLYPH =
   '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13.6 6.2 18.2 10.8 10.4 18.6H6.4v-4z"/><path d="M12.8 7.2l4.2 4.2"/></svg>';
 const AGENDA_DEL_GLYPH =
   '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6.2 8.2h11.6v10.2H6.2z"/><path d="M5.6 5.8h12.8v2.4H5.6z"/><path d="M10.2 12.4h3.6"/></svg>';
+const AGENDA_ACTION_LABELS: Record<string, string> = {
+  prenotato: "Conferma", confermato: "Inizia", "in-corso": "Concludi", concluso: "Riapri",
+};
 const POCKET_EMPTY_MARK =
   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="4.5" width="14" height="15" rx="2"/><path d="M8.2 9.2h7.6M8.2 12.4h7.6M8.2 15.6h5"/></svg>';
 
 function agendaActs(id: string, status: string): string {
-  return `<div class="slot-actions"><button class="btn sm ghost" data-act="advance" data-id="${id}" aria-label="Avanza stato ${status}">Avanti</button><button class="btn sm ghost" data-act="edit" data-id="${id}" aria-label="Modifica">${AGENDA_EDIT_GLYPH}</button><button class="btn sm ghost" data-act="del" data-id="${id}" aria-label="Archivia">${AGENDA_DEL_GLYPH}</button></div>`;
+  const label = AGENDA_ACTION_LABELS[status] || "Conferma";
+  return `<div class="slot-actions"><button class="btn sm ghost" data-act="advance" data-id="${id}" aria-label="${label} appuntamento">${label}</button><button class="btn sm ghost" data-act="edit" data-id="${id}" aria-label="Modifica">${AGENDA_EDIT_GLYPH}</button><button class="btn sm ghost" data-act="del" data-id="${id}" aria-label="Archivia">${AGENDA_DEL_GLYPH}</button></div>`;
 }
 
 function agendaRailMarkup(spec: PipelineSpec, grammar: LayoutGrammar): string {
@@ -1049,7 +1059,7 @@ html,body{height:100%;background:var(--bg);color:var(--fg);font:400 ${tokens.typ
 body{min-height:100dvh}
 .app{min-height:100dvh;display:flex;flex-direction:column;width:100%}
 header{padding:16px 18px 10px;display:flex;align-items:flex-end;justify-content:space-between;gap:12px}
-.brand{font-family:var(--display);font-size:${tokens.type.h1};font-weight:650;letter-spacing:-.04em;line-height:1.1;color:var(--fg)}
+.brand{font-family:var(--display);font-size:${tokens.type.h1};font-weight:650;letter-spacing:-.04em;line-height:1.1;color:var(--fg);overflow-wrap:anywhere;min-width:0}
 header .place{color:var(--muted);max-width:42%;overflow:visible;white-space:normal;text-align:right;line-height:1.3}
 main{flex:1;min-height:0;overflow-y:auto;padding:8px 16px 24px;-webkit-overflow-scrolling:touch}
 .hero,.sil,.plate{position:relative;border-radius:var(--r);overflow:hidden;margin-bottom:14px;border:1px solid var(--line);background:var(--elevated);min-height:200px}
@@ -1107,6 +1117,7 @@ const cta=${JSON.stringify(spec.cta)};
 const kicker=${JSON.stringify(spec.kicker)};
 const place=${JSON.stringify(spec.place)};
 const AGENDA_CYCLE={prenotato:"confermato",confermato:"in-corso","in-corso":"concluso",concluso:"prenotato"};
+const AGENDA_ACTION_LABELS=${JSON.stringify(AGENDA_ACTION_LABELS)};
 const AGENDA_EDIT_GLYPH=${JSON.stringify(AGENDA_EDIT_GLYPH)};
 const AGENDA_DEL_GLYPH=${JSON.stringify(AGENDA_DEL_GLYPH)};
 const KICKER_CYCLE={scouting:"trattativa",trattativa:"firma",firma:"chiuso",chiuso:"scouting","in-forno":"al-passo","al-passo":"in-sala","in-sala":"in-forno",arrivo:"in-house","in-house":"partenza",partenza:"arrivo"};
@@ -1652,7 +1663,8 @@ function renderStats(){
 }
 function slotMarkup(e,i){
   var st=e.status||"prenotato";
-  return '<article class="slot" data-id="'+e.id+'" data-day="'+(e.day||"")+'" data-state="'+(i===0?"on":"idle")+'" data-status="'+st+'"><time class="time" datetime="'+e.kicker+'">'+e.kicker+'</time><div class="slot-body"><h2>'+e.title+'</h2><p class="notes">'+chip(st)+" · "+e.note+" · "+e.meta+'</p><div class="slot-actions"><button class="btn sm ghost" data-act="advance" data-id="'+e.id+'" aria-label="Avanza stato '+st+'">Avanti</button><button class="btn sm ghost" data-act="edit" data-id="'+e.id+'" aria-label="Modifica">'+AGENDA_EDIT_GLYPH+'</button><button class="btn sm ghost" data-act="del" data-id="'+e.id+'" aria-label="Archivia">'+AGENDA_DEL_GLYPH+'</button></div></div></article>';
+  var advanceLabel=AGENDA_ACTION_LABELS[st]||"Conferma";
+  return '<article class="slot" data-id="'+e.id+'" data-day="'+(e.day||"")+'" data-state="'+(i===0?"on":"idle")+'" data-status="'+st+'"><time class="time" datetime="'+e.kicker+'">'+e.kicker+'</time><div class="slot-body"><h2>'+e.title+'</h2><p class="notes">'+chip(st)+" · "+e.note+" · "+e.meta+'</p><div class="slot-actions"><button class="btn sm ghost" data-act="advance" data-id="'+e.id+'" aria-label="'+advanceLabel+' appuntamento">'+advanceLabel+'</button><button class="btn sm ghost" data-act="edit" data-id="'+e.id+'" aria-label="Modifica">'+AGENDA_EDIT_GLYPH+'</button><button class="btn sm ghost" data-act="del" data-id="'+e.id+'" aria-label="Archivia">'+AGENDA_DEL_GLYPH+'</button></div></div></article>';
 }
 function renderAgenda(){
   hydrateAgenda();

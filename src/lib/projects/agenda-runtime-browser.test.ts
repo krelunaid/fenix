@@ -20,6 +20,64 @@ const VIEWPORTS = [
   ["M", { width: 390, height: 844 }],
 ] as const;
 
+it("native agenda titles and action labels fit D/T/M/320 and follow the persisted state cycle", async () => {
+  const brief = `${formatPrefix("app")}Agenda appuntamenti e prenotazioni, stile Apple.`;
+  const product = composeProduct(brief);
+  const browser = await launchChromium();
+  const output = "/tmp/fenix-agenda-labels-shots";
+  mkdirSync(output, {recursive:true});
+  try {
+    for (const [id, viewport] of [...VIEWPORTS, ["S", {width:320,height:568}] as const]) {
+      const page = await isolatedPage(browser, {viewport});
+      const errors: string[]=[];
+      page.on("pageerror", error=>errors.push(String(error)));
+      try {
+        await page.setContent(`<html><body style="margin:0"><iframe id="f" style="border:0;width:100vw;height:100dvh"></iframe><script>
+window.db={};addEventListener("message",function(e){var m=e.data;if(!m||m.t!=="fenix-db")return;if(m.op==="save")db[m.col]=m.data;e.source.postMessage({t:"fenix-db",id:m.id,v:m.op==="load"?(db[m.col]||null):{ok:true,v:m.data,durable:(m.data.items||[]).length}},"*");});
+</script></body></html>`);
+        const source=prepareSrcDoc(product.html,product.tokens.palette,`agenda-labels-${id}`,"app");
+        const mount=async()=>{
+          await page.locator("#f").evaluate((el,html)=>{(el as HTMLIFrameElement).srcdoc=html;},source);
+          await page.frameLocator("#f").locator("[data-fenix-ready]").waitFor({timeout:8000});
+        };
+        await mount();
+        const frame=page.frameLocator("#f");
+        assert.equal(await frame.locator("header h1").innerText(),"Agenda");
+        await page.screenshot({path:join(output,`${id}-initial.png`)});
+        const row=frame.locator('article.slot[data-id="s1"]');
+        for(const [status,label,next] of [
+          ["prenotato","Conferma","confermato"], ["confermato","Inizia","in-corso"],
+          ["in-corso","Concludi","concluso"], ["concluso","Riapri","prenotato"],
+        ]){
+          await row.locator(`[data-act="advance"]`).waitFor();
+          assert.equal(await row.getAttribute("data-status"),status);
+          const button=row.getByRole("button",{name:`${label} appuntamento`,exact:true});
+          assert.equal(await button.innerText(),label);
+          assert.equal(await frame.locator("html").evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),false,`${id}/${label} viewport`);
+          const fit=await row.locator(".slot-actions").evaluate(el=>el.scrollWidth<=el.clientWidth+1);
+          assert.equal(fit,true,`${id}/${label} action row`);
+          assert.equal(await button.evaluate(el=>el.getBoundingClientRect().height>=44),true);
+          await button.click();
+          await frame.locator(`article.slot[data-id="s1"][data-status="${next}"]`).waitFor({timeout:4000});
+          await frame.locator("html:not([data-fenix-persist='busy'])").waitFor({timeout:4000});
+          await mount();
+          assert.equal(await row.getAttribute("data-status"),next,`${id} persisted ${next}`);
+        }
+        await page.screenshot({path:join(output,`${id}-after-cycle.png`)});
+        for(const name of ["Agenda delle consulenze di Valentina","StudioValentinaAppuntamentiPersonalizzati"]){
+          const named=composeProduct(`${formatPrefix("app")}${name}: appuntamenti, stile Apple.`);
+          const src=prepareSrcDoc(named.html,named.tokens.palette,`named-${id}`,"app");
+          await page.locator("#f").evaluate((el,html)=>{(el as HTMLIFrameElement).srcdoc=html;},src);
+          await frame.locator("[data-fenix-ready]").waitFor({timeout:8000});
+          assert.equal(await frame.locator("header h1").innerText(),name,`${id} explicit brand retained`);
+          assert.equal(await frame.locator("html").evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),false,`${id} full brand fits`);
+        }
+        assert.deepEqual(errors,[]);
+      } finally { await page.close(); }
+    }
+  } finally { await browser.close(); }
+});
+
 async function shot(page: Page, name: string) {
   mkdirSync(SHOTS, { recursive: true });
   const dest = join(SHOTS, name);

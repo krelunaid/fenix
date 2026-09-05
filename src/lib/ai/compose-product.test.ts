@@ -23,6 +23,18 @@ import { prepareSrcDoc } from "../projects/color-scheme.ts";
 import { createBuildRequest, isComposedCreation } from "./build-request.ts";
 
 describe("controller build request preserves generated artifacts", () => {
+  it("uses complete product names instead of cutting a descriptive brief mid-word", () => {
+    for (const [brief, expected] of [
+      ["Agenda appuntamenti e prenotazioni, stile Apple.", "Agenda"],
+      ["Vorrei una agenda per appuntamenti e prenotazioni in studio.", "Agenda"],
+      ["Agenda delle consulenze di Valentina: appuntamenti, stile iPhone.", "Agenda delle consulenze di Valentina"],
+      ['Crea una agenda chiamata "Studio Valentina" per appuntamenti.', "Studio Valentina"],
+      ["Lista in tasca: cose da fare operative, stile Apple.", "Lista in tasca"],
+    ]) {
+      const result = composeProduct(formatPrefix("app") + brief);
+      assert.equal(result.html.match(/<title>([^<]+)<\/title>/)?.[1], expected, brief);
+    }
+  });
   it("limits the no-rewrite retry policy to explicitly composed initial phone builds", () => {
     for (const kind of ["app", "tool", "game"]) assert.equal(isComposedCreation({operation:"create",kind}), true);
     for (const kind of ["app", "tool", "game", "site", "dashboard", "landing"]) {
@@ -500,7 +512,9 @@ describe("graphic pipeline prompt→plan→generate→visual→QA", () => {
     assert.match(html, /placeholder="Es\. Taglio e piega"/);
     assert.match(html, /type="time"/);
     assert.match(html, /data-act="edit"/);
-    assert.match(html, />Avanti</);
+    for (const label of ["Conferma", "Inizia", "Concludi"]) assert.ok(html.includes(`>${label}</button>`));
+    assert.match(html, /"concluso":"Riapri"/);
+    assert.doesNotMatch(html, />Avanti</);
     assert.doesNotMatch(html, /Avanza slot/);
     assert.match(html, /aria-label="Modifica"/);
     assert.match(html, /aria-label="Archivia"/);
