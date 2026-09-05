@@ -1,7 +1,13 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { applyComposedBuildPlan, composedBaseSha } from "../workers/visual/composed-build.mjs";
-import { applyComposedBuildPlanWeb, composedBaseShaWeb } from "../workers/visual/composed-protocol.mjs";
+import {
+  applyComposedBuildPlanOrSeed,
+  applyComposedBuildPlanWeb,
+  composedBaseShaWeb,
+  COMPOSED_PLAN_APPLY_RETRIES,
+  COMPOSED_PLAN_DEGRADED_LOG,
+} from "../workers/visual/composed-protocol.mjs";
 
 const html = '<!doctype html><html data-grammar="agenda"><head><style data-fenix-craft>:root{--fg:#102030}</style><style data-fenix-native-style="v1">body{font-size:17px}</style></head><body><main id="root"><button id="save">Salva adesso</button><output id="status">In attesa</output></main><nav id="tabs"><button>Home</button></nav><script>window.saved="original";</script></body></html>';
 const plan = (changes, base = html) => ({ version: 1, baseSha256: composedBaseSha(base), changes });
@@ -55,4 +61,72 @@ test("bounds the resulting artifact without truncating any source", () => {
   assert.equal(big.length, 120000);
   assert.throws(() => applyComposedBuildPlan(big, plan([{...edit,replace:edit.find+' // expanded'}], big)), /troppo grande/);
   assert.equal(big.length, 120000);
+});
+
+test("first plan with a missing find retries against the original html and then applies", async () => {
+  const missing = plan([{...edit,find:"function doesNotExist(){"}]);
+  let retries = 0;
+  const outcome = await applyComposedBuildPlanOrSeed(
+    html,
+    (next) => applyComposedBuildPlan(html, next),
+    JSON.stringify(missing),
+    async (feedback) => {
+      retries++;
+      assert.match(feedback, /Target di creazione assente, ambiguo o fuori dal body/);
+      assert.match(feedback, /verbatim dall'HTML ORIGINALE/);
+      assert.match(feedback, /unico nel body/);
+      assert.match(feedback, /head, style o link/);
+      return JSON.stringify(plan([edit]));
+    },
+  );
+  assert.equal(retries, 1);
+  assert.equal(outcome.applied, true);
+  assert.equal(outcome.attempts, 2);
+  assert.deepEqual(outcome.log, []);
+  assert.equal(outcome.html, html.replace(edit.find, () => edit.replace));
+  assert.equal(outcome.html.split("<body>")[0], html.split("<body>")[0]);
+});
+
+test("exhausted plan retries return the composed seed unchanged", async () => {
+  const missing = plan([{...edit,find:"function doesNotExist(){"}]);
+  let retries = 0;
+  const outcome = await applyComposedBuildPlanOrSeed(
+    html,
+    (next) => {
+      assert.equal(html.includes("function doesNotExist(){"), false);
+      return applyComposedBuildPlan(html, next);
+    },
+    "not-json",
+    async (feedback) => {
+      retries++;
+      assert.match(feedback, /JSON non valido|assente, ambiguo/);
+      return JSON.stringify(missing);
+    },
+  );
+  assert.equal(retries, COMPOSED_PLAN_APPLY_RETRIES);
+  assert.equal(outcome.applied, false);
+  assert.equal(outcome.attempts, COMPOSED_PLAN_APPLY_RETRIES + 1);
+  assert.equal(outcome.html, html);
+  assert.deepEqual(outcome.log, [COMPOSED_PLAN_DEGRADED_LOG]);
+  assert.match(outcome.error?.message || "", /assente, ambiguo/);
+});
+
+test("ambiguous finds stay rejected and never become a full rewrite", async () => {
+  const repeated = html.replace("</body>", `${edit.find}</body>`);
+  const bad = JSON.stringify(plan([edit], repeated));
+  let retries = 0;
+  const outcome = await applyComposedBuildPlanOrSeed(
+    repeated,
+    (next) => applyComposedBuildPlan(repeated, next),
+    bad,
+    async (feedback) => {
+      retries++;
+      assert.match(feedback, /ambiguo/);
+      return bad;
+    },
+  );
+  assert.equal(retries, COMPOSED_PLAN_APPLY_RETRIES);
+  assert.equal(outcome.applied, false);
+  assert.equal(outcome.html, repeated);
+  assert.match(outcome.error?.message || "", /ambiguo/);
 });

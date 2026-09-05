@@ -21,7 +21,15 @@ import type { ProjectKind } from "../../src/lib/projects/types.ts";
 import { enforceGraphicIntent } from "../../src/lib/projects/graphic-intent.ts";
 import { repairFilesContext } from "../../src/lib/ai/repair-context.ts";
 import { isComposedVisualArtifact } from "../../workers/visual/visual-style.mjs";
-import { applyComposedBuildPlanWeb, composedBaseShaWeb, composedBuildPalette, COMPOSED_BUILD_SYSTEM } from "../../workers/visual/composed-protocol.mjs";
+import {
+  applyComposedBuildPlanOrSeed,
+  applyComposedBuildPlanWeb,
+  composedBaseShaWeb,
+  composedBuildPalette,
+  composedBuildUserContent,
+  COMPOSED_BUILD_SYSTEM,
+  COMPOSED_PLAN_DEGRADED_LOG,
+} from "../../workers/visual/composed-protocol.mjs";
 
 const MODEL = "grok-build-0.1";
 const XAI_URL = "https://api.x.ai/v1/chat/completions";
@@ -43,13 +51,72 @@ type GrokChunk = {
 
 type PaletteHex = { bg: string; surface: string; fg: string; muted: string; accent: string };
 
-async function composedResult(output: string, base: string, palette: PaletteHex, kind: ProjectKind): Promise<GatedProduct> {
-  const html = await applyComposedBuildPlanWeb(base, JSON.parse(output));
+function composedProduct(html: string, palette: PaletteHex, kind: ProjectKind): GatedProduct {
   return {
     name: html.match(/<title>([^<]+)<\/title>/i)?.[1]?.trim().slice(0, 80) || "Studio",
     tagline: "", summary: "", direction: "", kind, palette, html,
     files: [{ path: "index.html", content: html }],
   };
+}
+
+async function retryComposedPlan(apiKey: string, prompt: string, instruction: string, html: string, feedback: string) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 45_000);
+  try {
+    const response = await fetch(XAI_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      signal: controller.signal,
+      body: JSON.stringify({
+        model: MODEL,
+        temperature: 0.4,
+        max_tokens: 8000,
+        stream: false,
+        messages: [
+          { role: "system", content: COMPOSED_BUILD_SYSTEM },
+          {
+            role: "user",
+            content: composedBuildUserContent({
+              prompt,
+              instruction,
+              html,
+              digest: await composedBaseShaWeb(html),
+              feedback,
+            }),
+          },
+        ],
+      }),
+    });
+    if (!response.ok) return "";
+    const json = (await response.json()) as GrokChunk;
+    if (json.choices?.[0]?.finish_reason != null && json.choices[0].finish_reason !== "stop") return "";
+    return textValue(json.choices?.[0]?.message?.content);
+  } catch {
+    return "";
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function composedResult(
+  output: string,
+  base: string,
+  palette: PaletteHex,
+  kind: ProjectKind,
+  retryPlan?: (feedback: string) => Promise<string>,
+  onDegraded?: (message: string) => void,
+): Promise<GatedProduct> {
+  const outcome = await applyComposedBuildPlanOrSeed(
+    base,
+    (plan) => applyComposedBuildPlanWeb(base, plan),
+    output,
+    retryPlan,
+  );
+  if (!outcome.applied) onDegraded?.(COMPOSED_PLAN_DEGRADED_LOG);
+  return composedProduct(outcome.html, palette, kind);
 }
 
 function sse(event: StreamEvent) {
@@ -274,6 +341,7 @@ async function gateResult(
   send: (event: StreamEvent) => void,
   contract = planContract(prompt),
   compositionPalette?: PaletteHex,
+  instruction = "",
 ): Promise<{ error: string; result?: GatedProduct } | { result: GatedProduct }> {
   if (!result?.html) return { error: "Risposta incompleta. Riprova." };
   const gated = await gateIncompleteHtml({
@@ -294,7 +362,15 @@ async function gateResult(
     onStage: (s) => send({ t: "s", s }),
     repair: async ({ html, error, files }) => {
       const fixed = await repairPass(apiKey, prompt, html, error, files, Boolean(compositionPalette));
-      if (compositionPalette) return composedResult(fixed, html, compositionPalette, contract.kind);
+      if (compositionPalette) {
+        return composedResult(
+          fixed,
+          html,
+          compositionPalette,
+          contract.kind,
+          (feedback) => retryComposedPlan(apiKey, prompt, instruction, html, feedback),
+        );
+      }
       return parseResult(fixed, kindFromPrompt(prompt), prompt);
     },
   });
@@ -342,7 +418,12 @@ export default async function build(request: Request) {
   if (composed) {
     try {
       compositionPalette = composedBuildPalette(body.palette) as PaletteHex;
-      compositionContext = `BRIEF:\n${prompt}\nDIREZIONE:\n${instruction}\nBASE_SHA256:${await composedBaseShaWeb(currentHtml)}\nHTML ORIGINALE:\n${artifactContext(currentHtml)}`;
+      compositionContext = composedBuildUserContent({
+        prompt,
+        instruction,
+        html: currentHtml,
+        digest: await composedBaseShaWeb(currentHtml),
+      });
     } catch {
       return Response.json({ t: "err", error: "Composizione o palette non valida. La versione precedente resta invariata." }, { status: 400 });
     }
@@ -515,7 +596,14 @@ export default async function build(request: Request) {
         if (!terminal) {
           if (composed && !completed) throw new Error("Risposta del modello incompleta");
           let result = compositionPalette
-            ? await composedResult(output, currentHtml, compositionPalette, contract.kind)
+            ? await composedResult(
+              output,
+              currentHtml,
+              compositionPalette,
+              contract.kind,
+              (feedback) => retryComposedPlan(apiKey, prompt, instruction, currentHtml, feedback),
+              (message) => send({ t: "s", s: message }),
+            )
             : parseResult(output, lockKind, prompt);
           const desk = lockKind === "site" || lockKind === "landing" || lockKind === "dashboard";
           const evaluation = result
@@ -551,7 +639,7 @@ export default async function build(request: Request) {
               ),
             });
           }
-          const gated = await gateResult(apiKey, prompt, result, send, contract, compositionPalette);
+          const gated = await gateResult(apiKey, prompt, result, send, contract, compositionPalette, instruction);
           if ("error" in gated) finish({ t: "err", error: gated.error });
           else finish({ t: "ok", result: gated.result });
         }

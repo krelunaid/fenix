@@ -19,8 +19,11 @@ for requested functionality. The source head remains byte-identical. Literal
 application avoids replacement-string expansion of dollar sequences. The
 result cannot exceed the artifact limit or remove composed root/tab markers.
 Missing/ambiguous anchors, a wrong base hash, overlap, forbidden document/style
-tags, malformed JSON and explicit non-stop completions reject the entire plan.
-The worker's existing classic-script syntax check remains before job success.
+tags and malformed JSON retry the same original html (max 2) with explicit find
+feedback. If those retries still fail, the composed seed is returned unchanged.
+Explicit non-stop completions still reject the job. The worker never invents a
+full HTML rewrite. The existing classic-script syntax check remains before
+job success.
 
 When a composed creation is sent to the worker, the controller does not retry
 its failed/uncertain POST against a second host or switch to a full-document
@@ -39,11 +42,12 @@ pnpm typecheck
 
 The HTTP test starts the real worker on a reserved loopback port, explicitly
 preloading a fake provider. It verifies a >51k source, correct model/no
-reasoningEffort, one provider call per job, functional edits, and fail-closed
-wrong-hash/invalid-JS/missing-anchor/full-HTML/truncated responses. The fake
-provider never calls xAI or an image service. The retry-policy helper is unit
-tested and its controller wiring is source-asserted; this is NOT a complete
-browser simulation of network failure/refund timing in the Studio controller.
+reasoningEffort, a successful first plan, a missing find that applies on
+retry, seed-preserving exhausted retries, and fail-closed invalid-JS/truncated
+responses. The fake provider never calls xAI or an image service. The
+retry-policy helper is unit tested and its controller wiring is source-asserted;
+this is NOT a complete browser simulation of network failure/refund timing in
+the Studio controller.
 
 The browser proof uses real composeProduct/createBuildRequest output for a
 personal list and an appointment agenda, then the loopback worker, the same

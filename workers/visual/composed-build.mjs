@@ -2,7 +2,15 @@ import { createHash } from "node:crypto";
 import { artifactContext } from "./artifact-context.mjs";
 import { applyComposedBuildPlanForDigest } from "./composed-protocol.mjs";
 
-export { composedBuildPalette, COMPOSED_BUILD_SYSTEM } from "./composed-protocol.mjs";
+export {
+  composedBuildPalette,
+  COMPOSED_BUILD_SYSTEM,
+  COMPOSED_PLAN_APPLY_RETRIES,
+  COMPOSED_PLAN_DEGRADED_LOG,
+  applyComposedBuildPlanOrSeed,
+  composedBuildUserContent,
+  composedPlanRetryFeedback,
+} from "./composed-protocol.mjs";
 
 /** Synchronous Node entrypoint retained for the existing worker.
  * @param {string} html

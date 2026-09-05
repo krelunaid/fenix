@@ -12,6 +12,12 @@ globalThis.fetch = async (url, options) => {
   const html = user.slice(user.indexOf("HTML ORIGINALE:\n") + "HTML ORIGINALE:\n".length);
   assert.ok(html.endsWith("</html>"));
   assert.ok(user.includes(`BASE_SHA256:${composedBaseSha(html)}`));
+  const retrying = user.includes("ERRORE SUL PIANO PRECEDENTE");
+  if (retrying) {
+    assert.match(user, /verbatim dall'HTML ORIGINALE/);
+    assert.match(user, /unico nel body/);
+    assert.doesNotMatch(user, /<<<HTML>>>|<style>|<link /);
+  }
   console.log("COMPOSED_BUILD_PROVIDER_CALL");
   const plan = { version: 1, baseSha256: composedBaseSha(html), changes: [{
     find: 'var nome=(f.n && f.n.value || "").trim();',
@@ -19,7 +25,9 @@ globalThis.fetch = async (url, options) => {
   }] };
   if (user.includes("WRONG_BASE_FIXTURE")) plan.baseSha256 = "0".repeat(64);
   if (user.includes("SYNTAX_FIXTURE")) plan.changes[0].replace = "const = ;";
-  if (user.includes("MISSING_FIXTURE")) plan.changes[0].find = "function doesNotExist(){";
+  if (user.includes("MISSING_FIXTURE") || (user.includes("RETRY_OK_FIXTURE") && !retrying)) {
+    plan.changes[0].find = "function doesNotExist(){";
+  }
   let content = JSON.stringify(plan);
   if (user.includes("REWRITE_FIXTURE")) content = html;
   const finish_reason = user.includes("LENGTH_FIXTURE") ? "length" : "stop";
