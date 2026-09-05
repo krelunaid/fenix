@@ -180,7 +180,7 @@ const NAV_ICONS = {
     '<path d="M12 5.4v12.8"/><path d="M8 18.8h8"/><path d="M12 7.2 6.6 12.2H9.8z"/><path d="M12 7.2 17.4 12.2H14.2z"/>',
   ),
   storefront: navIcon(
-    '<path d="M5.2 10.2 6.8 6.4h10.4l1.6 3.8z"/><path d="M6.2 10.2v7.6h11.6v-7.6"/><path d="M10.2 17.8v-4.2h3.6v4.2"/><path d="M5.2 10.2h13.6"/>',
+    '<path d="M4.8 10 6.6 6.2h10.8L19.2 10z"/><path d="M5.4 10h13.2"/><path d="M6.6 10v2M9.6 10v2M12 10v2M14.4 10v2M17.4 10v2"/><path d="M6.6 12v5.8h10.8V12"/><path d="M10.4 17.8v-3.4h3.2v3.4"/>',
   ),
   folder: navIcon(
     '<path d="M5.4 8.4h4l1.5 1.6H18.6v8.2H5.4z"/><path d="M5.4 8.4V7.2h3.4l1.2 1.2"/>',

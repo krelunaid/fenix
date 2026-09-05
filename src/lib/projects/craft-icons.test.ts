@@ -311,7 +311,7 @@ document.getElementById('main').innerHTML = 'x';
       craftNavIcon({ id: "list", label }),
     );
     assert.equal(new Set(shop).size, 4, "shop tabs must be four distinct glyphs");
-    assert.match(shop[0]!, /M5\.2 10\.2 6\.8 6\.4/);
+    assert.match(shop[0]!, /M4\.8 10 6\.6 6\.2h10\.8/);
     assert.match(shop[3]!, /M5\.4 9 12 5\.6/);
     const shears = craftNavIcon({ id: "app", label: "Taglio" });
     assert.notEqual(fiscal[0], shears);
