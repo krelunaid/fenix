@@ -26,14 +26,14 @@ export function glossyWaterMarkSvg(id: string, colors: PremiumMarkColors): strin
   const track = "#E8EEF4";
   return `<svg viewBox="0 0 120 120" width="120" height="120" role="img" aria-hidden="true" data-craft-app="1" data-fenix-premium-mark="1" data-fenix-water-mark="1" overflow="visible">
 <defs>
-  <linearGradient id="wm-plate-${uid}" x1="16" y1="6" x2="108" y2="118" gradientUnits="userSpaceOnUse">
-    <stop offset="0" stop-color="${fg}"/>
-    <stop offset=".48" stop-color="${fg}"/>
-    <stop offset="1" stop-color="${accent}"/>
+  <linearGradient id="wm-plate-${uid}" x1="60" y1="4" x2="60" y2="118" gradientUnits="userSpaceOnUse">
+    <stop offset="0" stop-color="#1E293B"/>
+    <stop offset=".42" stop-color="${fg}"/>
+    <stop offset="1" stop-color="${fg}"/>
   </linearGradient>
-  <radialGradient id="wm-sheen-${uid}" cx="34" cy="24" r="58" gradientUnits="userSpaceOnUse">
-    <stop offset="0" stop-color="${lift}" stop-opacity=".46"/>
-    <stop offset=".55" stop-color="${lift}" stop-opacity=".08"/>
+  <radialGradient id="wm-sheen-${uid}" cx="40" cy="18" r="62" gradientUnits="userSpaceOnUse">
+    <stop offset="0" stop-color="${lift}" stop-opacity=".38"/>
+    <stop offset=".5" stop-color="${lift}" stop-opacity=".08"/>
     <stop offset="1" stop-color="${fg}" stop-opacity="0"/>
   </radialGradient>
   <radialGradient id="wm-well-${uid}" cx="78" cy="92" r="54" gradientUnits="userSpaceOnUse">
@@ -41,10 +41,10 @@ export function glossyWaterMarkSvg(id: string, colors: PremiumMarkColors): strin
     <stop offset="1" stop-color="#000" stop-opacity="0"/>
   </radialGradient>
   <linearGradient id="wm-drop-${uid}" x1="44" y1="24" x2="80" y2="94" gradientUnits="userSpaceOnUse">
-    <stop offset="0" stop-color="#D6F1FF"/>
-    <stop offset=".22" stop-color="#7EC8F2"/>
-    <stop offset=".55" stop-color="${accent}"/>
-    <stop offset="1" stop-color="#052A52"/>
+    <stop offset="0" stop-color="#E0F2FE"/>
+    <stop offset=".2" stop-color="#7DD3FC"/>
+    <stop offset=".52" stop-color="${accent}"/>
+    <stop offset="1" stop-color="#0369A1"/>
   </linearGradient>
   <radialGradient id="wm-spec-${uid}" cx="49" cy="40" r="14" gradientUnits="userSpaceOnUse">
     <stop offset="0" stop-color="#fff" stop-opacity="1"/>

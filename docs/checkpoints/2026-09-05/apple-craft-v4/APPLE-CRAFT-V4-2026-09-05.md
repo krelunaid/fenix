@@ -4,7 +4,7 @@ Fourth visual raise on `cursor/apple-like-visual-craft-b7e4` (PR #2). Still **no
 
 Andrea exported the real AcquaGt Expo/RN theme. We distilled **reusable craft slots** into Fenix. We did **not** copy Firebase, business logic, or copyrighted bitmaps. NordAcqua proofs are the same product family, not a pixel-identical AcquaGt reskin for every Fenix app.
 
-- `01-home.png` — surfaceSecondary page, greeting-first Home (no Ciao), two `surfaceInverse` cards, tile overlays, white active tank chip, electric fill, success `#10B981` in the 390×844 frame
+- `01-home.png` — surfaceSecondary page with a brand-soft sky wash, greeting-first Home (no Ciao), two `surfaceInverse` cards, large liter figures, white active tank chip, electric `#0EA5E9`/`#0284C7` fill, success `#10B981` in the 390×844 frame
 - `02-gestione.png` — admin metric/list chrome, sticky pills, official border/success
 - `03-storico.png` — card-row shadow tier, brand name, status chips
 - `04-statistiche.png` — brandPrimary bars on surfaceTertiary, 2×3 grid
