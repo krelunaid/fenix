@@ -5,8 +5,9 @@ import { createServer } from "node:net";
 import { setTimeout as delay } from "node:timers/promises";
 import { test } from "node:test";
 import { MAX_ARTIFACT_CHARS } from "../workers/visual/artifact-context.mjs";
+import { MAX_REQUEST_BYTES } from "../workers/visual/request-body.mjs";
 
-test("worker rejects oversized HTML before enqueue or any model call", {timeout:15000}, async () => {
+test("worker bounds transport bytes and rejects invalid bodies before enqueue or model calls", {timeout:15000}, async () => {
   const reservation = createServer();
   reservation.listen(0, "127.0.0.1");
   await once(reservation, "listening");
@@ -34,6 +35,31 @@ test("worker rejects oversized HTML before enqueue or any model call", {timeout:
       await delay(50);
     }
     assert.ok(ready, "worker must start");
+    for (const route of ["build", "polish"]) {
+      for (const raw of ["null", "[]", "42", '"text"', "{"]) {
+        const res = await fetch(`${base}/${route}`, {
+          method: "POST", body: raw, signal: AbortSignal.timeout(2000),
+        });
+        assert.equal(res.status, 400, `${route}: ${raw}`);
+      }
+      const oversized = JSON.stringify({prompt:"Fixture app", padding:"x".repeat(MAX_REQUEST_BYTES)});
+      // Exercise both Content-Length and chunked streaming. No HTML field:
+      // the document-character gate cannot hide an unbounded transport body.
+      for (const streamed of [false, true]) {
+        const res = await fetch(`${base}/${route}`, {
+          method: "POST",
+          body: streamed ? new ReadableStream({start(controller) {
+            const bytes = new TextEncoder().encode(oversized);
+            for (let at = 0; at < bytes.length; at += 16384) controller.enqueue(bytes.slice(at, at + 16384));
+            controller.close();
+          }}) : oversized,
+          ...(streamed ? {duplex:"half"} : {}),
+          signal: AbortSignal.timeout(3000),
+        });
+        assert.equal(res.status, 413, `${route}: streamed=${streamed}`);
+        assert.match((await res.json()).error, /Richiesta troppo grande/);
+      }
+    }
     for (const route of ["build", "polish"]) {
       const response = await fetch(`${base}/${route}`, {
         method:"POST", headers:{"Content-Type":"application/json"},

@@ -1,4 +1,5 @@
 import { createServer } from "node:http";
+import { readWorkerBody } from "./request-body.mjs";
 import { restoreHome, keepScripts } from "./artifact-restore.mjs";
 import { isComposedVisualArtifact, VISUAL_STYLE_SELECTORS } from "./visual-style.mjs";
 import { verifyVisualStyleEffect } from "./visual-style-effect.mjs";
@@ -1012,13 +1013,11 @@ const server = createServer(async (req, res) => {
     json(res, 404, { error: "POST /polish o POST /build" });
     return;
   }
-  const chunks = [];
-  for await (const c of req) chunks.push(c);
   let body = {};
   try {
-    body = JSON.parse(Buffer.concat(chunks).toString("utf8") || "{}");
-  } catch {
-    json(res, 400, { error: "JSON non valido" });
+    body = await readWorkerBody(req);
+  } catch (error) {
+    json(res, error?.status === 413 ? 413 : 400, { error: error?.status ? error.message : "Richiesta interrotta." });
     return;
   }
   const prompt = String(body.prompt || "").slice(0, 2500);
