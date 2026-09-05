@@ -24,6 +24,7 @@ import { appIdentityIcon, appIdentityLabel } from "../projects/app-identity.ts";
 import { prepareSrcDoc } from "../projects/color-scheme.ts";
 import { createBuildRequest, isComposedCreation } from "./build-request.ts";
 import { contrastRatio } from "../projects/visual-quality.ts";
+import { productIconSvg } from "../projects/product-icon.ts";
 import { MAX_ARTIFACT_CHARS } from "../../../workers/visual/artifact-context.mjs";
 import { nativeStyleAssignsPalette } from "../projects/native-app-style.ts";
 import { COMPOSED_PLAN_DEGRADED_LOG } from "../../../workers/visual/composed-protocol.mjs";
@@ -1004,6 +1005,7 @@ describe("graphic pipeline prompt→plan→generate→visual→QA", () => {
       product.html.match(/html\+='<div class="fx-hello-row"[\s\S]{0,360}/)?.[0] || "";
     const mark = campoHomeHeaderMark();
     const office = craftNavIcon({ id: "app", label: "Ufficio" });
+    const officeMotif = "M10 7h12v16H10z";
     assert.match(hello, /FX_WATER_MARK/);
     assert.match(hello, /fx-app-mark/);
     assert.doesNotMatch(hello, /fx-exit|FX_EXIT_MARK|aria-label=\\"Esci\\"|aria-label="Esci"/);
@@ -1011,10 +1013,33 @@ describe("graphic pipeline prompt→plan→generate→visual→QA", () => {
     assert.match(product.html, /M12 4\.4c3\.8 4\.8 5\.6 8\.2/);
     assert.match(mark, /data-fenix-water-header="1"/);
     assert.match(mark, /M12 4\.4c3\.8 4\.8 5\.6 8\.2/);
+    assert.match(mark, /#082338|#0F3A5C/);
+    assert.match(mark, /cwd-drop/);
+    assert.doesNotMatch(mark, /fill-opacity="\.18"|fill="none"/);
+    assert.match(product.html, /\.fx-app-mark\{[^}]*background:#082338/);
+    assert.match(product.html, /\.fx-app-mark\{[^}]*width:48px/);
+    assert.doesNotMatch(product.html, /\.fx-app-mark\{[^}]*#E0F2FE,#BAE6FD/);
+    assert.match(product.html, /rel="apple-touch-icon"/);
+    assert.match(product.html, /rel="icon" type="image\/svg\+xml"/);
+    assert.match(product.html, /M12(?: |%20)4\.4c3\.8/);
+    assert.doesNotMatch(product.html, new RegExp(officeMotif.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
     assert.notEqual(mark, office.replace('data-craft-nav="1"', 'data-craft-app="1"'));
     assert.doesNotMatch(product.html, /M10 7V5\.8A1\.8|M4 12h10M11\.2 8\.8/);
     assert.doesNotMatch(product.html, /M4\.8 8\.8h14\.4|M5\.2 8\.6h13\.6/);
     assert.doesNotMatch(office, /M12 4\.4c3\.8 4\.8 5\.6 8\.2/);
+    assert.ok(contrastRatio("#082338", "#38BDF8") >= 4.5, "filled drop on navy chip must stay readable");
+    const homeTab = craftNavIcon({ id: "home", label: "Acqua" });
+    assert.match(product.html, /<span>Home<\/span>/);
+    assert.match(homeTab, /M12 4\.4c3\.8 4\.8 5\.6 8\.2/);
+    assert.match(homeTab, /data-craft-nav="1"/);
+    const fallbackIcon = productIconSvg({
+      name: "App acqua bottiglia",
+      kind: "app",
+      palette: product.tokens.palette,
+      prompt: brief,
+    });
+    assert.match(fallbackIcon, /M16 6c5 6\.4 7\.4 11/);
+    assert.doesNotMatch(fallbackIcon, /M10 7h12v16H10z/);
   });
 
   it("keeps composed phone apps under the Edge artifact cap", () => {

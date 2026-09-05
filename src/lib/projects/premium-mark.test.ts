@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { glossyWaterMarkSvg, premiumAppMarkSvg, premiumMarkDataUri } from "./premium-mark.ts";
+import { crispWaterDropMarkSvg, glossyWaterMarkSvg, premiumAppMarkSvg, premiumMarkDataUri } from "./premium-mark.ts";
 
 describe("premium app mark", () => {
   it("paints a squircle ring with the supplied domain colors and never Apple SET blue", () => {
@@ -29,5 +29,17 @@ describe("premium app mark", () => {
     assert.match(svg, /feDropShadow|radialGradient/);
     assert.doesNotMatch(svg, /#007aff|#0071e3|#f5f5f7/i);
     assert.equal(premiumAppMarkSvg("nord-acqua", { accent: "#0D73C4", fg: "#0A2F6B", bg: "#F4F7FB" }, "<path/>", { water: true }), svg);
+  });
+
+  it("paints a high-contrast filled drop chip for header and favicon surfaces", () => {
+    const svg = crispWaterDropMarkSvg("home-header");
+    assert.match(svg, /data-fenix-water-header="1"/);
+    assert.match(svg, /data-fenix-water-mark="1"/);
+    assert.match(svg, /M12 4\.4c3\.8 4\.8 5\.6 8\.2/);
+    assert.match(svg, /#082338|#0F3A5C/);
+    assert.match(svg, /cwd-drop-home-header/);
+    assert.doesNotMatch(svg, /fill-opacity="\.18"|fill="none"/);
+    assert.doesNotMatch(svg, /#007aff|#0071e3|#f5f5f7/i);
+    assert.match(premiumMarkDataUri(svg), /^data:image\/svg\+xml/);
   });
 });

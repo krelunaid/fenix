@@ -1674,7 +1674,9 @@ describe("graphic pipeline visual QA D/T/M", () => {
         await waitForFenixReady(page, 8000);
         const paint = await page.evaluate(() => {
           const html = document.documentElement;
-          const mark = document.querySelector(".fx-hello-row .fx-app-mark svg");
+          const chip = document.querySelector(".fx-hello-row .fx-app-mark");
+          const mark = chip?.querySelector("svg");
+          const dropPath = mark?.querySelector("path");
           const botte = document.querySelector("svg.fx-botte");
           const well = document.querySelector(".fx-tank-well");
           const cells = [...document.querySelectorAll(".fx-inverse .fx-cell")].map((el) => {
@@ -1687,11 +1689,22 @@ describe("graphic pipeline visual QA D/T/M", () => {
             };
           });
           const nav = [...document.querySelectorAll("nav.tabs svg[data-craft-nav]")];
+          const bg = chip ? getComputedStyle(chip).backgroundColor : "";
+          const rgb = bg.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+          const lum = rgb
+            ? (0.2126 * Number(rgb[1]) + 0.7152 * Number(rgb[2]) + 0.0722 * Number(rgb[3])) / 255
+            : 1;
           return {
             domain: html.getAttribute("data-craft-domain"),
             campo: html.hasAttribute("data-fenix-campo"),
             waterHeader: mark?.getAttribute("data-fenix-water-header"),
             drop: mark?.innerHTML.includes("M12 4.4c3.8") ?? false,
+            fill: dropPath?.getAttribute("fill") || "",
+            fillOpacity: dropPath?.getAttribute("fill-opacity") || "1",
+            chipW: chip?.getBoundingClientRect().width ?? 0,
+            chipLum: lum,
+            appleTouch: !!document.querySelector('link[rel="apple-touch-icon"]'),
+            favicon: (document.querySelector('link[rel="icon"]') as HTMLLinkElement | null)?.href.includes("svg") ?? false,
             exit: /M10 7V5\.8A1\.8/.test(document.body.innerHTML),
             botte: !!botte,
             wellH: well ? well.getBoundingClientRect().height : 0,
@@ -1703,6 +1716,13 @@ describe("graphic pipeline visual QA D/T/M", () => {
         assert.equal(paint.campo, true);
         assert.equal(paint.waterHeader, "1");
         assert.equal(paint.drop, true);
+        assert.notEqual(paint.fill, "none");
+        assert.notEqual(paint.fillOpacity, ".18");
+        assert.notEqual(paint.fillOpacity, "0.18");
+        assert.ok(paint.chipW >= 44, `header chip ${paint.chipW}`);
+        assert.ok(paint.chipLum < 0.25, `header chip too pale ${paint.chipLum}`);
+        assert.equal(paint.appleTouch, true);
+        assert.equal(paint.favicon, true);
         assert.equal(paint.exit, false);
         assert.equal(paint.botte, true);
         assert.ok(paint.wellH > 120 && paint.wellH <= 200, `botte well ${paint.wellH}`);

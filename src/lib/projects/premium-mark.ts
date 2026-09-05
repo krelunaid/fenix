@@ -17,6 +17,32 @@ export type PremiumMarkColors = {
   elevated?: string;
 };
 
+/**
+ * Crisp filled water-drop chip. Readable at favicon and 48px header size.
+ * Navy plate + opaque drop — never a pale outline or 18% wash.
+ */
+export function crispWaterDropMarkSvg(id: string): string {
+  const uid = esc(id) || "mark";
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32" role="img" aria-hidden="true" data-craft-app="1" data-fenix-premium-mark="1" data-fenix-water-mark="1" data-fenix-water-header="1">
+<defs>
+  <linearGradient id="cwd-plate-${uid}" x1="6" y1="2" x2="26" y2="30" gradientUnits="userSpaceOnUse">
+    <stop offset="0" stop-color="#0F3A5C"/>
+    <stop offset="1" stop-color="#082338"/>
+  </linearGradient>
+  <linearGradient id="cwd-drop-${uid}" x1="11" y1="6" x2="22" y2="26" gradientUnits="userSpaceOnUse">
+    <stop offset="0" stop-color="#E0F2FE"/>
+    <stop offset=".38" stop-color="#38BDF8"/>
+    <stop offset="1" stop-color="#0284C7"/>
+  </linearGradient>
+</defs>
+<rect x="0" y="0" width="32" height="32" rx="9" fill="url(#cwd-plate-${uid})"/>
+<g transform="translate(16 16.6) scale(1.22) translate(-12 -13)">
+  <path fill="url(#cwd-drop-${uid})" d="M12 4.4c3.8 4.8 5.6 8.2 5.6 11a5.6 5.6 0 0 1-11.2 0C6.4 12.6 8.2 9.2 12 4.4z"/>
+</g>
+<ellipse cx="13.4" cy="12.2" rx="2.2" ry="3" fill="#fff" fill-opacity=".62"/>
+</svg>`;
+}
+
 /** Glossy water-ops mark: original drop + beveled ring. Not a cloned 3D asset, not Apple SET. */
 export function glossyWaterMarkSvg(id: string, colors: PremiumMarkColors): string {
   const uid = esc(id) || "mark";

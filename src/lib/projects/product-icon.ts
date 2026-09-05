@@ -1,6 +1,7 @@
 import type { Palette, ProjectKind } from "@/lib/projects/types";
 
 const MOTIFS: { test: RegExp; d: string }[] = [
+  { test: /acqua|bottiglia|serbatoio|\bbotte\b|livello|consegne/i, d: "M16 6c5 6.4 7.4 11 7.4 14.6A7.4 7.4 0 1 1 8.6 20.6C8.6 17 11 12.4 16 6z" },
   { test: /caff|coffee|espresso|bar\b|roast/i, d: "M10 12h12v8a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4v-8zm12 2h2a3 3 0 0 1 0 6h-2M12 8c0-2 2-3 4-3" },
   { test: /pane|forno|bakery|bread|pasticc/i, d: "M8 18c0-6 16-6 16 0v2H8v-2zm2-2c1-4 12-4 12 0" },
   { test: /medit|yoga|zen|calm|breath|sleep/i, d: "M16 7a3 3 0 1 1 0 6 3 3 0 0 1 0-6zm-6 14c1-5 5-7 6-7s5 2 6 7" },
