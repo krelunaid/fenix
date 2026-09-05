@@ -39,32 +39,40 @@ export function glossyWaterMarkSvg(id: string, colors: PremiumMarkColors): strin
     <stop offset="0" stop-color="#000" stop-opacity=".28"/>
     <stop offset="1" stop-color="#000" stop-opacity="0"/>
   </radialGradient>
-  <linearGradient id="wm-drop-${uid}" x1="48" y1="28" x2="78" y2="92" gradientUnits="userSpaceOnUse">
-    <stop offset="0" stop-color="#8FD0F2"/>
-    <stop offset=".42" stop-color="${accent}"/>
-    <stop offset="1" stop-color="#083A6E"/>
+  <linearGradient id="wm-drop-${uid}" x1="44" y1="24" x2="80" y2="94" gradientUnits="userSpaceOnUse">
+    <stop offset="0" stop-color="#D6F1FF"/>
+    <stop offset=".22" stop-color="#7EC8F2"/>
+    <stop offset=".55" stop-color="${accent}"/>
+    <stop offset="1" stop-color="#052A52"/>
   </linearGradient>
-  <radialGradient id="wm-spec-${uid}" cx="50" cy="42" r="16" gradientUnits="userSpaceOnUse">
-    <stop offset="0" stop-color="#fff" stop-opacity=".92"/>
-    <stop offset=".45" stop-color="#fff" stop-opacity=".28"/>
+  <radialGradient id="wm-spec-${uid}" cx="49" cy="40" r="14" gradientUnits="userSpaceOnUse">
+    <stop offset="0" stop-color="#fff" stop-opacity="1"/>
+    <stop offset=".35" stop-color="#fff" stop-opacity=".55"/>
+    <stop offset="1" stop-color="#fff" stop-opacity="0"/>
+  </radialGradient>
+  <radialGradient id="wm-glass-${uid}" cx="62" cy="58" r="22" gradientUnits="userSpaceOnUse">
+    <stop offset="0" stop-color="#fff" stop-opacity=".22"/>
     <stop offset="1" stop-color="#fff" stop-opacity="0"/>
   </radialGradient>
   <filter id="wm-soft-${uid}" x="-20%" y="-20%" width="140%" height="140%">
-    <feDropShadow dx="0" dy="3" stdDeviation="2.4" flood-color="#04101C" flood-opacity=".38"/>
+    <feDropShadow dx="0" dy="3.5" stdDeviation="2.6" flood-color="#04101C" flood-opacity=".45"/>
   </filter>
 </defs>
 <rect x="2" y="2" width="116" height="116" rx="32" fill="url(#wm-plate-${uid})"/>
 <rect x="2" y="2" width="116" height="116" rx="32" fill="url(#wm-sheen-${uid})"/>
 <rect x="2" y="2" width="116" height="116" rx="32" fill="url(#wm-well-${uid})"/>
-<circle cx="60" cy="61" r="41" fill="none" stroke="#0A1422" stroke-opacity=".35" stroke-width="9"/>
-<circle cx="60" cy="60" r="40" fill="none" stroke="${lift}" stroke-opacity=".22" stroke-width="8"/>
-<circle cx="60" cy="60" r="40" fill="none" stroke="${lift}" stroke-opacity=".94" stroke-width="7.2" stroke-linecap="round" stroke-dasharray="78 174" transform="rotate(-72 60 60)"/>
-<circle cx="60" cy="60" r="40" fill="none" stroke="${accent}" stroke-width="7.2" stroke-linecap="round" stroke-dasharray="52 200" transform="rotate(-18 60 60)"/>
-<ellipse cx="61" cy="88" rx="13" ry="5" fill="#041018" opacity=".28"/>
-<path filter="url(#wm-soft-${uid})" fill="url(#wm-drop-${uid})" d="M60 27c11.8 16.4 18.6 28.4 18.6 39.2A18.6 18.6 0 0 1 41.4 66.2C41.4 55.4 48.2 43.4 60 27z"/>
-<path fill="url(#wm-spec-${uid})" d="M52 38c4.2-3.6 11.4-3.2 14.8 1.4 1.6 2.2.4 5.2-2.2 6.1-3.6 1.3-8.6-.6-10.8-3.8-1.4-2-1.4-2.8-1.8-3.7z"/>
-<path fill="none" stroke="#083056" stroke-width="1.35" stroke-linecap="round" d="M50.5 72.2c3.2 2.2 7.2 3.4 11.4 3.2 3.6-.2 6.8-1.4 9.4-3.2"/>
-<path fill="none" stroke="#0B4A86" stroke-width="1.15" stroke-linecap="round" opacity=".8" d="M52.2 77.6c2.8 1.5 6.1 2.3 9.6 2.1 2.8-.1 5.4-1 7.6-2.3"/>
+<circle cx="60" cy="62" r="41.5" fill="none" stroke="#040910" stroke-opacity=".4" stroke-width="10"/>
+<circle cx="60" cy="59.2" r="40" fill="none" stroke="#fff" stroke-opacity=".55" stroke-width="3.2"/>
+<circle cx="60" cy="60" r="40" fill="none" stroke="${lift}" stroke-opacity=".2" stroke-width="8"/>
+<circle cx="60" cy="60" r="40" fill="none" stroke="${lift}" stroke-opacity=".96" stroke-width="8" stroke-linecap="round" stroke-dasharray="92 160" transform="rotate(-88 60 60)"/>
+<circle cx="60" cy="60" r="40" fill="none" stroke="${accent}" stroke-width="8" stroke-linecap="round" stroke-dasharray="58 194" transform="rotate(-12 60 60)"/>
+<ellipse cx="61" cy="89" rx="14" ry="5.5" fill="#041018" opacity=".32"/>
+<path filter="url(#wm-soft-${uid})" fill="url(#wm-drop-${uid})" d="M60 26c12.4 17.2 19.4 29.6 19.4 40.6A19.4 19.4 0 0 1 40.6 66.6C40.6 55.6 47.6 43.2 60 26z"/>
+<path fill="url(#wm-glass-${uid})" d="M60 26c12.4 17.2 19.4 29.6 19.4 40.6A19.4 19.4 0 0 1 40.6 66.6C40.6 55.6 47.6 43.2 60 26z"/>
+<ellipse cx="51.5" cy="41" rx="6.2" ry="8.4" fill="url(#wm-spec-${uid})"/>
+<path fill="none" stroke="#EAF7FF" stroke-opacity=".55" stroke-width="1.6" stroke-linecap="round" d="M47.8 46c2.4-6.4 8.6-10.2 14.2-8.4"/>
+<path fill="none" stroke="#083056" stroke-width="1.4" stroke-linecap="round" d="M50.2 73.2c3.4 2.3 7.6 3.5 12 3.2 3.8-.2 7.1-1.5 9.8-3.4"/>
+<path fill="none" stroke="#0B4A86" stroke-width="1.2" stroke-linecap="round" opacity=".85" d="M52 78.4c2.9 1.6 6.4 2.4 10 2.2 2.9-.1 5.6-1 7.9-2.4"/>
 </svg>`;
 }
 

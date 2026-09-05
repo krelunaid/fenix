@@ -1150,8 +1150,9 @@ html[data-fenix-campo] .fx-pill.on,html[data-fenix-campo] .fx-filter.on,html[dat
 html[data-fenix-campo] .fx-card,html[data-fenix-campo] .fx-record,html[data-fenix-campo] .fx-table-wrap,html[data-fenix-campo] .fx-jump{box-shadow:0 10px 28px color-mix(in srgb,var(--navy) 8%,transparent)}
 html[data-fenix-campo] .fx-metric b{color:var(--water)}
 html[data-fenix-campo] .fx-who{margin:4px 0 0;color:var(--water);font:650 14px/1.3 var(--body),system-ui,sans-serif}
-html[data-fenix-campo] .fx-badge{background:color-mix(in srgb,var(--warning) 16%,#fff);border-color:var(--warning);color:#8a7010}
-html[data-fenix-campo] .fx-badge.ok{background:color-mix(in srgb,var(--ok-loud) 12%,#fff);border-color:var(--ok-loud);color:var(--ok-loud)}
+html[data-fenix-campo] .fx-badge{background:color-mix(in srgb,var(--warning) 22%,#fff);border-color:var(--warning);color:#8a7010}
+html[data-fenix-campo] .fx-badge.ok{background:color-mix(in srgb,var(--ok-loud) 20%,#fff);border-color:var(--ok-loud);color:#0f6b36}
+html[data-fenix-campo] .fx-trend{background:color-mix(in srgb,var(--ok-loud) 18%,#fff);color:#0f6b36}
 html[data-fenix-campo] .fx-dot{background:var(--ok-loud);box-shadow:0 0 0 3px color-mix(in srgb,var(--ok-loud) 18%,transparent)}
 html[data-fenix-campo] .fx-splash{background:#f7f8fa}
 html[data-fenix-campo] .fx-splash .fx-mark{width:96px;height:96px;border-radius:28px;overflow:visible;box-shadow:0 16px 40px color-mix(in srgb,var(--navy) 16%,transparent)}
