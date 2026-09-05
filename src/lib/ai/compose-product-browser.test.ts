@@ -1653,4 +1653,69 @@ describe("graphic pipeline visual QA D/T/M", () => {
       }
     }
   });
+
+  it("paints acqua bottiglia water Home with a drop mark and a contained glass botte at 390", async () => {
+    const { composeProduct } = await import("./compose-product.ts");
+    const { formatPrefix } = await import("../projects/infer.ts");
+    const brief =
+      formatPrefix("app") +
+      "App acqua bottiglia: home con botte/serbatoio acqua, livello, e tab Ordina. Stile iPhone.";
+    const product = composeProduct(brief);
+    assert.match(product.html, /data-craft-domain="water"/);
+    assert.match(product.html, /data-fenix-water-header/);
+    assert.match(product.html, /fx-botte/);
+    assert.doesNotMatch(product.html, /M10 7V5\.8A1\.8|M4 12h10M11\.2 8\.8/);
+    const src = prepareSrcDoc(product.html, product.tokens.palette, "acqua-bottiglia", product.grammar.kind);
+    const browser = await launchChromium();
+    try {
+      const page = await isolatedPage(browser, { viewport: { width: 390, height: 844 } });
+      try {
+        await page.setContent(src, { waitUntil: "domcontentloaded", timeout: 15000 });
+        await waitForFenixReady(page, 8000);
+        const paint = await page.evaluate(() => {
+          const html = document.documentElement;
+          const mark = document.querySelector(".fx-hello-row .fx-app-mark svg");
+          const botte = document.querySelector("svg.fx-botte");
+          const well = document.querySelector(".fx-tank-well");
+          const cells = [...document.querySelectorAll(".fx-inverse .fx-cell")].map((el) => {
+            const r = el.getBoundingClientRect();
+            const p = el.parentElement?.getBoundingClientRect();
+            return {
+              w: r.width,
+              overflow: r.right - (p?.right ?? r.right),
+              wrap: getComputedStyle(el).overflow,
+            };
+          });
+          const nav = [...document.querySelectorAll("nav.tabs svg[data-craft-nav]")];
+          return {
+            domain: html.getAttribute("data-craft-domain"),
+            campo: html.hasAttribute("data-fenix-campo"),
+            waterHeader: mark?.getAttribute("data-fenix-water-header"),
+            drop: mark?.innerHTML.includes("M12 4.4c3.8") ?? false,
+            exit: /M10 7V5\.8A1\.8/.test(document.body.innerHTML),
+            botte: !!botte,
+            wellH: well ? well.getBoundingClientRect().height : 0,
+            cells,
+            nav: nav.length,
+          };
+        });
+        assert.equal(paint.domain, "water");
+        assert.equal(paint.campo, true);
+        assert.equal(paint.waterHeader, "1");
+        assert.equal(paint.drop, true);
+        assert.equal(paint.exit, false);
+        assert.equal(paint.botte, true);
+        assert.ok(paint.wellH > 120 && paint.wellH <= 200, `botte well ${paint.wellH}`);
+        assert.equal(paint.nav, 5);
+        for (const cell of paint.cells) {
+          assert.ok(cell.overflow <= 1, `kpi overflow ${cell.overflow}`);
+          assert.equal(cell.wrap, "hidden");
+        }
+      } finally {
+        await page.close();
+      }
+    } finally {
+      await browser.close();
+    }
+  });
 });

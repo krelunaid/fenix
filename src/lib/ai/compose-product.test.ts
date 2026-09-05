@@ -8,6 +8,7 @@ import { evaluateContract, planContract } from "./build-contract.ts";
 import { auditGraphicQuality } from "../projects/graphic-quality.ts";
 import {
   PIPELINE_SPECS,
+  campoHomeHeaderMark,
   composeProduct,
   loadPipelineFixtures,
   runGraphicPipeline,
@@ -18,7 +19,7 @@ import { APP_SHELL_HTML } from "./app-shell.ts";
 import { hueBucket } from "../projects/design-tokens.ts";
 import { PALETTE_CORPUS, paletteDistance, CLOSE_DELTA_E } from "../projects/palette-engine.ts";
 import { domainIllustration, GEOMETRIC_REGRESSIONS, materialSignature } from "./domain-imagery.ts";
-import { isLetterAIcon, looksLikeIosWidgetHome } from "../projects/craft-icons.ts";
+import { craftNavIcon, isLetterAIcon, looksLikeIosWidgetHome } from "../projects/craft-icons.ts";
 import { appIdentityIcon, appIdentityLabel } from "../projects/app-identity.ts";
 import { prepareSrcDoc } from "../projects/color-scheme.ts";
 import { createBuildRequest, isComposedCreation } from "./build-request.ts";
@@ -969,6 +970,12 @@ describe("graphic pipeline prompt→plan→generate→visual→QA", () => {
     assert.match(product.html, /\.fx-axis\{[^}]*list-style:none/);
     assert.match(product.html, /overflow-wrap:anywhere/);
     assert.match(product.html, /\.home-hero\{[^}]*overflow:hidden/);
+    assert.match(product.html, /background-color:#F0F9FF/);
+    assert.match(product.html, /#BAE6FD|#7DD3FC|#0EA5E9/);
+    assert.match(product.html, /\.fx-inverse \.fx-board\{[^}]*gap:12px/);
+    assert.match(product.html, /\.fx-tank-well\{[^}]*height:176px/);
+    assert.match(product.html, /\.fx-botte\{[^}]*max-height:176px/);
+    assert.match(product.html, /data-craft-nav="1"/);
     assert.equal(product.tokens.palette.accent.toLowerCase(), "#0ea5e9");
     assert.doesNotMatch(product.html, /Ciao/);
     const perfume = composeProduct(
@@ -986,6 +993,28 @@ describe("graphic pipeline prompt→plan→generate→visual→QA", () => {
     assert.match(generic.html, /\.fx-tank\{[^}]*overflow:hidden/);
     assert.match(generic.html, /\.fx-axis\{[^}]*list-style:none/);
     assert.doesNotMatch(generic.html, /data-craft-domain="water"/);
+  });
+
+  it("renders a water-drop header mark on acqua bottiglia, not the live exit door or a briefcase", () => {
+    const brief =
+      formatPrefix("app") +
+      "App acqua bottiglia: home con botte/serbatoio acqua, livello, e tab Ordina. Stile iPhone.";
+    const product = composeProduct(brief);
+    const hello =
+      product.html.match(/html\+='<div class="fx-hello-row"[\s\S]{0,360}/)?.[0] || "";
+    const mark = campoHomeHeaderMark();
+    const office = craftNavIcon({ id: "app", label: "Ufficio" });
+    assert.match(hello, /FX_WATER_MARK/);
+    assert.match(hello, /fx-app-mark/);
+    assert.doesNotMatch(hello, /fx-exit|FX_EXIT_MARK|aria-label=\\"Esci\\"|aria-label="Esci"/);
+    assert.match(product.html, /data-fenix-water-header=\\?"1\\?"/);
+    assert.match(product.html, /M12 4\.4c3\.8 4\.8 5\.6 8\.2/);
+    assert.match(mark, /data-fenix-water-header="1"/);
+    assert.match(mark, /M12 4\.4c3\.8 4\.8 5\.6 8\.2/);
+    assert.notEqual(mark, office.replace('data-craft-nav="1"', 'data-craft-app="1"'));
+    assert.doesNotMatch(product.html, /M10 7V5\.8A1\.8|M4 12h10M11\.2 8\.8/);
+    assert.doesNotMatch(product.html, /M4\.8 8\.8h14\.4|M5\.2 8\.6h13\.6/);
+    assert.doesNotMatch(office, /M12 4\.4c3\.8 4\.8 5\.6 8\.2/);
   });
 
   it("keeps composed phone apps under the Edge artifact cap", () => {
