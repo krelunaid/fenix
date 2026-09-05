@@ -4,6 +4,8 @@
  */
 import type { DesignTokens } from "./design-tokens.ts";
 import { extractUserColors } from "./palette-engine.ts";
+import { inferKind, kindFromPrompt } from "./infer.ts";
+import { applyNativeAppStyle } from "./native-app-style.ts";
 
 export type GraphicIntentType = "system" | "serif" | "domain";
 export type GraphicIntentChrome = "semantic" | "domain";
@@ -52,7 +54,8 @@ const DOMAIN_PALETTE_FAMILIES = new Set([
  * (gray+#0071e3+SF Pro) and not a clone of screens or marks.
  */
 const SYSTEM_TYPE_RE =
-  /system-ui|-apple-system|font di sistema|tipo system\b|iphone-?like|(?:stile|tipo|come(?:\s+(?:un|l['’])?)?|qualit[aà]|da)\s+(?:l['’])?iphone|sans di sistema|ui-sans-serif primario|font system(?:-ui)? primario|font di sistema primario/i;
+  /system-ui|-apple-system|\b(?:font|caratter[ei]|tipografia)\s+di\s+sistema\b|tipo system\b|iphone-?like|(?:stile|tipo|come(?:\s+(?:un|l['’])?)?|qualit[aà]|da)\s+(?:l['’])?iphone|sans di sistema|ui-sans-serif primario|font system(?:-ui)? primario/i;
+const NATIVE_APP_RE = /iphone-?like|(?:stile|tipo|come|design|interfaccia)\s+(?:un\s+|l['’])?(?:apple|iphone|ios)\b/i;
 const SERIF_ASK_RE =
   /serif da rivista|serif esplicit|tipo da rivista|didone|serif primario|serif da manifesto|editoriale esplicitamente serif/i;
 const NAMED_SERIF_RE =
@@ -94,15 +97,17 @@ function withoutDenied(text: string): string {
 export function graphicIntentFromBrief(brief: string): GraphicIntent {
   const raw = String(brief || "");
   const p = withoutDenied(raw);
-  const system = SYSTEM_TYPE_RE.test(p);
+  const system = SYSTEM_TYPE_RE.test(p) || NATIVE_APP_RE.test(p);
   const named = p.match(NAMED_SERIF_RE)?.[1] || null;
   const serifAsk = SERIF_ASK_RE.test(p) || Boolean(named);
   const semantic = SEMANTIC_CHROME_RE.test(p);
   const chrome: GraphicIntentChrome = semantic ? "semantic" : "domain";
   if (system && serifAsk) {
-    const lower = p.toLowerCase();
-    const si = Math.max(lower.lastIndexOf("system"), lower.lastIndexOf("iphone"));
-    const ri = Math.max(lower.lastIndexOf("serif"), lower.lastIndexOf("literata"));
+    // Compare the phrases actually recognized, including Italian synonyms and
+    // all named serif faces; English keyword offsets miss "di sistema".
+    const lastMatch = (pattern: RegExp) => Math.max(-1, ...Array.from(p.matchAll(new RegExp(pattern.source, "gi")), match => match.index));
+    const si = Math.max(lastMatch(SYSTEM_TYPE_RE), lastMatch(NATIVE_APP_RE));
+    const ri = Math.max(lastMatch(SERIF_ASK_RE), lastMatch(NAMED_SERIF_RE));
     if (si > ri) return { type: "system", chrome, face: null };
   } else if (system) {
     return { type: "system", chrome, face: null };
@@ -115,6 +120,11 @@ export function graphicIntentFromBrief(brief: string): GraphicIntent {
     };
   }
   return { type: "domain", chrome, face: null };
+}
+
+/** Distinguish style requests from Apple Pay, reseller names and font-only briefs. */
+export function wantsNativeAppStyle(brief: string): boolean {
+  return (kindFromPrompt(brief) ?? inferKind(brief)) === "app" && NATIVE_APP_RE.test(withoutDenied(brief));
 }
 
 function titledSerif(raw: string): string {
@@ -343,7 +353,7 @@ export function enforceGraphicIntent(html: string, brief: string): string {
       }
     }
   }
-  return next;
+  return applyNativeAppStyle(next, wantsNativeAppStyle(brief));
 }
 
 export function preservesSemanticChrome(html: string): boolean {

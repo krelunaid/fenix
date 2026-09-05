@@ -11,7 +11,9 @@ import {
   enforceGraphicIntent,
   graphicIntentFromBrief,
   stampGraphicIntent,
+  wantsNativeAppStyle,
 } from "./graphic-intent.ts";
+import { applyNativeAppStyle } from "./native-app-style.ts";
 import { composeProduct } from "../ai/compose-product.ts";
 import { prepareSrcDoc } from "./color-scheme.ts";
 import { applyChromeGuards, craftNavIcon, looksLikeAppleTabIcons } from "./craft-icons.ts";
@@ -32,6 +34,28 @@ const APPLE_DUMP = `<!DOCTYPE html><html><body>
 </nav></body></html>`;
 
 describe("graphic intent from brief", () => {
+  it("applies a native app direction only when requested, preserving data and other formats", () => {
+    for (const direction of ["stile Apple", "stile iPhone", "interfaccia iOS", "iPhone-like"]) {
+      const brief = `${formatPrefix("app")}Catalogo profumi, ${direction}`;
+      assert.equal(wantsNativeAppStyle(brief), true, direction);
+      assert.equal(graphicIntentFromBrief(brief).type, "system");
+      assert.equal(wantsNativeAppStyle(`Non usare ${direction}`), false);
+      const composed = composeProduct(brief);
+      assert.match(composed.html, /data-fenix-native-style="v1"/);
+      const plain = applyNativeAppStyle(composed.html, false);
+      assert.equal(applyNativeAppStyle(plain, true), composed.html);
+      assert.equal(applyNativeAppStyle(composed.html, true), composed.html);
+      assert.equal(plain.slice(plain.indexOf("</head>")), composed.html.slice(composed.html.indexOf("</head>")));
+      assert.deepEqual([...plain.matchAll(/--(?:bg|surface|fg|accent):([^;]+)/g)].map(m => m[0]), [...composed.html.matchAll(/--(?:bg|surface|fg|accent):([^;]+)/g)].map(m => m[0]));
+    }
+    for (const brief of ["App con Apple Pay", "App rivenditore Apple", "App caratteri di sistema", `${formatPrefix("site")}Portfolio stile Apple`, `${formatPrefix("dashboard")}CRM stile iPhone`]) {
+      assert.equal(wantsNativeAppStyle(brief), false, brief);
+      assert.doesNotMatch(composeProduct(brief).html, /data-fenix-native-style/);
+    }
+    assert.equal(applyNativeAppStyle("<html><head></head><body>Studio</body></html>", true), "<html><head></head><body>Studio</body></html>");
+    assert.equal(graphicIntentFromBrief("App stile Apple, invece serif primario Garamond").type, "serif");
+  });
+
   it("keeps parent SHA at 76414c7 and does not invent a score", () => {
     assert.equal(GRAPHIC_INTENT_PARENT_SHA, "76414c75ce4dc1b2f66343fc0ed1160be0c1b45b");
   });
@@ -186,6 +210,18 @@ describe("graphic intent from brief", () => {
     assert.equal(graphicIntentFromBrief("Non usare Literata, usa system-ui").type, "system");
     assert.equal(graphicIntentFromBrief("system-ui. Non usare Literata.").type, "system");
     assert.equal(graphicIntentFromBrief("Non usare system-ui, usa Literata").type, "serif");
+  });
+
+  it("recognizes Italian system typography wording, denials and last positive direction", () => {
+    for (const wording of ["font di sistema", "caratteri di sistema", "carattere di sistema", "tipografia di sistema", "CARATTERI  DI  SISTEMA"]) {
+      assert.equal(graphicIntentFromBrief(`App profumi, ${wording}`).type, "system", wording);
+      assert.equal(graphicIntentFromBrief(`Non usare ${wording}`).type, "domain", `denied ${wording}`);
+      assert.equal(graphicIntentFromBrief(`Non usare ${wording}, usa Literata`).type, "serif");
+      assert.equal(graphicIntentFromBrief(`Literata; invece ${wording}`).type, "system", `last ${wording}`);
+      assert.equal(graphicIntentFromBrief(`${wording}; invece Garamond`).type, "serif");
+    }
+    assert.equal(graphicIntentFromBrief("App profumi: descrivi i caratteri della fragranza").type, "domain");
+    assert.equal(graphicIntentFromBrief("Agenda per una tipografia, prenotazioni stampa").type, "domain");
   });
 
   it("does not stamp semantic chrome from a denied Home/Aggiungi/Persona phrase", () => {

@@ -7,6 +7,7 @@ import { describe, it } from "node:test";
 import { type Page } from "playwright";
 import { isolatedPage, isBlockedPublicNetworkError, launchChromium } from "../projects/playwright-harness.ts";
 import { prepareSrcDoc } from "../projects/color-scheme.ts";
+import { applyNativeAppStyle } from "../projects/native-app-style.ts";
 import { composeProduct } from "./compose-product.ts";
 import { verifyVisualStyleEffect } from "../../../workers/visual/visual-style-effect.mjs";
 import { repairBuild } from "./repair.ts";
@@ -379,6 +380,74 @@ async function crudRoundtrip(
 }
 
 describe("intent preservation D/T/M after compose+repair path+prepareSrcDoc", () => {
+  it("native app style paints across domains and viewports without changing navigation or data", async () => {
+    const output = process.env.FENIX_NATIVE_SHOTS || "/tmp/fenix-native-app-shots";
+    mkdirSync(output, { recursive: true });
+    const browser = await launchChromium();
+    try {
+      for (const [id, brief] of [
+        ["agenda", "Agenda appuntamenti e prenotazioni"],
+        ["profumi", "App vendita profumi, catalogo flaconi e scorte"],
+        ["abbigliamento", "App abbigliamento, catalogo capi e taglie"],
+        ["note", "Lista in tasca: cose da fare operative, tab Home Aggiungi Persona, elenco e CRUD"],
+      ]) {
+        const composed = composeProduct(`${formatPrefix("app")}${brief}, stile Apple`);
+        for (const [vp, viewport] of [...VIEWPORTS, ["S", NARROW] as const]) {
+          const page = await isolatedPage(browser, { viewport });
+          const errors: string[] = [];
+          page.on("pageerror", error => { if (!isBlockedPublicNetworkError(String(error))) errors.push(String(error)); });
+          page.on("console", message => { if (message.type() === "error" && !isBlockedPublicNetworkError(message.text())) errors.push(message.text()); });
+          try {
+            await page.setContent(PERSIST_HOST);
+            const mount = async (html: string) => {
+              const src = prepareSrcDoc(html, composed.tokens.palette, `native-${id}-${vp}`, "app");
+              await page.locator("#f").evaluate((el, doc) => { (el as HTMLIFrameElement).srcdoc = doc; }, src);
+              await restFrame(page);
+              return src;
+            };
+            const frame = page.frameLocator("#f");
+            await mount(applyNativeAppStyle(composed.html, false));
+            await page.screenshot({ path: join(output, `${id}-${vp}-before.png`) });
+            const src = await mount(composed.html);
+            const title = await frame.locator(".brand").evaluate(el => {
+              const c = getComputedStyle(el); return { font: c.fontFamily, size: c.fontSize, style: c.fontStyle };
+            });
+            assert.match(title.font, /system-ui/i);
+            assert.equal(title.style, "normal");
+            assert.equal(title.size, viewport.width < 600 ? "30px" : "34px");
+            await page.screenshot({ path: join(output, `${id}-${vp}-after.png`) });
+            const ids = await frame.locator("#tabs button[data-view]").evaluateAll(nodes => nodes.map(node => node.getAttribute("data-view") || ""));
+            for (const view of ids) {
+              await frame.locator(`#tabs button[data-view="${view}"]`).click();
+              assert.equal(await frame.locator("#root").getAttribute("data-fenix-view"), view);
+              const overflow = await frame.locator("html").evaluate(() => document.documentElement.scrollWidth - innerWidth);
+              assert.ok(overflow <= 2, `${id}/${vp}/${view} overflow ${overflow}`);
+              for (const tab of await paintedNav(frame)) {
+                assert.ok(tab.bw >= 44 && tab.bh >= 44, `${id}/${vp} target ${tab.label}`);
+                assert.ok(tab.iw >= 28 && tab.ih >= 28, `${id}/${vp} icon ${tab.label}`);
+                assert.ok(tab.contrast >= 4.5, `${id}/${vp} contrast ${tab.label}: ${tab.contrast}`);
+              }
+            }
+            await frame.locator(`#tabs button[data-view="${ids[1]}"]`).click();
+            const input = frame.locator("#n");
+            if (await input.count()) {
+              const metrics = await input.evaluate(el => ({ size: getComputedStyle(el).fontSize, height: el.getBoundingClientRect().height }));
+              assert.equal(metrics.size, "17px");
+              assert.ok(metrics.height >= 48);
+              await input.focus();
+              assert.equal(await input.evaluate(el => getComputedStyle(el).outlineStyle), "solid");
+              await page.screenshot({ path: join(output, `${id}-${vp}-form.png`) });
+            }
+            if (composed.grammar.id === "phone-seed") await crudRoundtrip(page, frame, src, ids[1]!, ids[2]!, `Native ${vp}`);
+            await page.emulateMedia({ reducedMotion: "reduce" });
+            if (await frame.locator(".btn").count()) assert.equal(await frame.locator(".btn").first().evaluate(el => getComputedStyle(el).transitionDuration), "0s");
+            assert.deepEqual(errors, [], `${id}/${vp} console`);
+          } finally { await page.close(); }
+        }
+      }
+    } finally { await browser.close(); }
+  });
+
   it("structured visual plan survives composed runtime navigation across five domains D/T/M", async () => {
     const prompts = [
       ["agenda", "Agenda appuntamenti e prenotazioni, stile iPhone, caratteri di sistema"],
@@ -416,6 +485,8 @@ describe("intent preservation D/T/M after compose+repair path+prepareSrcDoc", ()
             await mount(composed.html);
             const frame = page.frameLocator("#f");
             const baseline = await frame.locator(".brand").evaluate(el => ({ size: getComputedStyle(el).fontSize, color: getComputedStyle(el).color, font: getComputedStyle(el).fontFamily }));
+            assert.match(baseline.font, /system-ui|-apple-system|ui-sans-serif/i, `${id}/${vp} requested Italian system typography must paint`);
+            assert.doesNotMatch(baseline.font, /Georgia|Literata|Karla/i, `${id}/${vp} no domain font overriding explicit request`);
             await page.screenshot({ path: join(output, `${id}-${vp}-before.png`) });
             const src = await mount(styled);
             const expected = vp === "M" ? "29px" : vp === "T" ? "31px" : "33px";
