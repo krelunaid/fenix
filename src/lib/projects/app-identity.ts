@@ -19,9 +19,16 @@ export function isShopBrief(brief: string): boolean {
   return /\bnegozio\b|\bretail\b|\bemporio\b|\bshop\b/i.test(brief);
 }
 
+/** Water vessel / tank cue. Order-independent: "acqua bottiglia" and "serbatoio acqua" both count. */
+function hasWaterVesselCue(brief: string): boolean {
+  const t = String(brief || "");
+  if (/\bbotte\s*\/\s*serbatoio\b|\bserbatoio\s*\/\s*botte\b|\bserbatoio\b|\bautobotte\b/i.test(t)) return true;
+  return /\bacqua\b/i.test(t) && /\b(bottiglia|botte|livello|consegne|dipendenti|campo|automez)\b/i.test(t);
+}
+
 /**
- * Field / workforce product (consegne, dipendenti, storico+statistiche).
- * Not a palette. Does not match "gestione profumi" or a generic diario.
+ * Field / workforce / water-tank product (consegne, dipendenti, botte/serbatoio).
+ * Not a palette. Does not match "gestione profumi", agenda, barber, or fiscal.
  */
 export function isFieldProductBrief(brief: string): boolean {
   if (isBarberBrief(brief) || isAccountantBrief(brief)) return false;
@@ -30,7 +37,7 @@ export function isFieldProductBrief(brief: string): boolean {
   return (
     /consegne?\b|dipendenti|forza\s*lavoro|gestione\s+dipendent|squadra\s+operativ/i.test(t) ||
     (/\bstorico\b/i.test(t) && /\bstatistiche\b/i.test(t)) ||
-    /\bacqua\b.+\b(consegne|dipendenti|campo|automez)/i.test(t)
+    hasWaterVesselCue(t)
   );
 }
 
@@ -82,7 +89,7 @@ export function isLuxeBrief(brief: string): boolean {
 export function appIdentityLabel(brief: string, family: string): string {
   if (isBarberBrief(brief)) return "Taglio";
   if (isAccountantBrief(brief)) return "Fatture";
-  if (isFieldProductBrief(brief)) return "Consegne";
+  if (isFieldProductBrief(brief)) return /\b(acqua|bottiglia|botte|serbatoio)\b/i.test(brief) ? "Acqua" : "Consegne";
   if (isMarketplaceBrief(brief)) return "Incarichi";
   if (isLuxeBrief(brief)) return "Scene";
   const labels: Record<string, string> = {

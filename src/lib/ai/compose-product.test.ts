@@ -950,11 +950,50 @@ describe("graphic pipeline prompt→plan→generate→visual→QA", () => {
     assert.notEqual(desk.tokens.palette.bg.toLowerCase(), "#0d0d11");
   });
 
+  it("widens acqua bottiglia onto campo water craft with a contained glass botte", () => {
+    const brief =
+      formatPrefix("app") +
+      "App acqua bottiglia: home con botte/serbatoio acqua, livello, e tab Ordina. Stile iPhone.";
+    const product = composeProduct(brief);
+    assert.equal(product.grammar.id, "phone-seed");
+    assert.match(product.html, /data-fenix-campo/);
+    assert.match(product.html, /data-craft-domain="water"/);
+    assert.match(product.html, /data-craft-mode="utility"/);
+    assert.match(product.html, /fx-botte/);
+    assert.match(product.html, /fxBotteSvg/);
+    assert.match(product.html, /data-fenix-water-mark/);
+    assert.match(product.html, /Serbatoio:/);
+    assert.match(product.html, /fx-tank-meta/);
+    assert.match(product.html, /\.fx-tank\{[^}]*overflow:hidden/);
+    assert.match(product.html, /\.fx-tank-frame\{[^}]*overflow:hidden/);
+    assert.match(product.html, /\.fx-axis\{[^}]*list-style:none/);
+    assert.match(product.html, /overflow-wrap:anywhere/);
+    assert.match(product.html, /\.home-hero\{[^}]*overflow:hidden/);
+    assert.equal(product.tokens.palette.accent.toLowerCase(), "#0ea5e9");
+    assert.doesNotMatch(product.html, /Ciao/);
+    const perfume = composeProduct(
+      `${formatPrefix("app")}Essenza: gestione profumi da vendere, stile iPhone.`,
+    );
+    assert.doesNotMatch(perfume.html, /<html[^>]*data-fenix-campo/);
+    assert.doesNotMatch(perfume.html, /data-craft-domain="water"/);
+    const agenda = composeProduct(
+      `${formatPrefix("app")}Agenda appuntamenti e prenotazioni, stile Apple.`,
+    );
+    assert.doesNotMatch(agenda.html, /<html[^>]*data-fenix-campo/);
+    const generic = composeProduct(
+      `${formatPrefix("app")}Lista in tasca: cose da fare operative, tipo system-ui iPhone-like.`,
+    );
+    assert.match(generic.html, /\.fx-tank\{[^}]*overflow:hidden/);
+    assert.match(generic.html, /\.fx-axis\{[^}]*list-style:none/);
+    assert.doesNotMatch(generic.html, /data-craft-domain="water"/);
+  });
+
   it("keeps composed phone apps under the Edge artifact cap", () => {
     const briefs = [
       "FORMATO: app. kind=app. Agenda studio: appuntamenti e prenotazioni, stile iPhone.",
       "FORMATO: app telefono 390×844. kind=app. Tab in basso, 5 schermate. NON un sito.\n\nmi crei un app da parrucchieri stile Barber shop",
       `${formatPrefix("app")}NordAcqua: consegne acqua in campo, gestione dipendenti, storico e statistiche, stile Apple.`,
+      `${formatPrefix("app")}App acqua bottiglia: home con botte/serbatoio acqua, livello, e tab Ordina. Stile iPhone.`,
       `${formatPrefix("app")}Vicina: marketplace di lavoretti e bacheca incarichi, stile Apple.`,
       `${formatPrefix("app")}Palco: scene e recitazione, prove e repertorio, stile Apple.`,
       `${formatPrefix("app")}Emporio Luce: negozio di lampade da tavolo, stile Apple.`,

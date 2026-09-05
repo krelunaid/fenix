@@ -27,7 +27,7 @@ html[data-grammar] nav.tabs button{min-height:48px;gap:5px;font-size:12px;font-w
 html[data-grammar] nav.tabs button.on{background:transparent;color:var(--accent);border-radius:12px;box-shadow:none}
 html[data-grammar] .fx-large{font-size:var(--fenix-type-large-title);font-weight:700;letter-spacing:-.035em}
 html[data-grammar] .fx-sub{font-size:var(--fenix-type-subhead);color:var(--muted)}
-html[data-grammar] :is(.fx-board,.fx-tank,.fx-card,.fx-record,.fx-table-wrap){border-radius:22px}
+html[data-grammar] :is(.fx-board,.fx-tank,.fx-card,.fx-record,.fx-table-wrap){border-radius:22px;overflow:hidden;min-width:0}
 html[data-grammar] .fx-pill.on,.fx-filter.on,.fx-nuovo{box-shadow:none}
 html[data-grammar] .app-mark{width:44px;height:44px;padding:0;border:0;border-radius:14px;overflow:hidden}
 html[data-grammar] .app-mark svg{width:44px;height:44px}
