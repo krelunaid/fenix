@@ -15,7 +15,9 @@ An explicit later serif request remains authoritative for typography.
 
 The direction includes an upright 30–34px headline, 17px form text, consistent
 14px control radii, 18px surfaces, 44–48px tap targets, 28px original nav icons
-with stronger selected strokes, visible focus and reduced-motion handling.
+with stronger selected strokes, a published type ramp (34→12) and 8px spacing
+token, tabular figures, inset grouped-list hairlines, visible focus and
+reduced-motion handling.
 Selected nav text uses foreground-on-surface rather than accent-on-tinted-surface:
 browser testing exposed insufficient contrast in one of the adaptive palettes.
 Agenda rows use a grouped list (hairline separators, times in foreground, tinted

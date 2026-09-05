@@ -4,6 +4,7 @@
  */
 import type { DesignTokens } from "./design-tokens.ts";
 import { extractUserColors } from "./palette-engine.ts";
+import { isLuxeBrief } from "./app-identity.ts";
 import { inferKind, kindFromPrompt } from "./infer.ts";
 import { applyNativeAppStyle } from "./native-app-style.ts";
 
@@ -158,6 +159,16 @@ function serifStack(face: string): string {
 }
 
 export function applyGraphicIntent(tokens: DesignTokens, brief: string): DesignTokens {
+  if (isLuxeBrief(brief)) {
+    return {
+      ...tokens,
+      fonts: {
+        display: "Fraunces",
+        body: "Figtree",
+        href: "https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,700&display=swap",
+      },
+    };
+  }
   const intent = graphicIntentFromBrief(brief);
   if (intent.type === "system") {
     const keepPalette = DOMAIN_PALETTE_FAMILIES.has(tokens.family);
@@ -323,6 +334,14 @@ function ensureRootFontVars(html: string, display: string, body: string): string
 export function enforceGraphicIntent(html: string, brief: string): string {
   let next = stampGraphicIntent(html, brief);
   const intent = graphicIntentFromBrief(brief);
+  if (isLuxeBrief(brief)) {
+    const display = serifStack("Fraunces");
+    const body = `"Figtree",${SYSTEM_FONT_STACK}`;
+    next = next.replace(/--display\s*:[^;}]+/g, `--display:${display}`);
+    next = next.replace(/--body\s*:[^;}]+/g, `--body:${body}`);
+    next = ensureRootFontVars(next, display, body);
+    return applyNativeAppStyle(next, wantsNativeAppStyle(brief));
+  }
   if (intent.type === "system") {
     next = next.replace(/--display\s*:[^;}]+/g, `--display:${SYSTEM_FONT_STACK}`);
     next = next.replace(/--body\s*:[^;}]+/g, `--body:${SYSTEM_FONT_STACK}`);
