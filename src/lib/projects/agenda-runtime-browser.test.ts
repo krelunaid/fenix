@@ -56,7 +56,10 @@ window.db={};addEventListener("message",function(e){var m=e.data;if(!m||m.t!=="f
           assert.equal(await frame.locator("html").evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),false,`${id}/${label} viewport`);
           const fit=await row.locator(".slot-actions").evaluate(el=>el.scrollWidth<=el.clientWidth+1);
           assert.equal(fit,true,`${id}/${label} action row`);
-          assert.equal(await button.evaluate(el=>el.getBoundingClientRect().height>=44),true);
+          const target = await button.evaluate(el=>({height:el.getBoundingClientRect().height,minHeight:parseFloat(getComputedStyle(el).minHeight)}));
+          // Chromium can report 43.999969482421875 for a CSS 44px target at 320px.
+          // Allow only floating-point noise, not a visibly undersized target.
+          assert.equal(target.minHeight>=44 && target.height>=44-0.001,true,JSON.stringify({id,label,...target}));
           await button.click();
           await frame.locator(`article.slot[data-id="s1"][data-status="${next}"]`).waitFor({timeout:4000});
           await frame.locator("html:not([data-fenix-persist='busy'])").waitFor({timeout:4000});
