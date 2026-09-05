@@ -8,6 +8,7 @@ import { type Page } from "playwright";
 import { isolatedPage, isBlockedPublicNetworkError, launchChromium } from "../projects/playwright-harness.ts";
 import { prepareSrcDoc } from "../projects/color-scheme.ts";
 import { composeProduct } from "./compose-product.ts";
+import { verifyVisualStyleEffect } from "../../../workers/visual/visual-style-effect.mjs";
 import { repairBuild } from "./repair.ts";
 import { formatPrefix } from "../projects/infer.ts";
 import {
@@ -378,6 +379,68 @@ async function crudRoundtrip(
 }
 
 describe("intent preservation D/T/M after compose+repair path+prepareSrcDoc", () => {
+  it("structured visual plan survives composed runtime navigation across five domains D/T/M", async () => {
+    const prompts = [
+      ["agenda", "Agenda appuntamenti e prenotazioni, stile iPhone, caratteri di sistema"],
+      ["profumi", "App vendita profumi, catalogo flaconi e scorte, caratteri di sistema"],
+      ["abbigliamento", "App abbigliamento, catalogo capi e taglie, caratteri di sistema"],
+      ["repository", "App repository GitHub, commit e rami, caratteri di sistema"],
+      ["ristorazione", "App ristorante, menu e prenotazioni tavoli, caratteri di sistema"],
+    ];
+    const output = process.env.FENIX_STYLE_SHOTS || "/tmp/fenix-visual-style-shots";
+    mkdirSync(output, { recursive: true });
+    const plan = { version: 1, rules: [
+      { selector: ".brand", viewport: "mobile", declarations: { "font-size": "29px" } },
+      { selector: ".brand", viewport: "tablet", declarations: { "font-size": "31px" } },
+      { selector: ".brand", viewport: "desktop", declarations: { "font-size": "33px" } },
+    ] };
+    const browser = await launchChromium();
+    try {
+      for (const [id, brief] of prompts) {
+        const composed = composeProduct(`${formatPrefix("app")}${brief}`);
+        const styled = await verifyVisualStyleEffect(composed.html, plan);
+        assert.equal(styled.slice(styled.indexOf("</head>")), composed.html.slice(composed.html.indexOf("</head>")));
+        for (const [vp, viewport] of VIEWPORTS) {
+          const page = await isolatedPage(browser, { viewport });
+          const errors: string[] = [];
+          page.on("pageerror", error => { if (!isBlockedPublicNetworkError(String(error))) errors.push(String(error)); });
+          page.on("console", message => { if (message.type() === "error" && !isBlockedPublicNetworkError(message.text())) errors.push(message.text()); });
+          try {
+            await page.setContent(PERSIST_HOST, { waitUntil: "domcontentloaded" });
+            const mount = async (html: string) => {
+              const src = prepareSrcDoc(html, composed.tokens.palette, `style-${id}-${vp}`, composed.grammar.kind);
+              await page.locator("#f").evaluate((el, doc) => { (el as HTMLIFrameElement).srcdoc = doc; }, src);
+              await restFrame(page);
+              return src;
+            };
+            await mount(composed.html);
+            const frame = page.frameLocator("#f");
+            const baseline = await frame.locator(".brand").evaluate(el => ({ size: getComputedStyle(el).fontSize, color: getComputedStyle(el).color, font: getComputedStyle(el).fontFamily }));
+            await page.screenshot({ path: join(output, `${id}-${vp}-before.png`) });
+            const src = await mount(styled);
+            const expected = vp === "M" ? "29px" : vp === "T" ? "31px" : "33px";
+            const painted = await frame.locator(".brand").evaluate(el => ({ size: getComputedStyle(el).fontSize, color: getComputedStyle(el).color, font: getComputedStyle(el).fontFamily }));
+            assert.equal(painted.size, expected, `${id}/${vp} style layer must paint`);
+            assert.notEqual(painted.size, baseline.size, `${id}/${vp} real computed change`);
+            assert.equal(painted.color, baseline.color);
+            assert.equal(painted.font, baseline.font);
+            await page.screenshot({ path: join(output, `${id}-${vp}-after.png`) });
+            const ids = await frame.locator("#tabs button[data-view]").evaluateAll(nodes => nodes.map(node => node.getAttribute("data-view") || ""));
+            for (const view of ids) {
+              await frame.locator(`#tabs button[data-view="${view}"]`).click();
+              assert.equal(await frame.locator("#root").getAttribute("data-fenix-view"), view);
+              assert.equal(await frame.locator(".brand").evaluate(el => getComputedStyle(el).fontSize), expected);
+            }
+            if (composed.grammar.id === "phone-seed") {
+              await crudRoundtrip(page, frame, src, ids[1]!, ids[2]!, `Style ${id} ${vp}`);
+            }
+            assert.deepEqual(errors, [], `${id}/${vp} console`);
+          } finally { await page.close(); }
+        }
+      }
+    } finally { await browser.close(); }
+  });
+
   it("keeps system/iPhone-like and serif direction on computed styles, CRUD, reload, console", async () => {
     assert.equal(GRAPHIC_INTENT_PARENT_SHA, "76414c75ce4dc1b2f66343fc0ed1160be0c1b45b");
     assert.equal(readFileSync(join(BEFORE, "parent.txt"), "utf8").trim(), GRAPHIC_INTENT_PARENT_SHA);

@@ -1,5 +1,7 @@
 import { createServer } from "node:http";
 import { restoreHome, keepScripts } from "./artifact-restore.mjs";
+import { isComposedVisualArtifact, VISUAL_STYLE_SELECTORS } from "./visual-style.mjs";
+import { verifyVisualStyleEffect } from "./visual-style-effect.mjs";
 import { artifactContext, completeResponseText, MAX_ARTIFACT_CHARS } from "./artifact-context.mjs";
 import {
   TAB_IDS,
@@ -669,6 +671,34 @@ async function auditTab(page, index) {
   });
 }
 
+async function polishComposedStyle(apiKey, prompt, html) {
+  const response = await fetch(XAI, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+    body: JSON.stringify({
+      model: MODEL,
+      temperature: 0.4,
+      max_tokens: 3000,
+      stream: false,
+      messages: [
+        { role: "system", content: `Rifinisci SOLO il ritmo visivo dell'app esistente in base al brief. Non riscrivere HTML, script, copy, icone, palette o famiglia tipografica. Mantieni identità e dati. Non inventare elementi assenti. Rispondi soltanto JSON: {"version":1,"rules":[{"selector":".brand","viewport":"all","declarations":{"font-size":"28px"}}]}.
+Selector ammessi: ${VISUAL_STYLE_SELECTORS.join(", ")}. Usa soltanto target già presenti e visibili nell'HTML statico: elementi creati dagli script non sono verificabili in questo passaggio. Non proporre valori identici allo stile esistente.
+viewport: all, mobile (fino599px), tablet (600–1023px), desktop (da1024px). Massimo24regole, nessun duplicato selector/viewport.
+Proprietà ammesse con valori STRINGA: padding (da1a4misure 0–32px), gap (0–32px), border-radius (0–28px), font-size (14–40px), font-weight (400–750), line-height (1.1–1.7), letter-spacing (-0.03–0.1em), box-shadow (solo none oppure subtle).
+Scegli poche modifiche coerenti col dominio: gerarchia, leggibilità, densità mobile e respiro desktop. Non assegnare lo stesso stile a ogni elemento. Nessuna URL, animazione, regola per nascondere contenuti o riscrittura funzionale.` },
+        { role: "user", content: `BRIEF:\n${prompt}\n\nAPP ESISTENTE:\n${artifactContext(html)}` },
+      ],
+    }),
+  });
+  if (!response.ok) throw new Error(`xAI ${response.status}`);
+  const plan = JSON.parse(completeResponseText(await response.json()));
+  const styled = await verifyVisualStyleEffect(html, plan);
+  return {
+    html: styled, meta: {}, files: [],
+    log: ["Rifinitura visuale strutturata: tipografia e spazi", "HTML, dati, script, icone e palette preservati"],
+  };
+}
+
 async function polish(prompt, html, instruction, kind) {
   if (looksLikeIconInstruction(instruction)) {
     const verdict = applyIconRevision({ html, files: [], instruction });
@@ -718,6 +748,11 @@ async function polish(prompt, html, instruction, kind) {
     }
     current = stripPhoneChromeFromSite(current);
     return { html: current, meta: { kind: "site" }, log, files: [] };
+  }
+  // Automatic refinement only. An explicit functional edit must never be
+  // silently downgraded to a style-only response.
+  if (!instruction && isComposedVisualArtifact(html)) {
+    return polishComposedStyle(apiKey, prompt, html);
   }
   const log = [];
   let current = html;
