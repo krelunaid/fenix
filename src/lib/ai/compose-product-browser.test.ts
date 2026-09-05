@@ -1766,7 +1766,10 @@ describe("graphic pipeline visual QA D/T/M", () => {
           await page.setContent(src, { waitUntil: "domcontentloaded", timeout: 15000 });
           await waitForFenixReady(page, 8000);
           const paint = await page.evaluate((attr) => {
-            const chip = document.querySelector("header .app-mark");
+            const homeChip = document.querySelector(".fx-app-mark");
+            const headerChip = document.querySelector("header .app-mark");
+            const headerHidden = headerChip ? getComputedStyle(headerChip.closest("header")!).display === "none" : false;
+            const chip = homeChip && homeChip.getBoundingClientRect().width > 0 ? homeChip : headerChip;
             const mark = chip?.querySelector("svg");
             const filled = [...(mark?.querySelectorAll("path,circle,rect") ?? [])].some((el) => {
               const fill = el.getAttribute("fill") || "";
@@ -1782,6 +1785,7 @@ describe("graphic pipeline visual QA D/T/M", () => {
               chipW: chip?.getBoundingClientRect().width ?? 0,
               markW: mark?.getBoundingClientRect().width ?? 0,
               bg,
+              headerHidden,
               transparentChip: !rgb || (Number(rgb[1]) === 0 && Number(rgb[2]) === 0 && Number(rgb[3]) === 0) || bg === "transparent",
               appleTouch: !!document.querySelector('link[rel="apple-touch-icon"]'),
               exit: /M10 7V5\.8A1\.8/.test(document.body.innerHTML),
