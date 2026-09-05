@@ -73,3 +73,24 @@ examples or evidence of live account/role/message delivery.
 
 Production publication is separate from local changes and requires all release
 gates. This document does not assert a new production deployment.
+
+## Next protocol slice: runtime-independent atomic edits
+
+`workers/visual/composed-protocol.mjs` extracts the existing atomic validator,
+palette validation and system instruction without Node-only dependencies.
+Its Web Crypto entrypoint computes SHA-256 from the actual original HTML;
+the Node worker retains its synchronous API through a thin crypto wrapper.
+Parity tests compare Unicode/literal replacement bytes and rejection of stale
+hashes, malformed plans, ambiguous/overlapping targets and oversized sources.
+This is preparation for Edge parity, NOT a transport switch or a premium result.
+The Edge route and controller still need contract-aware integration: do not
+route backend/auth requests to an HTML-only composed protocol and lose files.
+Complete release verification must cover the eventual integrated commit.
+
+Foundation verification: 13/13 targeted tests passed, including actual worker
+requests against a mocked provider and Node/Web Crypto parity. Typecheck and
+build passed on this working tree; its build manifest still identifies the
+parent c1b2f81, so it is NOT an exact-commit release artifact. No Edge/controller
+wiring, full-suite rerun, GitHub push or deployment is claimed for this slice.
+Logs: /tmp/fenix-composed-protocol-worker.log and
+/tmp/fenix-composed-webcrypto-build.log. No model/network generation was used.
