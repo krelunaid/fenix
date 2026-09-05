@@ -33,12 +33,37 @@ const APPLE_APP = `<!DOCTYPE html><html><body>
 </body></html>`;
 
 describe("craft icons vs Apple chrome", () => {
+  it("maps appointment roles by visible label, independently of legacy ids and order", () => {
+    const labels = ["Agenda", "Prenota", "Prenotazioni", "Statistiche", "Team", "Messaggi", "Impostazioni"];
+    const svgs = labels.map(label => craftNavIcon({ id: "new", label }, 0));
+    assert.equal(new Set(svgs).size, labels.length, "each function needs its own recognizable glyph");
+    labels.forEach((label, i) => {
+      assert.equal(svgs[i], craftNavIcon({ id: "stats", label }, 3), "visible function must outrank positional fallback/id");
+      assert.match(svgs[i]!, /aria-hidden="true"/);
+    });
+    assert.notEqual(svgs[1], craftNavIcon({ id: "prenota", label: "Check-in" }));
+    assert.equal(svgs[3], craftNavIcon({ id: "kpi", label: "KPI" }));
+    assert.equal(svgs[4], craftNavIcon({ id: "clienti", label: "Clienti" }));
+  });
+
+  it("repairs icon semantics without changing labels, actions, order or unrelated SVG", () => {
+    const source = APPLE_APP.replace("<main>x</main>", '<main><svg id="chart"><path d="M1 1h2"/></svg></main>');
+    const next = replaceAppleTabIcons(source);
+    for (const [id, label] of [["home", "Oggi"], ["new", "Nuovo"], ["list", "Elenco"], ["stats", "Stat"], ["more", "Squadra"]]) {
+      assert.ok(next.includes(`<button data-view="${id}">${craftNavIcon({ id: id!, label: label! })}<span>${label}</span></button>`));
+    }
+    assert.match(next, /<svg id="chart"><path d="M1 1h2"\/><\/svg>/);
+    assert.equal(replaceAppleTabIcons(next), next, "repair must be idempotent");
+    const unlabeled = APPLE_APP.replace(/<span>[^<]*<\/span>/g, "").replace(/ data-view="[^"]*"/g, "");
+    assert.equal(replaceAppleTabIcons(unlabeled), unlabeled, "do not invent semantics for unlabeled icons");
+  });
+
   it("detects the iPhone house/plus/person set and rewrites it", () => {
     assert.equal(looksLikeAppleTabIcons(APPLE_APP), true);
     assert.ok(countAppleTabIcons(APPLE_APP) >= 4);
     const next = replaceAppleTabIcons(APPLE_APP);
     assert.equal(looksLikeAppleTabIcons(next), false);
-    assert.match(next, /M6 3\.5h11\.5v17H6z/);
+    assert.ok(next.includes(craftNavIcon({ id: "home", label: "Oggi" })), "Oggi must receive a calendar, not a positional notebook");
     assert.match(next, /Oggi/);
     assert.doesNotMatch(next, /M4 10\.5 12 4l8 6\.5V20H4z/);
   });
@@ -61,7 +86,7 @@ describe("craft icons vs Apple chrome", () => {
       updatedAt: Date.now(),
     });
     assert.equal(looksLikeAppleTabIcons(recovered.html), false);
-    assert.match(recovered.html, /M6 3\.5h11\.5v17H6z/);
+    assert.ok(recovered.html.includes(craftNavIcon({ id: "home", label: "Oggi" })));
   });
 
   it("rewrites the 4-widget iPhone home into a first-run product sheet", () => {

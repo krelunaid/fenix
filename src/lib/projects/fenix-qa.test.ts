@@ -270,7 +270,7 @@ describe("focus-visible and worker model", () => {
     assert.match(scheme, /nav\.bottom-tab,nav\.fk-tab\{display:none!important\}/);
     assert.match(scheme, /min-height:44px/);
     assert.match(scheme, /:focus-visible/);
-    assert.match(scheme, /\.fk-btn\{[^}]*border-radius:12px/);
+    assert.match(scheme, /\.fk-btn\{[^}]*border-radius:14px/);
     assert.doesNotMatch(scheme, /max-width:32vw/);
     assert.doesNotMatch(scheme, /\.logo,\.brand[^}]*text-overflow:ellipsis/);
     assert.doesNotMatch(scheme, /nav[^}]*flex-wrap:nowrap!important/);

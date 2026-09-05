@@ -122,7 +122,7 @@ describe("graphic intent from brief", () => {
 
   it("does not rewrite stamped semantic chrome, still rewrites a dumped iPhone set", () => {
     assert.equal(looksLikeAppleTabIcons(APPLE_DUMP), true);
-    assert.match(applyChromeGuards(APPLE_DUMP), /M6 3\.5h11\.5v17H6z/);
+    assert.ok(applyChromeGuards(APPLE_DUMP).includes(craftNavIcon({ id: "home", label: "Oggi" })));
     const stamped = stampGraphicIntent(APPLE_DUMP, SYSTEM);
     assert.match(stamped, /data-intent-type="system"/);
     assert.match(stamped, /data-intent-chrome="semantic"/);
@@ -137,7 +137,7 @@ describe("graphic intent from brief", () => {
     assert.match(stamped, /data-intent-type="system"/);
     assert.match(stamped, /data-intent-chrome="domain"/);
     const next = applyChromeGuards(stamped);
-    assert.match(next, /M6 3\.5h11\.5v17H6z/);
+    assert.ok(next.includes(craftNavIcon({ id: "home", label: "Oggi" })));
     assert.doesNotMatch(next, /M4 10\.5 12 4l8 6\.5V20H4z/);
   });
 

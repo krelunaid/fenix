@@ -1,4 +1,4 @@
-/** Pittogrammi da bottega. Mai casetta / plus-in-cerchio / omino iPhone. */
+/** Original pictograms: visible function takes priority over position and legacy ids. */
 
 const ATTR =
   'viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" overflow="hidden"';
@@ -127,6 +127,18 @@ const NAV_ICONS = {
   today: navIcon(
     '<rect x="6.2" y="7.4" width="11.6" height="10.2" rx="1.2"/><path d="M8.6 7.4V5.8M15.4 7.4V5.8M6.2 10.4h11.6"/><path d="M9.2 13.2h2M13.4 13.2h2"/>',
   ),
+  bookAppointment: navIcon(
+    '<rect x="4.8" y="6.4" width="14.4" height="13.2" rx="2"/><path d="M8 4.4v4M16 4.4v4M4.8 10.4h14.4M12 12.4v5M9.5 14.9h5"/>',
+  ),
+  appointments: navIcon(
+    '<rect x="4.8" y="6.4" width="14.4" height="13.2" rx="2"/><path d="M8 4.4v4M16 4.4v4M4.8 10.4h14.4M8 13.2h.01M11 13.2h5M8 16.4h.01M11 16.4h4"/>',
+  ),
+  messages: navIcon(
+    '<path d="M6.8 5.5h10.4a2 2 0 0 1 2 2v7.2a2 2 0 0 1-2 2H11l-4.8 3v-3.1a2 2 0 0 1-1.4-1.9V7.5a2 2 0 0 1 2-2z"/><path d="M8.4 9.5h7.2M8.4 12.7h4.8"/>',
+  ),
+  settings: navIcon(
+    '<path d="M5 7h3M12 7h7M5 12h8M17 12h2M5 17h3M12 17h7"/><circle cx="10" cy="7" r="2"/><circle cx="15" cy="12" r="2"/><circle cx="10" cy="17" r="2"/>',
+  ),
   archive: navIcon(
     '<path d="M6.2 8.2h11.6v10.2H6.2z"/><path d="M5.6 5.8h12.8v2.4H5.6z"/><path d="M10.2 12.4h3.6"/>',
   ),
@@ -180,6 +192,14 @@ export function craftNavIcon(tab: { id: string; label: string }, index = 0): str
   else if (/^aggiungi$/.test(label)) svg = NAV_ICONS.add;
   else if (/^persona$|^profilo$/.test(label)) svg = NAV_ICONS.person;
   else if (/^elenco$|^lista$/.test(label)) svg = NAV_ICONS.book;
+  else if (/\b(check-in|checkin)\b/.test(label)) svg = NAV_ICONS.key;
+  else if (/\b(prenotazioni|appuntamenti)\b/.test(label)) svg = NAV_ICONS.appointments;
+  else if (/\b(prenota|prenotare)\b/.test(label)) svg = NAV_ICONS.bookAppointment;
+  else if (/\b(agenda|calendario|oggi)\b/.test(label)) svg = NAV_ICONS.today;
+  else if (/\b(statistiche|stats?|numeri|kpi)\b/.test(label)) svg = NAV_ICONS.bars;
+  else if (/\b(team|squadra|clienti|persone)\b/.test(label)) svg = NAV_ICONS.people;
+  else if (/\b(messaggi|chat|conversazioni)\b/.test(label)) svg = NAV_ICONS.messages;
+  else if (/\b(impostazioni|preferenze|settings)\b/.test(label)) svg = NAV_ICONS.settings;
   else if (/piramide|accordi/.test(key)) svg = NAV_ICONS.pyramid;
   else if (/collezione|vetrina|essenz|profum/.test(key)) svg = NAV_ICONS.bottle;
   else if (/pelle|polso/.test(key)) svg = NAV_ICONS.wrist;
@@ -188,7 +208,9 @@ export function craftNavIcon(tab: { id: string; label: string }, index = 0): str
   else if (/clienti|signore/.test(key)) svg = NAV_ICONS.people;
   else if (/taglio|cucito/.test(key)) svg = NAV_ICONS.shears;
   else if (/reception|lobby/.test(key)) svg = NAV_ICONS.bell;
-  else if (/prenota|check-in|checkin/.test(key)) svg = NAV_ICONS.key;
+  else if (/check-in|checkin/.test(key)) svg = NAV_ICONS.key;
+  else if (/prenotazioni|appuntamenti/.test(key)) svg = NAV_ICONS.appointments;
+  else if (/prenota/.test(key)) svg = NAV_ICONS.bookAppointment;
   else if (/camere|suite/.test(key)) svg = NAV_ICONS.bed;
   else if (/soggiorno|notte/.test(key)) svg = NAV_ICONS.lamp;
   else if (/passo|cucina/.test(key)) svg = NAV_ICONS.pot;
@@ -250,15 +272,17 @@ export function looksLikeAppleTabIcons(html: string): boolean {
 
 export function replaceAppleTabIcons(html: string): string {
   if (!html || !looksLikeAppleTabIcons(html)) return html;
-  let i = 0;
   return html.replace(
     /(<nav[^>]*(?:fk-tab|aria-label)[^>]*>)([\s\S]*?)(<\/nav>)/i,
     (_full, open: string, inner: string, close: string) => {
-      const next = inner.replace(/<svg[\s\S]*?<\/svg>/gi, () => {
-        const icon = CRAFT_TAB_ICONS[Math.min(i, CRAFT_TAB_ICONS.length - 1)];
-        i += 1;
-        return icon.svg.replace("<svg", "<svg width='24' height='24'");
-      });
+      const next = inner.replace(/(<(button|a)\b[^>]*>)([\s\S]*?)(<\/\2>)/gi,
+        (whole: string, start: string, _tag: string, content: string, end: string) => {
+          const text = content.replace(/<svg\b[\s\S]*?<\/svg>/gi, "").replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+          const label = text || start.match(/\baria-label\s*=\s*["']([^"']+)["']/i)?.[1] || "";
+          if (!label) return whole; // No semantic evidence: preserve the original glyph.
+          const id = start.match(/\bdata-view\s*=\s*["']([^"']+)["']/i)?.[1] || "";
+          return start + content.replace(/<svg\b[\s\S]*?<\/svg>/i, craftNavIcon({ id, label })) + end;
+        });
       return `${open}${next}${close}`;
     },
   );

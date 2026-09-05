@@ -254,7 +254,7 @@ input::placeholder,textarea::placeholder{
 }
 .fk-tab button.on,.tabbar button.on,nav[aria-label] button.on{color:var(--accent,#3d4a1f)!important;background:none!important;box-shadow:none!important}
 .fk-tab svg,.tabbar svg,nav[aria-label] svg,.fk-tab button svg{width:24px!important;height:24px!important;flex:0 0 24px!important;transform:none!important;overflow:visible!important}
-.fk-tab span,.tabbar span,nav[aria-label] span{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block;line-height:1.15;min-height:11px}
+.fk-tab span,.tabbar span,nav[aria-label] span{max-width:100%;white-space:normal;overflow-wrap:anywhere;display:block;line-height:1.15;min-height:28px;flex-shrink:0}
 img[src=""],img:not([src]){display:none!important}
 main,.fk-main,main p,main li,main b,.fk-tile,.fk-tile b,.fk-hello,.fk-lbl{color:var(--fg,#1c1712)!important;opacity:1!important}
 .fk-role,.fk-date,main .muted,.fk-stat span{color:var(--muted,#5c5348)!important;opacity:1!important}
@@ -274,6 +274,7 @@ main,.fk-main,main p,main li,main b,.fk-tile,.fk-tile b,.fk-hello,.fk-lbl{color:
     flex-direction:row!important;font-family:inherit!important;font-size:13px!important;font-weight:650!important;line-height:1.2!important;padding:8px 12px!important;max-height:none;min-height:44px;gap:8px;
   }
   .fk-tab svg,.tabbar svg,nav[aria-label] svg,.fk-tab button svg{width:18px!important;height:18px!important;flex:0 0 18px!important}
+  .fk-tab span,.tabbar span,nav[aria-label] span{min-height:0}
   .fk-main,body>main,main{overflow:visible!important;flex:none!important}
 }
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
@@ -653,6 +654,7 @@ export function fenixRuntimeScript(projectId: string, kind?: string) {
     if (document.querySelector("table thead") && document.querySelector("table tbody")) return true;
     if (document.querySelector("[data-fenix-rail], [data-fenix-week], article.slot, [data-agenda-form]")) return true;
     if (document.querySelector("#root article[data-id], #root .state-empty, [data-state=empty]")) return true;
+    if (document.querySelector('main #list, main #lista, main #elenco, [data-panel="list"] ul, [data-panel="list"] ol, #view-list ul, #view-list ol')) return true;
     return false;
   }
   function listEl(){
@@ -665,7 +667,14 @@ export function fenixRuntimeScript(projectId: string, kind?: string) {
     var ul = document.getElementById("fk-saved")
       || document.querySelector("[data-list], .fk-list, #elenco, #lista");
     if (ul) return ul;
-    var main = document.querySelector('[data-view="list"], #view-list, main') || document.body;
+    var main = document.querySelector('main') || document.body;
+    var panels = document.querySelectorAll('[data-panel="list"], [data-view="list"], #view-list');
+    for (var pi = 0; pi < panels.length; pi++) {
+      if (!panels[pi].closest('nav,button,a,[role="tab"],form') && /^(SECTION|DIV|MAIN|ARTICLE)$/.test(panels[pi].tagName)) {
+        main = panels[pi];
+        break;
+      }
+    }
     ul = document.createElement("ul");
     ul.id = "fk-saved";
     ul.setAttribute("data-fenix-kit-list", "1");

@@ -9,6 +9,7 @@ import { describe, it } from "node:test";
 import { type Page } from "playwright";
 import { isolatedPage, isBlockedPublicNetworkError, launchChromium } from "./playwright-harness.ts";
 import { prepareSrcDoc } from "./color-scheme.ts";
+import { craftNavIcon } from "./craft-icons.ts";
 
 const AFTER = "/workspace/screenshots/fase3-graphic/five-tab";
 const VIEWPORTS = [
@@ -156,6 +157,57 @@ async function tabGeometry(page: Page) {
 }
 
 describe("prepareSrcDoc phone kit with 5 tabs and no data-fenix-phone", () => {
+  it("fallback list mounts in content, never in a data-view navigation control", async () => {
+    const browser = await launchChromium();
+    const page = await isolatedPage(browser, { viewport: { width: 320, height: 568 } });
+    try {
+      const fixture = '<!doctype html><html><head></head><body><nav class="fk-tab" aria-label="Navigazione"><button data-view="home">Agenda</button><button data-view="new">Prenota</button><button data-view="list">Prenotazioni</button></nav><main><h1>Agenda</h1></main></body></html>';
+      await page.setContent(prepareSrcDoc(fixture, "#edf4fa", "fallback-list-target", "app"));
+      await page.locator("main [data-fenix-kit-list]").waitFor();
+      assert.equal(await page.locator("nav [data-fenix-kit-list], nav ul, nav li").count(), 0);
+      assert.equal(await page.locator("main [data-fenix-kit-list]").count(), 1);
+    } finally { await page.close(); await browser.close(); }
+  });
+
+  it("semantic appointment icons survive preview, pointer and keyboard navigation at four widths", async () => {
+    const ids = ["home", "new", "list", "me", "more"];
+    const labels = ["Agenda", "Prenota", "Prenotazioni", "Statistiche", "Team"];
+    const dumped = '<svg viewBox="0 0 24 24"><path d="M4 10.5 12 4l8 6.5V20H4z"/></svg>';
+    const nav = `<nav class="fk-tab" aria-label="Navigazione">${ids.map((id, i) => `<button type="button" data-view="${id}">${dumped}<span>${labels[i]}</span></button>`).join("")}</nav>`;
+    const fixture = FIVE_TAB_APP.replace(/<nav[\s\S]*?<\/nav>/, nav);
+    const browser = await launchChromium();
+    try {
+      for (const [vp, viewport] of VIEWPORTS) {
+        const page = await isolatedPage(browser, { viewport });
+        const errors: string[] = [];
+        page.on("pageerror", error => errors.push(String(error)));
+        try {
+          await page.setContent(prepareSrcDoc(fixture, "#edf4fa", `semantic-${vp}`, "app"));
+          for (let i = 0; i < ids.length; i++) {
+            const button = page.locator(`nav button[data-view="${ids[i]}"]`);
+            const paths = await button.locator("svg").innerHTML();
+            const expected = await page.evaluate(svg => new DOMParser().parseFromString(svg, "text/html").querySelector("svg")!.innerHTML, craftNavIcon({ id: ids[i]!, label: labels[i]! }));
+            assert.equal(paths, expected);
+            await button.click();
+            assert.equal(await page.locator(`[data-panel="${ids[i]}"]`).isVisible(), true);
+            await button.focus();
+            await page.keyboard.press("Enter");
+            const box = await button.boundingBox();
+            assert.ok(box && box.width >= 44 && box.height >= 44, `${vp}/${labels[i]} touch target`);
+            assert.equal(await button.locator("svg").getAttribute("aria-hidden"), "true");
+            const labelBox = await button.locator("span").evaluate(el => ({ width: el.clientWidth, scroll: el.scrollWidth, height: el.clientHeight, scrollHeight: el.scrollHeight, overflow: getComputedStyle(el).overflow }));
+            assert.ok(labelBox.scroll <= labelBox.width + 1 && labelBox.scrollHeight <= labelBox.height + 1, `${vp}/${labels[i]} label clipped`);
+          }
+          assert.ok(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth <= 2));
+          assert.equal(await page.locator("nav ul, nav li, nav [data-fenix-kit-list]").count(), 0, "fallback data must never be inserted inside navigation");
+          assert.equal(await page.locator("[data-fenix-kit-list]").count(), 0, "do not duplicate the product's own list/empty state");
+          await page.screenshot({ path: `/tmp/fenix-semantic-icons-${vp}.png` });
+          assert.deepEqual(errors, []);
+        } finally { await page.close(); }
+      }
+    } finally { await browser.close(); }
+  });
+
   it("phone control typography is valid CSS and inherits the chosen family at every viewport", async () => {
     const browser = await launchChromium();
     try {

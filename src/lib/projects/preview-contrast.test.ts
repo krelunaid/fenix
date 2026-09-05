@@ -376,6 +376,7 @@ function chromeProbe() {
     stats: document.querySelectorAll(".fk-stat").length,
     appleHouse: document.body.innerHTML.includes("M4 10.5"),
     notebook: document.body.innerHTML.includes("M6 3.5h11.5v17H6z"),
+    todayCalendar: Boolean(document.querySelector('nav [data-view="home"] svg[data-craft-nav] path[d="M8.6 7.4V5.8M15.4 7.4V5.8M6.2 10.4h11.6"]')),
     tabCount: svgs.length,
     uniqueTabs: unique.size,
     btnRadius: rad(".fk-btn"),
@@ -530,7 +531,7 @@ describe("phone chrome is pocket quality, not Apple clone", () => {
       assert.equal(chrome.firstRun, true, "Taccuino home still 4 widgets");
       assert.match(chrome.firstRunText, /in lista/i);
       assert.equal(chrome.appleHouse, false);
-      assert.equal(chrome.notebook, true);
+      assert.equal(chrome.todayCalendar, true, "Oggi must paint its calendar, not a positional notebook");
       assert.equal(chrome.uniqueTabs, 5);
       assert.ok(chrome.btnRadius >= 8, `Taccuino CTA radius ${chrome.btnRadius}`);
       assert.ok(chrome.btnMinH >= 44, `Taccuino CTA hit ${chrome.btnMinH}`);

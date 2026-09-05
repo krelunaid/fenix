@@ -23,6 +23,15 @@ below proves code defects, not the exact origin of every screenshot finding.
    showed a sans-serif button inside a Georgia app. Valid longhands preserve
    the chosen family. Phone buttons use 16px/600, fields17px, tab labels12px
    (desktop13px), main action48px and14px radius; no palette/Studio rewrite.
+5. Icon replacement assigned pictograms by position. It now preserves labels,
+   view ids, handlers and unrelated SVG, resolving appointment/calendar/team/
+   statistics/messages/settings roles from the visible function. Unlabeled
+   icons remain untouched. Check-in and appointment booking have distinct glyphs.
+6. Browser visual inspection exposed fallback list content inserted INSIDE
+   the `data-view="list"` navigation button. Recovery now selects a content
+   panel/main and respects existing product lists; it cannot append to nav,
+   buttons, links, tabs or forms. Empty-state duplication and displaced icons
+   are covered by real DOM tests. Phone labels wrap instead of clipping.
 
 ## Reproduce without model credits
 
@@ -35,9 +44,15 @@ pnpm build
 pnpm test
 ```
 
-Focused results: 11 transport/parser tests, 25 file/repair tests and 2 real
-browser tests pass. Browser includes desktop/tablet/390/320, typography metrics,
-five tabs, scrolling and CRUD. Screenshot outputs `/tmp/fenix-phone-type-*.png`.
+Focused results before final full-suite verification: 11 transport/parser
+tests, 25 file/repair tests, 47 icon/intent/QA checks passed. Browser includes
+desktop/tablet/390/320, typography metrics, semantic SVG, complete labels,
+keyboard/pointer navigation, five tabs, scrolling and CRUD. Screenshot outputs
+`/tmp/fenix-phone-type-*.png` and `/tmp/fenix-semantic-icons-*.png`.
+First full-suite attempt: scripts251pass/4historicalskip/0fail; TS/browser
+528pass/1fail. The single failure asserted the old12px CTA radius in source;
+updated to the intentional14px radius (not removed), then focused QA passed.
+Complete verification must be rerun on the final combined commit.
 These browser fixtures are functional regression tests, NOT premium design
 examples or evidence of live account/role/message delivery.
 
@@ -46,8 +61,8 @@ examples or evidence of live account/role/message delivery.
 - Actual generated apps for appointments, perfume, clothing, repositories and
   restaurant operations; distinctive, coherent screens rather than recolored
   generic lists. Do not pass generic-nav by relabeling nonfunctional buttons.
-- Semantic icons matching real actions; appointment creation must not imply
-  a hotel key, generic index-based replacements must not erase meaning.
+- Review semantic icon coverage on actual generated apps, beyond the corrected
+  appointment roles and positional replacement regression fixtures.
 - Visual comparison at desktop/tablet/mobile: hierarchy, imagery, typography,
   empty/populated/error states, accessibility and complete interaction flows.
 - Live requested owner/customer isolation and messages must be proven on the
