@@ -37,7 +37,7 @@ export function isAccountantBrief(brief: string): boolean {
 
 /** Shop / retail activity. Barber shop and fashion atelier keep their own marks. */
 export function isShopBrief(brief: string): boolean {
-  if (isBarberBrief(brief)) return false;
+  if (isBarberBrief(brief) || isLibraryBrief(brief)) return false;
   if (/moda|sfilata|lookbook|atelier di moda|boutique/i.test(brief)) return false;
   return /\bnegozio\b|\bretail\b|\bemporio\b|\bshop\b/i.test(brief);
 }
@@ -54,7 +54,7 @@ function hasWaterVesselCue(brief: string): boolean {
  * Not a palette. Does not match "gestione profumi", agenda, barber, or fiscal.
  */
 export function isFieldProductBrief(brief: string): boolean {
-  if (isBarberBrief(brief) || isAccountantBrief(brief)) return false;
+  if (isBarberBrief(brief) || isAccountantBrief(brief) || isLibraryBrief(brief)) return false;
   const t = String(brief || "");
   if (/gestione\s+profum|lookbook|ristoraz|agenda|parrucchier|commercialist/i.test(t)) return false;
   return (
@@ -69,7 +69,7 @@ export function isFieldProductBrief(brief: string): boolean {
  * Does not match "consegne acqua" or a generic negozio.
  */
 export function isMarketplaceBrief(brief: string): boolean {
-  if (isFieldProductBrief(brief) || isAccountantBrief(brief) || isBarberBrief(brief) || isShopBrief(brief)) {
+  if (isFieldProductBrief(brief) || isAccountantBrief(brief) || isBarberBrief(brief) || isShopBrief(brief) || isLibraryBrief(brief)) {
     return false;
   }
   const t = String(brief || "");
@@ -92,7 +92,7 @@ function asksLuxeDark(brief: string): boolean {
  * unless the brief asks for midnight/luxe. Desk stays light without that ask.
  */
 export function isLuxeBrief(brief: string): boolean {
-  if (isFieldProductBrief(brief) || isBarberBrief(brief) || isShopBrief(brief) || isMarketplaceBrief(brief)) {
+  if (isFieldProductBrief(brief) || isBarberBrief(brief) || isShopBrief(brief) || isMarketplaceBrief(brief) || isLibraryBrief(brief)) {
     return false;
   }
   if (isAccountantBrief(brief) && !asksLuxeDark(brief)) return false;

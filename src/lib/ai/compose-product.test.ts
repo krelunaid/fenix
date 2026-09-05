@@ -9,6 +9,8 @@ import { auditGraphicQuality } from "../projects/graphic-quality.ts";
 import {
   PIPELINE_SPECS,
   campoHomeHeaderMark,
+  barberHomeHeaderMark,
+  libraryHomeHeaderMark,
   composeProduct,
   loadPipelineFixtures,
   runGraphicPipeline,
@@ -1097,6 +1099,81 @@ describe("graphic pipeline prompt→plan→generate→visual→QA", () => {
     assert.match(libraryIcon, /data-fenix-book-mark="1"/);
     assert.doesNotMatch(barberIcon, /M10 7h12v16H10z/);
     assert.doesNotMatch(libraryIcon, /M10 7h12v16H10z/);
+  });
+
+  it("teaches barber salon craft: warm Home, filled shears, not pale teal or raspberry", () => {
+    const brief = formatPrefix("app") + "App barbiere: agenda tagli e clienti, stile iPhone.";
+    const product = composeProduct(brief);
+    assert.equal(product.grammar.id, "agenda");
+    assert.match(product.html, /data-fenix-barber/);
+    assert.match(product.html, /data-craft-domain="barber"/);
+    assert.match(product.html, /data-craft-mode="salon"/);
+    assert.match(product.html, /<span>Oggi<\/span>/);
+    assert.match(product.html, /<span>Nuovo<\/span>/);
+    assert.match(product.html, /<span>Settimana<\/span>/);
+    assert.match(product.html, /<span>Archivio<\/span>/);
+    assert.match(product.html, /Taglio e piega/);
+    assert.match(product.html, /In sala/);
+    assert.match(product.html, /oggi in sala/);
+    assert.match(product.html, /barber-strip/);
+    assert.match(product.html, /FX_BARBER_MARK/);
+    assert.match(product.html, /data-fenix-barber-mark="1"/);
+    assert.match(product.html, /#A44A1C|#C45C26|#8A4B2E|#F6EDE4/i);
+    assert.equal(product.tokens.palette.accent.toLowerCase(), "#a44a1c");
+    assert.notEqual(product.tokens.palette.accent.toLowerCase(), "#0ea5e9");
+    assert.notEqual(product.tokens.palette.accent.toLowerCase(), "#1f6f68");
+    assert.doesNotMatch(product.html, /#b51246|#b01e47|#a61d4c/i);
+    assert.doesNotMatch(product.html, /<span>Tavolo<\/span>/);
+    assert.doesNotMatch(product.html, /<span>Registra<\/span>/);
+    assert.doesNotMatch(product.html, /M10 7V5\.8A1\.8|M4 12h10M11\.2 8\.8/);
+    const mark = barberHomeHeaderMark();
+    assert.match(mark, /data-fenix-barber-mark="1"/);
+    assert.match(mark, /M9\.4 16\.2 17\.6 5\.6/);
+  });
+
+  it("teaches library bookstore craft instead of falling to desk STUDIO/Tavolo/0-KPI", () => {
+    const brief = formatPrefix("app") + "App libreria: catalogo libri, prestiti e scaffali, stile iPhone.";
+    const product = composeProduct(brief);
+    assert.equal(product.grammar.id, "phone-seed");
+    assert.match(product.html, /data-fenix-libreria/);
+    assert.match(product.html, /data-craft-domain="library"/);
+    assert.match(product.html, /data-craft-mode="bookstore"/);
+    assert.match(product.html, /<span>Catalogo<\/span>/);
+    assert.match(product.html, /<span>Prestiti<\/span>/);
+    assert.match(product.html, /<span>Scaffali<\/span>/);
+    assert.match(product.html, /<span>Scheda<\/span>/);
+    assert.match(product.html, /Sala lettura/);
+    assert.match(product.html, /In prestito/);
+    assert.match(product.html, /In scaffale/);
+    assert.match(product.html, /Il nome della rosa/);
+    assert.match(product.html, /Nessun libro in scaffale/);
+    assert.match(product.html, /if\(libraryProduct\)/);
+    assert.match(product.html, /FX_BOOK_MARK/);
+    assert.match(product.html, /data-fenix-book-mark="1"/);
+    assert.match(product.html, /:has\(nav\.tabs button:first-child\.on\) header/);
+    assert.match(product.html, /#6B2D3C|#F6EFE4|#2A1814/i);
+    assert.equal(product.tokens.palette.accent.toLowerCase(), "#6b2d3c");
+    assert.notEqual(product.tokens.palette.accent.toLowerCase(), "#0ea5e9");
+    assert.doesNotMatch(product.html, /<span>Tavolo<\/span>/);
+    assert.doesNotMatch(product.html, /<span>Registra<\/span>/);
+    assert.doesNotMatch(product.html, /<span>Studio<\/span>/);
+    assert.doesNotMatch(product.html, />Studio</);
+    assert.doesNotMatch(product.html, /<p class="place">Studio<\/p>/);
+    assert.doesNotMatch(product.html, /<span>Oggi<\/span><\/div><div class="fx-cell"><b>0<\/b><span>Media/);
+    const boot = product.html.match(/<main id="root"[^>]*>([\s\S]*?)<\/main>/)?.[1] || "";
+    assert.doesNotMatch(boot, /fx-board|Tavolo|Registra|STUDIO/);
+    assert.match(boot, /In scaffale|Nessun libro in scaffale/);
+    assert.match(boot, /data-fenix-book-mark/);
+    const mark = libraryHomeHeaderMark();
+    assert.match(mark, /data-fenix-book-mark="1"/);
+    assert.match(mark, /M8\.2 6\.2h13\.4/);
+    const water = composeProduct(
+      formatPrefix("app") +
+        "App acqua bottiglia: home con botte/serbatoio acqua, livello, e tab Ordina. Stile iPhone.",
+    );
+    assert.match(water.html, /data-fenix-campo/);
+    assert.doesNotMatch(water.html, /<html[^>]*data-fenix-libreria/);
+    assert.doesNotMatch(product.html, /<html[^>]*data-fenix-campo/);
   });
 
   it("keeps composed phone apps under the Edge artifact cap", () => {

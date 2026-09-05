@@ -21,9 +21,9 @@ export type CraftSurfaces = {
   border: string;
 };
 
-export type CraftDomain = "water" | "market" | "luxe" | "generic";
+export type CraftDomain = "water" | "market" | "luxe" | "barber" | "library" | "generic";
 export type CraftRhythm = "utility" | "consumer" | "luxe" | "desk";
-export type CraftMode = "utility" | "marketplace" | "luxe" | "desk" | "generic";
+export type CraftMode = "utility" | "marketplace" | "luxe" | "desk" | "salon" | "bookstore" | "generic";
 
 /** AcquaGt / field — utility radii. */
 export const WATER_CRAFT: CraftSurfaces = {
@@ -57,6 +57,40 @@ export const MARKET_CRAFT: CraftSurfaces = {
   warning: "#F59E0B",
   error: "#EF4444",
   border: "#E4E4E7",
+};
+
+/** Barber / salon booking — warm cream paper, copper brand. Never raspberry. */
+export const BARBER_CRAFT: CraftSurfaces = {
+  surface: "#FFF7F0",
+  onSurface: "#2A1A12",
+  surfaceSecondary: "#F6EDE4",
+  surfaceTertiary: "#EDE0D2",
+  surfaceInverse: "#3D2314",
+  brand: "#A44A1C",
+  brandPrimary: "#8A4B2E",
+  brandSecondary: "#C45C26",
+  brandTertiary: "#F3D4B8",
+  success: "#3D6B4A",
+  warning: "#C47A1A",
+  error: "#B42318",
+  border: "#E4D2C0",
+};
+
+/** Library / bookstore — cream paper, wine brand, editorial type. Never desk gray. */
+export const LIBRARY_CRAFT: CraftSurfaces = {
+  surface: "#FFF8F0",
+  onSurface: "#1C1410",
+  surfaceSecondary: "#F6EFE4",
+  surfaceTertiary: "#EBE0D0",
+  surfaceInverse: "#2A1814",
+  brand: "#6B2D3C",
+  brandPrimary: "#4A1F2A",
+  brandSecondary: "#8B4554",
+  brandTertiary: "#F0D8DC",
+  success: "#2F5D50",
+  warning: "#B67323",
+  error: "#9B2C2C",
+  border: "#E0D2C2",
 };
 
 /** ActStage / luxe-dark — midnight paper, gold brand, utility radii, display 46. */
@@ -98,11 +132,15 @@ export function craftModeOf(flags: {
   market?: boolean;
   luxe?: boolean;
   desk?: boolean;
+  barber?: boolean;
+  library?: boolean;
 }): CraftMode {
   if (flags.desk && !flags.luxe) return "desk";
   if (flags.field) return "utility";
   if (flags.market) return "marketplace";
   if (flags.luxe) return "luxe";
+  if (flags.barber) return "salon";
+  if (flags.library) return "bookstore";
   if (flags.desk) return "desk";
   return "generic";
 }
@@ -113,11 +151,13 @@ export function craftRhythmOf(flags: {
   luxe?: boolean;
   desk?: boolean;
   phone?: boolean;
+  barber?: boolean;
+  library?: boolean;
 }): CraftRhythm {
   if (flags.desk && !flags.luxe) return "desk";
   if (flags.field) return "utility";
   if (flags.luxe) return "luxe";
-  if (flags.market || flags.phone) return "consumer";
+  if (flags.market || flags.phone || flags.barber || flags.library) return "consumer";
   return "utility";
 }
 
@@ -149,6 +189,8 @@ function asDomain(domain: boolean | CraftDomain = false): CraftDomain {
   if (domain === true || domain === "water") return "water";
   if (domain === "market") return "market";
   if (domain === "luxe") return "luxe";
+  if (domain === "barber") return "barber";
+  if (domain === "library") return "library";
   return "generic";
 }
 
@@ -192,6 +234,32 @@ export function surfacesFromPalette(palette: EnginePalette, domain: boolean | Cr
       brandTertiary: LUXE_CRAFT.brandTertiary,
       success: palette.success || LUXE_CRAFT.success,
       warning: palette.warning || LUXE_CRAFT.warning,
+    };
+  }
+  if (kind === "barber") {
+    const vivid = hexToOkLch(palette.accent).L >= 0.38 && hexToOkLch(palette.accent).C >= 0.08;
+    const brand = vivid ? palette.accent : BARBER_CRAFT.brand;
+    return {
+      ...BARBER_CRAFT,
+      brand,
+      brandPrimary: mixHex(brand, "#2A1A12", 0.28),
+      brandSecondary: mixHex(brand, "#FFFFFF", 0.28),
+      brandTertiary: mixHex(brand, "#FFFFFF", 0.78),
+      success: palette.success || BARBER_CRAFT.success,
+      warning: palette.warning || BARBER_CRAFT.warning,
+    };
+  }
+  if (kind === "library") {
+    const vivid = hexToOkLch(palette.accent).L >= 0.28 && hexToOkLch(palette.accent).C >= 0.06;
+    const brand = vivid ? palette.accent : LIBRARY_CRAFT.brand;
+    return {
+      ...LIBRARY_CRAFT,
+      brand,
+      brandPrimary: mixHex(brand, "#1C1410", 0.22),
+      brandSecondary: mixHex(brand, "#FFFFFF", 0.28),
+      brandTertiary: mixHex(brand, "#FFFFFF", 0.82),
+      success: palette.success || LIBRARY_CRAFT.success,
+      warning: palette.warning || LIBRARY_CRAFT.warning,
     };
   }
   const paper = isLightPaper(palette.bg);

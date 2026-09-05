@@ -8,6 +8,7 @@ import {
   isBarberBrief,
   isFieldProductBrief,
   isLibraryBrief,
+  isShopBrief,
   wantsCrispCraftMark,
 } from "./app-identity.ts";
 import { craftNavIcon } from "./craft-icons.ts";
@@ -70,8 +71,11 @@ describe("library and barber craft identity", () => {
     assert.equal(isLibraryBrief(LIBRARY_IPHONE_BRIEF), true);
     assert.equal(isLibraryBrief(formatPrefix("app") + LIBRARY_IPHONE_BRIEF), true);
     assert.equal(isLibraryBrief("catalogo libri, prestiti e scaffali"), true);
+    assert.equal(isLibraryBrief("prestiti e scaffali della sala"), true);
     assert.equal(isLibraryBrief("Essenza: gestione profumi da vendere, stile iPhone."), false);
     assert.equal(isLibraryBrief(BARBER_IPHONE_BRIEF), false);
+    assert.equal(isFieldProductBrief(LIBRARY_IPHONE_BRIEF), false);
+    assert.equal(isShopBrief(LIBRARY_IPHONE_BRIEF), false);
     assert.equal(appIdentityLabel(BARBER_IPHONE_BRIEF, "booking"), "Taglio");
     assert.equal(appIdentityLabel(LIBRARY_IPHONE_BRIEF, "paper"), "Libri");
     assert.equal(appIdentityLabel(LIBRARY_IPHONE_BRIEF, "utility"), "Libri");

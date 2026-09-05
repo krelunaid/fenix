@@ -1795,6 +1795,26 @@ describe("graphic pipeline visual QA D/T/M", () => {
           assert.ok(paint.markW >= 44, `header svg ${paint.markW}`);
           assert.equal(paint.appleTouch, true);
           assert.equal(paint.exit, false);
+          const home = await page.evaluate(() => {
+            const tabs = [...document.querySelectorAll("nav.tabs button span")].map((el) => el.textContent || "");
+            const place = document.querySelector("header .place")?.textContent || "";
+            const hello = document.querySelector(".fx-hello")?.textContent || "";
+            const strip = document.querySelector(".barber-strip, .lib-board")?.textContent || "";
+            const desk = /Tavolo|Registra|STUDIO/.test(document.body.innerText);
+            const kpi = /Media/.test(document.body.innerText) && /Voci/.test(document.body.innerText) && /Aperti/.test(document.body.innerText);
+            return { tabs, place, hello, strip, desk, kpi, htmlAttr: document.documentElement.getAttribute("data-fenix-libreria") || document.documentElement.getAttribute("data-fenix-barber") };
+          });
+          assert.equal(home.desk, false, row.brief);
+          assert.equal(home.kpi, false, row.brief);
+          if (row.attr === "data-fenix-book-mark") {
+            assert.deepEqual(home.tabs, ["Catalogo", "Prestiti", "Scaffali", "Scheda"]);
+            assert.match(home.hello, /In scaffale/);
+            assert.match(home.strip, /In prestito|In scaffale/);
+            assert.doesNotMatch(home.place, /STUDIO|Studio/);
+          } else {
+            assert.ok(home.tabs.includes("Oggi"));
+            assert.match(home.hello + home.strip, /sala|App barbiere/i);
+          }
         } finally {
           await page.close();
         }

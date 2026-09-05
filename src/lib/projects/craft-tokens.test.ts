@@ -7,6 +7,8 @@ import {
   CRAFT_RADIUS_LUXE,
   LUXE_CRAFT,
   MARKET_CRAFT,
+  BARBER_CRAFT,
+  LIBRARY_CRAFT,
   WATER_CRAFT,
   craftModeOf,
   craftRhythmOf,
@@ -78,5 +80,27 @@ describe("craft surface tokens", () => {
     assert.equal(craftModeOf({ market: true }), "marketplace");
     assert.equal(craftModeOf({ luxe: true }), "luxe");
     assert.equal(craftModeOf({ desk: true }), "desk");
+    assert.equal(craftModeOf({ barber: true }), "salon");
+    assert.equal(craftModeOf({ library: true }), "bookstore");
+    assert.equal(craftRhythmOf({ barber: true }), "consumer");
+    assert.equal(craftRhythmOf({ library: true }), "consumer");
+  });
+
+  it("keeps official salon and bookstore craft hexes on those briefs", () => {
+    const barber = tokensFromBrief(
+      `${formatPrefix("app")}App barbiere: agenda tagli e clienti, stile iPhone.`,
+    );
+    const library = tokensFromBrief(
+      `${formatPrefix("app")}App libreria: catalogo libri, prestiti e scaffali, stile iPhone.`,
+    );
+    const b = surfacesFromPalette(barber.palette, "barber");
+    const l = surfacesFromPalette(library.palette, "library");
+    assert.equal(barber.palette.accent.toLowerCase(), BARBER_CRAFT.brand.toLowerCase());
+    assert.equal(library.palette.accent.toLowerCase(), LIBRARY_CRAFT.brand.toLowerCase());
+    assert.equal(b.surfaceInverse.toLowerCase(), BARBER_CRAFT.surfaceInverse.toLowerCase());
+    assert.equal(l.surfaceInverse.toLowerCase(), LIBRARY_CRAFT.surfaceInverse.toLowerCase());
+    assert.notEqual(barber.palette.accent.toLowerCase(), WATER_CRAFT.brand.toLowerCase());
+    assert.notEqual(library.palette.accent.toLowerCase(), WATER_CRAFT.brand.toLowerCase());
+    assert.doesNotMatch(barber.palette.accent, /#b51246|#b01e47|#a61d4c/i);
   });
 });

@@ -33,12 +33,21 @@ const APPLE_APP = `<!DOCTYPE html><html><body>
 </body></html>`;
 
 describe("craft icons vs Apple chrome", () => {
-  it("maps library labels to the book, not a scrap tile", () => {
+  it("maps library labels to distinct bookstore glyphs, not one scrap tile", () => {
     const book = craftNavIcon({ id: "app", label: "Libri" });
+    const catalogo = craftNavIcon({ id: "home", label: "Catalogo" });
+    const prestiti = craftNavIcon({ id: "list", label: "Prestiti" });
+    const scaffali = craftNavIcon({ id: "list", label: "Scaffali" });
+    const scheda = craftNavIcon({ id: "persona", label: "Scheda" });
     assert.equal(book, craftNavIcon({ id: "elenco", label: "Biblioteca" }));
-    assert.equal(book, craftNavIcon({ id: "app", label: "Scaffali" }));
+    assert.equal(book, catalogo);
+    assert.notEqual(book, prestiti);
+    assert.notEqual(book, scaffali);
+    assert.notEqual(scaffali, prestiti);
+    assert.notEqual(scheda, book);
     assert.notEqual(book, craftNavIcon({ id: "app", label: "Ufficio" }));
     assert.match(book, /M9\.6 8\.6h4\.8M9\.6 12h4\.8/);
+    assert.equal(new Set([catalogo, prestiti, scaffali, scheda]).size, 4);
   });
 
   it("maps water vessel labels to the drop, not a briefcase scrap", () => {
