@@ -5,6 +5,29 @@ export function isBarberBrief(brief: string): boolean {
   return /parrucchier|barbiere|barbieri|\bbarber(?:\s*shop)?\b|\bhair\s*salon\b/i.test(brief);
 }
 
+/**
+ * Bookstore / library activity (catalogo libri, prestiti, scaffali).
+ * Not a palette. Barber, fiscal and water field keep their own marks.
+ */
+export function isLibraryBrief(brief: string): boolean {
+  if (isBarberBrief(brief) || isAccountantBrief(brief)) return false;
+  const t = String(brief || "");
+  if (/gestione\s+profum|lookbook|parrucchier|commercialist|consegne?\s+acqua/i.test(t)) {
+    return false;
+  }
+  if (/librer|bibliotec|\bbookstore\b|\blibrary\b/i.test(t)) return true;
+  if (/catalogo\s+libr/i.test(t)) return true;
+  if (/\blibri\b/i.test(t) && /catalogo|prestit|scaffal/i.test(t)) return true;
+  return /prestit[oi]/i.test(t) && /scaffal/i.test(t);
+}
+
+/** Header/favicon/apple-touch use a filled navy chip — not a pale outline. */
+export function wantsCrispCraftMark(brief: string, family = ""): boolean {
+  if (isFieldProductBrief(brief)) return false;
+  if (isBarberBrief(brief) || isLibraryBrief(brief)) return true;
+  return family === "utility" || family === "editorial" || family === "ops";
+}
+
 /** Commercialista / tax / ledger activity. Not a palette and not an iPhone tabbar. */
 export function isAccountantBrief(brief: string): boolean {
   return /commercialist|contabilit|ragionier|partita\s*iva|fiscale|fatturazione|dichiarazion|\bf24\b|gestionale(?:\s+\w+){0,3}\s+per\s+commercialist/i.test(
@@ -88,6 +111,7 @@ export function isLuxeBrief(brief: string): boolean {
 /** Visible sector label used to pick an original pictogram. */
 export function appIdentityLabel(brief: string, family: string): string {
   if (isBarberBrief(brief)) return "Taglio";
+  if (isLibraryBrief(brief)) return "Libri";
   if (isAccountantBrief(brief)) return "Fatture";
   if (isFieldProductBrief(brief)) return /\b(acqua|bottiglia|botte|serbatoio)\b/i.test(brief) ? "Acqua" : "Consegne";
   if (isMarketplaceBrief(brief)) return "Incarichi";

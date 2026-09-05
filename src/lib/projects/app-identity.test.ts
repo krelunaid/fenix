@@ -7,6 +7,8 @@ import {
   isAccountantBrief,
   isBarberBrief,
   isFieldProductBrief,
+  isLibraryBrief,
+  wantsCrispCraftMark,
 } from "./app-identity.ts";
 import { craftNavIcon } from "./craft-icons.ts";
 
@@ -56,5 +58,44 @@ describe("isFieldProductBrief water detector", () => {
     assert.notEqual(water, briefcase.replace('data-craft-nav="1"', 'data-craft-app="1"'));
     assert.match(water, /data-craft-app="1"/);
     assert.doesNotMatch(water, /M4\.8 y="8\.8"|M5\.2 8\.6/);
+  });
+});
+
+export const BARBER_IPHONE_BRIEF = "App barbiere: agenda tagli e clienti, stile iPhone.";
+export const LIBRARY_IPHONE_BRIEF = "App libreria: catalogo libri, prestiti e scaffali, stile iPhone.";
+
+describe("library and barber craft identity", () => {
+  it("labels barber Taglio and library Libri, never Ufficio scrap", () => {
+    assert.equal(isBarberBrief(BARBER_IPHONE_BRIEF), true);
+    assert.equal(isLibraryBrief(LIBRARY_IPHONE_BRIEF), true);
+    assert.equal(isLibraryBrief(formatPrefix("app") + LIBRARY_IPHONE_BRIEF), true);
+    assert.equal(isLibraryBrief("catalogo libri, prestiti e scaffali"), true);
+    assert.equal(isLibraryBrief("Essenza: gestione profumi da vendere, stile iPhone."), false);
+    assert.equal(isLibraryBrief(BARBER_IPHONE_BRIEF), false);
+    assert.equal(appIdentityLabel(BARBER_IPHONE_BRIEF, "booking"), "Taglio");
+    assert.equal(appIdentityLabel(LIBRARY_IPHONE_BRIEF, "paper"), "Libri");
+    assert.equal(appIdentityLabel(LIBRARY_IPHONE_BRIEF, "utility"), "Libri");
+    assert.equal(appIdentityLabel(LIBRARY_IPHONE_BRIEF, "editorial"), "Libri");
+    const book = appIdentityIcon(LIBRARY_IPHONE_BRIEF, "paper");
+    const scrap = craftNavIcon({ id: "app", label: "Ufficio" }).replace(
+      'data-craft-nav="1"',
+      'data-craft-app="1"',
+    );
+    const shears = appIdentityIcon(BARBER_IPHONE_BRIEF, "booking");
+    assert.equal(book, craftNavIcon({ id: "app", label: "Libri" }).replace('data-craft-nav="1"', 'data-craft-app="1"'));
+    assert.match(book, /M9\.6 8\.6h4\.8M9\.6 12h4\.8/);
+    assert.notEqual(book, scrap);
+    assert.match(shears, /cy="16\.2" r="2\.15"/);
+    assert.notEqual(shears, book);
+  });
+
+  it("asks a filled chip for barber, library, and generic utility/editorial/ops", () => {
+    assert.equal(wantsCrispCraftMark(BARBER_IPHONE_BRIEF, "booking"), true);
+    assert.equal(wantsCrispCraftMark(LIBRARY_IPHONE_BRIEF, "paper"), true);
+    assert.equal(wantsCrispCraftMark("Taglia foto ritaglio in tasca", "utility"), true);
+    assert.equal(wantsCrispCraftMark("Atelier Carta: portfolio editoriale", "editorial"), true);
+    assert.equal(wantsCrispCraftMark("Nord Ledger kpi di vendita pipeline vendite", "ops"), true);
+    assert.equal(wantsCrispCraftMark("App acqua bottiglia: botte/serbatoio", "paper"), false);
+    assert.equal(wantsCrispCraftMark("Essenza: gestione profumi da vendere", "perfume"), false);
   });
 });

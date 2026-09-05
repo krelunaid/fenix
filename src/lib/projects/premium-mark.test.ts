@@ -1,6 +1,14 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { crispWaterDropMarkSvg, glossyWaterMarkSvg, premiumAppMarkSvg, premiumMarkDataUri } from "./premium-mark.ts";
+import {
+  crispAppMarkSvg,
+  crispBarberMarkSvg,
+  crispBookMarkSvg,
+  crispWaterDropMarkSvg,
+  glossyWaterMarkSvg,
+  premiumAppMarkSvg,
+  premiumMarkDataUri,
+} from "./premium-mark.ts";
 
 describe("premium app mark", () => {
   it("paints a squircle ring with the supplied domain colors and never Apple SET blue", () => {
@@ -41,5 +49,24 @@ describe("premium app mark", () => {
     assert.doesNotMatch(svg, /fill-opacity="\.18"|fill="none"/);
     assert.doesNotMatch(svg, /#007aff|#0071e3|#f5f5f7/i);
     assert.match(premiumMarkDataUri(svg), /^data:image\/svg\+xml/);
+  });
+
+  it("paints filled navy shears and book chips, never an exit door or pale outline", () => {
+    const shears = crispBarberMarkSvg("barber-header");
+    const book = crispBookMarkSvg("library-header");
+    assert.match(shears, /data-fenix-barber-mark="1"/);
+    assert.match(shears, /data-fenix-crisp-mark="1"/);
+    assert.match(shears, /#082338|#0F3A5C/);
+    assert.match(shears, /M9\.4 16\.2 17\.6 5\.6/);
+    assert.doesNotMatch(shears, /fill="none"|fill-opacity="\.18"/);
+    assert.match(book, /data-fenix-book-mark="1"/);
+    assert.match(book, /M8\.2 6\.2h13\.4/);
+    assert.doesNotMatch(book, /fill="none"|fill-opacity="\.18"/);
+    assert.doesNotMatch(shears, /M10 7V5\.8A1\.8|M4 12h10M11\.2 8\.8/);
+    assert.doesNotMatch(book, /M10 7V5\.8A1\.8|M5\.2 5\.2h13\.6/);
+    assert.equal(crispAppMarkSvg("x", "Taglio"), shears.replace(/barber-header/g, "x"));
+    assert.equal(crispAppMarkSvg("x", "Libri"), book.replace(/library-header/g, "x"));
+    assert.doesNotMatch(shears, /#007aff|#0071e3|#f5f5f7/i);
+    assert.doesNotMatch(book, /#007aff|#0071e3|#f5f5f7/i);
   });
 });

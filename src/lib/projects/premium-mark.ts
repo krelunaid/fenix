@@ -1,5 +1,7 @@
 /** Original squircle app mark. Domain colors only — never Apple SET or a copied 3D drop. */
 
+import { craftNavIcon } from "./craft-icons.ts";
+
 function innerSvg(svg: string): string {
   return String(svg || "")
     .replace(/^<svg\b[^>]*>/i, "")
@@ -41,6 +43,89 @@ export function crispWaterDropMarkSvg(id: string): string {
 </g>
 <ellipse cx="13.4" cy="12.2" rx="2.2" ry="3" fill="#fff" fill-opacity=".62"/>
 </svg>`;
+}
+
+function crispChipOpen(id: string, extraAttr: string, defs: string): string {
+  const uid = esc(id) || "mark";
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32" role="img" aria-hidden="true" data-craft-app="1" data-fenix-premium-mark="1" data-fenix-crisp-mark="1" ${extraAttr}>
+<defs>
+  <linearGradient id="ccm-plate-${uid}" x1="6" y1="2" x2="26" y2="30" gradientUnits="userSpaceOnUse">
+    <stop offset="0" stop-color="#0F3A5C"/>
+    <stop offset="1" stop-color="#082338"/>
+  </linearGradient>
+${defs}
+</defs>
+<rect x="0" y="0" width="32" height="32" rx="9" fill="url(#ccm-plate-${uid})"/>`;
+}
+
+/**
+ * Crisp filled shears chip. Navy plate + opaque gold blades — not a faint X outline.
+ */
+export function crispBarberMarkSvg(id: string): string {
+  const uid = esc(id) || "mark";
+  return `${crispChipOpen(
+    id,
+    'data-fenix-barber-mark="1"',
+    `  <linearGradient id="cbm-glyph-${uid}" x1="8" y1="5" x2="24" y2="26" gradientUnits="userSpaceOnUse">
+    <stop offset="0" stop-color="#FEF3C7"/>
+    <stop offset=".45" stop-color="#FDE68A"/>
+    <stop offset="1" stop-color="#D97706"/>
+  </linearGradient>`,
+  )}
+<g transform="translate(16 16.4) scale(1.18) translate(-12 -13)">
+  <path fill="url(#cbm-glyph-${uid})" fill-rule="evenodd" d="M7.5 16.2a2.65 2.65 0 1 1 0 5.3 2.65 2.65 0 0 1 0-5.3zm0 1.75a.9.9 0 1 0 0 1.8.9.9 0 0 0 0-1.8z"/>
+  <path fill="url(#cbm-glyph-${uid})" fill-rule="evenodd" d="M16.5 16.2a2.65 2.65 0 1 1 0 5.3 2.65 2.65 0 0 1 0-5.3zm0 1.75a.9.9 0 1 0 0 1.8.9.9 0 0 0 0-1.8z"/>
+  <path fill="url(#cbm-glyph-${uid})" d="M9.4 16.2 17.6 5.6c.48-.58 1.32-.5 1.72.16l.58.92c.3.48.1 1.12-.4 1.44L10.8 17.5z"/>
+  <path fill="url(#cbm-glyph-${uid})" d="M14.6 16.2 6.4 5.6c-.48-.58-1.32-.5-1.72.16l-.58.92c-.3.48-.1 1.12.4 1.44L13.2 17.5z"/>
+  <circle cx="12" cy="16.7" r="1.2" fill="url(#cbm-glyph-${uid})"/>
+</g>
+<ellipse cx="12.6" cy="10.4" rx="2" ry="2.6" fill="#fff" fill-opacity=".5"/>
+</svg>`;
+}
+
+/**
+ * Crisp filled book chip. Navy plate + opaque cream volume — not a dim scrap outline.
+ */
+export function crispBookMarkSvg(id: string): string {
+  const uid = esc(id) || "mark";
+  return `${crispChipOpen(
+    id,
+    'data-fenix-book-mark="1"',
+    `  <linearGradient id="cbk-cover-${uid}" x1="8" y1="6" x2="24" y2="26" gradientUnits="userSpaceOnUse">
+    <stop offset="0" stop-color="#F8FAFC"/>
+    <stop offset=".4" stop-color="#E0F2FE"/>
+    <stop offset="1" stop-color="#7DD3FC"/>
+  </linearGradient>
+  <linearGradient id="cbk-spine-${uid}" x1="8" y1="6" x2="12" y2="26" gradientUnits="userSpaceOnUse">
+    <stop offset="0" stop-color="#38BDF8"/>
+    <stop offset="1" stop-color="#0369A1"/>
+  </linearGradient>`,
+  )}
+<path fill="url(#cbk-cover-${uid})" d="M8.2 6.2h13.4c1.15 0 1.9.85 1.9 1.9v16.1c0 .72-.62 1.28-1.42 1.28H9.55c-1.55 0-2.45-.92-2.45-2.25V8.15c0-1.08.92-1.95 2.1-1.95z"/>
+<path fill="url(#cbk-spine-${uid})" d="M8.2 6.2h2.85v18.95H9.55c-1.55 0-2.45-.92-2.45-2.25V8.15c0-1.08.92-1.95 2.1-1.95z"/>
+<path fill="#fff" fill-opacity=".7" d="M13.15 10.15h6.35v1.2H13.15zm0 3.15h6.35v1.2H13.15zm0 3.15h4.7v1.2H13.15z"/>
+<path fill="#38BDF8" d="M20.55 6.2h2.05v7.35l-1.02-1.25-1.03 1.25z"/>
+<ellipse cx="14.2" cy="9.6" rx="2.1" ry="2.8" fill="#fff" fill-opacity=".42"/>
+</svg>`;
+}
+
+/** Navy chip + opaque sector glyph. Used for generic utility / editorial / ops. */
+export function crispFilledGlyphMarkSvg(id: string, glyphSvg: string): string {
+  const glyph = innerSvg(glyphSvg);
+  return `${crispChipOpen(id, 'data-fenix-glyph-mark="1"', "")}
+<g fill="#E0F2FE" stroke="#E0F2FE" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" transform="translate(3.4 3.4) scale(1.05)">
+${glyph}
+</g>
+</svg>`;
+}
+
+/** Dispatch a water-quality filled chip from the sector identity label. */
+export function crispAppMarkSvg(id: string, label: string): string {
+  const key = String(label || "").toLowerCase().trim();
+  if (/acqua|bottiglia|serbatoio|botte|livello/.test(key)) return crispWaterDropMarkSvg(id);
+  if (/taglio|cucito/.test(key)) return crispBarberMarkSvg(id);
+  if (/libri|bibliotec|catalogo/.test(key)) return crispBookMarkSvg(id);
+  return crispFilledGlyphMarkSvg(id, craftNavIcon({ id: "app", label }));
 }
 
 /** Glossy water-ops mark: original drop + beveled ring. Not a cloned 3D asset, not Apple SET. */

@@ -27,8 +27,8 @@ import { auditGraphicQuality, type GraphicReport } from "../projects/graphic-qua
 import { domainIllustration, altForBrief } from "./domain-imagery.ts";
 import { DASHBOARD_POLISH_INSTRUCTION, SITE_POLISH_INSTRUCTION } from "./app-shell.ts";
 import { craftNavIcon } from "../projects/craft-icons.ts";
-import { appIdentityIcon, isAccountantBrief, isBarberBrief, isFieldProductBrief, isLuxeBrief, isMarketplaceBrief, isShopBrief } from "../projects/app-identity.ts";
-import { crispWaterDropMarkSvg, glossyWaterMarkSvg, premiumAppMarkSvg, premiumMarkDataUri } from "../projects/premium-mark.ts";
+import { appIdentityIcon, appIdentityLabel, isAccountantBrief, isBarberBrief, isFieldProductBrief, isLuxeBrief, isMarketplaceBrief, isShopBrief, wantsCrispCraftMark } from "../projects/app-identity.ts";
+import { crispAppMarkSvg, crispWaterDropMarkSvg, glossyWaterMarkSvg, premiumAppMarkSvg, premiumMarkDataUri } from "../projects/premium-mark.ts";
 import { craftModeOf, craftRhythmOf, craftTokenCss, surfacesFromPalette, type CraftDomain } from "../projects/craft-tokens.ts";
 import { accentButtonPair, contrastRatio } from "../projects/visual-quality.ts";
 import type { Palette, ProjectKind } from "../projects/types.ts";
@@ -1405,9 +1405,12 @@ function productHtml(spec: PipelineSpec, tokens: DesignTokens, grammar: LayoutGr
     desk,
     phone: grammar.id === "phone-seed" && !campo && !luxe,
   });
+  const identityLabel = appIdentityLabel(spec.brief, tokens.family);
   const premiumMark = campo
     ? glossyWaterMarkSvg(spec.id, p)
-    : premiumAppMarkSvg(spec.id, p, identityGlyph);
+    : wantsCrispCraftMark(spec.brief, tokens.family)
+      ? crispAppMarkSvg(spec.id, identityLabel)
+      : premiumAppMarkSvg(spec.id, p, identityGlyph);
   const iconMark = campo ? crispWaterDropMarkSvg(spec.id) : premiumMark;
   const markHref = premiumMarkDataUri(iconMark);
   const bootDate = italianLongDate();
@@ -1461,8 +1464,8 @@ header{padding:16px 18px 10px;display:flex;align-items:flex-end;justify-content:
 .brand{font-family:var(--display);font-size:${tokens.type.h1};font-weight:650;letter-spacing:-.04em;line-height:1.1;color:var(--fg);overflow-wrap:anywhere;min-width:0}
 .brand-group{display:flex;align-items:center;gap:12px;min-width:0}
 .brand-group>div{min-width:0}
-.app-mark{width:44px;height:44px;flex:0 0 44px;border-radius:12px;display:grid;place-items:center;background:var(--elevated);color:var(--fg);border:1px solid var(--line);box-shadow:none}
-.app-mark svg{width:26px;height:26px;stroke-width:2;overflow:visible}
+.app-mark{width:44px;height:44px;flex:0 0 44px;border-radius:12px;display:grid;place-items:center;padding:0;overflow:hidden;background:transparent;border:0;box-shadow:0 8px 18px rgba(8,35,56,.28)}
+.app-mark svg{width:44px;height:44px;display:block;overflow:visible}
 header .place{color:var(--muted);max-width:42%;overflow:visible;white-space:normal;text-align:right;line-height:1.3}
 main{flex:1;min-height:0;overflow-y:auto;padding:8px 16px 24px;-webkit-overflow-scrolling:touch}
 .hero,.sil,.plate{position:relative;border-radius:var(--r);overflow:hidden;margin-bottom:14px;border:1px solid var(--line);background:var(--elevated);min-height:200px}

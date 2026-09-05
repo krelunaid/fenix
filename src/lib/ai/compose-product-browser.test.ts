@@ -1738,4 +1738,69 @@ describe("graphic pipeline visual QA D/T/M", () => {
       await browser.close();
     }
   });
+
+  it("paints filled navy header chips for barber shears and library book at 390", async () => {
+    const { composeProduct } = await import("./compose-product.ts");
+    const { formatPrefix } = await import("../projects/infer.ts");
+    const rows = [
+      {
+        brief: formatPrefix("app") + "App barbiere: agenda tagli e clienti, stile iPhone.",
+        attr: "data-fenix-barber-mark",
+        path: "M9.4 16.2 17.6 5.6",
+      },
+      {
+        brief: formatPrefix("app") + "App libreria: catalogo libri, prestiti e scaffali, stile iPhone.",
+        attr: "data-fenix-book-mark",
+        path: "M8.2 6.2h13.4",
+      },
+    ] as const;
+    const browser = await launchChromium();
+    try {
+      for (const row of rows) {
+        const product = composeProduct(row.brief);
+        assert.match(product.html, new RegExp(row.attr));
+        assert.doesNotMatch(product.html, /M10 7V5\.8A1\.8|M4 12h10M11\.2 8\.8/);
+        const src = prepareSrcDoc(product.html, product.tokens.palette, "craft-mark", product.grammar.kind);
+        const page = await isolatedPage(browser, { viewport: { width: 390, height: 844 } });
+        try {
+          await page.setContent(src, { waitUntil: "domcontentloaded", timeout: 15000 });
+          await waitForFenixReady(page, 8000);
+          const paint = await page.evaluate((attr) => {
+            const chip = document.querySelector("header .app-mark");
+            const mark = chip?.querySelector("svg");
+            const filled = [...(mark?.querySelectorAll("path,circle,rect") ?? [])].some((el) => {
+              const fill = el.getAttribute("fill") || "";
+              return fill && fill !== "none";
+            });
+            const bg = chip ? getComputedStyle(chip).backgroundColor : "";
+            const rgb = bg.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+            return {
+              attr: mark?.getAttribute(attr),
+              crisp: mark?.getAttribute("data-fenix-crisp-mark"),
+              path: mark?.innerHTML.includes("M9.4") || mark?.innerHTML.includes("M8.2") || false,
+              filled,
+              chipW: chip?.getBoundingClientRect().width ?? 0,
+              markW: mark?.getBoundingClientRect().width ?? 0,
+              bg,
+              transparentChip: !rgb || (Number(rgb[1]) === 0 && Number(rgb[2]) === 0 && Number(rgb[3]) === 0) || bg === "transparent",
+              appleTouch: !!document.querySelector('link[rel="apple-touch-icon"]'),
+              exit: /M10 7V5\.8A1\.8/.test(document.body.innerHTML),
+            };
+          }, row.attr);
+          assert.equal(paint.attr, "1", row.brief);
+          assert.equal(paint.crisp, "1");
+          assert.equal(paint.path, true);
+          assert.equal(paint.filled, true);
+          assert.ok(paint.chipW >= 44, `header chip ${paint.chipW}`);
+          assert.ok(paint.markW >= 44, `header svg ${paint.markW}`);
+          assert.equal(paint.appleTouch, true);
+          assert.equal(paint.exit, false);
+        } finally {
+          await page.close();
+        }
+      }
+    } finally {
+      await browser.close();
+    }
+  });
 });

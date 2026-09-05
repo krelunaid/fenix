@@ -1049,6 +1049,56 @@ describe("graphic pipeline prompt→plan→generate→visual→QA", () => {
     assert.doesNotMatch(fallbackIcon, /M10 7h12v16H10z/);
   });
 
+  it("paints filled navy header marks for barber and library briefs, not faint scraps or exit doors", () => {
+    const barberBrief = formatPrefix("app") + "App barbiere: agenda tagli e clienti, stile iPhone.";
+    const libraryBrief = formatPrefix("app") + "App libreria: catalogo libri, prestiti e scaffali, stile iPhone.";
+    const barber = composeProduct(barberBrief);
+    const library = composeProduct(libraryBrief);
+    const officeMotif = "M10 7h12v16H10z";
+    const exitDoor = /M10 7V5\.8A1\.8|M4 12h10M11\.2 8\.8/;
+    const header = (html: string) => html.match(/<span class="app-mark"[^>]*>([\s\S]*?)<\/span>/)?.[1] || "";
+    const barberMark = header(barber.html);
+    const libraryMark = header(library.html);
+    assert.equal(appIdentityLabel(barberBrief, barber.tokens.family), "Taglio");
+    assert.equal(appIdentityLabel(libraryBrief, library.tokens.family), "Libri");
+    assert.match(barberMark, /data-fenix-barber-mark="1"/);
+    assert.match(barberMark, /data-fenix-crisp-mark="1"/);
+    assert.match(barberMark, /M9\.4 16\.2 17\.6 5\.6/);
+    assert.match(barberMark, /#082338|#0F3A5C/);
+    assert.doesNotMatch(barberMark, /fill="none"|fill-opacity="\.18"/);
+    assert.match(libraryMark, /data-fenix-book-mark="1"/);
+    assert.match(libraryMark, /M8\.2 6\.2h13\.4/);
+    assert.doesNotMatch(libraryMark, /fill="none"|fill-opacity="\.18"/);
+    assert.notEqual(barberMark, libraryMark);
+    assert.doesNotMatch(barber.html, exitDoor);
+    assert.doesNotMatch(library.html, exitDoor);
+    assert.doesNotMatch(library.html, /M5\.2 5\.2h13\.6|M5\.2 8\.6h13\.6/);
+    assert.doesNotMatch(library.html, new RegExp(officeMotif.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+    assert.match(barber.html, /rel="apple-touch-icon"/);
+    assert.match(library.html, /rel="apple-touch-icon"/);
+    assert.match(barber.html, /rel="icon" type="image\/svg\+xml"/);
+    assert.match(barber.html, /\.app-mark\{[^}]*background:transparent/);
+    assert.match(barber.html, /\.app-mark svg\{[^}]*width:44px/);
+    assert.ok(contrastRatio("#082338", "#FDE68A") >= 4.5, "gold shears on navy must stay readable");
+    assert.ok(contrastRatio("#082338", "#7DD3FC") >= 3, "book cover on navy must stay obvious");
+    const barberIcon = productIconSvg({
+      name: "App barbiere",
+      kind: "app",
+      palette: barber.tokens.palette,
+      prompt: barberBrief,
+    });
+    const libraryIcon = productIconSvg({
+      name: "App libreria",
+      kind: "app",
+      palette: library.tokens.palette,
+      prompt: libraryBrief,
+    });
+    assert.match(barberIcon, /data-fenix-barber-mark="1"/);
+    assert.match(libraryIcon, /data-fenix-book-mark="1"/);
+    assert.doesNotMatch(barberIcon, /M10 7h12v16H10z/);
+    assert.doesNotMatch(libraryIcon, /M10 7h12v16H10z/);
+  });
+
   it("keeps composed phone apps under the Edge artifact cap", () => {
     const briefs = [
       "FORMATO: app. kind=app. Agenda studio: appuntamenti e prenotazioni, stile iPhone.",
@@ -1058,6 +1108,8 @@ describe("graphic pipeline prompt→plan→generate→visual→QA", () => {
       `${formatPrefix("app")}Vicina: marketplace di lavoretti e bacheca incarichi, stile Apple.`,
       `${formatPrefix("app")}Palco: scene e recitazione, prove e repertorio, stile Apple.`,
       `${formatPrefix("app")}Emporio Luce: negozio di lampade da tavolo, stile Apple.`,
+      `${formatPrefix("app")}App barbiere: agenda tagli e clienti, stile iPhone.`,
+      `${formatPrefix("app")}App libreria: catalogo libri, prestiti e scaffali, stile iPhone.`,
     ];
     for (const brief of briefs) {
       const html = composeProduct(brief).html;
