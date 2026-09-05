@@ -24,6 +24,10 @@ import {
   type PaletteRecord,
 } from "./palette-engine.ts";
 import { applyGraphicIntent, graphicIntentFromBrief } from "./graphic-intent.ts";
+import { enrichWaterOpsPalette } from "./water-ops-palette.ts";
+import { enrichMarketPalette } from "./market-ops-palette.ts";
+import { enrichLuxePalette } from "./luxe-ops-palette.ts";
+import { isLuxeBrief, isMarketplaceBrief } from "./app-identity.ts";
 
 export type TokenFamily =
   | "perfume"
@@ -683,6 +687,24 @@ function finishSystemSheet(tokens: DesignTokens, brief: string, recent?: Palette
   return { ...tokens, palette, chroma: classifyPalette(palette) };
 }
 
+const LUXE_FONTS = {
+  display: "Fraunces",
+  body: "Figtree",
+  href: "https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,700&display=swap",
+};
+
+function finishFieldSheet(tokens: DesignTokens, brief: string): DesignTokens {
+  let palette = enrichWaterOpsPalette(brief, tokens.palette);
+  palette = enrichMarketPalette(brief, palette);
+  palette = enrichLuxePalette(brief, palette);
+  const luxe = isLuxeBrief(brief);
+  const radius = isMarketplaceBrief(brief) ? "24px" : luxe ? "20px" : tokens.radius;
+  const fonts = luxe ? LUXE_FONTS : tokens.fonts;
+  const type = luxe ? { h1: "2.4rem", body: "16px", label: "13px" } : tokens.type;
+  if (palette === tokens.palette && radius === tokens.radius && fonts === tokens.fonts) return tokens;
+  return { ...tokens, palette, radius, fonts, type, chroma: classifyPalette(palette) };
+}
+
 export function tokensFromBrief(brief: string, opts?: TokenOptions): DesignTokens {
   const family = familyFromBrief(brief);
   const variant = variantFromBrief(brief);
@@ -699,24 +721,27 @@ export function tokensFromBrief(brief: string, opts?: TokenOptions): DesignToken
     const type = family === "repo" && repoSrc ? repoSrc.type : recipe.type;
     const dont = family === "repo" && repoSrc ? repoSrc.dont : recipe.dont;
     const dna = `${srcFamily}${variant ? `/v${variant}` : ""} · ${adaptive.family} · ${fonts.display}/${fonts.body} · anti-clone`;
-    return finishSystemSheet(
-      applyGraphicIntent(
-        {
-          family: srcFamily,
-          variant,
-          mood,
-          fonts: { ...fonts },
-          radius,
-          type: { ...type },
-          palette: adaptive.palette,
-          dna: dna.slice(0, 80),
-          dont: [...dont],
-          chroma: adaptive.family,
-        },
+    return finishFieldSheet(
+      finishSystemSheet(
+        applyGraphicIntent(
+          {
+            family: srcFamily,
+            variant,
+            mood,
+            fonts: { ...fonts },
+            radius,
+            type: { ...type },
+            palette: adaptive.palette,
+            dna: dna.slice(0, 80),
+            dont: [...dont],
+            chroma: adaptive.family,
+          },
+          brief,
+        ),
         brief,
+        opts?.recent,
       ),
       brief,
-      opts?.recent,
     );
   }
   const src = variant === 1 && VARIANTS[family] ? VARIANTS[family]! : FAMILIES[family];
@@ -739,24 +764,27 @@ export function tokensFromBrief(brief: string, opts?: TokenOptions): DesignToken
   }
   const chroma = classifyPalette(palette);
   const dna = `${family}${variant ? `/v${variant}` : ""} · ${src.fonts.display}/${src.fonts.body} · anti-clone`;
-  return finishSystemSheet(
-    applyGraphicIntent(
-      {
-        family,
-        variant,
-        mood: src.mood,
-        fonts: { ...src.fonts },
-        radius: src.radius,
-        type: { ...src.type },
-        palette,
-        dna: dna.slice(0, 80),
-        dont: [...src.dont],
-        chroma,
-      },
+  return finishFieldSheet(
+    finishSystemSheet(
+      applyGraphicIntent(
+        {
+          family,
+          variant,
+          mood: src.mood,
+          fonts: { ...src.fonts },
+          radius: src.radius,
+          type: { ...src.type },
+          palette,
+          dna: dna.slice(0, 80),
+          dont: [...src.dont],
+          chroma,
+        },
+        brief,
+      ),
       brief,
+      opts?.recent,
     ),
     brief,
-    opts?.recent,
   );
 }
 

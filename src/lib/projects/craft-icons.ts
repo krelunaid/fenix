@@ -89,6 +89,9 @@ const NAV_ICONS = {
   glass: navIcon(
     '<path d="M8.2 5.6h7.6l-1.1 7.8a2.8 2.8 0 0 1-5.4 0z"/><path d="M12 13.8v4.6M9.4 18.4h5.2"/>',
   ),
+  stage: navIcon(
+    '<path d="M5 5.4h14v13.2H5z"/><path d="M5 5.4c2.8 3.6 2.8 9.6 0 13.2M19 5.4c-2.8 3.6-2.8 9.6 0 13.2"/><path d="M12 5.4v13.2"/>',
+  ),
   table: navIcon(
     '<path d="M5.4 10.4h13.2"/><path d="M7.2 10.4v7.4M16.8 10.4v7.4M12 10.4v7.4"/>',
   ),
@@ -163,12 +166,39 @@ const NAV_ICONS = {
   pot: navIcon(
     '<path d="M12 4.6v1.6"/><path d="M6.8 7.4h10.4"/><path d="M7.2 7.4h9.6v8.2a2.2 2.2 0 0 1-2.2 2.2H9.4a2.2 2.2 0 0 1-2.2-2.2z"/><path d="M7.2 10.2H4.6c-.8 0-1.4.6-1.4 1.4s.6 1.4 1.4 1.4H7.2"/><path d="M16.8 10.2h2.6c.8 0 1.4.6 1.4 1.4s-.6 1.4-1.4 1.4H16.8"/>',
   ),
+  clock: navIcon(
+    '<circle cx="12" cy="12.2" r="7"/><path d="M12 8.6v4l2.6 1.5"/>',
+  ),
+  drop: navIcon(
+    '<path d="M12 4.8s5.8 6.6 5.8 10.2a5.8 5.8 0 0 1-11.6 0C6.2 11.4 12 4.8 12 4.8z"/><path d="M9.6 14.2c.6 1.4 2 2.2 3.6 2.2"/>',
+  ),
   home: navIcon(
     '<path d="M5 10.8 12 5.2 19 10.8V19.2H5z"/><path d="M10.2 19.2v-6.2h3.6v6.2"/>',
   ),
   add: navIcon('<path d="M12 7.2v9.6M7.2 12h9.6"/>'),
   person: navIcon(
     '<circle cx="12" cy="8.2" r="2.4"/><path d="M7.2 19.2c.6-3.4 9-3.4 9.6 0"/>',
+  ),
+  ledger: navIcon(
+    '<path d="M5.8 6.2h5.4v12.2H7.4A1.6 1.6 0 0 1 5.8 16.8z"/><path d="M18.2 6.2h-5.4v12.2h3.8a1.6 1.6 0 0 0 1.6-1.6z"/><path d="M11.2 6.2v12.2"/><path d="M7.4 9.4h2M7.4 12h2M14.6 9.4h2M14.6 12h2"/>',
+  ),
+  invoice: navIcon(
+    '<rect x="6.6" y="4.8" width="10.8" height="14.4" rx="1.2"/><path d="M8.8 8.6h6.4M8.8 11.6h6.4M8.8 14.6h4.2"/>',
+  ),
+  scale: navIcon(
+    '<path d="M12 5.4v12.8"/><path d="M8 18.8h8"/><path d="M12 7.2 6.6 12.2H9.8z"/><path d="M12 7.2 17.4 12.2H14.2z"/>',
+  ),
+  storefront: navIcon(
+    '<path d="M4.8 10 6.6 6.2h10.8L19.2 10z"/><path d="M5.4 10h13.2"/><path d="M6.6 10v2M9.6 10v2M12 10v2M14.4 10v2M17.4 10v2"/><path d="M6.6 12v5.8h10.8V12"/><path d="M10.4 17.8v-3.4h3.2v3.4"/>',
+  ),
+  folder: navIcon(
+    '<path d="M5.4 8.4h4l1.5 1.6H18.6v8.2H5.4z"/><path d="M5.4 8.4V7.2h3.4l1.2 1.2"/>',
+  ),
+  crate: navIcon(
+    '<path d="M5.4 9 12 5.6 18.6 9v8.6L12 20.6 5.4 17.6z"/><path d="M5.4 9 12 12.4 18.6 9M12 12.4V20.6"/>',
+  ),
+  briefcase: navIcon(
+    '<rect x="5.2" y="8.6" width="13.6" height="9" rx="1.2"/><path d="M9.2 8.6V7h5.6v1.6M5.2 12.4h13.6"/>',
   ),
 } as const;
 
@@ -190,8 +220,22 @@ export function craftNavIcon(tab: { id: string; label: string }, index = 0): str
   let svg = NAV_FALLBACKS[index % NAV_FALLBACKS.length];
   if (/^home$/.test(label)) svg = NAV_ICONS.home;
   else if (/^aggiungi$/.test(label)) svg = NAV_ICONS.add;
+  else if (/^registra$/.test(label)) svg = NAV_ICONS.add;
+  else if (/^pubblica$/.test(label)) svg = NAV_ICONS.pencil;
+  else if (/^scena$/.test(label)) svg = NAV_ICONS.stage;
+  else if (/^prove$/.test(label)) svg = NAV_ICONS.book;
+  else if (/^gestione$/.test(label)) svg = NAV_ICONS.settings;
+  else if (/^storico$/.test(label)) svg = NAV_ICONS.clock;
+  else if (/^consegne$|^consegna$/.test(label)) svg = NAV_ICONS.drop;
   else if (/^persona$|^profilo$/.test(label)) svg = NAV_ICONS.person;
   else if (/^elenco$|^lista$/.test(label)) svg = NAV_ICONS.book;
+  else if (/^fatture$|^fattura$/.test(label)) svg = NAV_ICONS.invoice;
+  else if (/^bilancio$/.test(label)) svg = NAV_ICONS.scale;
+  else if (/^negozio$/.test(label)) svg = NAV_ICONS.storefront;
+  else if (/^pratiche$|^fascicolo$/.test(label)) svg = NAV_ICONS.folder;
+  else if (/^magazzino$/.test(label)) svg = NAV_ICONS.crate;
+  else if (/^contabilit[aà]$|^fiscale$/.test(label)) svg = NAV_ICONS.ledger;
+  else if (/^ufficio$/.test(label)) svg = NAV_ICONS.briefcase;
   else if (/\b(check-in|checkin)\b/.test(label)) svg = NAV_ICONS.key;
   else if (/\b(prenotazioni|appuntamenti)\b/.test(label)) svg = NAV_ICONS.appointments;
   else if (/\b(prenota|prenotare)\b/.test(label)) svg = NAV_ICONS.bookAppointment;
@@ -201,6 +245,13 @@ export function craftNavIcon(tab: { id: string; label: string }, index = 0): str
   else if (/\b(messaggi|chat|conversazioni)\b/.test(label)) svg = NAV_ICONS.messages;
   else if (/\b(impostazioni|preferenze|settings)\b/.test(label)) svg = NAV_ICONS.settings;
   else if (/piramide|accordi/.test(key)) svg = NAV_ICONS.pyramid;
+  else if (/fattur/.test(key)) svg = NAV_ICONS.invoice;
+  else if (/bilancio/.test(key)) svg = NAV_ICONS.scale;
+  else if (/negozio|emporio/.test(key)) svg = NAV_ICONS.storefront;
+  else if (/pratiche|fascicol/.test(key)) svg = NAV_ICONS.folder;
+  else if (/magazzino/.test(key)) svg = NAV_ICONS.crate;
+  else if (/commercialist|contabil|fiscal|partita/.test(key)) svg = NAV_ICONS.ledger;
+  else if (/ufficio|briefcase/.test(key)) svg = NAV_ICONS.briefcase;
   else if (/collezione|vetrina|essenz|profum/.test(key)) svg = NAV_ICONS.bottle;
   else if (/pelle|polso/.test(key)) svg = NAV_ICONS.wrist;
   else if (/lookbook|look|tela/.test(key)) svg = NAV_ICONS.hanger;
@@ -237,6 +288,9 @@ export function craftNavIcon(tab: { id: string; label: string }, index = 0): str
   else if (/clima|meteo/.test(key)) svg = NAV_ICONS.climate;
   else if (/resa|ritorno/.test(key)) svg = NAV_ICONS.back;
   else if (/settimana/.test(key)) svg = NAV_ICONS.week;
+  else if (/storico|cronolog/.test(key)) svg = NAV_ICONS.clock;
+  else if (/consegne|acqua|autobot/.test(key)) svg = NAV_ICONS.drop;
+  else if (/gestione/.test(key)) svg = NAV_ICONS.settings;
   else if (/atelier|laboratorio|studio/.test(key)) svg = NAV_ICONS.atelier;
   if (isLetterAIcon(svg)) svg = NAV_ICONS.book;
   return svg;

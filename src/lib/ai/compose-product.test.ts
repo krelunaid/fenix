@@ -19,9 +19,12 @@ import { hueBucket } from "../projects/design-tokens.ts";
 import { PALETTE_CORPUS, paletteDistance, CLOSE_DELTA_E } from "../projects/palette-engine.ts";
 import { domainIllustration, GEOMETRIC_REGRESSIONS, materialSignature } from "./domain-imagery.ts";
 import { isLetterAIcon, looksLikeIosWidgetHome } from "../projects/craft-icons.ts";
+import { appIdentityIcon, appIdentityLabel } from "../projects/app-identity.ts";
 import { prepareSrcDoc } from "../projects/color-scheme.ts";
 import { createBuildRequest, isComposedCreation } from "./build-request.ts";
 import { contrastRatio } from "../projects/visual-quality.ts";
+import { MAX_ARTIFACT_CHARS } from "../../../workers/visual/artifact-context.mjs";
+import { nativeStyleAssignsPalette } from "../projects/native-app-style.ts";
 
 describe("controller build request preserves generated artifacts", () => {
   it("creates an editable sector app icon in the first phone seed without provider calls", () => {
@@ -35,6 +38,55 @@ describe("controller build request preserves generated artifacts", () => {
       icons.add(icon);
     }
     assert.equal(icons.size,4,"sector icons must not all be the same generic document");
+  });
+  it("keeps sector marks distinct for accountant, shop, barber and perfume without a house palette", () => {
+    const rows = [
+      ["mi crei un app da parrucchieri stile Barber shop", "booking", "Taglio"],
+      ["Profumi e fragranze", "perfume", "Profumi"],
+      ["Abbigliamento e lookbook", "fashion", "Lookbook"],
+      ["Agenda appuntamenti", "booking", "Agenda"],
+      ["gestionale per commercialisti, fatture e pratiche", "paper", "Fatture"],
+      ["negozio di alimentari, cassa e magazzino", "paper", "Negozio"],
+    ] as const;
+    const icons = rows.map(([brief, family, label]) => {
+      assert.equal(appIdentityLabel(brief, family), label, brief);
+      return appIdentityIcon(brief, family);
+    });
+    assert.equal(new Set(icons).size, rows.length, "each activity needs its own mark");
+    assert.match(icons[4]!, /data-craft-app="1"/);
+    assert.match(icons[5]!, /data-craft-app="1"/);
+    const barber = composeProduct(formatPrefix("app") + rows[0][0]);
+    const shop = composeProduct(formatPrefix("app") + rows[5][0]);
+    const fiscal = composeProduct(formatPrefix("app") + rows[4][0]);
+    assert.doesNotMatch(barber.html, /#b51246|#b01e47|#a61d4c/i);
+    assert.doesNotMatch(shop.html, /#b51246|#b01e47|#a61d4c/i);
+    assert.doesNotMatch(fiscal.html, /#b51246|#b01e47|#a61d4c/i);
+    assert.notEqual(shop.tokens.palette.accent.toLowerCase(), barber.tokens.palette.accent.toLowerCase());
+    assert.match(fiscal.html, /<span>Fatture<\/span>/);
+    assert.match(fiscal.html, /<span>Bilancio<\/span>/);
+    assert.match(shop.html, /<span>Negozio<\/span>/);
+    assert.match(shop.html, /<span>Magazzino<\/span>/);
+    assert.match(fiscal.html, /--t-callout:/);
+    assert.match(fiscal.html, /--space:8px/);
+    assert.match(shop.html, /font-variant-numeric:tabular-nums/);
+  });
+  it("keeps a commercialisti gestionale on desk chrome with fiscal tabs, never a phone seed or raspberry", () => {
+    const brief = formatPrefix("dashboard") + "mi crei un gestionale per commercialisti";
+    const product = composeProduct(brief);
+    const payload = createBuildRequest({ prompt: brief, kind: "dashboard" });
+    assert.equal(product.grammar.id, "ops-desk");
+    assert.equal(product.grammar.chrome, "desk");
+    assert.doesNotMatch(product.html, /data-fenix-native-style/);
+    assert.doesNotMatch(product.html, /\bfk-tab\b/);
+    assert.doesNotMatch(product.html, /#b51246|#0071e3|#f5f5f7/i);
+    assert.match(product.html, /data-fenix-craft-desk/);
+    assert.match(product.html, /<span>Fatture<\/span>/);
+    assert.match(product.html, /<span>Pratiche<\/span>/);
+    assert.match(product.html, /\.kpis\{[^}]*border-radius:12px/);
+    assert.match(product.html, /--t-callout:1rem/);
+    assert.equal(payload.html, "");
+    assert.equal(payload.instruction, "");
+    assert.equal(payload.kind, "dashboard");
   });
   it("keeps Barber activity identity without the rejected raspberry palette or auto-native style", () => {
     const brief = formatPrefix("app") + "mi crei un app da parrucchieri stile Barber shop";
@@ -757,5 +809,135 @@ describe("graphic pipeline prompt→plan→generate→visual→QA", () => {
     assert.match(bootHome, /Panoramica/);
     assert.doesNotMatch(bootHome, /pocket-list/);
     assert.doesNotMatch(bootHome, /data-fenix-pane="persona"/);
+  });
+
+  it("raises field-product chrome toward a real product without Ciao or a house palette", () => {
+    const brief =
+      formatPrefix("app") +
+      "NordAcqua: consegne acqua in campo, gestione dipendenti, storico e statistiche, stile Apple. Accento #0A2F6B.";
+    const product = composeProduct(brief);
+    assert.equal(product.grammar.id, "phone-seed");
+    assert.match(product.html, /<span>Home<\/span>/);
+    assert.match(product.html, /<span>Registra<\/span>/);
+    assert.match(product.html, /<span>Storico<\/span>/);
+    assert.match(product.html, /<span>Statistiche<\/span>/);
+    assert.match(product.html, /<span>Gestione<\/span>/);
+    assert.match(product.html, /data-fenix-campo/);
+    assert.match(product.html, /data-fenix-water-mark/);
+    assert.match(product.html, /function renderPocketHistory/);
+    assert.match(product.html, /function renderPocketStats/);
+    assert.match(product.html, /fx-board/);
+    assert.match(product.html, /fx-tank/);
+    assert.match(product.html, /fxBotteSvg/);
+    assert.match(product.html, /fx-botte/);
+    assert.match(product.html, /fx-wave/);
+    assert.match(product.html, /fx-inverse/);
+    assert.match(product.html, /fx-toggle/);
+    assert.match(product.html, /Obiettivo raggiunto\. Bene\./);
+    assert.match(product.html, /:has\(nav\.tabs button:first-child\.on\) header/);
+    assert.match(product.html, /#10B981/);
+    assert.match(product.html, /fx-splash/);
+    assert.match(product.html, /data-fenix-premium-mark/);
+    assert.match(product.html, /Cerca per nome/);
+    assert.match(product.html, /Apertura/);
+    assert.match(product.html, /--inverse:/);
+    assert.match(product.html, /--brand:/);
+    assert.match(product.html, /#0[Ee][Aa]5[Ee]9|#10[Bb]981|#0[Ff]172[Aa]/);
+    assert.doesNotMatch(product.html, /Ciao/);
+    assert.doesNotMatch(product.html, /#b51246|#0071e3|#f5f5f7|#007aff/i);
+    assert.notEqual(product.tokens.palette.accent.toLowerCase(), "#b51246");
+    assert.equal(product.tokens.palette.accent.toLowerCase(), "#0ea5e9");
+    assert.equal(product.tokens.palette.success.toLowerCase(), "#10b981");
+    assert.equal(product.tokens.palette.fg.toLowerCase(), "#0f172a");
+    const system = composeProduct(`${formatPrefix("app")}Lista in tasca: cose da fare operative, tipo system-ui iPhone-like, font di sistema primario, tab Home Aggiungi Persona, elenco e CRUD. Non clonare marchi o schermate Apple.`);
+    assert.match(system.html, /<span>Home<\/span>/);
+    assert.match(system.html, /<span>Aggiungi<\/span>/);
+    assert.match(system.html, /Niente in lista/);
+    assert.doesNotMatch(system.html, /<span>Gestione<\/span>/);
+  });
+
+  it("teaches marketplace craft without cloning LikeSwift or forcing water sky", () => {
+    const product = composeProduct(
+      `${formatPrefix("app")}Vicina: marketplace di lavoretti e bacheca incarichi, stile Apple.`,
+    );
+    assert.equal(product.grammar.id, "phone-seed");
+    assert.match(product.html, /data-fenix-market/);
+    assert.match(product.html, /data-craft-rhythm="consumer"/);
+    assert.match(product.html, /<span>Pubblica<\/span>/);
+    assert.match(product.html, /<span>Attivit/);
+    assert.match(product.html, /<span>Profilo<\/span>/);
+    assert.match(product.html, /fx-cats/);
+    assert.match(product.html, /fx-task/);
+    assert.match(product.html, /#1[Ee]40[Aa][Ff]/);
+    assert.match(product.html, /--fx-r3:24px/);
+    assert.doesNotMatch(product.html, /<html[^>]*data-fenix-campo/);
+    assert.doesNotMatch(product.html, /Ciao/);
+    assert.doesNotMatch(product.html, /LikeSwift/);
+    assert.notEqual(product.tokens.palette.accent.toLowerCase(), "#0ea5e9");
+    const water = composeProduct(
+      `${formatPrefix("app")}NordAcqua: consegne acqua in campo, gestione dipendenti, storico e statistiche, stile Apple.`,
+    );
+    assert.match(water.html, /data-fenix-campo/);
+    assert.doesNotMatch(water.html, /<html[^>]*data-fenix-market/);
+    assert.equal(water.tokens.palette.accent.toLowerCase(), "#0ea5e9");
+  });
+
+  it("teaches luxe craft without cloning ActStage or forcing gold on water, market or desk", () => {
+    const product = composeProduct(
+      `${formatPrefix("app")}Palco: scene e recitazione, prove e repertorio, stile Apple.`,
+    );
+    assert.equal(product.grammar.id, "phone-seed");
+    assert.match(product.html, /data-fenix-luxe/);
+    assert.match(product.html, /data-craft-mode="luxe"/);
+    assert.match(product.html, /data-craft-rhythm="luxe"/);
+    assert.match(product.html, /<span>Scena<\/span>/);
+    assert.match(product.html, /<span>Prove<\/span>/);
+    assert.match(product.html, /fx-scene/);
+    assert.match(product.html, /Repertorio/);
+    assert.match(product.html, /#D4AF37/i);
+    assert.match(product.html, /#0[Dd]0[Dd]11/);
+    assert.match(product.html, /--fx-t-display:46px/);
+    assert.match(product.html, /Fraunces/);
+    assert.doesNotMatch(product.html, /<html[^>]*data-fenix-campo/);
+    assert.doesNotMatch(product.html, /<html[^>]*data-fenix-market/);
+    assert.doesNotMatch(product.html, /Ciao/);
+    assert.doesNotMatch(product.html, /ActStage|Teleprompter|Gamification|LikeSwift/);
+    assert.doesNotMatch(product.html, /#f5f5f7|#007aff|#0071e3/i);
+    const water = composeProduct(
+      `${formatPrefix("app")}NordAcqua: consegne acqua in campo, gestione dipendenti, storico e statistiche, stile Apple.`,
+    );
+    assert.match(water.html, /data-craft-mode="utility"/);
+    assert.doesNotMatch(water.html, /<html[^>]*data-fenix-luxe/);
+    assert.equal(water.tokens.palette.accent.toLowerCase(), "#0ea5e9");
+    const market = composeProduct(
+      `${formatPrefix("app")}Vicina: marketplace di lavoretti e bacheca incarichi, stile Apple.`,
+    );
+    assert.match(market.html, /data-craft-mode="marketplace"/);
+    assert.doesNotMatch(market.html, /<html[^>]*data-fenix-luxe/);
+    const desk = composeProduct(
+      `${formatPrefix("dashboard")}Studio Nord: gestionale per commercialisti, fatture e F24.`,
+    );
+    assert.equal(desk.grammar.id, "ops-desk");
+    assert.match(desk.html, /data-craft-mode="desk"/);
+    assert.doesNotMatch(desk.html, /<html[^>]*data-fenix-luxe/);
+    assert.notEqual(desk.tokens.palette.bg.toLowerCase(), "#0d0d11");
+  });
+
+  it("keeps composed phone apps under the Edge artifact cap", () => {
+    const briefs = [
+      "FORMATO: app. kind=app. Agenda studio: appuntamenti e prenotazioni, stile iPhone.",
+      "FORMATO: app telefono 390×844. kind=app. Tab in basso, 5 schermate. NON un sito.\n\nmi crei un app da parrucchieri stile Barber shop",
+      `${formatPrefix("app")}NordAcqua: consegne acqua in campo, gestione dipendenti, storico e statistiche, stile Apple.`,
+      `${formatPrefix("app")}Vicina: marketplace di lavoretti e bacheca incarichi, stile Apple.`,
+      `${formatPrefix("app")}Palco: scene e recitazione, prove e repertorio, stile Apple.`,
+      `${formatPrefix("app")}Emporio Luce: negozio di lampade da tavolo, stile Apple.`,
+    ];
+    for (const brief of briefs) {
+      const html = composeProduct(brief).html;
+      assert.ok(
+        html.length <= MAX_ARTIFACT_CHARS,
+        `${brief.slice(0, 48)}… ${html.length} > ${MAX_ARTIFACT_CHARS}`,
+      );
+    }
   });
 });
