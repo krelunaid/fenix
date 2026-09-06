@@ -1739,7 +1739,7 @@ describe("graphic pipeline visual QA D/T/M", () => {
     }
   });
 
-  it("paints filled navy header chips for barber shears and library book at 390", async () => {
+  it("paints filled espresso shears and navy book chips at 390", async () => {
     const { composeProduct } = await import("./compose-product.ts");
     const { formatPrefix } = await import("../projects/infer.ts");
     const rows = [
@@ -1777,6 +1777,8 @@ describe("graphic pipeline visual QA D/T/M", () => {
             });
             const bg = chip ? getComputedStyle(chip).backgroundColor : "";
             const rgb = bg.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+            const icon = document.querySelector('link[rel="icon"]')?.getAttribute("href") || "";
+            const favicon = decodeURIComponent(icon.replace(/^data:image\/svg\+xml;charset=utf-8,/, ""));
             return {
               attr: mark?.getAttribute(attr),
               crisp: mark?.getAttribute("data-fenix-crisp-mark"),
@@ -1786,6 +1788,10 @@ describe("graphic pipeline visual QA D/T/M", () => {
               markW: mark?.getBoundingClientRect().width ?? 0,
               bg,
               headerHidden,
+              appMarks: document.querySelectorAll('[data-fenix-id="icon:app"]').length,
+              homeMarks: document.querySelectorAll(".fx-app-mark").length,
+              faviconShears: favicon.includes("data-fenix-barber-mark") && favicon.includes("M9.4"),
+              faviconBook: favicon.includes("data-fenix-book-mark"),
               transparentChip: !rgb || (Number(rgb[1]) === 0 && Number(rgb[2]) === 0 && Number(rgb[3]) === 0) || bg === "transparent",
               appleTouch: !!document.querySelector('link[rel="apple-touch-icon"]'),
               exit: /M10 7V5\.8A1\.8/.test(document.body.innerHTML),
@@ -1799,14 +1805,24 @@ describe("graphic pipeline visual QA D/T/M", () => {
           assert.ok(paint.markW >= 44, `header svg ${paint.markW}`);
           assert.equal(paint.appleTouch, true);
           assert.equal(paint.exit, false);
+          if (row.attr === "data-fenix-barber-mark") {
+            assert.equal(paint.appMarks, 1, "barber keeps one header shears mark");
+            assert.equal(paint.homeMarks, 0, "barber Home does not add a second chip");
+            assert.equal(paint.headerHidden, false);
+            assert.equal(paint.faviconShears, true);
+          } else {
+            assert.equal(paint.faviconBook, true);
+          }
           const home = await page.evaluate(() => {
             const tabs = [...document.querySelectorAll("nav.tabs button span")].map((el) => el.textContent || "");
             const place = document.querySelector("header .place")?.textContent || "";
             const hello = document.querySelector(".fx-hello")?.textContent || "";
-            const strip = document.querySelector(".barber-strip, .lib-board")?.textContent || "";
+            const strip = document.querySelector(".salon-catalog, .lib-board, .barber-strip")?.textContent || "";
+            const hero = !!document.querySelector("[data-fenix-salon-art], .salon-hero");
             const desk = /Tavolo|Registra|STUDIO/.test(document.body.innerText);
             const kpi = /Media/.test(document.body.innerText) && /Voci/.test(document.body.innerText) && /Aperti/.test(document.body.innerText);
-            return { tabs, place, hello, strip, desk, kpi, htmlAttr: document.documentElement.getAttribute("data-fenix-libreria") || document.documentElement.getAttribute("data-fenix-barber") };
+            const staff = /oggi in sala|da confermare/.test(document.body.innerText);
+            return { tabs, place, hello, strip, hero, desk, kpi, staff, htmlAttr: document.documentElement.getAttribute("data-fenix-libreria") || document.documentElement.getAttribute("data-fenix-barber") };
           });
           assert.equal(home.desk, false, row.brief);
           assert.equal(home.kpi, false, row.brief);
@@ -1816,8 +1832,11 @@ describe("graphic pipeline visual QA D/T/M", () => {
             assert.match(home.strip, /In prestito|In scaffale/);
             assert.doesNotMatch(home.place, /STUDIO|Studio/);
           } else {
-            assert.ok(home.tabs.includes("Oggi"));
-            assert.match(home.hello + home.strip, /sala|App barbiere/i);
+            assert.deepEqual(home.tabs, ["Home", "Prenota", "I miei"]);
+            assert.match(home.hello + home.strip + home.place, /taglio|App barbiere|Sala/i);
+            assert.equal(home.hero, true);
+            assert.equal(home.staff, false);
+            assert.doesNotMatch(home.tabs.join(" "), /Oggi|Settimana|Archivio/);
           }
         } finally {
           await page.close();

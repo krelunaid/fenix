@@ -59,27 +59,33 @@ ${defs}
 }
 
 /**
- * Crisp filled shears chip. Navy plate + opaque gold blades — not a faint X outline.
+ * Crisp filled shears + comb chip. Espresso plate + cream/tan blades — not a faint X outline.
  */
 export function crispBarberMarkSvg(id: string): string {
   const uid = esc(id) || "mark";
-  return `${crispChipOpen(
-    id,
-    'data-fenix-barber-mark="1"',
-    `  <linearGradient id="cbm-glyph-${uid}" x1="8" y1="5" x2="24" y2="26" gradientUnits="userSpaceOnUse">
-    <stop offset="0" stop-color="#FEF3C7"/>
-    <stop offset=".45" stop-color="#FDE68A"/>
-    <stop offset="1" stop-color="#D97706"/>
-  </linearGradient>`,
-  )}
-<g transform="translate(16 16.4) scale(1.18) translate(-12 -13)">
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32" role="img" aria-hidden="true" data-craft-app="1" data-fenix-premium-mark="1" data-fenix-crisp-mark="1" data-fenix-barber-mark="1">
+<defs>
+  <linearGradient id="ccm-plate-${uid}" x1="6" y1="2" x2="26" y2="30" gradientUnits="userSpaceOnUse">
+    <stop offset="0" stop-color="#1C1612"/>
+    <stop offset="1" stop-color="#0B0908"/>
+  </linearGradient>
+  <linearGradient id="cbm-glyph-${uid}" x1="8" y1="5" x2="24" y2="26" gradientUnits="userSpaceOnUse">
+    <stop offset="0" stop-color="#F4EEE6"/>
+    <stop offset=".45" stop-color="#D2BFA6"/>
+    <stop offset="1" stop-color="#C4A882"/>
+  </linearGradient>
+</defs>
+<rect x="0.7" y="0.7" width="30.6" height="30.6" rx="8.4" fill="url(#ccm-plate-${uid})" stroke="#D2BFA6" stroke-width="1.4"/>
+<g transform="translate(16 16.4) scale(1.28) translate(-12 -13)">
+  <path fill="url(#cbm-glyph-${uid})" d="M4.4 7.2h2.3v10.4H4.4z"/>
+  <path fill="url(#cbm-glyph-${uid})" d="M4.15 7h2.8v1.05H4.15zm0 2.05h2.8v.7H4.15zm0 1.75h2.8v.7H4.15zm0 1.75h2.8v.7H4.15zm0 1.75h2.8v.7H4.15z"/>
   <path fill="url(#cbm-glyph-${uid})" fill-rule="evenodd" d="M7.5 16.2a2.65 2.65 0 1 1 0 5.3 2.65 2.65 0 0 1 0-5.3zm0 1.75a.9.9 0 1 0 0 1.8.9.9 0 0 0 0-1.8z"/>
   <path fill="url(#cbm-glyph-${uid})" fill-rule="evenodd" d="M16.5 16.2a2.65 2.65 0 1 1 0 5.3 2.65 2.65 0 0 1 0-5.3zm0 1.75a.9.9 0 1 0 0 1.8.9.9 0 0 0 0-1.8z"/>
   <path fill="url(#cbm-glyph-${uid})" d="M9.4 16.2 17.6 5.6c.48-.58 1.32-.5 1.72.16l.58.92c.3.48.1 1.12-.4 1.44L10.8 17.5z"/>
   <path fill="url(#cbm-glyph-${uid})" d="M14.6 16.2 6.4 5.6c-.48-.58-1.32-.5-1.72.16l-.58.92c-.3.48-.1 1.12.4 1.44L13.2 17.5z"/>
   <circle cx="12" cy="16.7" r="1.2" fill="url(#cbm-glyph-${uid})"/>
 </g>
-<ellipse cx="12.6" cy="10.4" rx="2" ry="2.6" fill="#fff" fill-opacity=".5"/>
+<ellipse cx="12.6" cy="10.4" rx="2" ry="2.6" fill="#fff" fill-opacity=".28"/>
 </svg>`;
 }
 

@@ -51,15 +51,17 @@ describe("premium app mark", () => {
     assert.match(premiumMarkDataUri(svg), /^data:image\/svg\+xml/);
   });
 
-  it("paints filled navy shears and book chips, never an exit door or pale outline", () => {
+  it("paints filled espresso shears and navy book chips, never an exit door or pale outline", () => {
     const shears = crispBarberMarkSvg("barber-header");
     const book = crispBookMarkSvg("library-header");
     assert.match(shears, /data-fenix-barber-mark="1"/);
     assert.match(shears, /data-fenix-crisp-mark="1"/);
-    assert.match(shears, /#082338|#0F3A5C/);
+    assert.match(shears, /#0B0908|#1C1612/);
+    assert.match(shears, /#D2BFA6|#F4EEE6/);
     assert.match(shears, /M9\.4 16\.2 17\.6 5\.6/);
     assert.doesNotMatch(shears, /fill="none"|fill-opacity="\.18"/);
     assert.match(book, /data-fenix-book-mark="1"/);
+    assert.match(book, /#082338|#0F3A5C/);
     assert.match(book, /M8\.2 6\.2h13\.4/);
     assert.doesNotMatch(book, /fill="none"|fill-opacity="\.18"/);
     assert.doesNotMatch(shears, /M10 7V5\.8A1\.8|M4 12h10M11\.2 8\.8/);

@@ -701,6 +701,18 @@ const LIBRARY_FONTS = {
   href: "https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,700&display=swap",
 };
 
+const BARBER_FONTS = {
+  display: "Fraunces",
+  body: "Figtree",
+  href: "https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,700&display=swap",
+};
+
+function namedSerifFace(display: string): boolean {
+  return /Garamond|Literata|Newsreader|Playfair|Cormorant|Source Serif|Bodoni|Cinzel|Libre Caslon|Spectral/i.test(
+    display,
+  );
+}
+
 function finishFieldSheet(tokens: DesignTokens, brief: string): DesignTokens {
   let palette = enrichWaterOpsPalette(brief, tokens.palette);
   palette = enrichBarberPalette(brief, palette);
@@ -710,11 +722,17 @@ function finishFieldSheet(tokens: DesignTokens, brief: string): DesignTokens {
   const luxe = isLuxeBrief(brief);
   const library = isLibraryBrief(brief);
   const barber = isBarberBrief(brief);
-  const radius = isMarketplaceBrief(brief) ? "24px" : luxe ? "20px" : barber || library ? "16px" : tokens.radius;
-  const fonts = luxe || library ? (luxe ? LUXE_FONTS : LIBRARY_FONTS) : tokens.fonts;
+  const radius = isMarketplaceBrief(brief) ? "24px" : luxe || barber ? "20px" : library ? "16px" : tokens.radius;
+  const fonts = luxe
+    ? LUXE_FONTS
+    : library
+      ? LIBRARY_FONTS
+      : barber && !namedSerifFace(tokens.fonts.display)
+        ? BARBER_FONTS
+        : tokens.fonts;
   const type = luxe
     ? { h1: "2.4rem", body: "16px", label: "13px" }
-    : library
+    : library || barber
       ? { h1: "2.2rem", body: "16px", label: "13px" }
       : tokens.type;
   if (palette === tokens.palette && radius === tokens.radius && fonts === tokens.fonts && type === tokens.type) {
@@ -837,6 +855,8 @@ export function tokensInstruction(tokens: DesignTokens, brief = ""): string {
     chromeLaw,
     tokens.family === "repo"
       ? "Dominio repository: attività commit, rami, stato sync, timeline/diff. Vietato home universale con hero grigio + due KPI + CTA + empty card. Non copiare GitHub."
+      : isBarberBrief(brief)
+        ? "Dominio salon cliente: tab Home/Prenota/I miei, serif editoriale + sans metadata, espresso/crema/tan, schede servizio con durata/prezzo/professionista, progresso prenota, mark forbici piene. Vietato dashboard staff Oggi/Nuovo/Settimana/Archivio e KPI in sala. Non clonare Corto."
       : tokens.family === "booking" && intent.type !== "system"
         ? "Dominio agenda: binario orario, tab Oggi/Nuovo/Settimana/Archivio, tipo 17/headline da tasca (sans operativa, non serif da rivista), icone griglia 24, target 44px. Vietato hero KPI e tab Home/Elenco."
         : `Asse dominio=${axes.domain}.`,

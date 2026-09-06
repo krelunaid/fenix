@@ -8,15 +8,18 @@ import { BARBER_RASPBERRY, enrichBarberPalette } from "./barber-ops-palette.ts";
 const BARBER_IPHONE_BRIEF = "App barbiere: agenda tagli e clienti, stile iPhone.";
 
 describe("barber / salon ops palette", () => {
-  it("turns the barber iPhone brief into warm cream + copper, not pale teal or raspberry", () => {
+  it("turns the barber iPhone brief into espresso + cream + tan, not pale teal or raspberry", () => {
     const tokens = tokensFromBrief(`${formatPrefix("app")}${BARBER_IPHONE_BRIEF}`);
     assert.equal(tokens.palette.accent.toLowerCase(), BARBER_CRAFT.brand.toLowerCase());
     assert.equal(tokens.palette.bg.toLowerCase(), BARBER_CRAFT.surfaceSecondary.toLowerCase());
     assert.equal(tokens.palette.fg.toLowerCase(), BARBER_CRAFT.onSurface.toLowerCase());
+    assert.equal(tokens.palette.bg.toLowerCase(), "#0b0908");
+    assert.equal(tokens.palette.fg.toLowerCase(), "#f4eee6");
+    assert.equal(tokens.palette.accent.toLowerCase(), "#d2bfa6");
     assert.notEqual(tokens.palette.accent.toLowerCase(), WATER_CRAFT.brand.toLowerCase());
     assert.notEqual(tokens.palette.accent.toLowerCase(), "#1f6f68");
     assert.doesNotMatch(tokens.palette.accent, BARBER_RASPBERRY);
-    assert.doesNotMatch(tokens.palette.bg, /#e8eef4|#f5f5f7/i);
+    assert.doesNotMatch(tokens.palette.bg, /#e8eef4|#f5f5f7|#f6ede4/i);
   });
 
   it("leaves water, perfume and library palettes alone", () => {

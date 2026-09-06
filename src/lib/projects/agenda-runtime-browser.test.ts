@@ -37,7 +37,9 @@ it("Barber identity survives polish parsing across D/T/M/320 without the rejecte
       await page.setContent(`<body style="margin:0"><iframe id="f" style="border:0;width:100vw;height:100dvh"></iframe><script>addEventListener('message',e=>{const m=e.data;if(m?.t==='fenix-db')e.source.postMessage({t:'fenix-db',id:m.id,v:m.op==='load'?null:{ok:true}},'*')})</script>`);
       await page.locator("#f").evaluate((el,src)=>(el as HTMLIFrameElement).srcdoc=src,prepareSrcDoc(parsed.html,parsed.palette,"brand-"+id,"app"));
       const frame=page.frameLocator("#f");await frame.locator("[data-fenix-ready]").waitFor({timeout:8000});
-      const mark=frame.locator('header [data-fenix-id="icon:app"]');
+      const mark=frame.locator('header .app-mark, header [data-fenix-id="icon:app"]');
+      assert.equal(await frame.locator('[data-fenix-id="icon:app"]').count(),1);
+      assert.equal(await frame.locator(".fx-app-mark").count(),0);
       assert.equal(await mark.count(),1);
       assert.equal(await mark.isVisible(),true);
       const dimensions=await mark.boundingBox();assert.ok(dimensions && dimensions.width>=44 && dimensions.height>=44);
@@ -45,15 +47,21 @@ it("Barber identity survives polish parsing across D/T/M/320 without the rejecte
       const accent=await frame.locator("html").evaluate(()=>getComputedStyle(document.documentElement).getPropertyValue("--accent").trim());
       assert.notEqual(markBg.replace(/\s/g,""),"rgb(181,18,70)");
       assert.notEqual(accent.toLowerCase(),"#b51246");
-      const timeColor=await frame.locator(".slot .time").first().evaluate(el=>getComputedStyle(el).color);
+      assert.match(accent.toLowerCase(),/#d2bfa6|#c4a882/);
+      const time=frame.locator(".salon-next .time, .slot .time").first();
+      assert.equal(await time.count(),1);
+      const timeColor=await time.evaluate(el=>getComputedStyle(el).color);
       const fg=await frame.locator("html").evaluate(()=>getComputedStyle(document.documentElement).getPropertyValue("--fg").trim());
       assert.ok(timeColor);
       assert.ok(fg);
       assert.equal(await frame.locator("header h1").innerText(),"Barber");
+      assert.deepEqual(await frame.locator("nav#tabs button span").allInnerTexts(),["Home","Prenota","I miei"]);
       await page.screenshot({path:join(output,`${id}-home.png`)});
       const count=await frame.locator("nav#tabs button").count();
       for(let i=0;i<count;i++){
         await frame.locator("nav#tabs button").nth(i).click();
+        assert.equal(await frame.locator('[data-fenix-id="icon:app"]').count(),1);
+        assert.equal(await frame.locator(".fx-app-mark").count(),0);
         assert.equal(await mark.isVisible(),true);
         assert.equal(await frame.locator("html").evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),false);
       }
