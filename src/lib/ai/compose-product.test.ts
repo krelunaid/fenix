@@ -11,6 +11,7 @@ import {
   campoHomeHeaderMark,
   barberHomeHeaderMark,
   libraryHomeHeaderMark,
+  pocketHomeHeaderMark,
   composeProduct,
   loadPipelineFixtures,
   runGraphicPipeline,
@@ -1182,6 +1183,80 @@ describe("graphic pipeline prompt→plan→generate→visual→QA", () => {
     assert.doesNotMatch(product.html, /<html[^>]*data-fenix-libreria/);
   });
 
+  it("raises default compose for a plain brief above the old utility floor", () => {
+    const appBrief = formatPrefix("app") + "Note e promemoria per la giornata.";
+    const deskBrief = formatPrefix("dashboard") + "Gestionale ufficio: pratiche, scadenze e clienti.";
+    const siteBrief = "FORMATO: sito web. kind=site. atlante delle maree";
+    const app = composeProduct(appBrief);
+    const desk = composeProduct(deskBrief);
+    const site = composeProduct(siteBrief);
+    const boot = app.html.match(/<main id="root"[^>]*>([\s\S]*?)<\/main>/)?.[1] || "";
+    const visible = app.html.replace(/<style[\s\S]*?<\/style>/gi, "").replace(/<script[\s\S]*?<\/script>/gi, "");
+
+    assert.equal(app.grammar.id, "phone-seed");
+    assert.match(app.html, /data-fenix-pocket/);
+    assert.match(app.html, /data-craft-domain="generic"/);
+    assert.match(app.html, /<span>Home<\/span>/);
+    assert.match(app.html, /<span>Aggiungi<\/span>/);
+    assert.match(app.html, /<span>Elenco<\/span>/);
+    assert.match(app.html, /<p class="place">Personale<\/p>/);
+    assert.match(app.html, /fx-hello/);
+    assert.match(app.html, /fx-app-mark/);
+    assert.match(app.html, /data-fenix-crisp-mark|data-fenix-premium-mark/);
+    assert.match(app.html, /Niente in lista/);
+    assert.match(boot, /class="mark"/);
+    assert.match(boot, /fx-hello/);
+    assert.doesNotMatch(visible, /<span>Tavolo<\/span>/);
+    assert.doesNotMatch(visible, /<span>Studio<\/span>/);
+    assert.doesNotMatch(visible, /<p class="place">Studio<\/p>/);
+    assert.doesNotMatch(boot, /fx-board|fx-tank/);
+    assert.doesNotMatch(boot, /<b>0<\/b>/);
+    assert.doesNotMatch(boot, /Panoramica/);
+    assert.doesNotMatch(app.html, /<span>Oggi<\/span><\/div><div class="fx-cell"><b>0<\/b><span>Media/);
+    assert.match(app.html, /html\[data-fenix-pocket\] \.fx-hello\{/);
+    assert.match(app.html, /--shadow-card:0 1px 0/);
+    assert.doesNotMatch(app.html, /<html[^>]*data-fenix-campo/);
+    assert.doesNotMatch(app.html, /<html[^>]*data-fenix-libreria/);
+    assert.doesNotMatch(app.html, /<html[^>]*data-fenix-barber/);
+    const mark = pocketHomeHeaderMark(appBrief, app.tokens.family);
+    assert.match(mark, /data-fenix-crisp-mark="1"|data-fenix-premium-mark="1"/);
+    assert.doesNotMatch(mark, /fill="none" stroke="currentColor"/);
+
+    assert.equal(desk.grammar.id, "ops-desk");
+    assert.match(desk.html, /data-craft-mode="desk"/);
+    assert.match(desk.html, /<span>Pipeline<\/span>/);
+    assert.match(desk.html, /desk-hello|fx-hello/);
+    assert.match(desk.html, /desk-empty/);
+    assert.match(desk.html, /data-fenix-id="icon:app"/);
+    assert.doesNotMatch(desk.html, /<span>Tavolo<\/span>/);
+    assert.doesNotMatch(desk.html, /<span>Studio<\/span>/);
+    assert.doesNotMatch(desk.html, /<p class="place">Studio<\/p>/);
+    assert.doesNotMatch(desk.html.replace(/<style[\s\S]*?<\/style>/gi, ""), /<b>0<\/b>/);
+    assert.doesNotMatch(desk.html, /<html[^>]*data-fenix-luxe/);
+
+    assert.equal(site.grammar.id, "magazine");
+    assert.equal(site.grammar.chrome, "masthead");
+    assert.match(site.html, /<span>Copertina<\/span>/);
+    assert.doesNotMatch(site.html, /<span>Tavolo<\/span>/);
+    assert.doesNotMatch(site.html, /nav\.tabs/);
+    assert.doesNotMatch(site.html, /<p class="place">Studio<\/p>/);
+
+    const water = composeProduct(
+      formatPrefix("app") +
+        "App acqua bottiglia: home con botte/serbatoio acqua, livello, e tab Ordina. Stile iPhone.",
+    );
+    const library = composeProduct(
+      formatPrefix("app") + "App libreria: catalogo libri, prestiti e scaffali, stile iPhone.",
+    );
+    const barber = composeProduct(formatPrefix("app") + "App barbiere: agenda tagli e clienti, stile iPhone.");
+    assert.match(water.html, /data-fenix-campo/);
+    assert.doesNotMatch(water.html, /data-fenix-pocket/);
+    assert.match(library.html, /data-fenix-libreria/);
+    assert.doesNotMatch(library.html, /data-fenix-pocket/);
+    assert.match(barber.html, /data-fenix-barber/);
+    assert.doesNotMatch(barber.html, /data-fenix-pocket/);
+  });
+
   it("teaches library bookstore craft instead of falling to desk STUDIO/Tavolo/0-KPI", () => {
     const brief = formatPrefix("app") + "App libreria: catalogo libri, prestiti e scaffali, stile iPhone.";
     const product = composeProduct(brief);
@@ -1292,8 +1367,8 @@ describe("composed create find/replace anchors", () => {
     assert.equal(composedFindStatus(water, "/*fenix-slot:botte*/function fxBotteSvg(pct){").usable, true);
     const boot = water.match(/<main id="root"[^>]*>([\s\S]*?)<\/main>/)?.[1] || "";
     assert.doesNotMatch(boot, /fx-board|fx-tank|fx-botte/);
-    assert.match(boot, /Panoramica/);
-    assert.match(boot, /Niente in lista/);
+    assert.match(boot, /Missioni|Quadro di controllo/);
+    assert.match(boot, /Niente in lista|data-fenix-water-header/);
   });
 
   it("applies hash-bound slot plans on water/campo without rewriting the botte or falling back to full HTML", () => {

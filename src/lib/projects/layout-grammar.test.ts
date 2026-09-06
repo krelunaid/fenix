@@ -77,6 +77,14 @@ describe("layout grammar from brief", () => {
     assert.equal(signal.id, "pocket-tool");
   });
 
+  it("gives an unmatched site magazine masthead, not phone-seed desk STUDIO", () => {
+    const g = grammarFromBrief("FORMATO: sito web. kind=site. atlante delle maree");
+    assert.equal(g.id, "magazine");
+    assert.equal(g.chrome, "masthead");
+    assert.match(g.desktop, /niente tabbar/i);
+    assert.match(g.desktop, /niente 0-KPI|lastre/i);
+  });
+
   it("gives a library iPhone brief phone-seed bookstore voice, not magazine or desk", () => {
     const g = grammarFromBrief(`${formatPrefix("app")}${LIBRARY_IPHONE_BRIEF}`);
     assert.equal(g.id, "phone-seed");

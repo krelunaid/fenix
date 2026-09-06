@@ -25,7 +25,10 @@ export function isLibraryBrief(brief: string): boolean {
 export function wantsCrispCraftMark(brief: string, family = ""): boolean {
   if (isFieldProductBrief(brief)) return false;
   if (isBarberBrief(brief) || isLibraryBrief(brief)) return true;
-  return family === "utility" || family === "editorial" || family === "ops";
+  if (family === "perfume" || family === "fashion" || family === "hospitality" || family === "food") {
+    return false;
+  }
+  return true;
 }
 
 /** Commercialista / tax / ledger activity. Not a palette and not an iPhone tabbar. */

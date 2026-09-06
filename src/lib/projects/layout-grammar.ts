@@ -213,21 +213,40 @@ export function grammarFromBrief(brief: string): LayoutGrammar {
         },
       };
     }
+    if (kind === "site" || kind === "landing") {
+      return {
+        id: "magazine",
+        family,
+        kind,
+        chrome: "masthead",
+        stage: "magazine",
+        desktop: "testata editoriale + lastre a tutta larghezza, niente tabbar e niente 0-KPI",
+        tablet: "copertina e lastre in colonna",
+        mobile: "copertina, lastre, nav in testata",
+        voice: {
+          census: "in pagina",
+          empty: "Nessuna lastra. Scrivine una.",
+          load: "Apro le pagine",
+          ok: "In pagina",
+          err: "Lastra non registrata.",
+        },
+      };
+    }
     return {
       id: "phone-seed",
       family,
       kind,
-      chrome: kind === "site" || kind === "landing" ? "desk" : "tabs",
+      chrome: "tabs",
       stage: "seed",
-      desktop: "scheletro di mestiere, non boxed 1080",
-      tablet: "colonna utile",
-      mobile: "tasca 100dvh",
+      desktop: "tasca premium a colonna, filled mark, card piene, niente hero 0-KPI",
+      tablet: "colonna editoriale",
+      mobile: "tasca 100dvh, tabbar mestiere",
       voice: {
-        census: "in lavorazione",
-        empty: "Nessuna riga. Compila e salva.",
-        load: "Carico",
-        ok: "Salvato",
-        err: "Non salvato. Riprova.",
+        census: "in tasca",
+        empty: "Niente in lista. Aggiungi la prima voce.",
+        load: "Apro l'elenco",
+        ok: "In elenco",
+        err: "La voce non è salvata.",
       },
     };
   }

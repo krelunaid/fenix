@@ -9,6 +9,8 @@ import {
   MARKET_CRAFT,
   BARBER_CRAFT,
   LIBRARY_CRAFT,
+  GENERIC_CRAFT,
+  GENERIC_DARK_CRAFT,
   WATER_CRAFT,
   craftModeOf,
   craftRhythmOf,
@@ -84,6 +86,23 @@ describe("craft surface tokens", () => {
     assert.equal(craftModeOf({ library: true }), "bookstore");
     assert.equal(craftRhythmOf({ barber: true }), "consumer");
     assert.equal(craftRhythmOf({ library: true }), "consumer");
+    assert.equal(craftRhythmOf({ phone: true }), "consumer");
+    assert.equal(craftModeOf({}), "generic");
+  });
+
+  it("raises unmatched generic surfaces above thin utility white/sky", () => {
+    const note = tokensFromBrief(`${formatPrefix("app")}Note e promemoria per la giornata.`);
+    const s = surfacesFromPalette(note.palette, "generic");
+    assert.notEqual(s.surface.toLowerCase(), "#ffffff");
+    assert.notEqual(s.surfaceSecondary.toLowerCase(), "#ffffff");
+    assert.notEqual(s.brand.toLowerCase(), WATER_CRAFT.brand.toLowerCase());
+    assert.notEqual(s.brand.toLowerCase(), LIBRARY_CRAFT.brand.toLowerCase());
+    assert.notEqual(s.brand.toLowerCase(), "#0ea5e9");
+    assert.match(craftTokenCss(s, { domain: "generic", rhythm: "consumer" }), /--shadow-card:0 1px 0/);
+    assert.equal(GENERIC_CRAFT.surface.toLowerCase(), "#fffcf8");
+    assert.equal(GENERIC_DARK_CRAFT.surface.toLowerCase(), "#141210");
+    assert.notEqual(s.onSurface.toLowerCase(), "#ffffff");
+    assert.notEqual(s.onSurface.toLowerCase(), s.surface.toLowerCase());
   });
 
   it("keeps official salon and bookstore craft hexes on those briefs", () => {

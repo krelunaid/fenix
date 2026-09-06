@@ -93,6 +93,43 @@ export const LIBRARY_CRAFT: CraftSurfaces = {
   border: "#E0D2C2",
 };
 
+/**
+ * Unmatched briefs — premium light floor. Warm paper, ink, one brand.
+ * Not utility gray, not water sky, not library wine, not stage gold.
+ */
+export const GENERIC_CRAFT: CraftSurfaces = {
+  surface: "#FFFCF8",
+  onSurface: "#14110E",
+  surfaceSecondary: "#F4F0EA",
+  surfaceTertiary: "#EBE6DE",
+  surfaceInverse: "#1A1815",
+  brand: "#1F3D36",
+  brandPrimary: "#16302B",
+  brandSecondary: "#3D6B5C",
+  brandTertiary: "#D7E4DE",
+  success: "#1F7A4D",
+  warning: "#B86A1A",
+  error: "#B42318",
+  border: "#DDD6CB",
+};
+
+/** Unmatched dark briefs — refined charcoal + cream, not luxe gold midnight. */
+export const GENERIC_DARK_CRAFT: CraftSurfaces = {
+  surface: "#141210",
+  onSurface: "#F4EFE6",
+  surfaceSecondary: "#1C1A17",
+  surfaceTertiary: "#26231F",
+  surfaceInverse: "#F4EFE6",
+  brand: "#C4B5A0",
+  brandPrimary: "#E8DCC8",
+  brandSecondary: "#8A7A66",
+  brandTertiary: "#3A342C",
+  success: "#5AA87A",
+  warning: "#D08A4A",
+  error: "#E07070",
+  border: "#2E2A26",
+};
+
 /** ActStage / luxe-dark — midnight paper, gold brand, utility radii, display 46. */
 export const LUXE_CRAFT: CraftSurfaces = {
   surface: "#0D0D11",
@@ -263,23 +300,31 @@ export function surfacesFromPalette(palette: EnginePalette, domain: boolean | Cr
     };
   }
   const paper = isLightPaper(palette.bg);
-  const inverse = paper ? palette.fg : palette.bg;
-  const onSurface = palette.fg;
-  const brand = palette.accent;
+  const base = paper ? GENERIC_CRAFT : GENERIC_DARK_CRAFT;
+  const vivid = hexToOkLch(palette.accent).L >= (paper ? 0.22 : 0.38) && hexToOkLch(palette.accent).C >= 0.05;
+  const brand = vivid ? palette.accent : base.brand;
+  const onSurface = paper
+    ? hexToOkLch(palette.fg).L <= 0.28
+      ? palette.fg
+      : base.onSurface
+    : hexToOkLch(palette.fg).L >= 0.78
+      ? palette.fg
+      : base.onSurface;
   return {
-    surface: paper ? "#FFFFFF" : palette.surface,
+    ...base,
+    surface: paper ? base.surface : palette.surface || base.surface,
     onSurface,
-    surfaceSecondary: paper ? mixHex(palette.bg, "#FFFFFF", 0.35) : mixHex(palette.bg, "#FFFFFF", 0.06),
-    surfaceTertiary: paper ? mixHex(palette.bg, inverse, 0.08) : mixHex(palette.surface, "#FFFFFF", 0.08),
-    surfaceInverse: inverse,
+    surfaceSecondary: paper ? mixHex(base.surfaceSecondary, palette.bg, 0.28) : mixHex(palette.bg, "#FFFFFF", 0.05),
+    surfaceTertiary: paper ? mixHex(base.surfaceTertiary, palette.bg, 0.18) : mixHex(palette.surface, "#FFFFFF", 0.08),
+    surfaceInverse: paper ? base.surfaceInverse : mixHex(palette.bg, "#FFFFFF", 0.92),
     brand,
-    brandPrimary: mixHex(brand, paper ? "#000000" : "#FFFFFF", 0.22),
+    brandPrimary: mixHex(brand, paper ? "#0A0A0A" : "#FFFFFF", 0.22),
     brandSecondary: mixHex(brand, "#FFFFFF", paper ? 0.28 : 0.18),
     brandTertiary: mixHex(brand, paper ? "#FFFFFF" : palette.surface, 0.78),
-    success: palette.success || (paper ? "#15803D" : "#5AA87A"),
-    warning: palette.warning || "#D08A4A",
-    error: "#DC2626",
-    border: palette.line || mixHex(palette.bg, onSurface, 0.16),
+    success: palette.success || base.success,
+    warning: palette.warning || base.warning,
+    error: paper ? base.error : GENERIC_DARK_CRAFT.error,
+    border: palette.line || base.border,
   };
 }
 
@@ -296,6 +341,9 @@ function categoryCss(s: CraftSurfaces, domain: CraftDomain): string {
 function shadowCss(s: CraftSurfaces, domain: CraftDomain): string {
   if (domain === "luxe" || domain === "barber") {
     return `--shadow-card:0 1px 0 color-mix(in srgb,${s.brand} 22%,transparent),0 18px 40px rgba(0,0,0,.48);--shadow-float:0 16px 44px color-mix(in srgb,${s.brand} 32%,transparent)`;
+  }
+  if (domain === "generic") {
+    return `--shadow-card:0 1px 0 color-mix(in srgb,${s.onSurface} 6%,transparent),0 14px 36px color-mix(in srgb,${s.onSurface} 10%,transparent);--shadow-float:0 16px 40px color-mix(in srgb,${s.brandPrimary} 28%,transparent)`;
   }
   return `--shadow-card:0 1px 2px rgba(15,23,42,.05),0 10px 28px rgba(15,23,42,.10);--shadow-float:0 12px 32px color-mix(in srgb,${s.brandPrimary} 30%,transparent)`;
 }
