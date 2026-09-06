@@ -59,29 +59,30 @@ ${defs}
 }
 
 /**
- * Crisp filled shears chip. Gold/cream blades on espresso — never an empty
- * rounded square, never a comb+dot that collapses at favicon size.
+ * Defined filled shears chip. Tapered cream blades + evenodd donut rings on
+ * espresso — never an empty square, never solid blobs that collapse at 32px.
  */
 export function crispBarberMarkSvg(id: string): string {
   const uid = esc(id) || "mark";
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32" role="img" aria-hidden="true" data-craft-app="1" data-fenix-premium-mark="1" data-fenix-crisp-mark="1" data-fenix-barber-mark="1" data-fenix-shears-fill="1">
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32" role="img" aria-hidden="true" data-craft-app="1" data-fenix-premium-mark="1" data-fenix-crisp-mark="1" data-fenix-barber-mark="1" data-fenix-shears-fill="1" data-fenix-shears-defined="1">
 <defs>
   <linearGradient id="ccm-plate-${uid}" x1="6" y1="2" x2="26" y2="30" gradientUnits="userSpaceOnUse">
     <stop offset="0" stop-color="#1C1612"/>
     <stop offset="1" stop-color="#0B0908"/>
   </linearGradient>
 </defs>
-<rect x="0.55" y="0.55" width="30.9" height="30.9" rx="8.5" fill="url(#ccm-plate-${uid})" stroke="#D2BFA6" stroke-width="1.5"/>
-<g data-fenix-shears-glyph="1">
-  <path fill="#F4EEE6" d="M10.2 17.6 19.2 3.8 26.6 7 14.8 21.6z"/>
-  <path fill="#F4EEE6" d="M21.8 17.6 12.8 3.8 5.4 7 17.2 21.6z"/>
-  <circle fill="#F4EEE6" cx="9.1" cy="23.4" r="5.45"/>
-  <circle fill="#F4EEE6" cx="22.9" cy="23.4" r="5.45"/>
+<rect x="0.7" y="0.7" width="30.6" height="30.6" rx="8" fill="url(#ccm-plate-${uid})"/>
+<rect x="0.7" y="0.7" width="30.6" height="30.6" rx="8" fill="none" stroke="#E4D3B8" stroke-width="1.7"/>
+<g data-fenix-shears-glyph="1" fill="#F4EEE6" stroke="#C4A882" stroke-width="0.45" stroke-linejoin="round">
+  <path d="M22.8 3.9 26.4 6.85 17.05 17.55 14.7 15.55z"/>
+  <path d="M9.2 3.9 5.6 6.85 14.95 17.55 17.3 15.55z"/>
+  <path d="M14.45 16.55 9.5 21.5 11.35 23.05 16.55 17.7z"/>
+  <path d="M17.55 16.55 22.5 21.5 20.65 23.05 15.45 17.7z"/>
 </g>
-<circle cx="9.1" cy="23.4" r="2.15" fill="#0B0908"/>
-<circle cx="22.9" cy="23.4" r="2.15" fill="#0B0908"/>
-<circle cx="16" cy="17.3" r="2.35" fill="#C4A882"/>
-<circle cx="16" cy="17.3" r="0.9" fill="#0B0908"/>
+<path fill="#F4EEE6" fill-rule="evenodd" d="M9.05 18.5a5.2 5.2 0 1 1 0 10.4 5.2 5.2 0 1 1 0-10.4zm0 2.9a2.3 2.3 0 1 0 0 4.6 2.3 2.3 0 1 0 0-4.6z"/>
+<path fill="#F4EEE6" fill-rule="evenodd" d="M22.95 18.5a5.2 5.2 0 1 1 0 10.4 5.2 5.2 0 1 1 0-10.4zm0 2.9a2.3 2.3 0 1 0 0 4.6 2.3 2.3 0 1 0 0-4.6z"/>
+<circle cx="16" cy="16.35" r="2.55" fill="#E4D3B8"/>
+<circle cx="16" cy="16.35" r="1.05" fill="#0B0908"/>
 </svg>`;
 }
 
