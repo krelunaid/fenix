@@ -75,8 +75,8 @@ export function crispBarberMarkSvg(id: string): string {
     <stop offset="1" stop-color="#C4A882"/>
   </linearGradient>
 </defs>
-<rect x="0" y="0" width="32" height="32" rx="9" fill="url(#ccm-plate-${uid})"/>
-<g transform="translate(16 16.4) scale(1.18) translate(-12 -13)">
+<rect x="0.7" y="0.7" width="30.6" height="30.6" rx="8.4" fill="url(#ccm-plate-${uid})" stroke="#D2BFA6" stroke-width="1.4"/>
+<g transform="translate(16 16.4) scale(1.28) translate(-12 -13)">
   <path fill="url(#cbm-glyph-${uid})" d="M4.4 7.2h2.3v10.4H4.4z"/>
   <path fill="url(#cbm-glyph-${uid})" d="M4.15 7h2.8v1.05H4.15zm0 2.05h2.8v.7H4.15zm0 1.75h2.8v.7H4.15zm0 1.75h2.8v.7H4.15zm0 1.75h2.8v.7H4.15z"/>
   <path fill="url(#cbm-glyph-${uid})" fill-rule="evenodd" d="M7.5 16.2a2.65 2.65 0 1 1 0 5.3 2.65 2.65 0 0 1 0-5.3zm0 1.75a.9.9 0 1 0 0 1.8.9.9 0 0 0 0-1.8z"/>
