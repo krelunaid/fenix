@@ -167,15 +167,14 @@ function editorialPair(display = "Fraunces"): DesignTokens["fonts"] {
 }
 
 export function applyGraphicIntent(tokens: DesignTokens, brief: string): DesignTokens {
-  if (isLuxeBrief(brief)) {
+  const intent = graphicIntentFromBrief(brief);
+  if (isLuxeBrief(brief) && intent.type === "domain") {
     return { ...tokens, fonts: editorialPair("Fraunces") };
   }
-  if (isBarberBrief(brief)) {
-    const intent = graphicIntentFromBrief(brief);
+  if (isBarberBrief(brief) && intent.type !== "system") {
     const face = intent.type === "serif" && intent.face ? intent.face : "Fraunces";
     return { ...tokens, fonts: editorialPair(face) };
   }
-  const intent = graphicIntentFromBrief(brief);
   if (intent.type === "system") {
     const keepPalette = DOMAIN_PALETTE_FAMILIES.has(tokens.family);
     const user = extractUserColors(brief);
@@ -340,7 +339,7 @@ function ensureRootFontVars(html: string, display: string, body: string): string
 export function enforceGraphicIntent(html: string, brief: string): string {
   let next = stampGraphicIntent(html, brief);
   const intent = graphicIntentFromBrief(brief);
-  if (isLuxeBrief(brief) || isBarberBrief(brief)) {
+  if ((intent.type === "domain" && isLuxeBrief(brief)) || (intent.type !== "system" && isBarberBrief(brief))) {
     const intentFace = isBarberBrief(brief) && intent.type === "serif" && intent.face ? intent.face : "Fraunces";
     const display = serifStack(intentFace);
     const body = `"Figtree",${SYSTEM_FONT_STACK}`;

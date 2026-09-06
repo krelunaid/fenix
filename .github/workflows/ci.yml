@@ -46,6 +46,7 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm build
       - run: pnpm test
+      - run: pnpm test:product-design
 
   postgres-reliability:
     name: postgres-16-reliability

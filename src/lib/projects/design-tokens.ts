@@ -5,6 +5,7 @@
  * Unknown briefs go through the adaptive palette engine, never #101114.
  */
 import { contrastRatio } from "./visual-quality.ts";
+import { productDesignInstruction } from "./product-design-system.ts";
 import type { Palette } from "./types.ts";
 import {
   applyUserColors,
@@ -723,7 +724,7 @@ function finishFieldSheet(tokens: DesignTokens, brief: string): DesignTokens {
   const library = isLibraryBrief(brief);
   const barber = isBarberBrief(brief);
   const radius = isMarketplaceBrief(brief) ? "24px" : luxe || barber ? "20px" : library ? "16px" : tokens.radius;
-  const fonts = luxe
+  const fonts = graphicIntentFromBrief(brief).type !== "domain" ? tokens.fonts : luxe
     ? LUXE_FONTS
     : library
       ? LIBRARY_FONTS
@@ -831,7 +832,7 @@ export function fallbackPaletteFromBrief(brief: string): Palette {
 
 export function tokensInstruction(tokens: DesignTokens, brief = ""): string {
   const p = tokens.palette;
-  const axes = extractBriefAxes(tokens.dna);
+  const axes = extractBriefAxes(brief.trim() || tokens.dna);
   const intent = graphicIntentFromBrief(brief);
   const typeLaw =
     intent.type === "system"
@@ -853,10 +854,11 @@ export function tokensInstruction(tokens: DesignTokens, brief = ""): string {
     `Vietato per questo brief: ${tokens.dont.join("; ")}.`,
     typeLaw,
     chromeLaw,
+    productDesignInstruction(),
     tokens.family === "repo"
       ? "Dominio repository: attività commit, rami, stato sync, timeline/diff. Vietato home universale con hero grigio + due KPI + CTA + empty card. Non copiare GitHub."
       : isBarberBrief(brief)
-        ? "Dominio salon cliente: tab Home/Prenota/I miei, serif editoriale 800 + sans metadata, espresso/crema/tan, hairline #4A3C30, Prenota solida con bordo e press, schede servizio con durata/prezzo/professionista, mark forbici piene definite. Vietato blur molle, dashboard staff Oggi/Nuovo/Settimana/Archivio e KPI in sala. Non clonare Corto."
+        ? "Dominio salon cliente: tab Home/Prenota/I miei, tipografia e palette definite sopra (richieste esplicite prioritarie), Prenota evidente, schede servizio con durata/prezzo/professionista, mark forbici definito. Vietato blur molle, dashboard staff Oggi/Nuovo/Settimana/Archivio e KPI in sala. Non clonare Corto."
       : tokens.family === "booking" && intent.type !== "system"
         ? "Dominio agenda: binario orario, tab Oggi/Nuovo/Settimana/Archivio, tipo 17/headline da tasca (sans operativa, non serif da rivista), icone griglia 24, target 44px. Vietato hero KPI e tab Home/Elenco."
         : `Asse dominio=${axes.domain}.`,

@@ -130,8 +130,8 @@ describe("controller build request preserves generated artifacts", () => {
     assert.equal(explicit.tokens.palette.accent,"#006633");
     const native = composeProduct(brief + ", stile iPhone");
     assert.match(native.html,/data-fenix-native-style="v1"/);
-    assert.equal(native.tokens.fonts.display,"Fraunces");
-    assert.equal(native.tokens.fonts.body,"Figtree");
+    assert.equal(native.tokens.fonts.display,"system-ui");
+    assert.equal(native.tokens.fonts.body,"system-ui");
     assert.notEqual(native.tokens.palette.accent.toLowerCase(),"#b51246");
     assert.equal(native.tokens.palette.accent,product.tokens.palette.accent);
   });
@@ -943,7 +943,7 @@ describe("graphic pipeline prompt→plan→generate→visual→QA", () => {
     assert.match(product.html, /#D4AF37/i);
     assert.match(product.html, /#0[Dd]0[Dd]11/);
     assert.match(product.html, /--fx-t-display:46px/);
-    assert.match(product.html, /Fraunces/);
+    assert.match(product.html, /--display:ui-sans-serif,system-ui/);
     assert.doesNotMatch(product.html, /<html[^>]*data-fenix-campo/);
     assert.doesNotMatch(product.html, /<html[^>]*data-fenix-market/);
     assert.doesNotMatch(product.html, /Ciao/);
@@ -1170,8 +1170,8 @@ describe("graphic pipeline prompt→plan→generate→visual→QA", () => {
     assert.equal(iconHref, touchHref);
     assert.doesNotMatch(headerMark, /fill-opacity="\.18"/);
     assert.doesNotMatch(product.html, /FX_BARBER_MARK/);
-    assert.match(product.html, /Fraunces/);
-    assert.match(product.html, /9\.\.144,800/);
+    assert.match(product.html, /--display:ui-sans-serif,system-ui/);
+    assert.doesNotMatch(product.html, /fonts.googleapis.com/);
     assert.match(product.html, /#0B0908|#F4EEE6|#D2BFA6/i);
     assert.match(product.html, /html\[data-fenix-barber\] header\{[^}]*blur\(8px\)/);
     assert.match(product.html, /html\[data-fenix-barber\] nav\.tabs\{[^}]*blur\(6px\)/);
@@ -1182,8 +1182,8 @@ describe("graphic pipeline prompt→plan→generate→visual→QA", () => {
     assert.match(product.html, /header \.btn\.salon-cta-prenota\{[^}]*flex:0 0 auto/);
     assert.match(product.html, /border:1px solid #4A3C30/);
     assert.doesNotMatch(product.html, /html\[data-fenix-barber\] nav\.tabs\{[^}]*blur\(18px\)/);
-    assert.equal(product.tokens.fonts.display, "Fraunces");
-    assert.equal(product.tokens.fonts.body, "Figtree");
+    assert.equal(product.tokens.fonts.display, "system-ui");
+    assert.equal(product.tokens.fonts.body, "system-ui");
     assert.equal(product.tokens.palette.accent.toLowerCase(), "#d2bfa6");
     assert.equal(product.tokens.palette.bg.toLowerCase(), "#0b0908");
     assert.notEqual(product.tokens.palette.accent.toLowerCase(), "#0ea5e9");

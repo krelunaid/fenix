@@ -3,6 +3,7 @@
  * 0 LLM credits. Seed HTML is the product the worker then polishes.
  */
 import { formatPrefix } from "../projects/infer.ts";
+import { productDesignCss } from "../projects/product-design-system.ts";
 import {
   tokensFromBrief,
   tokensInstruction,
@@ -1860,7 +1861,7 @@ ${tokens.fonts.href ? `<link rel="preconnect" href="https://fonts.googleapis.com
 <style data-fenix-phone data-fenix-site data-fenix-craft>
 :root{color-scheme:${scheme};--bg:${p.bg};--surface:${p.surface};--elevated:${p.elevated};--fg:${p.fg};--muted:${p.muted};--accent:${p.accent};--line:${p.line};--accent-ink:${accentInk};--success:${p.success};--warning:${p.warning};--navy:${p.fg};--water:${p.accent};--ok-loud:${p.success};${craftTokenCss(surfacesFromPalette(p, craftDomain), { rhythm: craftRhythm, domain: craftDomain })};--r:${tokens.radius};--display:${displayStack(tokens)};--body:${bodyStack(tokens)};--t-h1:${tokens.type.h1};--t-h2:${h2};--t-body:${tokens.type.body};--t-large:${large};--t-headline:1.0625rem;--t-callout:1rem;--t-subhead:.9375rem;--t-footnote:.8125rem;--t-caption:.6875rem;--space:8px;--ink-loud:${p.fg};--ink-quiet:${p.muted}}
 *{box-sizing:border-box;margin:0;padding:0}
-html,body{height:100%;background:var(--bg);color:var(--fg);font:400 ${tokens.type.body}/1.29 var(--body);-webkit-font-smoothing:antialiased}
+html,body{height:100%;background:var(--bg);color:var(--fg);font:400 ${tokens.type.body}/1.47 var(--body);-webkit-font-smoothing:antialiased}
 body{min-height:100dvh}
 .app{min-height:100dvh;display:flex;flex-direction:column;width:100%}
 header{padding:16px 18px 10px;display:flex;align-items:flex-end;justify-content:space-between;gap:12px}
@@ -1883,6 +1884,7 @@ main{flex:1;min-height:0;overflow-y:auto;padding:8px 16px 24px;-webkit-overflow-
 .look p{padding-bottom:14px;color:var(--muted)}
 .room h2,.room p,.room .notes{flex:0 0 auto}
 ${visualKitCss(tokens, grammar)}
+${productDesignCss(grammar.kind)}
 ${campo ? "html[data-fenix-campo] nav.tabs{grid-template-columns:repeat(5,minmax(0,1fr))}" : ""}
 ${campo ? campoChromeCss() : ""}
 ${market ? marketChromeCss() : ""}
