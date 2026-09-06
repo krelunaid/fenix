@@ -1739,7 +1739,7 @@ describe("graphic pipeline visual QA D/T/M", () => {
     }
   });
 
-  it("paints filled navy header chips for barber shears and library book at 390", async () => {
+  it("paints filled espresso shears and navy book chips at 390", async () => {
     const { composeProduct } = await import("./compose-product.ts");
     const { formatPrefix } = await import("../projects/infer.ts");
     const rows = [
@@ -1803,10 +1803,12 @@ describe("graphic pipeline visual QA D/T/M", () => {
             const tabs = [...document.querySelectorAll("nav.tabs button span")].map((el) => el.textContent || "");
             const place = document.querySelector("header .place")?.textContent || "";
             const hello = document.querySelector(".fx-hello")?.textContent || "";
-            const strip = document.querySelector(".barber-strip, .lib-board")?.textContent || "";
+            const strip = document.querySelector(".salon-catalog, .lib-board, .barber-strip")?.textContent || "";
+            const hero = !!document.querySelector("[data-fenix-salon-art], .salon-hero");
             const desk = /Tavolo|Registra|STUDIO/.test(document.body.innerText);
             const kpi = /Media/.test(document.body.innerText) && /Voci/.test(document.body.innerText) && /Aperti/.test(document.body.innerText);
-            return { tabs, place, hello, strip, desk, kpi, htmlAttr: document.documentElement.getAttribute("data-fenix-libreria") || document.documentElement.getAttribute("data-fenix-barber") };
+            const staff = /oggi in sala|da confermare/.test(document.body.innerText);
+            return { tabs, place, hello, strip, hero, desk, kpi, staff, htmlAttr: document.documentElement.getAttribute("data-fenix-libreria") || document.documentElement.getAttribute("data-fenix-barber") };
           });
           assert.equal(home.desk, false, row.brief);
           assert.equal(home.kpi, false, row.brief);
@@ -1816,8 +1818,11 @@ describe("graphic pipeline visual QA D/T/M", () => {
             assert.match(home.strip, /In prestito|In scaffale/);
             assert.doesNotMatch(home.place, /STUDIO|Studio/);
           } else {
-            assert.ok(home.tabs.includes("Oggi"));
-            assert.match(home.hello + home.strip, /sala|App barbiere/i);
+            assert.deepEqual(home.tabs, ["Home", "Prenota", "I miei"]);
+            assert.match(home.hello + home.strip + home.place, /taglio|App barbiere|Sala/i);
+            assert.equal(home.hero, true);
+            assert.equal(home.staff, false);
+            assert.doesNotMatch(home.tabs.join(" "), /Oggi|Settimana|Archivio/);
           }
         } finally {
           await page.close();

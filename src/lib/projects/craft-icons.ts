@@ -222,6 +222,7 @@ export function craftNavIcon(tab: { id: string; label: string }, index = 0): str
   const label = String(tab.label || "").toLowerCase().trim();
   let svg = NAV_FALLBACKS[index % NAV_FALLBACKS.length];
   if (/^home$/.test(label)) svg = NAV_ICONS.home;
+  else if (/^i miei$|^miei$/.test(label)) svg = NAV_ICONS.appointments;
   else if (/^aggiungi$/.test(label)) svg = NAV_ICONS.add;
   else if (/^registra$/.test(label)) svg = NAV_ICONS.add;
   else if (/^pubblica$/.test(label)) svg = NAV_ICONS.pencil;

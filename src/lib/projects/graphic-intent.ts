@@ -4,7 +4,7 @@
  */
 import type { DesignTokens } from "./design-tokens.ts";
 import { extractUserColors } from "./palette-engine.ts";
-import { isLuxeBrief } from "./app-identity.ts";
+import { isBarberBrief, isLuxeBrief } from "./app-identity.ts";
 import { inferKind, kindFromPrompt } from "./infer.ts";
 import { applyNativeAppStyle } from "./native-app-style.ts";
 
@@ -158,16 +158,22 @@ function serifStack(face: string): string {
   return `"${face}",ui-serif,Georgia,"Times New Roman",serif`;
 }
 
+function editorialPair(display = "Fraunces"): DesignTokens["fonts"] {
+  return {
+    display,
+    body: "Figtree",
+    href: "https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,700&display=swap",
+  };
+}
+
 export function applyGraphicIntent(tokens: DesignTokens, brief: string): DesignTokens {
   if (isLuxeBrief(brief)) {
-    return {
-      ...tokens,
-      fonts: {
-        display: "Fraunces",
-        body: "Figtree",
-        href: "https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,700&display=swap",
-      },
-    };
+    return { ...tokens, fonts: editorialPair("Fraunces") };
+  }
+  if (isBarberBrief(brief)) {
+    const intent = graphicIntentFromBrief(brief);
+    const face = intent.type === "serif" && intent.face ? intent.face : "Fraunces";
+    return { ...tokens, fonts: editorialPair(face) };
   }
   const intent = graphicIntentFromBrief(brief);
   if (intent.type === "system") {
@@ -334,12 +340,20 @@ function ensureRootFontVars(html: string, display: string, body: string): string
 export function enforceGraphicIntent(html: string, brief: string): string {
   let next = stampGraphicIntent(html, brief);
   const intent = graphicIntentFromBrief(brief);
-  if (isLuxeBrief(brief)) {
-    const display = serifStack("Fraunces");
+  if (isLuxeBrief(brief) || isBarberBrief(brief)) {
+    const intentFace = isBarberBrief(brief) && intent.type === "serif" && intent.face ? intent.face : "Fraunces";
+    const display = serifStack(intentFace);
     const body = `"Figtree",${SYSTEM_FONT_STACK}`;
     next = next.replace(/--display\s*:[^;}]+/g, `--display:${display}`);
     next = next.replace(/--body\s*:[^;}]+/g, `--body:${body}`);
     next = ensureRootFontVars(next, display, body);
+    const href = serifHref(intentFace);
+    if (href && !next.includes(href) && !next.includes("family=Fraunces")) {
+      next = next.replace(/<link[^>]*fonts\.googleapis\.com[^>]*>/gi, "");
+      if (/<head\b/i.test(next)) {
+        next = next.replace(/<head\b[^>]*>/i, (open) => `${open}\n<link href="${editorialPair(intentFace).href}" rel="stylesheet"/>`);
+      }
+    }
     return applyNativeAppStyle(next, wantsNativeAppStyle(brief));
   }
   if (intent.type === "system") {

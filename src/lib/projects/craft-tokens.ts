@@ -59,21 +59,21 @@ export const MARKET_CRAFT: CraftSurfaces = {
   border: "#E4E4E7",
 };
 
-/** Barber / salon booking — warm cream paper, copper brand. Never raspberry. */
+/** Barber / salon booking — espresso paper, cream ink, tan brand. Never raspberry. */
 export const BARBER_CRAFT: CraftSurfaces = {
-  surface: "#FFF7F0",
-  onSurface: "#2A1A12",
-  surfaceSecondary: "#F6EDE4",
-  surfaceTertiary: "#EDE0D2",
-  surfaceInverse: "#3D2314",
-  brand: "#A44A1C",
-  brandPrimary: "#8A4B2E",
-  brandSecondary: "#C45C26",
-  brandTertiary: "#F3D4B8",
-  success: "#3D6B4A",
-  warning: "#C47A1A",
-  error: "#B42318",
-  border: "#E4D2C0",
+  surface: "#16110E",
+  onSurface: "#F4EEE6",
+  surfaceSecondary: "#0B0908",
+  surfaceTertiary: "#1C1612",
+  surfaceInverse: "#F4EEE6",
+  brand: "#D2BFA6",
+  brandPrimary: "#C4A882",
+  brandSecondary: "#E4D3B8",
+  brandTertiary: "#2A221C",
+  success: "#8FBF9A",
+  warning: "#E0A45A",
+  error: "#E07070",
+  border: "#3A2E24",
 };
 
 /** Library / bookstore — cream paper, wine brand, editorial type. Never desk gray. */
@@ -237,14 +237,14 @@ export function surfacesFromPalette(palette: EnginePalette, domain: boolean | Cr
     };
   }
   if (kind === "barber") {
-    const vivid = hexToOkLch(palette.accent).L >= 0.38 && hexToOkLch(palette.accent).C >= 0.08;
+    const vivid = hexToOkLch(palette.accent).L >= 0.38 && hexToOkLch(palette.accent).C >= 0.04;
     const brand = vivid ? palette.accent : BARBER_CRAFT.brand;
     return {
       ...BARBER_CRAFT,
       brand,
-      brandPrimary: mixHex(brand, "#2A1A12", 0.28),
-      brandSecondary: mixHex(brand, "#FFFFFF", 0.28),
-      brandTertiary: mixHex(brand, "#FFFFFF", 0.78),
+      brandPrimary: mixHex(brand, "#0B0908", 0.18),
+      brandSecondary: mixHex(brand, "#F4EEE6", 0.22),
+      brandTertiary: mixHex(brand, "#0B0908", 0.72),
       success: palette.success || BARBER_CRAFT.success,
       warning: palette.warning || BARBER_CRAFT.warning,
     };
@@ -294,7 +294,7 @@ function categoryCss(s: CraftSurfaces, domain: CraftDomain): string {
 }
 
 function shadowCss(s: CraftSurfaces, domain: CraftDomain): string {
-  if (domain === "luxe") {
+  if (domain === "luxe" || domain === "barber") {
     return `--shadow-card:0 1px 0 color-mix(in srgb,${s.brand} 22%,transparent),0 18px 40px rgba(0,0,0,.48);--shadow-float:0 16px 44px color-mix(in srgb,${s.brand} 32%,transparent)`;
   }
   return `--shadow-card:0 1px 2px rgba(15,23,42,.05),0 10px 28px rgba(15,23,42,.10);--shadow-float:0 12px 32px color-mix(in srgb,${s.brandPrimary} 30%,transparent)`;
@@ -307,6 +307,6 @@ export function craftTokenCss(
 ): string {
   const r = radiusForRhythm(opts?.rhythm || "utility");
   const domain = opts?.domain || "generic";
-  const type = domain === "luxe" || opts?.rhythm === "luxe" ? CRAFT_FONT_LUXE : CRAFT_FONT;
+  const type = domain === "luxe" || domain === "barber" || opts?.rhythm === "luxe" ? CRAFT_FONT_LUXE : CRAFT_FONT;
   return `--on-surface:${s.onSurface};--surface-2:${s.surfaceSecondary};--surface-3:${s.surfaceTertiary};--inverse:${s.surfaceInverse};--brand:${s.brand};--brand-2:${s.brandPrimary};--brand-3:${s.brandSecondary};--brand-soft:${s.brandTertiary};--ok:${s.success};--warn:${s.warning};--err:${s.error};--tile:rgba(255,255,255,.08);${categoryCss(s, domain)};${shadowCss(s, domain)};--fx-r1:${r.sm}px;--fx-r2:${r.md}px;--fx-r3:${r.lg}px;--fx-pill:${r.pill}px;--fx-s1:${CRAFT_SPACE[1]}px;--fx-s2:${CRAFT_SPACE[2]}px;--fx-s3:${CRAFT_SPACE[3]}px;--fx-s4:${CRAFT_SPACE[4]}px;--fx-s5:${CRAFT_SPACE[5]}px;--fx-s6:${CRAFT_SPACE[6]}px;--fx-s7:${CRAFT_SPACE[7]}px;--fx-t-12:${type.caption}px;--fx-t-14:${type.body}px;--fx-t-16:${type.callout}px;--fx-t-20:${type.title}px;--fx-t-24:${type.title2}px;--fx-t-display:${type.display}px`;
 }

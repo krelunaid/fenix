@@ -550,10 +550,33 @@ function synthesizeSpec(brief: string): PipelineSpec {
     const clinical = /clinic|medic|pazient|terap|ospedal|dentist/.test(brief);
     const salon = isBarberBrief(brief);
     const place = clinical ? "Studio" : /lino|tessile|tessuto/.test(brief) ? "Atelier" : "Sala";
+    if (salon) {
+      return {
+        id: `${tokens.family}-agenda`,
+        name,
+        kicker: "In poltrona",
+        place: "Sala taglio",
+        collection: "slot",
+        brief,
+        tabs: [
+          { id: "home", label: "Home" },
+          { id: "prenota", label: "Prenota" },
+          { id: "miei", label: "I miei" },
+        ],
+        rows: [
+          { id: "s1", title: "Taglio e piega", kicker: "09:30", note: "Sala · Marta", meta: "45 min · €42", status: "prenotato", dayOffset: 0 },
+          { id: "s2", title: "Taglio classico", kicker: "11:00", note: "Poltrona · Leo", meta: "30 min · €28", status: "confermato", dayOffset: 0 },
+          { id: "s3", title: "Rifinitura barba", kicker: "14:30", note: "Sala nord · Noa", meta: "25 min · €22", status: "in-corso", dayOffset: 0 },
+          { id: "s4", title: "Colore", kicker: "17:00", note: "Sala · Leo", meta: "90 min · €68", status: "prenotato", dayOffset: 1 },
+        ],
+        formTitle: "Prenota il taglio",
+        cta: "Conferma prenotazione",
+      };
+    }
     return {
       id: `${tokens.family}-agenda`,
       name,
-      kicker: salon ? "In sala" : `Oggi · ${place}`,
+      kicker: `Oggi · ${place}`,
       place,
       collection: "slot",
       brief,
@@ -629,9 +652,58 @@ export function libraryHomeHeaderMark(): string {
   return crispBookMarkSvg("home-header");
 }
 
-/** Visible salon Home mark — filled shears chip, never a pale X outline. */
+/** Visible salon Home mark — filled shears + comb chip, never a pale X outline. */
 export function barberHomeHeaderMark(): string {
   return crispBarberMarkSvg("home-header");
+}
+
+const SALON_SERVICES = [
+  { title: "Taglio e piega", mins: "45 min", price: "€42", pro: "Marta" },
+  { title: "Taglio classico", mins: "30 min", price: "€28", pro: "Leo" },
+  { title: "Rifinitura barba", mins: "25 min", price: "€22", pro: "Noa" },
+  { title: "Colore", mins: "90 min", price: "€68", pro: "Leo" },
+] as const;
+
+/** Original espresso still-life. Not a photo, not a Corto asset. */
+function barberAtmosphereSvg(): string {
+  return `<svg viewBox="0 0 640 220" width="100%" height="220" role="img" aria-hidden="true" data-fenix-salon-art="1" preserveAspectRatio="xMidYMid slice">
+<defs>
+  <linearGradient id="sa-bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#1C1612"/><stop offset="1" stop-color="#0B0908"/></linearGradient>
+  <radialGradient id="sa-lamp" cx="78%" cy="18%" r="42%"><stop offset="0" stop-color="#D2BFA6" stop-opacity=".42"/><stop offset="1" stop-color="#0B0908" stop-opacity="0"/></radialGradient>
+</defs>
+<rect width="640" height="220" fill="url(#sa-bg)"/>
+<rect width="640" height="220" fill="url(#sa-lamp)"/>
+<path d="M92 188h168c8 0 14-8 12-16l-18-72H98l-18 72c-2 8 4 16 12 16z" fill="#2A221C"/>
+<rect x="118" y="68" width="92" height="36" rx="16" fill="#3A2E24"/>
+<rect x="148" y="38" width="32" height="38" fill="#2A221C"/>
+<ellipse cx="164" cy="34" rx="22" ry="8" fill="#D2BFA6" opacity=".35"/>
+<rect x="318" y="132" width="86" height="10" rx="2" fill="#D2BFA6"/>
+<g fill="#F4EEE6">${Array.from({ length: 7 }, (_, i) => `<rect x="${324 + i * 11}" y="108" width="4" height="26" rx="1"/>`).join("")}</g>
+<path d="M470 78l86 38-18 48-86-38z" fill="#C4A882"/>
+<path d="M492 96l42 18" stroke="#0B0908" stroke-width="3"/>
+<circle cx="486" cy="104" r="8" fill="#F4EEE6"/>
+<circle cx="548" cy="132" r="8" fill="#F4EEE6"/>
+<path d="M40 196h560" stroke="#D2BFA6" stroke-opacity=".22" stroke-width="2"/>
+</svg>`;
+}
+
+function salonServiceCards(selected = "Taglio e piega", pickable = true): string {
+  return SALON_SERVICES.map((s) => {
+    const on = s.title === selected ? " on" : "";
+    const open = pickable
+      ? `<button type="button" class="salon-service${on}" data-act="pick-service" data-title="${s.title}" data-mins="${s.mins}" data-price="${s.price}" data-pro="${s.pro}">`
+      : `<article class="salon-service${on}">`;
+    const close = pickable ? "</button>" : "</article>";
+    return `${open}<span class="salon-radio" aria-hidden="true"></span><span class="salon-service-body"><b>${s.title}</b><span class="notes">${s.mins} · ${s.pro}</span></span><em>${s.price}</em>${close}`;
+  }).join("");
+}
+
+function barberHomeBoot(spec: PipelineSpec): string {
+  const next = spec.rows.find((e) => !e.dayOffset) || spec.rows[0];
+  const nextCard = next
+    ? `<article class="salon-next" data-id="${next.id}"><p class="kicker">Prossimo passaggio</p><h2>${next.title}</h2><p class="notes"><time class="time" datetime="${next.kicker}">${next.kicker}</time> · ${next.note} · ${next.meta}</p></article>`
+    : "";
+  return `<section class="salon-home" data-fenix-slot="salon-home"><div class="fx-hello-row"><div><p class="fx-role">${spec.place}</p><p class="fx-hello">${spec.name}</p></div><span class="fx-app-mark" data-fenix-id="icon:app" aria-hidden="true">${barberHomeHeaderMark()}</span></div><p class="kicker salon-kicker">Il mestiere, in tasca</p><h2 class="salon-display">Il taglio, al tuo ritmo.</h2><p class="notes salon-lead">Scegli il servizio. Durata, prezzo e professionista restano in chiaro.</p><div class="salon-hero">${barberAtmosphereSvg()}</div>${nextCard}<div class="salon-catalog" data-fenix-slot="salon-services"><p class="kicker">Servizi</p>${salonServiceCards("Taglio e piega", false)}</div><button class="btn" type="button" data-view="prenota">Prenota il taglio →</button></section>`;
 }
 
 function italianLongDate(d = new Date()): string {
@@ -659,13 +731,17 @@ function agendaRailMarkup(spec: PipelineSpec, grammar: LayoutGrammar): string {
     })
     .join("");
   const rail = `<div class="day-head"><p class="kicker">${spec.kicker}</p><h2 id="day-label">${todayRows.length || spec.rows.length} ${grammar.voice.census}</h2></div><div class="day-rail" data-fenix-rail="day" data-fenix-slot="agenda-boot" id="day-rail" role="tabpanel" aria-labelledby="day-label">${slots}</div>`;
-  if (!isBarberBrief(spec.brief)) return rail;
-  const todo = todayRows.filter((e) => e.status === "prenotato").length;
-  const live = todayRows.filter((e) => e.status === "in-corso").length;
-  return `<div class="fx-hello-row"><div><p class="fx-hello">${spec.name}</p><p class="fx-role">In sala</p></div><span class="fx-app-mark" data-fenix-id="icon:app" aria-hidden="true">${barberHomeHeaderMark()}</span></div><p class="fx-date">${italianLongDate()}</p><div class="barber-strip fx-inverse"><article><b>${todayRows.length}</b><span>oggi in sala</span></article><article><b>${todo}</b><span>da confermare</span></article><article><b>${live}</b><span>in corso</span></article></div>${rail}`;
+  if (isBarberBrief(spec.brief)) return barberHomeBoot(spec);
+  return rail;
 }
 
-function tabSvg(tab: { id: string; label: string }, i: number, campo = false): string {
+function tabSvg(tab: { id: string; label: string }, i: number, campo = false, salon = false): string {
+  if (salon) {
+    const label = String(tab.label || "");
+    if (/^home$/i.test(label)) return craftNavIcon({ id: "home", label: "Taglio" });
+    if (/^prenota$/i.test(label)) return craftNavIcon({ id: "add", label: "Aggiungi" });
+    if (/miei/i.test(label)) return craftNavIcon({ id: "miei", label: "I miei" });
+  }
   if (!campo) return craftNavIcon(tab, i);
   const label = String(tab.label || "");
   if (/^home$/i.test(label)) return craftNavIcon({ id: "home", label: "Acqua" });
@@ -725,7 +801,7 @@ function displayStack(t: DesignTokens): string {
   if (t.family === "repo" || t.family === "ops") {
     return `"${t.fonts.display}",ui-monospace,"IBM Plex Mono",Menlo,monospace`;
   }
-  if (isOperationalApp(t) || t.family === "utility") {
+  if ((isOperationalApp(t) || t.family === "utility") && !serifFace) {
     return `"${t.fonts.display}",ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif`;
   }
   if (
@@ -1360,33 +1436,45 @@ html[data-fenix-luxe] .fx-splash .fx-mark{box-shadow:var(--shadow-float)}
 }
 
 function barberChromeCss(): string {
-  return `html[data-fenix-barber],html[data-fenix-barber] body{background-color:#F6EDE4;background-image:radial-gradient(120% 64% at 50% -8%,#F3D4B8 0%,transparent 58%),radial-gradient(70% 36% at 108% 12%,color-mix(in srgb,#C45C26 16%,transparent),transparent 58%);color:var(--on-surface)}
-html[data-fenix-barber] header{position:sticky;top:0;z-index:6;padding:12px 16px 10px;background:color-mix(in srgb,#FFF7F0 82%,transparent);-webkit-backdrop-filter:saturate(1.5) blur(16px);backdrop-filter:saturate(1.5) blur(16px)}
-html[data-fenix-barber] .app-mark{background:transparent}
-html[data-fenix-barber] nav.tabs{background:color-mix(in srgb,#fff 86%,#F3D4B8);border-top:1px solid var(--border,var(--line));box-shadow:0 -8px 24px rgba(196,92,38,.08);-webkit-backdrop-filter:saturate(1.6) blur(18px);backdrop-filter:saturate(1.6) blur(18px)}
+  return `html[data-fenix-barber],html[data-fenix-barber] body{background-color:#0B0908;background-image:radial-gradient(90% 50% at 80% -10%,color-mix(in srgb,#D2BFA6 18%,transparent),transparent 58%),radial-gradient(70% 40% at 0% 100%,color-mix(in srgb,#D2BFA6 8%,transparent),transparent 62%);color:#F4EEE6}
+html[data-fenix-barber] header{position:sticky;top:0;z-index:6;padding:14px 18px 12px;background:color-mix(in srgb,#0B0908 82%,transparent);-webkit-backdrop-filter:saturate(1.4) blur(16px);backdrop-filter:saturate(1.4) blur(16px)}
+html[data-fenix-barber] .brand{font-family:var(--display),ui-serif,Georgia,serif;color:#F4EEE6}
+html[data-fenix-barber] .place{letter-spacing:.14em;text-transform:uppercase;font:650 11px/1.3 var(--body),system-ui,sans-serif;color:#D2BFA6}
+html[data-fenix-barber] .app-mark{background:transparent;box-shadow:0 8px 18px rgba(11,9,8,.45)}
+html[data-fenix-barber] nav.tabs{grid-template-columns:repeat(3,minmax(0,1fr));margin:0 12px calc(10px + env(safe-area-inset-bottom));border:1px solid #3A2E24;border-radius:22px;background:color-mix(in srgb,#16110E 92%,transparent);box-shadow:0 -10px 28px rgba(0,0,0,.35);-webkit-backdrop-filter:saturate(1.5) blur(18px);backdrop-filter:saturate(1.5) blur(18px)}
 html[data-fenix-barber] nav.tabs svg{width:24px;height:24px;stroke-width:1.9}
-html[data-fenix-barber][data-grammar="agenda"] nav.tabs button.on{background:color-mix(in srgb,var(--brand-soft) 82%,transparent);color:var(--brand);border-radius:14px}
-html[data-fenix-barber] .fx-hello-row{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin:4px 0 4px}
-html[data-fenix-barber] .fx-hello{margin:0;font:750 var(--fx-t-display)/1.05 var(--display),system-ui,sans-serif;letter-spacing:-.04em;color:var(--on-surface)}
-html[data-fenix-barber] .fx-role{margin:4px 0 0;font:500 var(--fx-t-14)/1.3 var(--body),system-ui,sans-serif;color:var(--muted)}
-html[data-fenix-barber] .fx-date{margin:0 0 14px;font:500 var(--fx-t-14)/1.3 var(--body),system-ui,sans-serif;color:color-mix(in srgb,var(--on-surface) 52%,#7A5A48)}
-html[data-fenix-barber] .fx-app-mark{width:48px;height:48px;border:0;border-radius:14px;background:#3D2314;color:#FDE68A;display:grid;place-items:center;flex:0 0 48px;overflow:hidden;box-shadow:0 10px 22px rgba(61,35,20,.36)}
+html[data-fenix-barber][data-grammar="agenda"] nav.tabs button.on{background:#1C1612;color:#D2BFA6;border-radius:16px}
+html[data-fenix-barber] .kicker,.salon-kicker{letter-spacing:.16em;text-transform:uppercase;font:650 11px/1.3 var(--body),system-ui,sans-serif;color:#D2BFA6}
+html[data-fenix-barber] .fx-hello-row{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin:2px 0 10px}
+html[data-fenix-barber] .fx-hello{margin:0;font:600 var(--fx-t-display)/1.05 var(--display),ui-serif,Georgia,serif;letter-spacing:-.03em;color:#F4EEE6}
+html[data-fenix-barber] .fx-role{margin:0 0 4px;font:650 11px/1.3 var(--body),system-ui,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#D2BFA6}
+html[data-fenix-barber] .fx-app-mark{width:48px;height:48px;border:0;border-radius:14px;background:#16110E;color:#D2BFA6;display:grid;place-items:center;flex:0 0 48px;overflow:hidden;box-shadow:0 10px 22px rgba(0,0,0,.4)}
 html[data-fenix-barber] .fx-app-mark svg{width:48px;height:48px;display:block}
-html[data-fenix-barber] .barber-strip{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:0 0 14px;padding:14px;border-radius:22px;background:linear-gradient(180deg,color-mix(in srgb,#5A3420 28%,var(--inverse)) 0%,var(--inverse) 52%);color:#FFF7F0;box-shadow:var(--shadow-card)}
-html[data-fenix-barber] .barber-strip article{padding:10px 8px;border-radius:14px;background:color-mix(in srgb,#C45C26 22%,transparent);min-width:0}
-html[data-fenix-barber] .barber-strip b{display:block;font:750 var(--fx-t-24)/1 var(--display),system-ui,sans-serif;letter-spacing:-.03em;color:#fff}
-html[data-fenix-barber] .barber-strip span{display:block;margin-top:4px;font:650 11px/1.25 var(--body),system-ui,sans-serif;color:color-mix(in srgb,#F3D4B8 86%,transparent)}
-html[data-fenix-barber] .day-head h2{color:var(--on-surface)}
-html[data-fenix-barber] .day-rail{background:#FFF7F0;border-color:var(--border,var(--line));box-shadow:var(--shadow-card);border-radius:18px}
-html[data-fenix-barber] .slot{padding:16px 16px;background:transparent}
-html[data-fenix-barber] .slot .time{color:var(--brand);font-weight:750}
-html[data-fenix-barber] .slot-body h2{color:var(--on-surface)}
-html[data-fenix-barber] .chip.prenotato{color:#8A4B2E;border-color:color-mix(in srgb,#C45C26 45%,var(--line));background:color-mix(in srgb,#C45C26 12%,#fff)}
-html[data-fenix-barber] .chip.confermato,.chip.in-corso{color:#3D6B4A;border-color:color-mix(in srgb,#3D6B4A 45%,var(--line))}
-html[data-fenix-barber] .slot .btn.ghost{color:var(--brand);border-color:color-mix(in srgb,var(--brand) 28%,var(--line))}
-html[data-fenix-barber] .week-day.on{background:var(--brand);color:#FFF7F0;border-color:var(--brand)}
-html[data-fenix-barber] .week-day.on .kicker,.week-day.on .count{color:#FFF7F0}
-html[data-fenix-barber] .fx-splash{background:#F6EDE4}
+html[data-fenix-barber] .salon-display{margin:0 0 8px;font:600 clamp(2rem,8vw,2.6rem)/1.05 var(--display),ui-serif,Georgia,serif;letter-spacing:-.03em;color:#F4EEE6}
+html[data-fenix-barber] .salon-lead{margin:0 0 18px;max-width:34ch}
+html[data-fenix-barber] .salon-hero{margin:0 0 18px;border-radius:22px;overflow:hidden;border:1px solid #3A2E24;background:#16110E;min-height:160px}
+html[data-fenix-barber] .salon-hero svg{display:block;width:100%;height:220px}
+html[data-fenix-barber] .salon-next,.salon-book,.day-rail{margin:0 0 16px;padding:16px;border:1px solid #3A2E24;border-radius:20px;background:#16110E}
+html[data-fenix-barber] .salon-next h2,.salon-book h2,.slot-body h2{font-family:var(--display),ui-serif,Georgia,serif;color:#F4EEE6}
+html[data-fenix-barber] .salon-catalog{display:grid;gap:10px;margin:0 0 18px}
+html[data-fenix-barber] .salon-service{display:grid;grid-template-columns:18px minmax(0,1fr) auto;gap:12px;align-items:center;width:100%;text-align:left;padding:16px;border:1px solid #3A2E24;border-radius:18px;background:#16110E;color:#F4EEE6;min-height:64px}
+html[data-fenix-barber] .salon-service.on{border-color:#D2BFA6;box-shadow:0 0 0 1px #D2BFA6}
+html[data-fenix-barber] .salon-service b{display:block;font:600 1.2rem/1.2 var(--display),ui-serif,Georgia,serif}
+html[data-fenix-barber] .salon-service em{font:650 14px/1 var(--body),system-ui,sans-serif;color:#D2BFA6;font-style:normal}
+html[data-fenix-barber] .salon-radio{width:14px;height:14px;border-radius:50%;border:1.5px solid #D2BFA6}
+html[data-fenix-barber] .salon-service.on .salon-radio{background:#D2BFA6}
+html[data-fenix-barber] .salon-progress{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 14px}
+html[data-fenix-barber] .salon-bar{flex:1;height:2px;background:#3A2E24;border-radius:99px;overflow:hidden}
+html[data-fenix-barber] .salon-bar i{display:block;height:100%;width:66%;background:#D2BFA6}
+html[data-fenix-barber] .btn{background:#D2BFA6;color:#0B0908;border-radius:999px}
+html[data-fenix-barber] .btn.ghost{background:transparent;color:#F4EEE6;border-color:#3A2E24}
+html[data-fenix-barber] .slot{padding:16px;background:transparent;border-color:#3A2E24}
+html[data-fenix-barber] .slot .time{color:#D2BFA6;font-weight:750}
+html[data-fenix-barber] .chip.prenotato{color:#D2BFA6;border-color:color-mix(in srgb,#D2BFA6 45%,#3A2E24);background:color-mix(in srgb,#D2BFA6 12%,#16110E)}
+html[data-fenix-barber] .chip.confermato,.chip.in-corso{color:#8FBF9A;border-color:color-mix(in srgb,#8FBF9A 45%,#3A2E24)}
+html[data-fenix-barber] .card,.field,input.field{background:#16110E;border-color:#3A2E24;color:#F4EEE6}
+html[data-fenix-barber] .fx-splash{background:#0B0908;color:#F4EEE6}
+html[data-fenix-barber] .state-empty{border-color:#3A2E24;color:#B9A894}
 `;
 }
 
@@ -1555,7 +1643,7 @@ function productHtml(spec: PipelineSpec, tokens: DesignTokens, grammar: LayoutGr
   const navButtons = spec.tabs
     .map(
       (tab, i) =>
-        `  <button type="button" data-view="${tab.id}" data-fenix-id="icon:${tab.id}"${i === 0 ? ' class="on"' : ""}>${tabSvg(tab, i, campo)}<span>${tab.label}</span></button>`,
+        `  <button type="button" data-view="${tab.id}" data-fenix-id="icon:${tab.id}"${i === 0 ? ' class="on"' : ""}>${tabSvg(tab, i, campo, barber)}<span>${tab.label}</span></button>`,
     )
     .join("\n");
   const h2 =
@@ -1648,7 +1736,7 @@ const arts=${JSON.stringify(grammar.id === "phone-seed" || grammar.id === "agend
 const meets=${JSON.stringify(grammar.id === "phone-seed" ? [] : meets)};
 const hero=${JSON.stringify(grammar.id === "phone-seed" ? "" : hero)};
 const tabDefs=${JSON.stringify(spec.tabs)};
-const glyphs=${JSON.stringify(spec.tabs.map((t, i) => tabSvg(t, i, campo)))};
+const glyphs=${JSON.stringify(spec.tabs.map((t, i) => tabSvg(t, i, campo, barber)))};
 const grammarId=${JSON.stringify(grammar.id)};
 const tokenVariant=${tokens.variant};
 const chroma=${JSON.stringify(tokens.chroma)};
@@ -1975,7 +2063,7 @@ function enqueueOp(op, afterOk, afterFail){
       row={id:createdId,title:nome,kicker:ora,note:luogo+" · "+cliente,meta:"30 min",status:"prenotato",day:giorno,slot:confirmed.items.length%4};
     }
     nextDay=giorno;
-    nextView=giorno===todayIso()?tabDefs[0].id:tabDefs[2].id;
+    nextView=${barber ? "tabDefs[Math.min(2,tabDefs.length-1)].id" : "giorno===todayIso()?tabDefs[0].id:tabDefs[2].id"};
   } else {
     createdId=wasEdit?editId:("n"+Date.now());
     if(!wasEdit){
@@ -2507,18 +2595,51 @@ function slotMarkup(e,i){
   var advanceLabel=AGENDA_ACTION_LABELS[st]||"Conferma";
   return '<article class="slot" data-id="'+e.id+'" data-day="'+(e.day||"")+'" data-state="'+(i===0?"on":"idle")+'" data-status="'+st+'"><time class="time" datetime="'+e.kicker+'">'+e.kicker+'</time><div class="slot-body"><h2>'+e.title+'</h2><p class="notes slot-detail">'+e.note+" · "+e.meta+'</p><span class="chip slot-status '+st+'">'+(AGENDA_STATUS_LABELS[st]||st)+'</span><div class="slot-actions"><button class="btn sm ghost" data-act="advance" data-id="'+e.id+'" aria-label="'+advanceLabel+' appuntamento">'+advanceLabel+'</button><button class="btn sm ghost" data-act="edit" data-id="'+e.id+'" aria-label="Modifica">'+AGENDA_EDIT_GLYPH+'</button><button class="btn sm ghost" data-act="del" data-id="'+e.id+'" aria-label="Archivia">'+AGENDA_DEL_GLYPH+'</button></div></div></article>';
 }
-/*fenix-slot:agenda*/function renderAgenda(){
+${barber ? `function salonCatalog(selected){
+  selected=selected||"Taglio e piega";
+  var rows=${JSON.stringify(SALON_SERVICES)};
+  var html="";
+  rows.forEach(function(s){
+    html+='<button type="button" class="salon-service'+(s.title===selected?" on":"")+'" data-act="pick-service" data-title="'+s.title+'" data-mins="'+s.mins+'" data-price="'+s.price+'" data-pro="'+s.pro+'"><span class="salon-radio" aria-hidden="true"></span><span class="salon-service-body"><b>'+s.title+'</b><span class="notes">'+s.mins+" · "+s.pro+'</span></span><em>'+s.price+"</em></button>";
+  });
+  return html;
+}
+function renderBarberHome(){
+  hydrateAgenda();
+  var upcoming=data.items.slice().sort(function(a,b){return String(a.day||"").localeCompare(String(b.day||""))||String(a.kicker).localeCompare(String(b.kicker));})[0];
+  var html='<section class="salon-home" data-fenix-slot="salon-home"><div class="fx-hello-row"><div><p class="fx-role">'+place+'</p><p class="fx-hello">'+specName()+'</p></div><span class="fx-app-mark" data-fenix-id="icon:app" aria-hidden="true">'+FX_BARBER_MARK+"</span></div>";
+  html+='<p class="kicker salon-kicker">Il mestiere, in tasca</p><h2 class="salon-display">Il taglio, al tuo ritmo.</h2><p class="notes salon-lead">Scegli il servizio. Durata, prezzo e professionista restano in chiaro.</p>';
+  html+='<div class="salon-hero">'+${JSON.stringify(barberAtmosphereSvg())}+"</div>";
+  if(upcoming){
+    html+='<article class="salon-next" data-id="'+upcoming.id+'"><p class="kicker">Prossimo passaggio</p><h2>'+upcoming.title+'</h2><p class="notes"><time class="time" datetime="'+upcoming.kicker+'">'+upcoming.kicker+"</time> · "+upcoming.note+" · "+upcoming.meta+"</p></article>";
+  }
+  html+='<div class="salon-catalog" data-fenix-slot="salon-services"><p class="kicker">Servizi</p>'+salonCatalog("Taglio e piega").replace(/data-act="pick-service"/g,"data-view=\\"prenota\\"")+"</div>";
+  html+='<button class="btn" type="button" data-view="prenota">Prenota il taglio →</button></section>';
+  return html;
+}
+function renderBarberBook(){
+  var editing=editId?data.items.find(function(x){return x.id===editId;}):null;
+  var selected=editing?editing.title:"Taglio e piega";
+  var html='<section class="salon-book" data-fenix-slot="salon-book"><div class="salon-progress"><p class="kicker">Passaggio 1 di 2</p><span class="salon-bar" aria-hidden="true"><i></i></span></div>';
+  html+='<p class="kicker">Servizio</p><h2>Scegli il taglio</h2><p class="notes">Durata, prezzo e professionista in una riga.</p>';
+  html+='<div class="salon-catalog" style="margin-top:14px">'+salonCatalog(selected)+"</div>";
+  return html+renderForm();
+}
+function renderBarberMine(){
+  hydrateAgenda();
+  var rows=data.items.slice().sort(function(a,b){return String(a.day||"").localeCompare(String(b.day||""))||String(a.kicker).localeCompare(String(b.kicker));});
+  var html='<section class="salon-mine" data-fenix-slot="salon-mine"><p class="kicker">I tuoi passaggi</p><h2 class="salon-display">In agenda.</h2>';
+  html+='<div class="day-rail" data-fenix-rail="day" data-fenix-slot="agenda" id="day-rail" role="tabpanel" aria-labelledby="day-label">';
+  html+='<h2 id="day-label" class="kicker">'+rows.length+" "+census+"</h2>";
+  if(!rows.length) html+=emptyBox();
+  else rows.forEach(function(e,i){ html+=slotMarkup(e,i); });
+  return html+"</div></section>";
+}
+` : ""}/*fenix-slot:agenda*/function renderAgenda(){
   hydrateAgenda();
   var focus=view===tabDefs[2].id?selectedDay:todayIso();
   var rows=data.items.filter(function(e){return e.day===focus;}).slice().sort(function(a,b){return String(a.kicker).localeCompare(String(b.kicker));});
   var html="";
-  if(barberProduct && view===tabDefs[0].id){
-    var todo=rows.filter(function(e){return e.status==="prenotato";}).length;
-    var live=rows.filter(function(e){return e.status==="in-corso";}).length;
-    html+='<div class="fx-hello-row"><div><p class="fx-hello">'+specName()+'</p><p class="fx-role">In sala</p></div><span class="fx-app-mark" data-fenix-id="icon:app" aria-hidden="true">'+FX_BARBER_MARK+"</span></div>";
-    html+='<p class="fx-date">'+agendaDateLabel(focus)+"</p>";
-    html+='<div class="barber-strip fx-inverse"><article><b>'+rows.length+'</b><span>oggi in sala</span></article><article><b>'+todo+'</b><span>da confermare</span></article><article><b>'+live+'</b><span>in corso</span></article></div>';
-  }
   html+='<div class="day-head"><p class="kicker"><time datetime="'+focus+'">'+agendaDateLabel(focus)+'</time></p><h2 id="day-label">'+rows.length+" "+census+"</h2></div>";
   html+='<div class="day-rail" data-fenix-rail="day" data-fenix-slot="agenda" id="day-rail" role="tabpanel" aria-labelledby="day-label">';
   if(!rows.length) html+=emptyBox();
@@ -2627,7 +2748,11 @@ function renderTool(){
     else if(pane==="stats") root.innerHTML=renderPocketStats();
     else if(pane==="list") root.innerHTML=renderPocketList();
     else root.innerHTML=renderPocketPersona();
-  } else if(id===tabDefs[0].id) root.innerHTML=renderHome();
+  } ${barber ? `else if(barberProduct){
+    if(id===tabDefs[0].id) root.innerHTML=renderBarberHome();
+    else if(id===tabDefs[1].id) root.innerHTML=renderBarberBook();
+    else root.innerHTML=renderBarberMine();
+  } ` : ""}else if(id===tabDefs[0].id) root.innerHTML=renderHome();
   else if(id===tabDefs[1].id) root.innerHTML=renderForm();
   else if(id===tabDefs[2].id) root.innerHTML=grammarId==="ops-desk"?renderDesk():grammarId==="agenda"?renderWeek():renderList();
   else root.innerHTML=grammarId==="magazine"?renderForm():renderStats();
@@ -2644,7 +2769,18 @@ document.getElementById("tabs").addEventListener("click",function(e){
     for(var ci=0;ci<sibs.length;ci++) sibs[ci].classList.remove("on");
     chip.classList.add("on");
   }
-  var jump=e.target.closest("[data-view]");
+  ${barber ? `var pick=e.target.closest("[data-act='pick-service']");
+  if(pick){
+    var cards=document.querySelectorAll("[data-act='pick-service']");
+    for(var pi=0;pi<cards.length;pi++) cards[pi].classList.remove("on");
+    pick.classList.add("on");
+    var n=document.getElementById("n");
+    if(n) n.value=pick.getAttribute("data-title")||"";
+    var luogoEl=document.getElementById("luogo");
+    if(luogoEl && pick.getAttribute("data-pro")) luogoEl.value="Poltrona · "+pick.getAttribute("data-pro");
+    return;
+  }
+  ` : ""}var jump=e.target.closest("[data-view]");
   if(jump){ view=jump.getAttribute("data-view"); render(); return; }
   var dayBtn=e.target.closest(".week-day[data-day]");
   if(dayBtn && grammarId==="agenda"){
@@ -2668,7 +2804,7 @@ document.getElementById("tabs").addEventListener("click",function(e){
     return;
   }
   if(act==="fx-new"){
-    var formTab=tabDefs.filter(function(t){return /nuovo|aggiungi|registra/i.test(t.id+" "+t.label);})[0];
+    var formTab=tabDefs.filter(function(t){return /nuovo|aggiungi|registra|prenota/i.test(t.id+" "+t.label);})[0];
     if(formTab){ view=formTab.id; render(); return; }
     var rootNew=document.getElementById("root");
     if(rootNew) rootNew.innerHTML='<div data-fenix-pane="nuovo">'+renderForm()+"</div>";
@@ -2799,6 +2935,8 @@ function polishFor(tokens: DesignTokens, grammar: LayoutGrammar, brief = ""): st
       ? "Chrome da registro di repository: testata + rail, timeline commit, rami, stato sync, diff. Vietato hero grigio, due KPI, empty card, clone GitHub."
       : isLibraryBrief(brief)
         ? "Chrome da libreria: catalogo, prestiti, scaffali, scheda. Vietato Tavolo/Registra/Studio, 0-KPI Oggi/Media/Voci/Aperti, e desk STUDIO."
+      : isBarberBrief(brief)
+        ? "Chrome da salon cliente: tab Home/Prenota/I miei, serif editoriale, espresso/crema/tan, schede servizio durata/prezzo, progresso prenota, mark forbici piene. Vietato Oggi/Nuovo/Settimana/Archivio e KPI in sala. Non clonare Corto."
       : grammar.id === "agenda"
         ? "Chrome da agenda: binario orario, tab Oggi/Nuovo/Settimana/Archivio, tipo 17/headline, target 44px. Vietato hero KPI, tab Home/Elenco, riquadri vuoti."
         : grammar.chrome === "desk"
