@@ -440,6 +440,10 @@ describe("graphic pipeline prompt→plan→generate→visual→QA", () => {
     const b = composeProduct(luce);
     assert.equal(a.grammar.id, "source-timeline");
     assert.equal(b.grammar.id, "source-timeline");
+    assert.doesNotMatch(
+      a.html,
+      /html\[data-fenix-craft-desk\],html\[data-fenix-craft-desk\] body\{background:var\(--surface-2\)/,
+    );
     assert.equal(a.tokens.family, "repo");
     assert.notEqual(a.tokens.palette.bg.toLowerCase(), b.tokens.palette.bg.toLowerCase());
     assert.notEqual(a.tokens.chroma, b.tokens.chroma);
@@ -1216,6 +1220,8 @@ describe("graphic pipeline prompt→plan→generate→visual→QA", () => {
     assert.doesNotMatch(boot, /Panoramica/);
     assert.doesNotMatch(app.html, /<span>Oggi<\/span><\/div><div class="fx-cell"><b>0<\/b><span>Media/);
     assert.match(app.html, /html\[data-fenix-pocket\] \.fx-hello\{/);
+    assert.match(app.html, /html\[data-fenix-pocket\]:has\(nav\.tabs button:first-child\.on\) header \.app-mark\{display:none\}/);
+    assert.doesNotMatch(app.html, /html\[data-fenix-pocket\]:has\(nav\.tabs button:first-child\.on\) header\{display:none\}/);
     assert.match(app.html, /--shadow-card:0 1px 0/);
     assert.doesNotMatch(app.html, /<html[^>]*data-fenix-campo/);
     assert.doesNotMatch(app.html, /<html[^>]*data-fenix-libreria/);

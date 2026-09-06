@@ -1592,7 +1592,7 @@ html[data-fenix-libreria] .home-first h2{font-family:var(--display),ui-serif,Geo
 function genericChromeCss(): string {
   return `html[data-fenix-pocket],html[data-fenix-pocket] body{background-color:var(--surface-2);background-image:radial-gradient(120% 64% at 50% -8%,var(--brand-soft) 0%,transparent 58%),radial-gradient(70% 36% at 108% 12%,color-mix(in srgb,var(--brand) 14%,transparent),transparent 58%);color:var(--on-surface)}
 html[data-fenix-pocket] header{position:sticky;top:0;z-index:6;padding:12px 16px 10px;background:color-mix(in srgb,var(--surface) 80%,transparent);-webkit-backdrop-filter:saturate(1.5) blur(16px);backdrop-filter:saturate(1.5) blur(16px)}
-html[data-fenix-pocket]:has(nav.tabs button:first-child.on) header{display:none}
+html[data-fenix-pocket]:has(nav.tabs button:first-child.on) header .app-mark{display:none}
 html[data-fenix-pocket] .app-mark{background:transparent}
 html[data-fenix-pocket] .app-mark svg{width:44px;height:44px;display:block}
 html[data-fenix-pocket] nav.tabs{background:color-mix(in srgb,var(--surface) 88%,var(--brand-soft));border-top:1px solid var(--border,var(--line));box-shadow:0 -8px 24px color-mix(in srgb,var(--on-surface) 6%,transparent);-webkit-backdrop-filter:saturate(1.6) blur(18px);backdrop-filter:saturate(1.6) blur(18px)}
@@ -1622,8 +1622,7 @@ html[data-fenix-pocket] .fx-splash{background:var(--surface-2)}
 }
 
 function deskChromeCss(): string {
-  return `html[data-fenix-craft-desk],html[data-fenix-craft-desk] body{background:var(--surface-2);color:var(--on-surface)}
-html[data-fenix-craft-desk] header .app-mark{width:44px;height:44px;border-radius:12px;overflow:hidden;background:var(--inverse);box-shadow:0 10px 22px color-mix(in srgb,var(--inverse) 28%,transparent)}
+  return `html[data-fenix-craft-desk] header .app-mark{width:44px;height:44px;border-radius:12px;overflow:hidden;background:var(--inverse);box-shadow:0 10px 22px color-mix(in srgb,var(--inverse) 28%,transparent)}
 html[data-fenix-craft-desk] header .app-mark svg{width:44px;height:44px;display:block}
 html[data-fenix-craft-desk] .desk-hello{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin:0 0 20px}
 html[data-fenix-craft-desk] .desk-hello .fx-hello{margin:0;font:750 var(--fx-t-display)/1.05 var(--display),system-ui,sans-serif;letter-spacing:-.04em;color:var(--on-surface)}
