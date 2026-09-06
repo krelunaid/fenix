@@ -652,7 +652,7 @@ export function libraryHomeHeaderMark(): string {
   return crispBookMarkSvg("home-header");
 }
 
-/** Visible salon Home mark — filled shears + comb chip, never a pale X outline. */
+/** Visible salon header/favicon mark — one filled shears chip, never an empty square. */
 export function barberHomeHeaderMark(): string {
   return crispBarberMarkSvg("home-header");
 }
@@ -664,33 +664,46 @@ const SALON_SERVICES = [
   { title: "Colore", mins: "90 min", price: "€68", pro: "Leo" },
 ] as const;
 
-/** Original espresso still-life. Not a photo, not a Corto asset. */
+/** Original espresso atelier still-life. Not a photo, not a Corto asset. */
 function barberAtmosphereSvg(): string {
-  return `<svg viewBox="0 0 640 220" width="100%" height="220" role="img" aria-hidden="true" data-fenix-salon-art="1" preserveAspectRatio="xMidYMid slice">
+  return `<svg viewBox="0 0 390 460" width="100%" height="460" role="img" aria-hidden="true" data-fenix-salon-art="1" preserveAspectRatio="xMidYMid slice">
 <defs>
-  <linearGradient id="sa-bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#1C1612"/><stop offset="1" stop-color="#0B0908"/></linearGradient>
-  <radialGradient id="sa-lamp" cx="72%" cy="8%" r="48%"><stop offset="0" stop-color="#D2BFA6" stop-opacity=".55"/><stop offset=".55" stop-color="#C4A882" stop-opacity=".12"/><stop offset="1" stop-color="#0B0908" stop-opacity="0"/></radialGradient>
-  <linearGradient id="sa-seat" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3A2E24"/><stop offset="1" stop-color="#16110E"/></linearGradient>
+  <linearGradient id="sa-bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2A221C"/><stop offset=".42" stop-color="#16110E"/><stop offset="1" stop-color="#0B0908"/></linearGradient>
+  <radialGradient id="sa-lamp" cx="78%" cy="6%" r="46%"><stop offset="0" stop-color="#F4EEE6" stop-opacity=".42"/><stop offset=".38" stop-color="#D2BFA6" stop-opacity=".2"/><stop offset="1" stop-color="#0B0908" stop-opacity="0"/></radialGradient>
+  <linearGradient id="sa-wood" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3A2E24"/><stop offset="1" stop-color="#1C1612"/></linearGradient>
+  <linearGradient id="sa-leather" x1="0" y1="0" x2=".2" y2="1"><stop offset="0" stop-color="#5A4636"/><stop offset="1" stop-color="#2A221C"/></linearGradient>
+  <linearGradient id="sa-chrome" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#F4EEE6"/><stop offset="1" stop-color="#C4A882"/></linearGradient>
 </defs>
-<rect width="640" height="220" fill="url(#sa-bg)"/>
-<rect width="640" height="220" fill="url(#sa-lamp)"/>
-<ellipse cx="168" cy="198" rx="92" ry="10" fill="#0B0908" opacity=".55"/>
-<path d="M86 196h164c10 0 16-10 13-19l-22-78H95l-22 78c-3 9 3 19 13 19z" fill="url(#sa-seat)"/>
-<rect x="118" y="62" width="100" height="42" rx="20" fill="#2A221C"/>
-<rect x="152" y="28" width="34" height="42" rx="4" fill="#1C1612"/>
-<ellipse cx="169" cy="26" rx="24" ry="9" fill="#D2BFA6" opacity=".4"/>
-<rect x="154" y="188" width="30" height="8" rx="2" fill="#3A2E24"/>
-<rect x="318" y="168" width="286" height="10" rx="3" fill="#2A221C"/>
-<rect x="336" y="136" width="92" height="12" rx="2" fill="#D2BFA6"/>
-<g fill="#F4EEE6">${Array.from({ length: 8 }, (_, i) => `<rect x="${342 + i * 10}" y="108" width="4" height="28" rx="1"/>`).join("")}</g>
-<path d="M456 92l98 44-16 42-98-44z" fill="#C4A882"/>
-<path d="M480 110l48 22" stroke="#0B0908" stroke-width="3"/>
-<circle cx="472" cy="118" r="9" fill="#F4EEE6"/>
-<circle cx="546" cy="150" r="9" fill="#F4EEE6"/>
-<rect x="568" y="124" width="18" height="44" rx="9" fill="#3A2E24"/>
-<ellipse cx="577" cy="122" rx="10" ry="6" fill="#D2BFA6" opacity=".55"/>
-<path d="M48 204h560" stroke="#D2BFA6" stroke-opacity=".2" stroke-width="2"/>
+<rect width="390" height="460" fill="url(#sa-bg)"/>
+<rect width="390" height="460" fill="url(#sa-lamp)"/>
+<rect x="214" y="36" width="156" height="168" rx="10" fill="url(#sa-wood)"/>
+<rect x="226" y="50" width="132" height="58" rx="6" fill="#0B0908"/>
+<rect x="234" y="62" width="18" height="36" rx="6" fill="#C4A882"/>
+<rect x="258" y="58" width="22" height="40" rx="7" fill="#D2BFA6"/>
+<rect x="286" y="64" width="16" height="34" rx="6" fill="#8A6A4A"/>
+<rect x="308" y="60" width="20" height="38" rx="7" fill="#E4D3B8"/>
+<ellipse cx="243" cy="60" rx="8" ry="4" fill="#F4EEE6" opacity=".45"/>
+<ellipse cx="269" cy="56" rx="9" ry="4" fill="#F4EEE6" opacity=".5"/>
+<rect x="226" y="122" width="132" height="66" rx="6" fill="#16110E"/>
+<path d="M238 168h108" stroke="#D2BFA6" stroke-opacity=".28"/>
+<rect x="18" y="248" width="354" height="14" rx="3" fill="#2A221C"/>
+<ellipse cx="118" cy="248" rx="78" ry="11" fill="#0B0908" opacity=".45"/>
+<path d="M52 248c8-54 28-92 66-92s58 38 66 92" fill="url(#sa-leather)"/>
+<rect x="96" y="86" width="44" height="78" rx="18" fill="#2A221C"/>
+<rect x="108" y="48" width="20" height="46" rx="6" fill="url(#sa-chrome)"/>
+<ellipse cx="118" cy="46" rx="16" ry="7" fill="#D2BFA6"/>
+<rect x="108" y="248" width="20" height="18" rx="3" fill="#3A2E24"/>
+<rect x="248" y="214" width="118" height="34" rx="8" fill="#1C1612"/>
+<rect x="260" y="222" width="54" height="10" rx="2" fill="#D2BFA6"/>
+<path d="M328 220 368 238 360 254 320 236z" fill="#C4A882"/>
+<circle cx="334" cy="232" r="5" fill="#F4EEE6"/>
+<circle cx="356" cy="246" r="5" fill="#F4EEE6"/>
+<path d="M24 430h342" stroke="#D2BFA6" stroke-opacity=".16" stroke-width="2"/>
 </svg>`;
+}
+
+function barberHeroBlock(): string {
+  return `<div class="salon-hero" data-fenix-slot="salon-hero">${barberAtmosphereSvg()}<div class="salon-hero-card"><p class="kicker salon-kicker">Il mestiere, in tasca</p><h2 class="salon-display">Il taglio, al tuo ritmo.</h2><p class="notes salon-lead">Scegli il servizio. Durata, prezzo e professionista restano in chiaro.</p><div class="salon-hero-cta"><button class="btn salon-cta-prenota" type="button" data-view="prenota">Prenota →</button><button class="btn ghost salon-cta-miei" type="button" data-view="miei">I miei appuntamenti</button></div></div></div>`;
 }
 
 function salonServiceCards(selected = "Taglio e piega", pickable = true): string {
@@ -709,7 +722,7 @@ function barberHomeBoot(spec: PipelineSpec): string {
   const nextCard = next
     ? `<article class="salon-next" data-id="${next.id}"><p class="kicker">Prossimo passaggio</p><h2>${next.title}</h2><p class="notes"><time class="time" datetime="${next.kicker}">${next.kicker}</time> · ${next.note} · ${next.meta}</p></article>`
     : "";
-  return `<section class="salon-home" data-fenix-slot="salon-home"><p class="kicker salon-kicker">Il mestiere, in tasca</p><h2 class="salon-display">Il taglio, al tuo ritmo.</h2><p class="notes salon-lead">Scegli il servizio. Durata, prezzo e professionista restano in chiaro.</p><div class="salon-hero">${barberAtmosphereSvg()}</div>${nextCard}<div class="salon-catalog" data-fenix-slot="salon-services"><p class="kicker">Servizi</p>${salonServiceCards("Taglio e piega", false)}</div><button class="btn" type="button" data-view="prenota">Prenota il taglio →</button></section>`;
+  return `<section class="salon-home" data-fenix-slot="salon-home">${barberHeroBlock()}${nextCard}<div class="salon-catalog" data-fenix-slot="salon-services"><p class="kicker">Servizi</p>${salonServiceCards("Taglio e piega", false)}</div></section>`;
 }
 
 function italianLongDate(d = new Date()): string {
@@ -1444,9 +1457,10 @@ html[data-fenix-luxe] .fx-splash .fx-mark{box-shadow:var(--shadow-float)}
 function barberChromeCss(): string {
   return `html[data-fenix-barber],html[data-fenix-barber] body{background-color:#0B0908;background-image:radial-gradient(90% 50% at 80% -10%,color-mix(in srgb,#D2BFA6 18%,transparent),transparent 58%),radial-gradient(70% 40% at 0% 100%,color-mix(in srgb,#D2BFA6 8%,transparent),transparent 62%);color:#F4EEE6}
 html[data-fenix-barber] header{position:sticky;top:0;z-index:6;padding:14px 18px 12px;background:color-mix(in srgb,#0B0908 82%,transparent);-webkit-backdrop-filter:saturate(1.4) blur(16px);backdrop-filter:saturate(1.4) blur(16px)}
-html[data-fenix-barber] .brand{font-family:var(--display),ui-serif,Georgia,serif;color:#F4EEE6}
-html[data-fenix-barber] .place{letter-spacing:.14em;text-transform:uppercase;font:650 11px/1.3 var(--body),system-ui,sans-serif;color:#D2BFA6}
-html[data-fenix-barber] .app-mark{background:transparent;box-shadow:0 8px 18px rgba(11,9,8,.45)}
+html[data-fenix-barber] .brand{font-family:var(--display),ui-serif,Georgia,serif;font-weight:650;letter-spacing:-.04em;color:#F4EEE6}
+html[data-fenix-barber] .place{letter-spacing:.16em;text-transform:uppercase;font:650 11px/1.3 var(--body),system-ui,sans-serif;color:#D2BFA6}
+html[data-fenix-barber] header .app-mark{width:48px;height:48px;flex:0 0 48px;background:transparent;box-shadow:0 8px 18px rgba(11,9,8,.45);overflow:visible;border-radius:14px}
+html[data-fenix-barber] header .app-mark svg,html[data-fenix-barber] header .app-mark svg[data-fenix-premium-mark]{width:48px;height:48px;display:block}
 html[data-fenix-barber] nav.tabs{grid-template-columns:repeat(3,minmax(0,1fr));margin:0 12px calc(10px + env(safe-area-inset-bottom));border:1px solid #3A2E24;border-top-color:#3A2E24;border-radius:22px;background:color-mix(in srgb,#16110E 92%,transparent);box-shadow:0 -10px 28px rgba(0,0,0,.35);-webkit-backdrop-filter:saturate(1.5) blur(18px);backdrop-filter:saturate(1.5) blur(18px)}
 html[data-fenix-barber] nav.tabs svg{width:24px;height:24px;stroke-width:1.9}
 html[data-fenix-barber][data-grammar="agenda"] nav.tabs button.on{background:#1C1612;color:#D2BFA6;border-radius:16px}
@@ -1456,10 +1470,14 @@ html[data-fenix-barber] .fx-hello{margin:0;font:600 var(--fx-t-display)/1.05 var
 html[data-fenix-barber] .fx-role{margin:0 0 4px;font:650 11px/1.3 var(--body),system-ui,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#D2BFA6}
 html[data-fenix-barber] .fx-app-mark{width:48px;height:48px;border:0;border-radius:14px;background:#16110E;color:#D2BFA6;display:grid;place-items:center;flex:0 0 48px;overflow:hidden;box-shadow:0 10px 22px rgba(0,0,0,.4)}
 html[data-fenix-barber] .fx-app-mark svg{width:48px;height:48px;display:block}
-html[data-fenix-barber] .salon-display{margin:0 0 8px;font:600 clamp(2rem,8vw,2.6rem)/1.05 var(--display),ui-serif,Georgia,serif;letter-spacing:-.03em;color:#F4EEE6}
-html[data-fenix-barber] .salon-lead{margin:0 0 18px;max-width:34ch}
-html[data-fenix-barber] .salon-hero{margin:0 0 18px;border-radius:22px;overflow:hidden;border:1px solid #3A2E24;background:#16110E;min-height:160px}
-html[data-fenix-barber] .salon-hero svg{display:block;width:100%;height:220px}
+html[data-fenix-barber] .salon-display{margin:0 0 10px;font:700 clamp(2.2rem,9vw,2.9rem)/1.02 var(--display),ui-serif,Georgia,serif;letter-spacing:-.038em;color:#F4EEE6}
+html[data-fenix-barber] .salon-lead{margin:0 0 4px;max-width:32ch;font:400 15px/1.45 var(--body),system-ui,sans-serif;color:#B9A894}
+html[data-fenix-barber] .salon-hero{position:relative;margin:0 0 18px;border-radius:24px;overflow:hidden;border:1px solid #3A2E24;background:#16110E;min-height:min(72vw,420px);display:flex;flex-direction:column;justify-content:flex-end}
+html[data-fenix-barber] .salon-hero>svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+html[data-fenix-barber] .salon-hero-card{position:relative;z-index:1;padding:28px 18px 18px;background:linear-gradient(180deg,transparent,rgba(11,9,8,.42) 18%,rgba(11,9,8,.94) 72%)}
+html[data-fenix-barber] .salon-hero-cta{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}
+html[data-fenix-barber] .btn.salon-cta-prenota{flex:1 1 160px;min-height:52px;padding:14px 22px;border-radius:999px;background:#D2BFA6;color:#0B0908;font:700 17px/1.2 var(--body),system-ui,sans-serif}
+html[data-fenix-barber] .btn.salon-cta-miei{flex:1 1 148px;min-height:48px;border-radius:999px;background:transparent;color:#F4EEE6;border:1px solid #D2BFA6;font:650 15px/1.2 var(--body),system-ui,sans-serif}
 html[data-fenix-barber] .salon-next,.salon-book,.day-rail{margin:0 0 16px;padding:16px;border:1px solid #3A2E24;border-radius:20px;background:#16110E}
 html[data-fenix-barber] .salon-next h2,.salon-book h2,.slot-body h2{font-family:var(--display),ui-serif,Georgia,serif;color:#F4EEE6}
 html[data-fenix-barber] .salon-catalog{display:grid;gap:10px;margin:0 0 18px}
@@ -2615,13 +2633,11 @@ function renderBarberHome(){
   hydrateAgenda();
   var upcoming=data.items.slice().sort(function(a,b){return String(a.day||"").localeCompare(String(b.day||""))||String(a.kicker).localeCompare(String(b.kicker));})[0];
   var html='<section class="salon-home" data-fenix-slot="salon-home">';
-  html+='<p class="kicker salon-kicker">Il mestiere, in tasca</p><h2 class="salon-display">Il taglio, al tuo ritmo.</h2><p class="notes salon-lead">Scegli il servizio. Durata, prezzo e professionista restano in chiaro.</p>';
-  html+='<div class="salon-hero">'+${JSON.stringify(barberAtmosphereSvg())}+"</div>";
+  html+=${JSON.stringify(barberHeroBlock())};
   if(upcoming){
     html+='<article class="salon-next" data-id="'+upcoming.id+'"><p class="kicker">Prossimo passaggio</p><h2>'+upcoming.title+'</h2><p class="notes"><time class="time" datetime="'+upcoming.kicker+'">'+upcoming.kicker+"</time> · "+upcoming.note+" · "+upcoming.meta+"</p></article>";
   }
   html+='<div class="salon-catalog" data-fenix-slot="salon-services"><p class="kicker">Servizi</p>'+salonCatalog("Taglio e piega").replace(/data-act="pick-service"/g,"data-view=\\"prenota\\"")+"</div>";
-  html+='<button class="btn" type="button" data-view="prenota">Prenota il taglio →</button></section>';
   return html;
 }
 function renderBarberBook(){
@@ -2943,7 +2959,7 @@ function polishFor(tokens: DesignTokens, grammar: LayoutGrammar, brief = ""): st
       : isLibraryBrief(brief)
         ? "Chrome da libreria: catalogo, prestiti, scaffali, scheda. Vietato Tavolo/Registra/Studio, 0-KPI Oggi/Media/Voci/Aperti, e desk STUDIO."
       : isBarberBrief(brief)
-        ? "Chrome da salon cliente: tab Home/Prenota/I miei, serif editoriale, espresso/crema/tan, schede servizio durata/prezzo, progresso prenota, mark forbici piene. Vietato Oggi/Nuovo/Settimana/Archivio e KPI in sala. Non clonare Corto."
+        ? "Chrome da salon cliente: tab Home/Prenota/I miei, serif editoriale Fraunces, espresso/crema/tan, hero con CTA Prenota dominante e atmosfera SVG originale, un solo mark forbici piene in header/favicon. Vietato quadrato vuoto, foto stock, Corto, Oggi/Nuovo/Settimana/Archivio e KPI in sala."
       : grammar.id === "agenda"
         ? "Chrome da agenda: binario orario, tab Oggi/Nuovo/Settimana/Archivio, tipo 17/headline, target 44px. Vietato hero KPI, tab Home/Elenco, riquadri vuoti."
         : grammar.chrome === "desk"

@@ -1746,7 +1746,7 @@ describe("graphic pipeline visual QA D/T/M", () => {
       {
         brief: formatPrefix("app") + "App barbiere: agenda tagli e clienti, stile iPhone.",
         attr: "data-fenix-barber-mark",
-        path: "M9.4 16.2 17.6 5.6",
+        path: "M12.2 18.8 24.6 4.4",
       },
       {
         brief: formatPrefix("app") + "App libreria: catalogo libri, prestiti e scaffali, stile iPhone.",
@@ -1775,14 +1775,21 @@ describe("graphic pipeline visual QA D/T/M", () => {
               const fill = el.getAttribute("fill") || "";
               return fill && fill !== "none";
             });
+            const pathCount = mark?.querySelectorAll("path").length ?? 0;
             const bg = chip ? getComputedStyle(chip).backgroundColor : "";
             const rgb = bg.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
             const icon = document.querySelector('link[rel="icon"]')?.getAttribute("href") || "";
             const favicon = decodeURIComponent(icon.replace(/^data:image\/svg\+xml;charset=utf-8,/, ""));
+            const prenota = document.querySelector(".salon-hero [data-view='prenota']") as HTMLElement | null;
+            const miei = document.querySelector(".salon-hero [data-view='miei']") as HTMLElement | null;
+            const display = document.querySelector(".salon-hero .salon-display");
+            const displayFont = display ? getComputedStyle(display).fontFamily : "";
             return {
               attr: mark?.getAttribute(attr),
+              shearsFill: mark?.getAttribute("data-fenix-shears-fill"),
               crisp: mark?.getAttribute("data-fenix-crisp-mark"),
-              path: mark?.innerHTML.includes("M9.4") || mark?.innerHTML.includes("M8.2") || false,
+              path: mark?.innerHTML.includes("M12.2") || mark?.innerHTML.includes("M8.2") || false,
+              pathCount,
               filled,
               chipW: chip?.getBoundingClientRect().width ?? 0,
               markW: mark?.getBoundingClientRect().width ?? 0,
@@ -1790,11 +1797,16 @@ describe("graphic pipeline visual QA D/T/M", () => {
               headerHidden,
               appMarks: document.querySelectorAll('[data-fenix-id="icon:app"]').length,
               homeMarks: document.querySelectorAll(".fx-app-mark").length,
-              faviconShears: favicon.includes("data-fenix-barber-mark") && favicon.includes("M9.4"),
+              faviconShears: favicon.includes("data-fenix-shears-fill") && favicon.includes("M12.2"),
               faviconBook: favicon.includes("data-fenix-book-mark"),
               transparentChip: !rgb || (Number(rgb[1]) === 0 && Number(rgb[2]) === 0 && Number(rgb[3]) === 0) || bg === "transparent",
               appleTouch: !!document.querySelector('link[rel="apple-touch-icon"]'),
               exit: /M10 7V5\.8A1\.8/.test(document.body.innerHTML),
+              prenotaH: prenota?.getBoundingClientRect().height ?? 0,
+              prenotaText: prenota?.textContent || "",
+              mieiText: miei?.textContent || "",
+              displayFont,
+              heroImg: !!document.querySelector(".salon-hero img"),
             };
           }, row.attr);
           assert.equal(paint.attr, "1", row.brief);
@@ -1806,10 +1818,17 @@ describe("graphic pipeline visual QA D/T/M", () => {
           assert.equal(paint.appleTouch, true);
           assert.equal(paint.exit, false);
           if (row.attr === "data-fenix-barber-mark") {
+            assert.equal(paint.shearsFill, "1");
+            assert.ok(paint.pathCount >= 2, `shears need blade paths, got ${paint.pathCount}`);
             assert.equal(paint.appMarks, 1, "barber keeps one header shears mark");
             assert.equal(paint.homeMarks, 0, "barber Home does not add a second chip");
             assert.equal(paint.headerHidden, false);
             assert.equal(paint.faviconShears, true);
+            assert.ok(paint.prenotaH >= 48, `Prenota CTA ${paint.prenotaH}`);
+            assert.match(paint.prenotaText, /Prenota/);
+            assert.match(paint.mieiText, /I miei appuntamenti/);
+            assert.match(paint.displayFont, /Fraunces|Georgia|serif/i);
+            assert.equal(paint.heroImg, false);
           } else {
             assert.equal(paint.faviconBook, true);
           }
