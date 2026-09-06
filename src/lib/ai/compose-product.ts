@@ -1527,31 +1527,36 @@ html[data-fenix-barber] .salon-hero{position:relative;margin:0 0 18px;border-rad
 html[data-fenix-barber] .salon-hero>svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
 html[data-fenix-barber] .salon-hero-card{position:relative;z-index:1;padding:28px 18px 18px;background:linear-gradient(180deg,transparent 0%,rgba(11,9,8,.78) 48%,#0B0908 100%)}
 html[data-fenix-barber] .salon-hero-cta{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}
-html[data-fenix-barber] .btn.salon-cta-prenota{flex:1 1 160px;min-height:52px;padding:14px 22px;border-radius:999px;background:#D2BFA6;color:#0B0908;border:1.5px solid #E4D3B8;box-shadow:inset 0 1px 0 #F4EEE6,0 1px 0 #0B0908;font:750 17px/1.15 var(--body),system-ui,sans-serif}
+html[data-fenix-barber] .btn.salon-cta-prenota{min-height:52px;padding:14px 22px;border-radius:999px;background:#D2BFA6;color:#0B0908;border:2px solid #E4D3B8;box-shadow:inset 0 1px 0 #F4EEE6,0 1px 0 #0B0908;font:750 17px/1.15 var(--body),system-ui,sans-serif}
+html[data-fenix-barber] .salon-hero-cta .btn.salon-cta-prenota{flex:1 1 160px}
+html[data-fenix-barber] header .btn.salon-cta-prenota{flex:0 0 auto;width:auto;min-width:112px;min-height:44px;padding:10px 18px}
 html[data-fenix-barber] .btn.salon-cta-prenota:hover{background:#E4D3B8;border-color:#F4EEE6;filter:none;box-shadow:inset 0 1px 0 #F4EEE6,0 1px 0 #0B0908}
 html[data-fenix-barber] .btn.salon-cta-prenota:active{background:#C4A882;border-color:#D2BFA6;filter:none;transform:translateY(1px);box-shadow:inset 0 1px 0 rgba(11,9,8,.2)}
-html[data-fenix-barber] .btn.salon-cta-miei{flex:1 1 148px;min-height:48px;border-radius:999px;background:transparent;color:#F4EEE6;border:1.5px solid #D2BFA6;font:700 15px/1.15 var(--body),system-ui,sans-serif}
+html[data-fenix-barber] .btn.salon-cta-miei{flex:1 1 148px;min-height:48px;border-radius:999px;background:transparent;color:#F4EEE6;border:2px solid #D2BFA6;font:700 15px/1.15 var(--body),system-ui,sans-serif}
 html[data-fenix-barber] .salon-next,.salon-book,.day-rail{margin:0 0 16px;padding:16px;border:1px solid #4A3C30;border-radius:18px;background:#16110E;box-shadow:0 1px 0 rgba(228,211,184,.1)}
 html[data-fenix-barber] .salon-next h2,.salon-book h2,.slot-body h2{font-family:var(--display),ui-serif,Georgia,serif;font-weight:750;letter-spacing:-.03em;color:#F4EEE6}
 html[data-fenix-barber] .salon-catalog{display:grid;gap:10px;margin:0 0 18px}
 html[data-fenix-barber] .salon-service{display:grid;grid-template-columns:18px minmax(0,1fr) auto;gap:12px;align-items:center;width:100%;text-align:left;padding:16px;border:1px solid #4A3C30;border-radius:16px;background:#16110E;color:#F4EEE6;min-height:64px;box-shadow:0 1px 0 rgba(228,211,184,.08)}
-html[data-fenix-barber] .salon-service.on{border-color:#D2BFA6;box-shadow:0 0 0 1.5px #D2BFA6}
+html[data-fenix-barber] .salon-service.on{border-color:#D2BFA6;box-shadow:0 0 0 2px #D2BFA6}
 html[data-fenix-barber] .salon-service b{display:block;font:700 1.22rem/1.15 var(--display),ui-serif,Georgia,serif;letter-spacing:-.028em}
 html[data-fenix-barber] .salon-service em{font:750 14px/1 var(--body),system-ui,sans-serif;color:#D2BFA6;font-style:normal}
-html[data-fenix-barber] .salon-radio{width:14px;height:14px;border-radius:50%;border:1.5px solid #D2BFA6}
+html[data-fenix-barber] .salon-radio{width:14px;height:14px;border-radius:50%;border:2px solid #D2BFA6}
 html[data-fenix-barber] .salon-service.on .salon-radio{background:#D2BFA6}
 html[data-fenix-barber] .salon-progress{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 14px}
 html[data-fenix-barber] .salon-bar{flex:1;height:2px;background:#4A3C30;border-radius:99px;overflow:hidden}
 html[data-fenix-barber] .salon-bar i{display:block;height:100%;width:66%;background:#D2BFA6}
-html[data-fenix-barber] .btn{background:#D2BFA6;color:#0B0908;border-radius:999px;border:1.5px solid #E4D3B8}
-html[data-fenix-barber] .btn.ghost{background:transparent;color:#F4EEE6;border:1.5px solid #4A3C30}
+html[data-fenix-barber] .btn{background:#D2BFA6;color:#0B0908;border-radius:999px;border:2px solid #E4D3B8}
+html[data-fenix-barber] .btn.ghost{background:transparent;color:#F4EEE6;border:2px solid #4A3C30}
 html[data-fenix-barber] .slot{padding:16px;background:transparent;border-color:#4A3C30}
 html[data-fenix-barber] .slot .time{color:#D2BFA6;font-weight:750}
 html[data-fenix-barber] .chip.prenotato{color:#D2BFA6;border-color:color-mix(in srgb,#D2BFA6 55%,#4A3C30);background:color-mix(in srgb,#D2BFA6 12%,#16110E)}
 html[data-fenix-barber] .chip.confermato,.chip.in-corso{color:#8FBF9A;border-color:color-mix(in srgb,#8FBF9A 55%,#4A3C30)}
 html[data-fenix-barber] .card,.field,input.field{background:#16110E;border-color:#4A3C30;color:#F4EEE6}
 html[data-fenix-barber] .fx-splash{background:#0B0908;color:#F4EEE6}
-html[data-fenix-barber] .fx-splash .btn.salon-cta-prenota{margin-top:18px}
+html[data-fenix-barber] .fx-splash .fx-mark{width:88px;height:88px;border-radius:22px;overflow:visible;box-shadow:0 1px 0 rgba(228,211,184,.22),0 8px 18px rgba(0,0,0,.5)}
+html[data-fenix-barber] .fx-splash .fx-mark svg{width:88px;height:88px}
+html[data-fenix-barber] .fx-splash strong{font:800 1.55rem/1.05 var(--display),ui-serif,Georgia,serif;letter-spacing:-.04em;color:#F4EEE6}
+html[data-fenix-barber] .fx-splash .btn.salon-cta-prenota{flex:0 0 auto;align-self:center;width:min(240px,78vw);min-height:52px;margin-top:18px}
 html[data-fenix-barber] .state-empty{border-color:#4A3C30;color:#C8B8A2}
 `;
 }

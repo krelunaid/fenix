@@ -1780,6 +1780,7 @@ describe("graphic pipeline visual QA D/T/M", () => {
             const rgb = bg.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
             const icon = document.querySelector('link[rel="icon"]')?.getAttribute("href") || "";
             const favicon = decodeURIComponent(icon.replace(/^data:image\/svg\+xml;charset=utf-8,/, ""));
+            const splashPrenota = document.querySelector("#fx-splash [data-view='prenota']") as HTMLElement | null;
             const prenota = document.querySelector(".salon-hero [data-view='prenota']") as HTMLElement | null;
             const miei = document.querySelector(".salon-hero [data-view='miei']") as HTMLElement | null;
             const display = document.querySelector(".salon-hero .salon-display");
@@ -1812,6 +1813,7 @@ describe("graphic pipeline visual QA D/T/M", () => {
               transparentChip: !rgb || (Number(rgb[1]) === 0 && Number(rgb[2]) === 0 && Number(rgb[3]) === 0) || bg === "transparent",
               appleTouch: !!document.querySelector('link[rel="apple-touch-icon"]'),
               exit: /M10 7V5\.8A1\.8/.test(document.body.innerHTML),
+              splashPrenotaH: splashPrenota?.getBoundingClientRect().height ?? 0,
               prenotaH: prenota?.getBoundingClientRect().height ?? 0,
               prenotaText: prenota?.textContent || "",
               mieiText: miei?.textContent || "",
@@ -1837,7 +1839,10 @@ describe("graphic pipeline visual QA D/T/M", () => {
             assert.equal(paint.headerHidden, false);
             assert.equal(paint.faviconShears, true);
             assert.ok(paint.prenotaH >= 48, `Prenota CTA ${paint.prenotaH}`);
-            assert.ok(parseFloat(paint.prenotaBorder) >= 1.4, `Prenota edge ${paint.prenotaBorder}`);
+            if (paint.splashPrenotaH > 0) {
+              assert.ok(paint.splashPrenotaH <= 72, `splash Prenota must stay a pill, got ${paint.splashPrenotaH}`);
+            }
+            assert.ok(parseFloat(paint.prenotaBorder) >= 2, `Prenota edge ${paint.prenotaBorder}`);
             assert.ok(Number(paint.displayWeight) >= 700, `display weight ${paint.displayWeight}`);
             assert.match(String(paint.tabBlur), /blur\(([1-9]|1[0-2])px\)|none/i);
             assert.match(paint.prenotaText, /Prenota/);

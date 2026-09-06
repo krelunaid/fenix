@@ -1176,8 +1176,10 @@ describe("graphic pipeline prompt→plan→generate→visual→QA", () => {
     assert.match(product.html, /html\[data-fenix-barber\] header\{[^}]*blur\(8px\)/);
     assert.match(product.html, /html\[data-fenix-barber\] nav\.tabs\{[^}]*blur\(6px\)/);
     assert.match(product.html, /html\[data-fenix-barber\] \.salon-display\{[^}]*font:800/);
-    assert.match(product.html, /\.btn\.salon-cta-prenota\{[^}]*border:1\.5px solid #E4D3B8/);
+    assert.match(product.html, /\.btn\.salon-cta-prenota\{[^}]*border:2px solid #E4D3B8/);
     assert.match(product.html, /\.btn\.salon-cta-prenota:active\{[^}]*background:#C4A882/);
+    assert.match(product.html, /\.fx-splash \.btn\.salon-cta-prenota\{[^}]*flex:0 0 auto/);
+    assert.match(product.html, /header \.btn\.salon-cta-prenota\{[^}]*flex:0 0 auto/);
     assert.match(product.html, /border:1px solid #4A3C30/);
     assert.doesNotMatch(product.html, /html\[data-fenix-barber\] nav\.tabs\{[^}]*blur\(18px\)/);
     assert.equal(product.tokens.fonts.display, "Fraunces");
