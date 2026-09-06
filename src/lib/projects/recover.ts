@@ -16,8 +16,43 @@ import { repairLeakedCss } from "./color-scheme.ts";
 import { migrateProjectTree, type ProjectFile } from "./files.ts";
 import { blocksPublish } from "../ai/build-contract.ts";
 
-export const STALE_BUILD_MS = 120_000;
+/** Match the 5–10 min overlay promise and visual-job TTL. 2 min was killing live gens. */
+export const STALE_BUILD_MS = 10 * 60 * 1000;
 export const RESUME_ERROR = "Rifinitura interrotta. Tocca Riprendi rifinitura.";
+export const INTERRUPT_ERROR = "Interrotto. Riprova.";
+export const TIMEOUT_ERROR =
+  "Timeout di generazione. Il modello non ha finito in tempo. Riprova.";
+
+export function isTimeoutInterrupt(error?: string) {
+  return /timeout|aborted|The operation was aborted|Timeout di generazione|AbortError/i.test(
+    String(error || ""),
+  );
+}
+
+/** First create: studio must call runBuild, not resumePolish, even if a compose seed is already stored. */
+export function shouldStartCreateBuild(project: {
+  status?: string;
+  html?: string;
+  buildEpoch?: number;
+  visualJobId?: string;
+  buildLog?: string[];
+}) {
+  if (project.status !== "building") return false;
+  if ((project.buildEpoch ?? 0) > 0) return false;
+  if (project.visualJobId) return false;
+  if (project.html && (project.buildLog?.length ?? 0) > 0) return false;
+  return true;
+}
+
+export function shouldResumePolish(project: {
+  status?: string;
+  html?: string;
+  buildEpoch?: number;
+  visualJobId?: string;
+  buildLog?: string[];
+}) {
+  return project.status === "building" && Boolean(project.html) && !shouldStartCreateBuild(project);
+}
 
 export type Recoverable = {
   id: string;
@@ -94,9 +129,14 @@ export function recoverPersistedProject<T extends Recoverable>(p: T, now = Date.
   };
 
   if (p.status === "building" && !p.html) {
-    status = "error";
-    error = "Interrotto. Riprova.";
-    dropJob();
+    // A just-created studio has no HTML until compose seeds it. Persist merge
+    // must not flip that to Interrotto before runBuild starts (no buildEpoch).
+    // After a generation has begun, empty HTML on reload is a real interrupt.
+    if ((p.buildEpoch ?? 0) > 0 || now - p.updatedAt > STALE_BUILD_MS) {
+      status = "error";
+      error = INTERRUPT_ERROR;
+      dropJob();
+    }
   } else if (p.status === "ready" && !p.html) {
     status = "error";
     error = "HTML assente.";
@@ -158,7 +198,7 @@ export function recoverPersistedProject<T extends Recoverable>(p: T, now = Date.
     dropJob();
     if (isJobSentinelError(error) || !String(error || "").trim()) {
       const fromHtml = html ? htmlRecoveryError(html, kind, p.id, p.palette?.bg) : undefined;
-      error = fromHtml || (html ? RESUME_ERROR : "Interrotto. Riprova.");
+      error = fromHtml || (html ? RESUME_ERROR : INTERRUPT_ERROR);
     }
     if (p.visualJobId || isJobSentinelError(p.error)) {
       buildLog = dropLiveJobLogs(buildLog);

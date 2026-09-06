@@ -8,7 +8,13 @@ import { DEMOS } from "./demos";
 import { formatPrefix, resolveProjectKind, isPhoneKind } from "./infer";
 import { validatePublishable, type HtmlReport } from "./validate-html";
 import { blocksPublish } from "../ai/build-contract";
-import { recoverPersistedProject, STALE_BUILD_MS, RESUME_ERROR } from "./recover";
+import {
+  recoverPersistedProject,
+  STALE_BUILD_MS,
+  RESUME_ERROR,
+  INTERRUPT_ERROR,
+} from "./recover";
+import { composeProduct } from "../ai/compose-product";
 import { polishDashboardHtml, scrubTechMessages, shouldRepairDashboard } from "./dashboard-crud";
 import {
   applyChromeGuards,
@@ -59,7 +65,7 @@ import {
 } from "./durable-db";
 
 const MAX_PROJECTS = 48;
-export { STALE_BUILD_MS, RESUME_ERROR };
+export { STALE_BUILD_MS, RESUME_ERROR, INTERRUPT_ERROR };
 export { APP_DB_KEY };
 
 type NewProjectInput = {
@@ -444,6 +450,20 @@ export const useProjectStore = create<ProjectStore>()(
       },
       createFromBrief: ({ prompt, kind }) => {
         const project = blankProject(prompt.trim(), kind ?? "app");
+        if (isPhoneKind(project.kind)) {
+          const composed = composeProduct(project.prompt, { recent: get().recentPalettes });
+          const seeded = {
+            ...project,
+            name:
+              composed.html.match(/<title>([^<]+)<\/title>/i)?.[1]?.trim().slice(0, 80) ||
+              project.name,
+            html: composed.html,
+            files: composed.files,
+            palette: composed.tokens.palette,
+          };
+          set((s) => ({ projects: trimList([seeded, ...s.projects]) }));
+          return seeded;
+        }
         set((s) => ({ projects: trimList([project, ...s.projects]) }));
         return project;
       },

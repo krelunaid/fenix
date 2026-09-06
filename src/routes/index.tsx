@@ -48,6 +48,7 @@ function Home() {
   function handleBuild() {
     const text = brief.trim();
     if (text.length < 3) return;
+    if (!hydrated) return;
     if (creditsRemaining < 4) {
       toast("Crediti esauriti. Ogni creazione usa 4 crediti.");
       return;
