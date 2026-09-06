@@ -1127,6 +1127,7 @@ describe("graphic pipeline prompt→plan→generate→visual→QA", () => {
     assert.doesNotMatch(product.html, /Corto|Gentleman Barber|Il dettaglio fa la differenza/i);
     assert.match(product.html, /FX_BARBER_MARK/);
     assert.match(product.html, /data-fenix-barber-mark="1"/);
+    assert.match(product.html, /:has\(nav\.tabs button:first-child\.on\) header/);
     assert.match(product.html, /Fraunces/);
     assert.match(product.html, /#0B0908|#F4EEE6|#D2BFA6/i);
     assert.equal(product.tokens.fonts.display, "Fraunces");

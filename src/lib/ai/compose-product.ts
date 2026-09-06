@@ -669,21 +669,27 @@ function barberAtmosphereSvg(): string {
   return `<svg viewBox="0 0 640 220" width="100%" height="220" role="img" aria-hidden="true" data-fenix-salon-art="1" preserveAspectRatio="xMidYMid slice">
 <defs>
   <linearGradient id="sa-bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#1C1612"/><stop offset="1" stop-color="#0B0908"/></linearGradient>
-  <radialGradient id="sa-lamp" cx="78%" cy="18%" r="42%"><stop offset="0" stop-color="#D2BFA6" stop-opacity=".42"/><stop offset="1" stop-color="#0B0908" stop-opacity="0"/></radialGradient>
+  <radialGradient id="sa-lamp" cx="72%" cy="8%" r="48%"><stop offset="0" stop-color="#D2BFA6" stop-opacity=".55"/><stop offset=".55" stop-color="#C4A882" stop-opacity=".12"/><stop offset="1" stop-color="#0B0908" stop-opacity="0"/></radialGradient>
+  <linearGradient id="sa-seat" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3A2E24"/><stop offset="1" stop-color="#16110E"/></linearGradient>
 </defs>
 <rect width="640" height="220" fill="url(#sa-bg)"/>
 <rect width="640" height="220" fill="url(#sa-lamp)"/>
-<path d="M92 188h168c8 0 14-8 12-16l-18-72H98l-18 72c-2 8 4 16 12 16z" fill="#2A221C"/>
-<rect x="118" y="68" width="92" height="36" rx="16" fill="#3A2E24"/>
-<rect x="148" y="38" width="32" height="38" fill="#2A221C"/>
-<ellipse cx="164" cy="34" rx="22" ry="8" fill="#D2BFA6" opacity=".35"/>
-<rect x="318" y="132" width="86" height="10" rx="2" fill="#D2BFA6"/>
-<g fill="#F4EEE6">${Array.from({ length: 7 }, (_, i) => `<rect x="${324 + i * 11}" y="108" width="4" height="26" rx="1"/>`).join("")}</g>
-<path d="M470 78l86 38-18 48-86-38z" fill="#C4A882"/>
-<path d="M492 96l42 18" stroke="#0B0908" stroke-width="3"/>
-<circle cx="486" cy="104" r="8" fill="#F4EEE6"/>
-<circle cx="548" cy="132" r="8" fill="#F4EEE6"/>
-<path d="M40 196h560" stroke="#D2BFA6" stroke-opacity=".22" stroke-width="2"/>
+<ellipse cx="168" cy="198" rx="92" ry="10" fill="#0B0908" opacity=".55"/>
+<path d="M86 196h164c10 0 16-10 13-19l-22-78H95l-22 78c-3 9 3 19 13 19z" fill="url(#sa-seat)"/>
+<rect x="118" y="62" width="100" height="42" rx="20" fill="#2A221C"/>
+<rect x="152" y="28" width="34" height="42" rx="4" fill="#1C1612"/>
+<ellipse cx="169" cy="26" rx="24" ry="9" fill="#D2BFA6" opacity=".4"/>
+<rect x="154" y="188" width="30" height="8" rx="2" fill="#3A2E24"/>
+<rect x="318" y="168" width="286" height="10" rx="3" fill="#2A221C"/>
+<rect x="336" y="136" width="92" height="12" rx="2" fill="#D2BFA6"/>
+<g fill="#F4EEE6">${Array.from({ length: 8 }, (_, i) => `<rect x="${342 + i * 10}" y="108" width="4" height="28" rx="1"/>`).join("")}</g>
+<path d="M456 92l98 44-16 42-98-44z" fill="#C4A882"/>
+<path d="M480 110l48 22" stroke="#0B0908" stroke-width="3"/>
+<circle cx="472" cy="118" r="9" fill="#F4EEE6"/>
+<circle cx="546" cy="150" r="9" fill="#F4EEE6"/>
+<rect x="568" y="124" width="18" height="44" rx="9" fill="#3A2E24"/>
+<ellipse cx="577" cy="122" rx="10" ry="6" fill="#D2BFA6" opacity=".55"/>
+<path d="M48 204h560" stroke="#D2BFA6" stroke-opacity=".2" stroke-width="2"/>
 </svg>`;
 }
 
@@ -1438,10 +1444,11 @@ html[data-fenix-luxe] .fx-splash .fx-mark{box-shadow:var(--shadow-float)}
 function barberChromeCss(): string {
   return `html[data-fenix-barber],html[data-fenix-barber] body{background-color:#0B0908;background-image:radial-gradient(90% 50% at 80% -10%,color-mix(in srgb,#D2BFA6 18%,transparent),transparent 58%),radial-gradient(70% 40% at 0% 100%,color-mix(in srgb,#D2BFA6 8%,transparent),transparent 62%);color:#F4EEE6}
 html[data-fenix-barber] header{position:sticky;top:0;z-index:6;padding:14px 18px 12px;background:color-mix(in srgb,#0B0908 82%,transparent);-webkit-backdrop-filter:saturate(1.4) blur(16px);backdrop-filter:saturate(1.4) blur(16px)}
+html[data-fenix-barber]:has(nav.tabs button:first-child.on) header{display:none}
 html[data-fenix-barber] .brand{font-family:var(--display),ui-serif,Georgia,serif;color:#F4EEE6}
 html[data-fenix-barber] .place{letter-spacing:.14em;text-transform:uppercase;font:650 11px/1.3 var(--body),system-ui,sans-serif;color:#D2BFA6}
 html[data-fenix-barber] .app-mark{background:transparent;box-shadow:0 8px 18px rgba(11,9,8,.45)}
-html[data-fenix-barber] nav.tabs{grid-template-columns:repeat(3,minmax(0,1fr));margin:0 12px calc(10px + env(safe-area-inset-bottom));border:1px solid #3A2E24;border-radius:22px;background:color-mix(in srgb,#16110E 92%,transparent);box-shadow:0 -10px 28px rgba(0,0,0,.35);-webkit-backdrop-filter:saturate(1.5) blur(18px);backdrop-filter:saturate(1.5) blur(18px)}
+html[data-fenix-barber] nav.tabs{grid-template-columns:repeat(3,minmax(0,1fr));margin:0 12px calc(10px + env(safe-area-inset-bottom));border:1px solid #3A2E24;border-top-color:#3A2E24;border-radius:22px;background:color-mix(in srgb,#16110E 92%,transparent);box-shadow:0 -10px 28px rgba(0,0,0,.35);-webkit-backdrop-filter:saturate(1.5) blur(18px);backdrop-filter:saturate(1.5) blur(18px)}
 html[data-fenix-barber] nav.tabs svg{width:24px;height:24px;stroke-width:1.9}
 html[data-fenix-barber][data-grammar="agenda"] nav.tabs button.on{background:#1C1612;color:#D2BFA6;border-radius:16px}
 html[data-fenix-barber] .kicker,.salon-kicker{letter-spacing:.16em;text-transform:uppercase;font:650 11px/1.3 var(--body),system-ui,sans-serif;color:#D2BFA6}
