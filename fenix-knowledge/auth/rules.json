@@ -1,0 +1,16 @@
+{
+  "id": "auth-scaffold",
+  "category": "auth",
+  "title": "Auth scaffold",
+  "extractNotClone": true,
+  "appliesWhen": ["login", "signup", "auth", "password", "oauth"],
+  "rules": [
+    {
+      "id": "auth.scaffold",
+      "title": "Do not invent a full auth stack yet",
+      "severity": "scaffold",
+      "statement": "Slice 1 records the category. A brief that asks for login must not leak secrets into HTML. Full auth/payments land in a later slice.",
+      "mustNot": ["API keys in generated HTML"]
+    }
+  ]
+}

@@ -1,0 +1,38 @@
+{
+  "id": "water-craft",
+  "category": "ui-patterns",
+  "title": "Water / field utility craft",
+  "extractNotClone": true,
+  "teacher": "AcquaGt (quality only)",
+  "appliesWhen": ["water", "field", "acqua", "campo", "serbatoio", "bottiglia", "consegne"],
+  "rules": [
+    {
+      "id": "water-craft.slots",
+      "title": "Named craft slots, utility rhythm",
+      "severity": "must",
+      "statement": "Use shared craft slots: surface / onSurface / inverse / brand scale / success / radius 6/12/20 / spacing 4–48. Mode is utility. Paper #F8FAFC, sky brand #0EA5E9 / #0284C7, inverse board #0F172A, success #10B981.",
+      "mustNot": ["Apple SET #f5f5f7 + #0071e3 / #007AFF", "olive wash from a dark user navy"]
+    },
+    {
+      "id": "water-craft.inverse-tank",
+      "title": "Two inverse cards, glass only on chrome",
+      "severity": "must",
+      "statement": "Home is greeting-first with two inverse cards, not one mashed shell. Glass only on sticky header, tab bar, and the hero tank — never on fields or rows.",
+      "mustNot": ["clone AcquaGt screen structure", "glass on every card"]
+    },
+    {
+      "id": "water-craft.drop-mark",
+      "title": "Original filled drop mark",
+      "severity": "must",
+      "statement": "Campo identity is an original filled water-drop chip on a navy plate. Readable at favicon and 48px.",
+      "mustNot": ["copyrighted 3D drop asset", "generic briefcase", "pale 18% outline"]
+    },
+    {
+      "id": "water-craft.lock-hex",
+      "title": "Field briefs lock craft hexes",
+      "severity": "must",
+      "statement": "A dark brief accent (e.g. #0A2F6B) becomes ink/board, not the brand fill. Force a vivid water accent unless the brief already gave one.",
+      "mustNot": ["user navy as the only color", "barber tan or raspberry on a field product"]
+    }
+  ]
+}

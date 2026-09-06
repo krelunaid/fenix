@@ -1,0 +1,16 @@
+{
+  "id": "admin-scaffold",
+  "category": "admin",
+  "title": "Admin / desk scaffold",
+  "extractNotClone": true,
+  "appliesWhen": ["dashboard", "gestionale", "admin", "commercialist"],
+  "rules": [
+    {
+      "id": "admin.desk",
+      "title": "Desk IA for gestionali",
+      "severity": "scaffold",
+      "statement": "Dashboard kind: header + filters + table + form. Desk radii 6/10/14. Light professional paper unless the brief asks midnight.",
+      "mustNot": ["phone tabbar on a desk product"]
+    }
+  ]
+}

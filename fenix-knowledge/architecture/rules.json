@@ -1,0 +1,23 @@
+{
+  "id": "architecture-floor",
+  "category": "architecture",
+  "title": "Kind lock and chrome",
+  "extractNotClone": true,
+  "appliesWhen": ["always"],
+  "rules": [
+    {
+      "id": "architecture.kind-lock",
+      "title": "Prompt kind beats a leftover phone seed",
+      "severity": "must",
+      "statement": "Dashboard / sito stay desk or masthead. Phone kinds stay tab chrome. A gestionale must not ship a phone seed.",
+      "mustNot": ["iPhone tabbar on a commercialisti desk"]
+    },
+    {
+      "id": "architecture.seed-is-product",
+      "title": "Seed HTML is the product",
+      "severity": "should",
+      "statement": "Compose writes a real product seed. Polish refines copy and craft; it does not recycle a generic phone skeleton.",
+      "mustNot": ["boxed 1080 placeholder", "Ciao/Operatore skeleton"]
+    }
+  ]
+}

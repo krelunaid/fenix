@@ -1,0 +1,16 @@
+{
+  "id": "mobile-floor",
+  "category": "mobile",
+  "title": "Phone chrome floor",
+  "extractNotClone": true,
+  "appliesWhen": ["phone", "app", "tool", "game"],
+  "rules": [
+    {
+      "id": "mobile.phone-chrome",
+      "title": "Tab chrome and 44px targets",
+      "severity": "must",
+      "statement": "Phone kinds: bottom tabs, ≥44px targets, no min-width desktop, no overflow-x. Native style layer only when the brief asks stile Apple / iPhone / iOS.",
+      "mustNot": ["Apple skin on every shop brief", "desktop min-width on an app"]
+    }
+  ]
+}

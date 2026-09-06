@@ -44,6 +44,7 @@ import {
   VISUAL_STYLE_SKIPPED_LOG,
 } from "../../../workers/visual/visual-style-keep.mjs";
 import { runIconRevisionFlow } from "@/lib/projects/icon-build";
+import { reviewDraftForBuildLoop } from "../fenix-knowledge";
 
 const inflight = new Set<string>();
 /** A successful polishDraft for this project in the current runBuild. Blocks a second POST. */
@@ -949,18 +950,30 @@ export async function runBuild(projectId: string, instruction?: string) {
           });
           return;
         }
-        const polishInstruction =
+        const reviewGate = reviewDraftForBuildLoop({
+          html: latest.html,
+          brief: project.prompt,
+          kind,
+        });
+        let polishInstruction =
           instruction ||
           (kind === "site" || kind === "landing" ? SITE_POLISH_INSTRUCTION : instruction);
-        const skipComposedPolish = shouldSkipComposedPolish({
-          instruction: polishInstruction,
-          html: latest.html,
-          buildLog: latest.buildLog,
-        });
+        if (reviewGate.retry && !instruction) {
+          polishInstruction = [reviewGate.instruction, polishInstruction].filter(Boolean).join("\n");
+        }
+        const skipComposedPolish =
+          reviewGate.retry && !instruction
+            ? false
+            : shouldSkipComposedPolish({
+                instruction: polishInstruction,
+                html: latest.html,
+                buildLog: latest.buildLog,
+              });
         store.updateProject(projectId, {
           status: "building",
           buildLog: uniqueLogs([
             ...(useProjectStore.getState().getProject(projectId)?.buildLog ?? []),
+            reviewGate.log,
             skipComposedPolish ? VISUAL_STYLE_SKIPPED_LOG : "Motore visivo in sottofondo",
           ]),
         });

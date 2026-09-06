@@ -1,0 +1,31 @@
+{
+  "id": "library-editorial",
+  "category": "ui-patterns",
+  "title": "Library / bookstore editorial",
+  "extractNotClone": true,
+  "teacher": "Fenix bookstore craft",
+  "appliesWhen": ["library", "librer", "bibliotec", "bookstore", "catalogo libr", "prestit"],
+  "rules": [
+    {
+      "id": "library-editorial.paper",
+      "title": "Cream paper, wine brand, editorial type",
+      "severity": "must",
+      "statement": "Bookstore mode: cream paper #FFF8F0 / #F6EFE4, wine brand #6B2D3C, consumer radii. Editorial display type. Phone craft — not magazine masthead.",
+      "mustNot": ["desk gray STUDIO", "water sky", "generic studio teal"]
+    },
+    {
+      "id": "library-editorial.ia",
+      "title": "Catalogo, prestiti, scaffali",
+      "severity": "must",
+      "statement": "IA is shelf + loan + card. Empty: Nessun libro in scaffale. CTA Metti in scaffale. Label Libri.",
+      "mustNot": ["Tavolo/Registra/Studio", "0-KPI Oggi/Media/Voci/Aperti", "desk ledger chrome"]
+    },
+    {
+      "id": "library-editorial.mark",
+      "title": "Filled book chip",
+      "severity": "must",
+      "statement": "Home mark is a filled cream book on a navy plate — not a dim scrap outline or exit door.",
+      "mustNot": ["briefcase", "shears", "water drop"]
+    }
+  ]
+}

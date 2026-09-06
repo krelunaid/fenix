@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "extractNotClone": true,
+  "completenessRetryThreshold": 90,
+  "categories": [
+    { "id": "architecture", "status": "scaffold", "title": "Architecture" },
+    { "id": "ui-patterns", "status": "seeded", "title": "UI patterns" },
+    { "id": "auth", "status": "scaffold", "title": "Auth" },
+    { "id": "database", "status": "scaffold", "title": "Database" },
+    { "id": "api", "status": "scaffold", "title": "API" },
+    { "id": "ai-features", "status": "scaffold", "title": "AI features" },
+    { "id": "marketplace", "status": "scaffold", "title": "Marketplace" },
+    { "id": "admin", "status": "scaffold", "title": "Admin" },
+    { "id": "mobile", "status": "scaffold", "title": "Mobile" },
+    { "id": "golden-projects", "status": "empty", "title": "Golden projects" }
+  ]
+}

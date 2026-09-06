@@ -1,0 +1,12 @@
+{
+  "id": "golden-projects",
+  "category": "golden-projects",
+  "title": "Golden project ingest",
+  "extractNotClone": true,
+  "appliesWhen": [],
+  "plannedIngest": 10,
+  "source": "Emergent export zips",
+  "status": "empty",
+  "note": "Ingest extracts reusable patterns by category. Never clone screens, chat, wizards, or assets.",
+  "rules": []
+}
