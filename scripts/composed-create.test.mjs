@@ -2,16 +2,24 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   applyCreatedDocumentOrSeed,
+  applyCreatedDeskDocumentOrSeed,
+  applyCreatedGraphicOrKeep,
   composedCreateUserContent,
+  composedDeskCreateUserContent,
   COMPOSED_CREATE_APPLIED_LOG,
   COMPOSED_CREATE_SYSTEM,
+  COMPOSED_DESK_CREATE_APPLIED_LOG,
+  COMPOSED_DESK_GRAPHIC_SYSTEM,
   COMPOSED_PLAN_DEGRADED_LOG,
+  COMPOSED_SITE_CREATE_SYSTEM,
   createdDocumentBeatsSeed,
   extractCreatedHtml,
   isModelCreatedArtifact,
   looksLikeFenixComposeSeed,
+  looksLikeFenixWebsiteSeed,
 } from "../workers/visual/composed-create.mjs";
 import { originalCreateHtml, createdMetaHtml } from "./fixtures/composed-create-html.mjs";
+import { createdGraphicSiteMetaHtml, createdSiteMetaHtml, originalSiteHtml } from "./fixtures/composed-desk-html.mjs";
 import { COMPOSED_BUILD_SYSTEM } from "../workers/visual/composed-protocol.mjs";
 
 const seed = '<!doctype html><html data-grammar="agenda"><head><style data-fenix-craft>body{color:#102030}</style></head><body><main id="root">Agenda</main><nav id="tabs"><button>Home</button></nav><script>window.Fenix.load("s");window.Fenix.save("s",{});</script></body></html>';
@@ -51,4 +59,30 @@ test("create system asks for a full original document and never for an atomic JS
   assert.match(user, /DIREZIONE/);
   assert.doesNotMatch(user, /HTML ORIGINALE:/);
   assert.doesNotMatch(user, /BASE_SHA256/);
+});
+
+test("desktop create accepts original site HTML and rejects the magazine seed", () => {
+  const seed = '<!doctype html><html data-fenix-website="1" data-grammar="magazine"><head><style data-fenix-site>body{}</style></head><body><main id="main">Sito</main></body></html>';
+  assert.equal(looksLikeFenixWebsiteSeed(seed), true);
+  const applied = applyCreatedDeskDocumentOrSeed(seed, createdSiteMetaHtml(), "site");
+  assert.equal(applied.applied, true);
+  assert.ok(isModelCreatedArtifact(applied.html));
+  assert.equal(applied.log[0], COMPOSED_DESK_CREATE_APPLIED_LOG);
+  assert.equal(looksLikeFenixWebsiteSeed(originalSiteHtml()), false);
+
+  const copy = applyCreatedDeskDocumentOrSeed(seed, seed + " ".repeat(3000), "site");
+  assert.equal(copy.applied, false);
+  assert.equal(copy.html, seed);
+
+  const current = originalSiteHtml().replace("<html", '<html data-fenix-model-create="1"');
+  const graphic = applyCreatedGraphicOrKeep(current, createdGraphicSiteMetaHtml(), "desk", "site");
+  assert.equal(graphic.applied, true);
+  assert.match(graphic.html, /Sala · Brera/);
+
+  const deskUser = composedDeskCreateUserContent({ prompt: "sito barbiere", kind: "site" });
+  assert.match(deskUser, /BRIEF:/);
+  assert.doesNotMatch(deskUser, /HTML ORIGINALE:/);
+  assert.match(COMPOSED_SITE_CREATE_SYSTEM, /SITO WEB desktop/);
+  assert.match(COMPOSED_DESK_GRAPHIC_SYSTEM, /screenshot DESKTOP 1280/);
+  assert.doesNotMatch(COMPOSED_SITE_CREATE_SYSTEM, /Rispondi SOLO JSON/);
 });

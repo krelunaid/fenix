@@ -1,10 +1,15 @@
-import { MAX_ARTIFACT_CHARS } from "./artifact-context.mjs";
+import { artifactContext, MAX_ARTIFACT_CHARS } from "./artifact-context.mjs";
 import { isComposedVisualArtifact } from "./visual-style.mjs";
 import { COMPOSED_PLAN_DEGRADED_LOG } from "./composed-protocol.mjs";
 
 export { COMPOSED_PLAN_DEGRADED_LOG };
 
 export const COMPOSED_CREATE_APPLIED_LOG = "Documento originale dal modello; seed solo fallback";
+export const COMPOSED_CREATE_GRAPHIC_APPLIED_LOG = "Passaggio grafico sul documento originale";
+export const COMPOSED_CREATE_GRAPHIC_KEPT_LOG = "Passaggio grafico: resta il documento originale";
+export const COMPOSED_DESK_CREATE_APPLIED_LOG = "Documento desktop originale dal modello; seed solo fallback";
+export const PHONE_VIEWPORT = { width: 390, height: 844 };
+export const DESK_VIEWPORT = { width: 1280, height: 800 };
 export const COMPOSED_CREATE_RETRY = 1;
 export const MIN_CREATED_CHARS = 2500;
 export const MODEL_CREATE_ATTR = "data-fenix-model-create";
@@ -32,6 +37,62 @@ Rispondi SOLO:
 <!DOCTYPE html> documento completo originale
 <<<END>>>`;
 
+export const COMPOSED_SITE_CREATE_SYSTEM = `Studio visivo Fenix. Scrivi tu un SITO WEB desktop originale, non una patch e non un'app telefono.
+
+Il seed TypeScript/magazine è solo fallback di crash. NON copiarlo. Vietato data-fenix-website, data-fenix-craft, data-grammar="magazine", nav.fk-tab, template t-home, 5 tab, colonna 100dvh da tasca.
+Identità, layout editoriale, tipografia, illustrazioni SVG e copy nascono dal brief. Ogni mestiere un volto.
+
+JS in <script> classico. window.Fenix.load e window.Fenix.save (coppia obbligatoria) sul form. Mai localStorage. Mai login o server inventati. Il form salva una richiesta, non finge email inviate.
+
+DEFAULT: desktop-first 1280×800, nav in alto, almeno 4 sezioni, footer con via/orari dal brief, hero a tutta larghezza, max-width ~1120px.
+Italiano. Testi veri. Niente lorem, Inter, Manrope, emoji, Grok, Fenix.
+Palette DAL MESTIERE in :root --bg --surface --fg --muted --accent --line. Mai #f5f5f7+#0071e3. Contrasto AA 4.5:1.
+GRAFICA da battere un builder generico: coppia display+testo dal mestiere, materiale firma in CSS+SVG (niente Unsplash), ritmo 8px, lastre piene, CTA ≥44px.
+Vietato clonare Corto, Emergent, Apple, Linear, Stripe, Vercel. Niente dashboard Tailwind da SaaS.
+
+Rispondi SOLO:
+<<<META>>>
+{"name":"","tagline":"","kind":"site","summary":"","palette":{"bg":"#1a1612","surface":"#2a241c","fg":"#e6dcc8","muted":"#9a8f7a","accent":"#c45c26"}}
+<<<HTML>>>
+<!DOCTYPE html> sito desktop completo
+<<<END>>>`;
+
+export const COMPOSED_DASH_CREATE_SYSTEM = `Studio visivo Fenix. Scrivi tu un GESTIONALE DESKTOP originale, non una patch e non un'app telefono.
+
+Il seed è solo fallback di crash. NON copiarlo. Vietato nav.fk-tab in basso, template t-home, colonna iPhone, data-fenix-craft-desk da scheletro.
+Identità, chrome (header o sidebar), tabella, filtri, form e numeri nascono dal brief.
+
+JS in <script> classico. window.Fenix.load e window.Fenix.save. CRUD su collezioni [A-Za-z0-9._-]{1,80}. Mai localStorage. Mai login inventato.
+
+DEFAULT: desktop 1280×800, almeno 3 viste data-view, tabella o elenco che si riempie, form nuovo, filtri, KPI onesti.
+Italiano. Campi e colonne della stessa entità del brief. Niente lorem, Inter, Manrope, emoji, Grok, Fenix.
+Palette DAL MESTIERE. Mai #f5f5f7+#0071e3. Contrasto AA 4.5:1. Controlli stilizzati, non nativi nudi.
+GRAFICA: tipo in coppia, superfici distinguibili, ritmo 8px, icone silhouette del mestiere. Vietato clonare Corto, Emergent, Apple, Linear, Stripe.
+
+Rispondi SOLO:
+<<<META>>>
+{"name":"","tagline":"","kind":"dashboard","summary":"","palette":{"bg":"#1a1612","surface":"#2a241c","fg":"#e6dcc8","muted":"#9a8f7a","accent":"#c45c26"}}
+<<<HTML>>>
+<!DOCTYPE html> gestionale desktop completo
+<<<END>>>`;
+
+export const COMPOSED_DESK_GRAPHIC_SYSTEM = `Studio visivo Fenix. Vedi uno screenshot DESKTOP 1280×800 del documento originale già scritto da te.
+
+Non è una patch CSS e non è un piano JSON. Non è il seed. Riscrivi il DOCUMENTO COMPLETO per vincere sulla grafica desktop.
+
+Tieni: window.Fenix.load/save, <script> classico valido, italiano, niente localStorage.
+Sito: nav in alto, sezioni, footer, hero pieno. Gestionale: header/sidebar, tabella, form, filtri, data-view. Mai tabbar iPhone.
+Alza: coppia tipografica dal mestiere, materiale firma CSS+SVG (niente Unsplash), ritmo 8px, contrasto AA, CTA ≥44px, gerarchia editoriale a tutta larghezza.
+Vietato: data-fenix-website, data-fenix-craft, Inter, Manrope, SF Pro, emoji, lorem, clonare Corto, Emergent, Apple, Linear, Stripe, Vercel, coppia #f5f5f7+#0071e3.
+Se lo screenshot è piatto, boxed al centro, o da dashboard SaaS, rifai i materiali.
+
+Rispondi SOLO:
+<<<META>>>
+{"name":"","tagline":"","kind":"site","summary":"","palette":{"bg":"#1a1612","surface":"#2a241c","fg":"#e6dcc8","muted":"#9a8f7a","accent":"#c45c26"}}
+<<<HTML>>>
+<!DOCTYPE html> documento desktop completo
+<<<END>>>`;
+
 /** @param {string} html */
 export function isModelCreatedArtifact(html) {
   return new RegExp(`<html\\b[^>]*\\b${MODEL_CREATE_ATTR}=["']1["']`, "i").test(String(html || ""));
@@ -42,6 +103,65 @@ export function isModelCreatedArtifact(html) {
  */
 export function looksLikeFenixComposeSeed(html) {
   return isComposedVisualArtifact(html) && !isModelCreatedArtifact(html);
+}
+
+/** Website compose seed used as t0 on Mac/PC site create.
+ * @param {string} html
+ */
+export function looksLikeFenixWebsiteSeed(html) {
+  const text = String(html || "");
+  return /<html\b[^>]*\bdata-fenix-website=/i.test(text) && !isModelCreatedArtifact(text);
+}
+
+/** @param {string} html */
+export function looksLikePhoneChromeOnDesk(html) {
+  return /nav\.fk-tab|class=["'][^"']*\bfk-tab\b|id=["']t-home["']|bottom-tab/i.test(String(html || ""));
+}
+
+/** @param {string} kind */
+export function deskCreateSystemFor(kind) {
+  return String(kind || "").toLowerCase() === "dashboard"
+    ? COMPOSED_DASH_CREATE_SYSTEM
+    : COMPOSED_SITE_CREATE_SYSTEM;
+}
+
+/** @param {string} html */
+function deskKindFrom(html) {
+  const text = String(html || "");
+  if (/<footer\b/i.test(text) && (text.match(/<section\b/gi) || []).length >= 3) return "site";
+  return "dashboard";
+}
+
+/**
+ * @param {string} seed
+ * @param {string} created
+ * @param {string} [kind]
+ */
+export function createdDeskDocumentBeatsSeed(seed, created, kind = "site") {
+  if (!created || created === seed) return false;
+  if (created.length < MIN_CREATED_CHARS || created.length > MAX_ARTIFACT_CHARS) return false;
+  if (seed && created.length < Math.floor(String(seed).length * 0.5) && String(seed).length > MIN_CREATED_CHARS) {
+    return false;
+  }
+  if (!/<script\b/i.test(created)) return false;
+  if (!hasFenixRuntime(created)) return false;
+  if (!createdScriptsAreValid(created)) return false;
+  if (CLONE_BAN.test(created)) return false;
+  if (looksLikeFenixComposeSeed(created) || looksLikeFenixWebsiteSeed(created)) return false;
+  if (looksLikePhoneChromeOnDesk(created)) return false;
+  if (/\/\*fenix-slot:/.test(created) && /data-fenix-slot=/.test(created)) return false;
+  const deskKind = String(kind || "site").toLowerCase();
+  if (deskKind === "dashboard") {
+    const views = new Set([...String(created).matchAll(/data-view=["']([^"']+)["']/gi)].map((m) => m[1].toLowerCase()));
+    if (views.size < 3) return false;
+    if (!/<table\b|<form\b/i.test(created)) return false;
+  } else {
+    const sections = (created.match(/<section\b/gi) || []).length;
+    const views = new Set([...created.matchAll(/data-view=["']([^"']+)["']/gi)].map((m) => m[1].toLowerCase()));
+    if (sections < 4 && views.size < 3) return false;
+    if (!/<nav\b/i.test(created) || !/<footer\b/i.test(created)) return false;
+  }
+  return true;
 }
 
 /** @param {string} html */
@@ -106,9 +226,58 @@ export function createdDocumentBeatsSeed(seed, created) {
   return true;
 }
 
-/**
- * @param {{prompt: string, instruction?: string, feedback?: string}} input
+/** User iterate must not trigger the create-graphic restyle.
+ * Compose direzione / seed-fallback copy is not an iterate.
+ * @param {string} [instruction]
  */
+export function isUserIterateInstruction(instruction) {
+  const text = String(instruction || "").trim();
+  if (!text) return false;
+  if (/solo fallback|prodotto originale|data-fenix-craft|direzione di mestiere/i.test(text)) return false;
+  return /^(aggiungi|cambia|sposta|rimuovi|modifica|togli|metti|alza|abbassa)\b/i.test(text);
+}
+
+/**
+ * @param {{prompt: string, html: string, instruction?: string, feedback?: string, surface?: string}} input
+ */
+export function composedGraphicUserContent(input) {
+  const desk = input.surface === "desk";
+  return [
+    `BRIEF:\n${input.prompt}`,
+    input.instruction && !isUserIterateInstruction(input.instruction)
+      ? `VINCOLI DI MESTIERE:\n${input.instruction}`
+      : "",
+    `HTML ORIGINALE DA RIFINIRE (tieni JS e dati, alza la grafica):\n${artifactContext(input.html)}`,
+    input.feedback || "",
+    desk
+      ? "Lo screenshot è il desktop 1280×800. Se manca, giudica dall'HTML. Rispondi META+HTML completo."
+      : "Lo screenshot è il telefono 390×844. Se manca, giudica dall'HTML. Rispondi META+HTML completo.",
+    "NON clonare Corto, Emergent, Apple. NON tornare al seed Fenix.",
+  ]
+    .filter(Boolean)
+    .join("\n\n");
+}
+
+/**
+ * @param {{prompt: string, instruction?: string, feedback?: string, kind?: string}} input
+ */
+export function composedDeskCreateUserContent(input) {
+  const dashboard = String(input.kind || "").toLowerCase() === "dashboard";
+  return [
+    `BRIEF:\n${input.prompt}`,
+    input.instruction
+      ? `DIREZIONE (vincoli di mestiere, NON un layout da copiare):\n${input.instruction}`
+      : "",
+    input.feedback || "",
+    dashboard
+      ? "Contratto: gestionale desktop, window.Fenix.load/save, almeno 3 data-view, tabella e form, italiano."
+      : "Contratto: sito desktop, window.Fenix.load/save sul form, nav in alto, 4 sezioni, footer, italiano.",
+    "NON copiare il seed Fenix (data-fenix-website, magazine, craft-desk, tabbar iPhone).",
+    "NON clonare Corto, Emergent, Apple. Vinci sulla grafica desktop: materiale firma, tipo in coppia, layout a tutta larghezza.",
+  ]
+    .filter(Boolean)
+    .join("\n\n");
+}
 export function composedCreateUserContent(input) {
   return [
     `BRIEF:\n${input.prompt}`,
@@ -143,5 +312,47 @@ export function applyCreatedDocumentOrSeed(seed, text) {
     html: markModelCreatedHtml(created),
     applied: true,
     log: [COMPOSED_CREATE_APPLIED_LOG],
+  };
+}
+
+/** @param {string} [reason] */
+export function composedGraphicRetryFeedback(reason) {
+  return `Il passaggio grafico precedente non è un documento originale valido${reason ? ` (${reason})` : ""}. Riscrivi META+HTML completo. Tieni Fenix.load/save e data-view. Non copiare il seed, non rispondere JSON.`;
+}
+
+/**
+ * @param {string} current
+ * @param {string} text
+ * @param {string} [surface]
+ * @param {string} [kind]
+ * @returns {{html: string, applied: boolean, log: string[]}}
+ */
+export function applyCreatedGraphicOrKeep(current, text, surface = "desk", kind = "") {
+  const created = extractCreatedHtml(text);
+  if (!createdDeskDocumentBeatsSeed(current, created, kind || deskKindFrom(created || current))) {
+    return { html: current, applied: false, log: [COMPOSED_CREATE_GRAPHIC_KEPT_LOG] };
+  }
+  return {
+    html: markModelCreatedHtml(created),
+    applied: true,
+    log: [COMPOSED_CREATE_GRAPHIC_APPLIED_LOG],
+  };
+}
+
+/**
+ * @param {string} seed
+ * @param {string} text
+ * @param {string} [kind]
+ * @returns {{html: string, applied: boolean, log: string[]}}
+ */
+export function applyCreatedDeskDocumentOrSeed(seed, text, kind = "site") {
+  const created = extractCreatedHtml(text);
+  if (!createdDeskDocumentBeatsSeed(seed, created, kind)) {
+    return { html: seed, applied: false, log: [COMPOSED_PLAN_DEGRADED_LOG] };
+  }
+  return {
+    html: markModelCreatedHtml(created),
+    applied: true,
+    log: [COMPOSED_DESK_CREATE_APPLIED_LOG],
   };
 }

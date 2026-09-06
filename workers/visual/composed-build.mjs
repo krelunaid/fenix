@@ -18,15 +18,33 @@ export {
 
 export {
   applyCreatedDocumentOrSeed,
+  applyCreatedDeskDocumentOrSeed,
+  applyCreatedGraphicOrKeep,
   composedCreateRetryFeedback,
   composedCreateUserContent,
+  composedDeskCreateUserContent,
+  composedGraphicRetryFeedback,
+  composedGraphicUserContent,
   COMPOSED_CREATE_APPLIED_LOG,
+  COMPOSED_CREATE_GRAPHIC_APPLIED_LOG,
+  COMPOSED_CREATE_GRAPHIC_KEPT_LOG,
   COMPOSED_CREATE_SYSTEM,
+  COMPOSED_DASH_CREATE_SYSTEM,
+  COMPOSED_DESK_CREATE_APPLIED_LOG,
+  COMPOSED_DESK_GRAPHIC_SYSTEM,
+  COMPOSED_SITE_CREATE_SYSTEM,
   createdDocumentBeatsSeed,
+  createdDeskDocumentBeatsSeed,
+  deskCreateSystemFor,
+  DESK_VIEWPORT,
   extractCreatedHtml,
   isModelCreatedArtifact,
+  isUserIterateInstruction,
   looksLikeFenixComposeSeed,
+  looksLikeFenixWebsiteSeed,
+  looksLikePhoneChromeOnDesk,
   markModelCreatedHtml,
+  PHONE_VIEWPORT,
 } from "./composed-create.mjs";
 
 /** Synchronous Node entrypoint retained for the existing worker.

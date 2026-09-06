@@ -19,7 +19,7 @@ export async function withComposedWorker(run) {
   await new Promise(resolve => reservation.close(resolve));
   const worker = spawn(process.execPath, ["--import", "./scripts/fixtures/composed-build-provider.mjs", "workers/visual/server.mjs"], {
     cwd: new URL("../../", import.meta.url),
-    env: {PATH:process.env.PATH,PORT:String(port),XAI_API_KEY:"fixture-not-a-secret"},
+    env: {PATH:process.env.PATH,PORT:String(port),XAI_API_KEY:"fixture-not-a-secret",FENIX_SKIP_SHOT:"1"},
     stdio:["ignore","pipe","pipe"],
   });
   const exited = once(worker, "exit");

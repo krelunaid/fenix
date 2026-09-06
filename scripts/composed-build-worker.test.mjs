@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import { withComposedWorker } from "./fixtures/composed-build-worker.mjs";
 import { originalCreateHtml } from "./fixtures/composed-create-html.mjs";
+import { originalSiteHtml } from "./fixtures/composed-desk-html.mjs";
 import { isModelCreatedArtifact } from "../workers/visual/composed-create.mjs";
 
 test("composed /build applies original grok-build HTML and keeps the seed when the document is invalid", {timeout:30000}, async () => {
@@ -99,4 +100,38 @@ test("controller wiring keeps composed worker failures out of automatic full-doc
   assert.match(controller.slice(guard, guard+500), /persistComposedSeed/);
   const edgeGuard=controller.indexOf("if (isAtomicStreamCreation(payload))");
   assert.ok(edgeGuard>guard && edgeGuard<controller.indexOf("if (isTransientNetwork(msg))",guard));
+});
+
+test("composed /build writes original desktop site HTML instead of the magazine seed", {timeout:30000}, async () => {
+  await withComposedWorker(async ({build,calls}) => {
+    const seed = '<!doctype html><html data-fenix-website="1" data-grammar="magazine"><head><style data-fenix-site>body{color:#102030}</style></head><body><main id="main">Sito</main><nav><a href="#x">Home</a></nav>'+' '.repeat(2000)+'<script>window.Fenix.load("s");window.Fenix.save("s",{});</script></body></html>';
+    const applied = await build({prompt:"VALID_FIXTURE sito brera",html:seed,kind:"site",operation:"create"});
+    assert.equal(applied.status,"ok");
+    assert.ok(isModelCreatedArtifact(applied.html));
+    assert.ok(applied.html.includes("Atelier Luce"));
+    assert.match(applied.html, /<footer\b/i);
+    assert.ok(applied.log.some(line => /Documento desktop originale/.test(line)));
+    assert.equal(calls(),1);
+  });
+});
+
+test("composed /polish restyles an original desktop site instead of stripping chrome only", {timeout:30000}, async () => {
+  await withComposedWorker(async ({base,calls}) => {
+    const html = originalSiteHtml().replace("<html", '<html data-fenix-model-create="1"');
+    const response = await fetch(`${base}/polish`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({prompt:"VALID_FIXTURE sito già originale",html,kind:"site"}),signal:AbortSignal.timeout(2000)});
+    assert.equal(response.status,202);
+    const receipt = await response.json();
+    let job;
+    for (let i=0;i<120;i++) {
+      job = await (await fetch(`${base}/jobs/${receipt.id}`,{signal:AbortSignal.timeout(1000)})).json();
+      if (job.status !== "run") break;
+      await new Promise(r => setTimeout(r, 50));
+    }
+    assert.equal(job.status,"ok");
+    assert.ok(isModelCreatedArtifact(job.html));
+    assert.notEqual(job.html, html);
+    assert.ok(job.html.includes("Sala · Brera") || /letter-spacing:-.05em/.test(job.html));
+    assert.ok(job.log.some(line => /Passaggio grafico desktop/.test(line)));
+    assert.equal(calls(),1);
+  });
 });

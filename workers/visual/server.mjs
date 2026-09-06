@@ -2,13 +2,24 @@ import { createServer } from "node:http";
 import { readWorkerBody } from "./request-body.mjs";
 import {
   applyCreatedDocumentOrSeed,
+  applyCreatedDeskDocumentOrSeed,
+  applyCreatedGraphicOrKeep,
   composedBuildPalette,
   composedCreateRetryFeedback,
   composedCreateUserContent,
+  composedDeskCreateUserContent,
+  composedGraphicRetryFeedback,
+  composedGraphicUserContent,
+  COMPOSED_CREATE_GRAPHIC_KEPT_LOG,
   COMPOSED_CREATE_SYSTEM,
+  COMPOSED_DESK_GRAPHIC_SYSTEM,
   COMPOSED_PLAN_DEGRADED_LOG,
+  deskCreateSystemFor,
+  DESK_VIEWPORT,
   isModelCreatedArtifact,
+  isUserIterateInstruction,
   looksLikeFenixComposeSeed,
+  PHONE_VIEWPORT,
 } from "./composed-build.mjs";
 import { restoreHome, keepScripts } from "./artifact-restore.mjs";
 import { isComposedVisualArtifact, VISUAL_STYLE_SELECTORS } from "./visual-style.mjs";
@@ -348,6 +359,50 @@ function paletteFromHtml(html) {
   };
 }
 
+async function createDeskDocument(apiKey, prompt, html, instruction, kind) {
+  const requestCreate = async (feedback) => {
+    const response = await fetch(XAI, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+      body: JSON.stringify({
+        model: MODEL, temperature: 0.8, max_tokens: 20000, stream: false,
+        messages: [
+          { role: "system", content: deskCreateSystemFor(kind) },
+          { role: "user", content: composedDeskCreateUserContent({ prompt, instruction, feedback, kind }) },
+        ],
+      }),
+    });
+    if (!response.ok) throw new Error(`xAI ${response.status}`);
+    return completeResponseText(await response.json());
+  };
+  let outcome;
+  try {
+    let text = await requestCreate();
+    outcome = applyCreatedDeskDocumentOrSeed(html, text, kind);
+    if (!outcome.applied) {
+      text = await requestCreate(composedCreateRetryFeedback("documento desktop non valido"));
+      outcome = applyCreatedDeskDocumentOrSeed(html, text, kind);
+    }
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    if (/incompleta|troppo grande/i.test(reason)) {
+      outcome = { html, applied: false, log: [COMPOSED_PLAN_DEGRADED_LOG, reason] };
+    } else {
+      throw error;
+    }
+  }
+  if (!outcome.applied && !html) {
+    throw new Error("HTML non valido");
+  }
+  const parsed = outcome.applied ? parseHtml(outcome.html) : null;
+  return {
+    html: outcome.html,
+    meta: { ...(parsed?.meta || {}), kind, palette: paletteFromHtml(outcome.html) },
+    files: [],
+    log: [...outcome.log, "Avvio desktop da verificare"],
+  };
+}
+
 async function generate(prompt, html, instruction, kind, operation, inputPalette) {
   const apiKey = (process.env.XAI_API_KEY || "").trim();
   if (!apiKey) throw new Error("Manca XAI_API_KEY");
@@ -406,6 +461,9 @@ async function generate(prompt, html, instruction, kind, operation, inputPalette
   }
   const dashboard = looksDashboard(prompt, instruction, kind);
   const site = looksSite(prompt, instruction, kind, html);
+  if (operation === "create" && (dashboard || site)) {
+    return createDeskDocument(apiKey, prompt, html, instruction, dashboard ? "dashboard" : "site");
+  }
   const user = [
     `BRIEF:\n${prompt}`,
     html ? `HTML ATTUALE:\n${artifactContext(html)}` : "",
@@ -674,7 +732,7 @@ function injectIcons(html, pack) {
   return next;
 }
 
-async function openPage(html) {
+async function openPage(html, viewport = PHONE_VIEWPORT) {
   let chromium;
   try {
     ({ chromium } = await import("playwright"));
@@ -682,7 +740,9 @@ async function openPage(html) {
     return null;
   }
   const browser = await chromium.launch({ args: ["--no-sandbox", "--disable-dev-shm-usage"] });
-  const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  const page = await browser.newPage({
+    viewport: { width: viewport.width || 390, height: viewport.height || 844 },
+  });
   await page.setContent(html, { waitUntil: "domcontentloaded", timeout: 12000 });
   try {
     await page.waitForSelector("[data-fenix-ready]", { timeout: 4000, state: "attached" });
@@ -769,6 +829,81 @@ Scegli poche modifiche coerenti col dominio: gerarchia, leggibilità, densità m
   };
 }
 
+async function polishCreatedGraphics(apiKey, prompt, html, instruction, surface = "desk", kind = "") {
+  const viewport = DESK_VIEWPORT;
+  const log = ["Passaggio grafico desktop 1280×800"];
+  let shot = null;
+  let session = null;
+  if (process.env.FENIX_SKIP_SHOT !== "1") {
+    try {
+      session = await openPage(html, viewport);
+      if (session?.page) {
+        shot = await shotTab(session.page, 0);
+        log.push("Screenshot desktop");
+      } else {
+        log.push("Niente browser, passaggio grafico a testo");
+      }
+    } catch (err) {
+      log.push(`Screenshot saltato: ${err instanceof Error ? err.message : "errore"}`);
+    } finally {
+      try {
+        await session?.browser?.close();
+      } catch {
+        /* ignore */
+      }
+    }
+  } else {
+    log.push("Screenshot saltato in fixture");
+  }
+  const requestGraphic = async (feedback) => {
+    const userText = composedGraphicUserContent({ prompt, html, instruction, feedback, surface: "desk" });
+    const user = shot
+      ? [
+          { type: "text", text: userText },
+          { type: "image_url", image_url: { url: `data:image/jpeg;base64,${shot}` } },
+        ]
+      : userText;
+    const response = await fetch(XAI, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+      body: JSON.stringify({
+        model: MODEL,
+        temperature: 0.65,
+        max_tokens: 20000,
+        stream: false,
+        messages: [
+          { role: "system", content: COMPOSED_DESK_GRAPHIC_SYSTEM },
+          { role: "user", content: user },
+        ],
+      }),
+    });
+    if (!response.ok) throw new Error(`xAI ${response.status}`);
+    return completeResponseText(await response.json());
+  };
+  try {
+    let text = await requestGraphic();
+    let outcome = applyCreatedGraphicOrKeep(html, text, "desk", kind);
+    if (!outcome.applied) {
+      text = await requestGraphic(composedGraphicRetryFeedback());
+      outcome = applyCreatedGraphicOrKeep(html, text, "desk", kind);
+    }
+    return {
+      html: outcome.html,
+      meta: {},
+      files: [],
+      log: [...log, ...outcome.log],
+    };
+  } catch (err) {
+    const reason = err instanceof Error ? err.message : "errore";
+    return {
+      html,
+      meta: {},
+      files: [],
+      log: [...log, `${COMPOSED_CREATE_GRAPHIC_KEPT_LOG} (${reason})`],
+    };
+  }
+}
+
 async function polish(prompt, html, instruction, kind) {
   if (looksLikeIconInstruction(instruction)) {
     const verdict = applyIconRevision({ html, files: [], instruction });
@@ -785,39 +920,66 @@ async function polish(prompt, html, instruction, kind) {
   const apiKey = (process.env.XAI_API_KEY || "").trim();
   if (!apiKey) throw new Error("Manca XAI_API_KEY");
   if (looksDashboard(prompt, instruction, kind)) {
-    const dashInstruction =
-      instruction ||
-      "SOSTITUISCI nav.fk-tab e lo scheletro telefono con un gestionale desktop. Header o sidebar, tabella, filtri, form, numeri. kind=dashboard. Niente tabbar iPhone. Tieni Fenix.load/save. CSS reale.";
-    const result = await generate(prompt, html, dashInstruction, kind);
+    if (isUserIterateInstruction(instruction)) {
+      const result = await generate(prompt, html, instruction, kind);
+      return {
+        ...result,
+        meta: { ...(result.meta || {}), kind: "dashboard" },
+        log: ["Rifinitura gestionale desktop", ...(result.log || [])],
+      };
+    }
+    if (isModelCreatedArtifact(html)) {
+      return polishCreatedGraphics(apiKey, prompt, html, instruction, "desk", "dashboard");
+    }
+    const created = await createDeskDocument(apiKey, prompt, html, instruction, "dashboard");
+    if (isModelCreatedArtifact(created.html)) {
+      const graphic = await polishCreatedGraphics(apiKey, prompt, created.html, instruction, "desk", "dashboard");
+      return {
+        ...graphic,
+        meta: { ...(created.meta || {}), kind: "dashboard" },
+        log: ["Documento gestionale originale", ...(created.log || []), ...(graphic.log || [])],
+      };
+    }
     return {
-      ...result,
-      meta: { ...(result.meta || {}), kind: "dashboard" },
-      log: ["Rifinitura gestionale desktop", ...(result.log || [])],
+      ...created,
+      meta: { ...(created.meta || {}), kind: "dashboard" },
+      log: ["Rifinitura gestionale desktop", ...(created.log || [])],
     };
   }
   if (looksSite(prompt, instruction, kind, html)) {
-    const log = ["Rifinitura sito (nav in alto, niente tabbar)"];
-    let current = html;
-    if (looksPhoneShell(html) || /bottom-tab|fk-appicon|height:\s*100dvh/i.test(html)) {
-      const regen = await generate(
-        prompt,
-        html,
-        instruction || "FORMATO: sito web. kind=site. Rigenera desktop, nav in alto, niente tabbar.",
-        kind || "site",
-      );
-      current = regen.html;
-      log.push(...(regen.log || []), "Layout desktop");
+    if (isUserIterateInstruction(instruction)) {
+      const log = ["Rifinitura sito (nav in alto, niente tabbar)"];
+      let current = html;
+      if (looksPhoneShell(html) || /bottom-tab|fk-appicon|height:\s*100dvh/i.test(html)) {
+        const regen = await generate(
+          prompt,
+          html,
+          instruction || "FORMATO: sito web. kind=site. Rigenera desktop, nav in alto, niente tabbar.",
+          kind || "site",
+        );
+        current = regen.html;
+        log.push(...(regen.log || []), "Layout desktop");
+      }
+      return { html: stripPhoneChromeFromSite(current), meta: { kind: "site" }, log, files: [] };
     }
-    current = stripPhoneChromeFromSite(current);
-    try {
-      const placed = await placeHero(current, prompt);
-      current = placed.html;
-      log.push(...placed.log);
-    } catch {
-      /* senza foto */
+    if (isModelCreatedArtifact(html)) {
+      return polishCreatedGraphics(apiKey, prompt, html, instruction, "desk", "site");
     }
-    current = stripPhoneChromeFromSite(current);
-    return { html: current, meta: { kind: "site" }, log, files: [] };
+    const created = await createDeskDocument(apiKey, prompt, html, instruction, kind || "site");
+    if (isModelCreatedArtifact(created.html)) {
+      const graphic = await polishCreatedGraphics(apiKey, prompt, created.html, instruction, "desk", "site");
+      return {
+        ...graphic,
+        meta: { kind: "site" },
+        log: ["Documento sito originale", "Layout desktop", ...(created.log || []), ...(graphic.log || [])],
+      };
+    }
+    return {
+      html: stripPhoneChromeFromSite(created.html || html),
+      meta: { kind: "site" },
+      log: ["Rifinitura sito (nav in alto, niente tabbar)", ...(created.log || [])],
+      files: [],
+    };
   }
   // A Fenix compose seed is never the product. Ask grok-build for an original
   // document instead of CSS-only rhythm tweaks.
