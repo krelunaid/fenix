@@ -27,7 +27,7 @@ import { auditGraphicQuality, type GraphicReport } from "../projects/graphic-qua
 import { domainIllustration, altForBrief } from "./domain-imagery.ts";
 import { DASHBOARD_POLISH_INSTRUCTION, SITE_POLISH_INSTRUCTION } from "./app-shell.ts";
 import { craftNavIcon } from "../projects/craft-icons.ts";
-import { appIdentityIcon, appIdentityLabel, isAccountantBrief, isBarberBrief, isFieldProductBrief, isLibraryBrief, isLuxeBrief, isMarketplaceBrief, isShopBrief, wantsCrispCraftMark } from "../projects/app-identity.ts";
+import { appIdentityIcon, appIdentityLabel, isAccountantBrief, isBarberBrief, isFieldProductBrief, isLibraryBrief, isLuxeBrief, isMarketplaceBrief, isPremiumDefaultBrief, isShopBrief, wantsCrispCraftMark } from "../projects/app-identity.ts";
 import { crispAppMarkSvg, crispBarberMarkSvg, crispBookMarkSvg, crispWaterDropMarkSvg, glossyWaterMarkSvg, premiumAppMarkSvg, premiumMarkDataUri } from "../projects/premium-mark.ts";
 import { craftModeOf, craftRhythmOf, craftTokenCss, surfacesFromPalette, type CraftDomain } from "../projects/craft-tokens.ts";
 import { accentButtonPair, contrastRatio } from "../projects/visual-quality.ts";
@@ -554,6 +554,44 @@ function synthesizeSpec(brief: string): PipelineSpec {
       cta: "Metti in scaffale",
     };
   }
+  if (grammar.id === "ops-desk" || grammar.kind === "dashboard") {
+    return {
+      id: `${tokens.family}-desk`,
+      name,
+      kicker: grammar.voice.census,
+      place: "Ufficio",
+      collection: "pratiche",
+      brief,
+      tabs: [
+        { id: "pipeline", label: "Pipeline" },
+        { id: "nuovo", label: "Nuova" },
+        { id: "archivio", label: "Archivio" },
+        { id: "numeri", label: "Numeri" },
+      ],
+      rows: [],
+      formTitle: "Nuova riga",
+      cta: "Registra",
+    };
+  }
+  if (grammar.id === "magazine" || grammar.kind === "site" || grammar.kind === "landing") {
+    return {
+      id: `${tokens.family}-pagine`,
+      name,
+      kicker: grammar.voice.census,
+      place: "Pagine",
+      collection: "lastre",
+      brief,
+      tabs: [
+        { id: "copertina", label: "Copertina" },
+        { id: "lastre", label: "Lastre" },
+        { id: "archivio", label: "Archivio" },
+        { id: "visita", label: "Visita" },
+      ],
+      rows: [],
+      formTitle: "Nuova lastra",
+      cta: "Metti in pagina",
+    };
+  }
   if (grammar.id === "agenda" || tokens.family === "booking") {
     const clinical = /clinic|medic|pazient|terap|ospedal|dentist/.test(brief);
     const salon = isBarberBrief(brief);
@@ -614,19 +652,19 @@ function synthesizeSpec(brief: string): PipelineSpec {
   return {
     id: `${tokens.family}-seed`,
     name,
-    kicker: grammar.voice.census,
-    place: "Studio",
+    kicker: /^lista|^note|^diario|^promemoria/i.test(name) ? "Le tue voci" : "In tasca",
+    place: "Personale",
     collection: "voci",
     brief,
     tabs: [
-      { id: "home", label: "Tavolo" },
-      { id: "nuovo", label: "Registra" },
-      { id: "elenco", label: "Archivio" },
-      { id: "studio", label: "Studio" },
+      { id: "home", label: "Home" },
+      { id: "nuovo", label: "Aggiungi" },
+      { id: "elenco", label: "Elenco" },
+      { id: "persona", label: "Profilo" },
     ],
     rows: [],
-    formTitle: "Nuova riga",
-    cta: "Salva nel mestiere",
+    formTitle: "Nuova voce",
+    cta: "Aggiungi",
   };
 }
 
@@ -731,6 +769,11 @@ function barberHomeBoot(spec: PipelineSpec): string {
     ? `<article class="salon-next" data-id="${next.id}"><p class="kicker">Prossimo passaggio</p><h2>${next.title}</h2><p class="notes"><time class="time" datetime="${next.kicker}">${next.kicker}</time> · ${next.note} · ${next.meta}</p></article>`
     : "";
   return `<section class="salon-home" data-fenix-slot="salon-home">${barberHeroBlock()}${nextCard}<div class="salon-catalog" data-fenix-slot="salon-services"><p class="kicker">Servizi</p>${salonServiceCards("Taglio e piega", false)}</div></section>`;
+}
+
+/** Visible default Home mark. Filled chip, never a faint list outline. */
+export function pocketHomeHeaderMark(brief = "", family = ""): string {
+  return crispAppMarkSvg("home-header", appIdentityLabel(brief, family));
 }
 
 function italianLongDate(d = new Date()): string {
@@ -1546,6 +1589,91 @@ html[data-fenix-libreria] .home-first h2{font-family:var(--display),ui-serif,Geo
 `;
 }
 
+function genericChromeCss(): string {
+  return `html[data-fenix-pocket],html[data-fenix-pocket] body{background-color:var(--surface-2);background-image:radial-gradient(120% 64% at 50% -8%,var(--brand-soft) 0%,transparent 58%),radial-gradient(70% 36% at 108% 12%,color-mix(in srgb,var(--brand) 14%,transparent),transparent 58%);color:var(--on-surface)}
+html[data-fenix-pocket] header{position:sticky;top:0;z-index:6;padding:12px 16px 10px;background:color-mix(in srgb,var(--surface) 80%,transparent);-webkit-backdrop-filter:saturate(1.5) blur(16px);backdrop-filter:saturate(1.5) blur(16px)}
+html[data-fenix-pocket]:has(nav.tabs button:first-child.on) header .app-mark{display:none}
+html[data-fenix-pocket] .app-mark{background:transparent}
+html[data-fenix-pocket] .app-mark svg{width:44px;height:44px;display:block}
+html[data-fenix-pocket] nav.tabs{background:color-mix(in srgb,var(--surface) 88%,var(--brand-soft));border-top:1px solid var(--border,var(--line));box-shadow:0 -8px 24px color-mix(in srgb,var(--on-surface) 6%,transparent);-webkit-backdrop-filter:saturate(1.6) blur(18px);backdrop-filter:saturate(1.6) blur(18px)}
+html[data-fenix-pocket] nav.tabs svg{width:24px;height:24px;stroke-width:1.9}
+html[data-fenix-pocket][data-grammar="phone-seed"] nav.tabs button.on{background:color-mix(in srgb,var(--brand-soft) 82%,transparent);color:var(--brand);border-radius:14px}
+html[data-fenix-pocket] .home-hero{background:transparent;border:0;box-shadow:none;padding:0}
+html[data-fenix-pocket] .fx-board,html[data-fenix-pocket] .fx-tank{display:none}
+html[data-fenix-pocket] .home-count,html[data-fenix-pocket] .home-hero>.btn{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+html[data-fenix-pocket] .fx-hello-row{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin:4px 0 4px}
+html[data-fenix-pocket] .fx-hello{margin:0;font:750 var(--fx-t-display)/1.05 var(--display),system-ui,sans-serif;letter-spacing:-.04em;color:var(--on-surface)}
+html[data-fenix-pocket] .fx-role{margin:4px 0 0;font:500 var(--fx-t-14)/1.3 var(--body),system-ui,sans-serif;color:var(--muted)}
+html[data-fenix-pocket] .fx-date{margin:0 0 16px;font:500 var(--fx-t-14)/1.3 var(--body),system-ui,sans-serif;color:color-mix(in srgb,var(--on-surface) 52%,var(--muted))}
+html[data-fenix-pocket] .fx-app-mark{width:48px;height:48px;border:0;border-radius:14px;background:var(--inverse);color:var(--brand-soft);display:grid;place-items:center;flex:0 0 48px;overflow:hidden;box-shadow:0 10px 22px color-mix(in srgb,var(--inverse) 36%,transparent)}
+html[data-fenix-pocket] .fx-app-mark svg{width:48px;height:48px;display:block}
+html[data-fenix-pocket] .home-first{margin:0 0 16px;padding:22px 18px;border:1px solid var(--border,var(--line));border-radius:22px;background:var(--surface);box-shadow:var(--shadow-card)}
+html[data-fenix-pocket] .home-first .mark{width:48px;height:48px;margin:0 0 14px;color:var(--brand)}
+html[data-fenix-pocket] .home-first .mark svg{width:48px;height:48px;display:block}
+html[data-fenix-pocket] .home-first h2{margin:0 0 8px;font:750 var(--fx-t-24)/1.15 var(--display),system-ui,sans-serif;letter-spacing:-.03em;color:var(--on-surface)}
+html[data-fenix-pocket] .home-first .notes{margin:0 0 16px;font:500 var(--fx-t-16)/1.45 var(--body),system-ui,sans-serif}
+html[data-fenix-pocket] .home-aside{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+html[data-fenix-pocket] .home-aside .card{margin:0;padding:16px;min-height:96px;border-radius:18px;background:var(--surface);box-shadow:var(--shadow-card);border-color:var(--border,var(--line))}
+html[data-fenix-pocket] .home-aside h2{font:700 var(--fx-t-20)/1.2 var(--display),system-ui,sans-serif;letter-spacing:-.02em}
+html[data-fenix-pocket] .home-recent{border-radius:18px;box-shadow:var(--shadow-card);background:var(--surface)}
+html[data-fenix-pocket] .card,.pocket-list,.wipe-box,[data-fenix-crud]{box-shadow:var(--shadow-card);border-radius:18px;background:var(--surface)}
+html[data-fenix-pocket] .fx-splash{background:var(--surface-2)}
+`;
+}
+
+function deskChromeCss(): string {
+  return `html[data-fenix-craft-desk] header .app-mark{width:44px;height:44px;border-radius:12px;overflow:hidden;background:var(--inverse);box-shadow:0 10px 22px color-mix(in srgb,var(--inverse) 28%,transparent)}
+html[data-fenix-craft-desk] header .app-mark svg{width:44px;height:44px;display:block}
+html[data-fenix-craft-desk] .desk-hello{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin:0 0 20px}
+html[data-fenix-craft-desk] .desk-hello .fx-hello{margin:0;font:750 var(--fx-t-display)/1.05 var(--display),system-ui,sans-serif;letter-spacing:-.04em;color:var(--on-surface)}
+html[data-fenix-craft-desk] .desk-hello .fx-role{margin:6px 0 0;font:500 var(--fx-t-14)/1.3 var(--body),system-ui,sans-serif;color:var(--muted)}
+html[data-fenix-craft-desk] .desk-empty{padding:28px 22px;border:1px solid var(--border,var(--line));border-radius:var(--fx-r3,18px);background:var(--surface);box-shadow:var(--shadow-card)}
+html[data-fenix-craft-desk] .desk-empty h2{margin:0 0 8px;font:750 var(--fx-t-24)/1.15 var(--display),system-ui,sans-serif;letter-spacing:-.03em}
+html[data-fenix-craft-desk] .kpis{gap:12px;background:transparent;border:0;border-radius:0}
+html[data-fenix-craft-desk] .kpi{border:1px solid var(--border,var(--line));border-radius:var(--fx-r2,12px);padding:18px 16px;min-height:104px;box-shadow:var(--shadow-card)}
+html[data-fenix-craft-desk] .kpi b{font-size:clamp(1.35rem,2.6vw,1.75rem)}
+html[data-fenix-craft-desk] .lane{box-shadow:var(--shadow-card);border-radius:var(--fx-r2,12px)}
+html[data-fenix-craft-desk] .table-wrap{box-shadow:var(--shadow-card)}
+html[data-fenix-craft-desk] .ledger-art{display:none}
+`;
+}
+
+/** System premium floor for unmatched app/site/gestionale/tool — not a sector kit. */
+function premiumFloorCss(): string {
+  return `html[data-fenix-premium] .brand{font-weight:750;letter-spacing:-.04em}
+html[data-fenix-premium] .fx-hello{margin:0;font:750 var(--fx-t-display)/1.05 var(--display),system-ui,sans-serif;letter-spacing:-.04em;color:var(--on-surface)}
+html[data-fenix-premium] .fx-role{margin:6px 0 0;font:500 var(--fx-t-14)/1.3 var(--body),system-ui,sans-serif;color:var(--muted)}
+html[data-fenix-premium] .fx-hello-row{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin:0 0 16px}
+html[data-fenix-premium] .fx-app-mark{width:48px;height:48px;border:0;border-radius:14px;background:var(--inverse);color:var(--brand-soft);display:grid;place-items:center;flex:0 0 48px;overflow:hidden;box-shadow:0 10px 22px color-mix(in srgb,var(--inverse) 36%,transparent)}
+html[data-fenix-premium] .fx-app-mark svg{width:48px;height:48px;display:block}
+html[data-fenix-premium] .app-mark{background:var(--inverse);overflow:hidden}
+html[data-fenix-premium] .mast-lead{padding:8px 0 24px}
+html[data-fenix-premium] .mast-lead .fx-hello{margin:8px 0 12px}
+html[data-fenix-premium] .home-first{margin:0 0 16px;padding:22px 18px;border:1px solid var(--border,var(--line));border-radius:22px;background:var(--surface);box-shadow:var(--shadow-card)}
+html[data-fenix-premium] .home-first .mark{width:48px;height:48px;margin:0 0 14px;color:var(--brand)}
+html[data-fenix-premium] .home-first .mark svg{width:48px;height:48px;display:block}
+html[data-fenix-premium] .home-first h2{margin:0 0 8px;font:750 var(--fx-t-24)/1.15 var(--display),system-ui,sans-serif;letter-spacing:-.03em}
+html[data-fenix-premium][data-grammar="magazine"] #copertina .hero,
+html[data-fenix-premium][data-grammar="pocket-tool"] .hero,
+html[data-fenix-premium][data-grammar="split-stage"] .hero,
+html[data-fenix-premium][data-grammar="service-board"] .hero{display:none;min-height:0;height:0;margin:0;border:0}
+html[data-fenix-premium][data-grammar="magazine"] #copertina{min-height:0;gap:16px}
+html[data-fenix-premium] .card,.home-first{box-shadow:var(--shadow-card)}
+`;
+}
+
+function premiumDeskBoot(spec: PipelineSpec): string {
+  return `<div class="desk-hello"><div><p class="fx-hello">${spec.name}</p><p class="fx-role">${spec.place}</p></div></div><section class="desk-empty" data-state="empty"><h2>Nessuna riga in ledger</h2><p class="notes">Registra la prima pratica. Qui non mostriamo KPI a zero come hero.</p><button class="btn" type="button" data-view="${spec.tabs[1]!.id}">${spec.cta}</button></section>`;
+}
+
+function premiumMagazineBoot(spec: PipelineSpec): string {
+  return `<section id="copertina" class="mast-lead" data-fenix-slot="home-boot"><p class="kicker">${spec.kicker}</p><h2 class="fx-hello">${spec.name}</h2><p class="fx-role">${spec.place}</p><div class="card span"><p class="notes">Fascicolo editoriale. Tipo e marche, niente stock e niente telefono boxed.</p></div></section>`;
+}
+
+function premiumTypeBoot(spec: PipelineSpec, mark: string): string {
+  return `<section class="home-overview" data-fenix-slot="home-boot"><div class="fx-hello-row"><div><p class="fx-hello">${spec.name}</p><p class="fx-role">${spec.place}</p></div><span class="fx-app-mark" data-fenix-id="icon:app" aria-hidden="true">${mark}</span></div><div class="home-first" data-state="empty"><div class="mark" aria-hidden="true">${mark}</div><h2>Niente in lista</h2><p class="notes">Aggiungi la prima voce. Qui non ci sono dati di prova.</p><button class="btn" type="button" data-view="${spec.tabs[1]!.id}">${spec.cta}</button></div></section>`;
+}
+
 function visualKitCss(t: DesignTokens, grammar: LayoutGrammar): string {
   const desk = grammar.chrome !== "tabs";
   return `${typeRampCss(t)}
@@ -1628,6 +1756,8 @@ function productHtml(spec: PipelineSpec, tokens: DesignTokens, grammar: LayoutGr
   const library = isLibraryBrief(spec.brief) && grammar.id === "phone-seed";
   const barber = isBarberBrief(spec.brief) && grammar.id === "agenda";
   const shop = isShopBrief(spec.brief) && grammar.id === "phone-seed" && !campo && !market && !luxe && !library;
+  const pocket = grammar.id === "phone-seed" && !campo && !market && !luxe && !library && !shop;
+  const premiumDefault = isPremiumDefaultBrief(spec.brief, tokens.family);
   const craftDomain: CraftDomain = campo
     ? "water"
     : market
@@ -1648,6 +1778,7 @@ function productHtml(spec: PipelineSpec, tokens: DesignTokens, grammar: LayoutGr
     barber,
     library,
     phone: grammar.id === "phone-seed" && !campo && !luxe,
+    premium: premiumDefault && !desk && !campo && !luxe,
   });
   const identityLabel = appIdentityLabel(spec.brief, tokens.family);
   const premiumMark = barber
@@ -1660,12 +1791,20 @@ function productHtml(spec: PipelineSpec, tokens: DesignTokens, grammar: LayoutGr
   const iconMark = barber ? premiumMark : campo ? crispWaterDropMarkSvg(spec.id) : premiumMark;
   const markHref = premiumMarkDataUri(iconMark);
   const bootDate = italianLongDate();
+  const pocketMark = pocketHomeHeaderMark(spec.brief, tokens.family);
   const pocketEmpty = library
     ? `<section class="home-overview" data-fenix-pane="home" data-fenix-slot="home-boot"><div class="home-hero"><div class="fx-hello-row"><div><p class="fx-hello">In scaffale</p><p class="fx-role">Sala lettura</p></div><span class="fx-app-mark" data-fenix-id="icon:app" aria-hidden="true">${libraryHomeHeaderMark()}</span></div><p class="fx-date">${bootDate}</p><div class="home-first" data-state="empty"><h2>Nessun libro in scaffale</h2><p class="notes">Il catalogo si riempie quando metti un titolo in scaffale.</p><button class="btn" type="button" data-act="fx-new">${spec.cta}</button></div></div></section>`
-    : `<section class="home-overview" data-fenix-pane="home" data-fenix-slot="home-boot"><div class="home-hero"><p class="kicker">Panoramica</p><p class="fx-date">${bootDate}</p><p class="home-count" data-count="0"><b>0</b><span>voci sul dispositivo</span></p><div class="home-first" data-state="empty"><div class="mark" aria-hidden="true">${POCKET_EMPTY_MARK}</div><h2>Niente in lista</h2><p class="notes">Aggiungi la prima voce. Qui non ci sono dati di prova.</p><button class="btn" type="button" data-view="${spec.tabs[1]!.id}">${spec.cta}</button></div></div><aside class="home-aside"><article class="card"><p class="kicker">Elenco</p><h2>Vuoto</h2><p class="notes">Le azioni restano nella lista.</p></article><article class="card"><p class="kicker">Privacy</p><h2>Solo qui</h2><p class="notes">Storage locale, senza profilo.</p></article></aside></section>`;
+    : campo
+      ? `<section class="home-overview" data-fenix-pane="home" data-fenix-slot="home-boot"><div class="home-hero"><div class="fx-hello-row"><div><p class="fx-hello">Missioni</p><p class="fx-role">Quadro di controllo</p></div><span class="fx-app-mark" data-fenix-id="icon:app" aria-hidden="true">${campoHomeHeaderMark()}</span></div><p class="fx-date">${bootDate}</p><div class="home-first" data-state="empty"><h2>Niente in lista</h2><p class="notes">Aggiungi la prima voce. Qui non ci sono dati di prova.</p><button class="btn" type="button" data-view="${spec.tabs[1]!.id}">${spec.cta}</button></div></div></section>`
+    : `<section class="home-overview" data-fenix-pane="home" data-fenix-slot="home-boot"><div class="home-hero"><div class="fx-hello-row"><div><p class="fx-hello">${spec.name}</p><p class="fx-role">${spec.place}</p></div><span class="fx-app-mark" data-fenix-id="icon:app" aria-hidden="true">${pocketMark}</span></div><p class="fx-date">${bootDate}</p><div class="home-first" data-state="empty"><div class="mark" aria-hidden="true">${pocketMark}</div><h2>Niente in lista</h2><p class="notes">Aggiungi la prima voce. Qui non ci sono dati di prova.</p><button class="btn" type="button" data-view="${spec.tabs[1]!.id}">${spec.cta}</button></div></div><aside class="home-aside"><article class="card"><p class="kicker">Elenco</p><h2>In tasca</h2><p class="notes">Le voci restano nella lista, con azioni visibili.</p></article><article class="card"><p class="kicker">Privacy</p><h2>Solo qui</h2><p class="notes">Storage locale, senza profilo inventato.</p></article></aside></section>`;
   const splash = desk
     ? ""
     : `<div class="fx-splash" id="fx-splash" data-fenix-splash data-fenix-slot="splash"><span class="fx-mark">${premiumMark}</span><strong>${spec.name}</strong><span class="fx-spin" aria-hidden="true"></span><p class="notes">${campo ? "Apertura" : grammar.voice.load}…</p></div>`;
+  const wantsPremiumBoot =
+    premiumDefault &&
+    grammar.id !== "agenda" &&
+    grammar.id !== "source-timeline" &&
+    grammar.id !== "phone-seed";
   const bootMain =
     grammar.id === "source-timeline"
       ? `<section class="repo-stage" data-repo-stage="activity"><div class="timeline-art">${hero}</div></section>`
@@ -1673,7 +1812,13 @@ function productHtml(spec: PipelineSpec, tokens: DesignTokens, grammar: LayoutGr
         ? agendaRailMarkup(spec, grammar)
         : grammar.id === "phone-seed"
           ? pocketEmpty
-          : `<div class="hero">${hero}</div>`;
+          : wantsPremiumBoot && grammar.id === "ops-desk"
+            ? premiumDeskBoot(spec)
+            : wantsPremiumBoot && grammar.id === "magazine"
+              ? premiumMagazineBoot(spec)
+              : wantsPremiumBoot
+                ? premiumTypeBoot(spec, pocketMark)
+                : `<div class="hero">${hero}</div>`;
   const navButtons = spec.tabs
     .map(
       (tab, i) =>
@@ -1692,7 +1837,7 @@ function productHtml(spec: PipelineSpec, tokens: DesignTokens, grammar: LayoutGr
             : "clamp(1.18rem, 2.2vw, 1.55rem)";
   const large = isOperationalApp(tokens) ? "2.125rem" : "1.75rem";
   return `<!DOCTYPE html>
-<html lang="it" data-family="${tokens.family}" data-grammar="${grammar.id}" data-chroma="${tokens.chroma}" data-intent-type="${graphicIntentFromBrief(spec.brief).type}" data-intent-chrome="${graphicIntentFromBrief(spec.brief).chrome}" data-craft-mode="${craftMode}" data-craft-rhythm="${craftRhythm}" data-craft-domain="${craftDomain}"${desk ? " data-fenix-craft-desk" : ""}${campo ? " data-fenix-campo" : ""}${market ? " data-fenix-market" : ""}${luxe ? " data-fenix-luxe" : ""}${library ? " data-fenix-libreria" : ""}${barber ? " data-fenix-barber" : ""}>
+<html lang="it" data-family="${tokens.family}" data-grammar="${grammar.id}" data-chroma="${tokens.chroma}" data-intent-type="${graphicIntentFromBrief(spec.brief).type}" data-intent-chrome="${graphicIntentFromBrief(spec.brief).chrome}" data-craft-mode="${craftMode}" data-craft-rhythm="${craftRhythm}" data-craft-domain="${craftDomain}"${desk ? " data-fenix-craft-desk" : ""}${campo ? " data-fenix-campo" : ""}${market ? " data-fenix-market" : ""}${luxe ? " data-fenix-luxe" : ""}${library ? " data-fenix-libreria" : ""}${barber ? " data-fenix-barber" : ""}${pocket ? " data-fenix-pocket" : ""}${premiumDefault ? " data-fenix-premium" : ""}>
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
@@ -1734,6 +1879,9 @@ ${market ? marketChromeCss() : ""}
 ${luxe ? luxeChromeCss() : ""}
 ${barber ? barberChromeCss() : ""}
 ${library ? libraryChromeCss() : ""}
+${pocket ? genericChromeCss() : ""}
+${premiumDefault ? premiumFloorCss() : ""}
+${desk ? deskChromeCss() : ""}
 </style>
 </head>
 <body>
@@ -1741,7 +1889,7 @@ ${splash}
 <div class="app"${deskAttr}>
 <header class="${headerExtra.trim()}">
   <div class="brand-group">
-    ${desk ? "" : `<span class="app-mark" data-fenix-id="icon:app" data-fenix-slot="mark" aria-hidden="true">${premiumMark}</span>`}
+    <span class="app-mark" data-fenix-id="icon:app" data-fenix-slot="mark" aria-hidden="true">${premiumMark}</span>
     <div>
     ${grammar.id === "phone-seed" || grammar.id === "agenda" ? "" : `<p class="kicker">${spec.kicker}</p>`}
     <h1 class="brand">${spec.name}</h1>
@@ -1766,9 +1914,9 @@ let view=${JSON.stringify(homeView)};
 let selectedDay="";
 let editId=null;
 var wipeAsk=false;
-const arts=${JSON.stringify(grammar.id === "phone-seed" || grammar.id === "agenda" ? [] : slices)};
-const meets=${JSON.stringify(grammar.id === "phone-seed" ? [] : meets)};
-const hero=${JSON.stringify(grammar.id === "phone-seed" ? "" : hero)};
+const arts=${JSON.stringify(grammar.id === "phone-seed" || grammar.id === "agenda" || wantsPremiumBoot ? [] : slices)};
+const meets=${JSON.stringify(grammar.id === "phone-seed" || wantsPremiumBoot ? [] : meets)};
+const hero=${JSON.stringify(grammar.id === "phone-seed" || wantsPremiumBoot ? "" : hero)};
 const tabDefs=${JSON.stringify(spec.tabs)};
 const glyphs=${JSON.stringify(spec.tabs.map((t, i) => tabSvg(t, i, campo, barber)))};
 const grammarId=${JSON.stringify(grammar.id)};
@@ -1786,6 +1934,8 @@ const luxeProduct=${luxe ? "true" : "false"};
 const shopProduct=${shop ? "true" : "false"};
 const libraryProduct=${library ? "true" : "false"};
 const barberProduct=${barber ? "true" : "false"};
+const pocketProduct=${pocket ? "true" : "false"};
+const premiumDefault=${premiumDefault ? "true" : "false"};
 const AGENDA_CYCLE={prenotato:"confermato",confermato:"in-corso","in-corso":"concluso",concluso:"prenotato"};
 const AGENDA_ACTION_LABELS=${JSON.stringify(AGENDA_ACTION_LABELS)};
 const AGENDA_STATUS_LABELS=${JSON.stringify(AGENDA_STATUS_LABELS)};
@@ -1797,6 +1947,7 @@ const FX_PAUSE_MARK=${JSON.stringify(FX_PAUSE_MARK)};
 const FX_CHEVRON_MARK=${JSON.stringify(FX_CHEVRON_MARK)};
 const FX_WATER_MARK=${JSON.stringify(campo ? campoHomeHeaderMark() : "")};
 const FX_BOOK_MARK=${JSON.stringify(library ? libraryHomeHeaderMark() : "")};
+const FX_POCKET_MARK=${JSON.stringify(pocket || premiumDefault ? pocketMark : "")};
 const FX_DROP_MARK='<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4.8s5.8 6.6 5.8 10.2a5.8 5.8 0 0 1-11.6 0C6.2 11.4 12 4.8 12 4.8z"/></svg>';
 (function dismissSplash(){
   var splash=document.getElementById("fx-splash");
@@ -2166,7 +2317,7 @@ ${grammar.id === "phone-seed" ? `function pocketLine(e){
   return parts.join(" · ");
 }
 function pocketEmptyInner(){
-  return '<div class="mark" aria-hidden="true">${POCKET_EMPTY_MARK}</div><h2>Niente in lista</h2><p class="notes">Aggiungi la prima voce. Qui non ci sono dati di prova.</p><button class="btn" type="button" data-view="'+tabDefs[1].id+'">'+cta+"</button>";
+  return '<div class="mark" aria-hidden="true">'+(FX_POCKET_MARK||'${POCKET_EMPTY_MARK}')+'</div><h2>Niente in lista</h2><p class="notes">Aggiungi la prima voce. Qui non ci sono dati di prova.</p><button class="btn" type="button" data-view="'+tabDefs[1].id+'">'+cta+"</button>";
 }
 function italianLongDateJs(){
   var raw=nowDate().toLocaleDateString("it-IT",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
@@ -2297,7 +2448,8 @@ function fxSceneCard(e){
       html+='<article class="card fx-shop" data-id="'+e.id+'"><p class="kicker">'+e.kicker+'</p><h2>'+e.title+'</h2><p class="notes">'+(e.note||"")+'</p><p class="fx-pay">'+(e.meta||"")+"</p></article>";
     });
   } else {
-    html+='<p class="kicker">Panoramica</p><p class="fx-date">'+italianLongDateJs()+"</p>"+fxBoardMarkup(n)+fxTankMarkup(n);
+    html+='<div class="fx-hello-row"><div><p class="fx-hello">'+specName()+'</p><p class="fx-role">'+place+'</p></div><span class="fx-app-mark" data-fenix-id="icon:app" aria-hidden="true">'+FX_POCKET_MARK+"</span></div>";
+    html+='<p class="fx-date">'+italianLongDateJs()+"</p>";
   }
   if(campoProduct){
     html+='<p class="home-count" data-count="'+n+'"><b>'+n+'</b><span>'+(n===1?"dipendente in campo":"dipendenti in campo")+"</span></p>";
@@ -2314,12 +2466,12 @@ function fxSceneCard(e){
   }
   if(!n){
     html+='<div class="home-first" data-state="empty">'+(libraryProduct?'<h2>Nessun libro in scaffale</h2><p class="notes">Il catalogo si riempie quando metti un titolo in scaffale.</p><button class="btn" type="button" data-view="nuovo">'+cta+"</button>":pocketEmptyInner())+"</div></div>";
-    if(!libraryProduct) html+='<aside class="home-aside"><article class="card"><p class="kicker">Elenco</p><h2>Vuoto</h2><p class="notes">Le azioni restano nella lista.</p></article><article class="card"><p class="kicker">Privacy</p><h2>Solo qui</h2><p class="notes">Storage locale, senza profilo.</p></article></aside>';
+    if(pocketProduct) html+='<aside class="home-aside"><article class="card"><p class="kicker">Elenco</p><h2>In tasca</h2><p class="notes">Le voci restano nella lista, con azioni visibili.</p></article><article class="card"><p class="kicker">Privacy</p><h2>Solo qui</h2><p class="notes">Storage locale, senza profilo inventato.</p></article></aside>';
   } else if(campoProduct || marketProduct || luxeProduct || shopProduct || libraryProduct){
     html+='<button class="btn" type="button" data-view="'+(libraryProduct?"nuovo":formId)+'">'+cta+"</button></div>";
   } else {
     html+='<p class="notes">Ultime voci dal dispositivo. Niente dati di prova.</p><button class="btn" type="button" data-view="'+tabDefs[1].id+'">'+cta+"</button></div>";
-    html+='<aside class="home-aside"><article class="card"><p class="kicker">Elenco</p><h2>'+n+(n===1?" voce":" voci")+'</h2><p class="notes">Apri Elenco per le azioni sulle voci.</p></article><article class="card"><p class="kicker">Privacy</p><h2>Solo qui</h2><p class="notes">Storage locale, senza profilo.</p></article></aside>';
+    html+='<aside class="home-aside"><article class="card"><p class="kicker">Elenco</p><h2>'+n+(n===1?" voce":" voci")+'</h2><p class="notes">Apri Elenco per le azioni sulle voci.</p></article><article class="card"><p class="kicker">Privacy</p><h2>Solo qui</h2><p class="notes">Storage locale, senza profilo inventato.</p></article></aside>';
     html+='<div class="home-recent" data-fenix-recent><p class="kicker">Recenti</p>';
     data.items.slice(0,3).forEach(function(e){
       var line=pocketLine(e);
@@ -2553,7 +2705,11 @@ function renderDesk(){
   var closed=data.items.length-open;
   var closedSum=Math.max(0,total-openSum);
   var avg=data.items.length?Math.round(total/data.items.length):0;
-  var html='<div class="ledger-art" aria-hidden="true">'+hero+"</div>";
+  var html='<div class="desk-hello"><div><p class="fx-hello">'+specName()+'</p><p class="fx-role">'+place+'</p></div></div>';
+  if(!data.items.length){
+    html+='<section class="desk-empty" data-state="empty"><h2>Nessuna riga in ledger</h2><p class="notes">Registra la prima pratica. Qui non mostriamo KPI a zero come hero.</p><button class="btn" type="button" data-view="'+tabDefs[1].id+'">'+cta+"</button></section>";
+    return html;
+  }
   html+='<div class="kpis">';
   html+='<div class="kpi" data-kpi="book"><span class="kicker">Book</span><b>'+fmtEuro(total)+"</b>"+spark(total||11,1)+"</div>";
   html+='<div class="kpi" data-kpi="open"><span class="kicker">Aperte</span><b>'+open+" · "+fmtEuro(openSum)+"</b>"+spark(openSum||13,.92)+"</div>";
@@ -2574,20 +2730,32 @@ function renderDesk(){
     html+='<tr data-id="'+e.id+'"><td>'+e.title+"</td><td>"+chip(e.kicker)+"</td><td>"+e.note+"</td><td>"+e.meta+"</td></tr>";
   });
   html+="</tbody></table></div>";
-  if(!data.items.length) html+=emptyBox();
   return html;
 }
 function renderMagazine(){
-  var html='<section id="copertina"><div class="hero">'+hero+'</div><div class="card span"><p class="kicker">'+kicker+"</p><h2>"+specName()+" in lastre</h2><p class=\\"notes\\">Rivista di lastre fotografiche. Niente stock, niente telefono boxed.</p></div></section>";
+${
+  premiumDefault
+    ? `  var html='<section id="copertina" class="mast-lead"><p class="kicker">'+kicker+'</p><h2 class="fx-hello">'+specName()+'</h2><p class="fx-role">'+place+'</p><div class="card span"><p class="notes">Fascicolo editoriale. Tipo e marche, niente stock e niente telefono boxed.</p></div></section>';
+  html+='<section id="lastre" class="lastre">';
+  data.items.forEach(function(e,i){
+    html+='<article class="plate card" data-id="'+e.id+'" data-act="wear" data-state="'+(i===0?"on":"idle")+'"><h2>'+e.title+'</h2><p class="notes">'+e.note+" · "+e.meta+"</p></article>";
+  });
+  html+="</section>";
+  html+='<section id="studio" class="card span"><p class="kicker">Fascicolo</p><h2>'+data.items.length+" lastre in fascicolo</h2><p class=\\"notes\\">"+place+"</p></section>";
+  html+=renderForm();
+  if(!data.items.length) html+=emptyBox();
+  return html;`
+    : `  var html='<section id="copertina"><div class="hero">'+hero+'</div><div class="card span"><p class="kicker">'+kicker+"</p><h2>"+specName()+" in lastre</h2><p class=\\"notes\\">Rivista di lastre fotografiche. Niente stock, niente telefono boxed.</p></div></section>";
   html+='<section id="lastre" class="lastre">';
   data.items.forEach(function(e,i){
     html+='<article class="plate card" data-id="'+e.id+'" data-act="wear" data-state="'+(i===0?"on":"idle")+'">'+artOf(e,"slice")+"<h2>"+e.title+'</h2><p class="notes">'+e.note+" · "+e.meta+"</p></article>";
   });
   html+="</section>";
-  html+='<section id="studio" class="card span"><p class="kicker">Studio</p><h2>'+data.items.length+" lastre in fascicolo</h2><p class=\\"notes\\">"+place+"</p></section>";
+  html+='<section id="studio" class="card span"><p class="kicker">Fascicolo</p><h2>'+data.items.length+" lastre in fascicolo</h2><p class=\\"notes\\">"+place+"</p></section>";
   html+=renderForm();
   if(!data.items.length) html+=emptyBox();
-  return html;
+  return html;`
+}
 }`}
 function specName(){ return ${JSON.stringify(spec.name)}; }
 /*fenix-slot:form*/function renderForm(){
@@ -2621,7 +2789,8 @@ ${grammar.id === "phone-seed" ? `function renderHome(){ return renderPocketHome(
   return html;
 }
 function renderStats(){
-  return '<div class="hero">'+hero+'</div><div class="card span"><p class="kicker">Studio</p><h2>'+data.items.length+" "+census+'</h2><p class="notes">'+place+"</p></div>";
+  if(premiumDefault) return '<div class="card span"><p class="kicker">Fascicolo</p><h2>'+data.items.length+" "+census+'</h2><p class="notes">'+place+"</p></div>";
+  return '<div class="hero">'+hero+'</div><div class="card span"><p class="kicker">Fascicolo</p><h2>'+data.items.length+" "+census+'</h2><p class="notes">'+place+"</p></div>";
 }
 function slotMarkup(e,i){
   var st=e.status||"prenotato";
@@ -2740,9 +2909,25 @@ function renderSource(mode){
   }
   return html;
 }
-function renderHome(){
+${
+  premiumDefault
+    ? `function renderPremiumHome(){
+  var html='<section class="home-overview" data-fenix-slot="home"><div class="fx-hello-row"><div><p class="fx-hello">'+specName()+'</p><p class="fx-role">'+place+'</p></div><span class="fx-app-mark" aria-hidden="true">'+FX_POCKET_MARK+"</span></div>";
+  if(!data.items.length){
+    html+='<div class="home-first" data-state="empty"><div class="mark" aria-hidden="true">'+FX_POCKET_MARK+'</div><h2>Niente in lista</h2><p class="notes">Aggiungi la prima voce. Qui non ci sono dati di prova.</p><button class="btn" type="button" data-view="'+tabDefs[1].id+'">'+cta+"</button></div>";
+    return html+"</section>";
+  }
+  data.items.forEach(function(e){
+    html+='<article class="card" data-id="'+e.id+'"><p class="kicker">'+e.kicker+'</p><h2>'+e.title+'</h2><p class="notes">'+(e.note||"")+(e.meta?" · "+e.meta:"")+"</p></article>";
+  });
+  return html+"</section>";
+}
+`
+    : ""
+}function renderHome(){
   if(grammarId==="lookbook") return renderLookbook();
   if(grammarId==="hospitality") return renderRooms();
+  if(premiumDefault && (grammarId==="service-board"||grammarId==="split-stage"||grammarId==="pocket-tool")) return renderPremiumHome();
   if(grammarId==="service-board") return renderTickets();
   if(grammarId==="ops-desk") return renderDesk();
   if(grammarId==="magazine") return renderMagazine();
@@ -2750,9 +2935,10 @@ function renderHome(){
   if(grammarId==="agenda") return renderAgenda();
   if(grammarId==="pocket-tool") return renderTool();
   if(grammarId==="phone-seed") return renderPocketHome();
-  return renderPerfume();
+  return premiumDefault?renderPremiumHome():renderPerfume();
 }
 function renderTool(){
+  if(premiumDefault) return renderPremiumHome();
   var html='<div class="hero">'+hero+'<div class="caption"><p class="kicker">'+kicker+"</p><h2>"+data.items.length+" "+census+"</h2></div></div>";
   if(!data.items.length) return html+emptyBox();
   data.items.forEach(function(e,i){
@@ -2973,6 +3159,10 @@ function polishFor(
         ? "Chrome da libreria: catalogo, prestiti, scaffali, scheda. Vietato Tavolo/Registra/Studio, 0-KPI Oggi/Media/Voci/Aperti, e desk STUDIO."
       : isBarberBrief(brief)
         ? "Chrome da salon cliente: tab Home/Prenota/I miei, serif editoriale Fraunces, espresso/crema/tan, hero con CTA Prenota dominante e atmosfera SVG originale, un solo mark forbici piene in header/favicon. Vietato quadrato vuoto, foto stock, Corto, Oggi/Nuovo/Settimana/Archivio e KPI in sala."
+      : isPremiumDefaultBrief(brief, tokens.family)
+        ? "Chrome premium di sistema: filled mark, gerarchia editoriale, layout calmo. Vietato Tavolo/Registra/Studio, 0-KPI, icone outline vuote, hero fotografico, desk utility come default."
+      : grammar.id === "phone-seed"
+        ? "Chrome da tasca premium: filled mark, gerarchia, card piene, tipo ritmato. Vietato Tavolo/Registra/Studio, 0-KPI Oggi/Media/Voci/Aperti come hero, icone outline doppie."
       : grammar.id === "agenda"
         ? "Chrome da agenda: binario orario, tab Oggi/Nuovo/Settimana/Archivio, tipo 17/headline, target 44px. Vietato hero KPI, tab Home/Elenco, riquadri vuoti."
         : grammar.chrome === "desk"

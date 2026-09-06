@@ -13,17 +13,18 @@ Collezioni Fenix.data: solo [A-Za-z0-9._-]{1,80}, mai "capi vesti".
 Ogni tab mostra una vista vera. Form: preventDefault, niente righe vuote.
 Restituisci META + FILE screens/home.html new list stats more + HTML montato.`;
 
-export const DASHBOARD_POLISH_INSTRUCTION = `SOSTITUISCI lo scheletro telefono (nav.fk-tab, header.fk-top, 5 tab iPhone) con un gestionale desktop.
-kind=dashboard. Header in alto o sidebar — MAI tabbar in basso, MAI class fk-tab.
+export const DASHBOARD_POLISH_INSTRUCTION = `SOSTITUISCI lo scheletro telefono (nav.fk-tab, header.fk-top, 5 tab iPhone) con un gestionale desktop premium.
+kind=dashboard. Header in alto o sidebar — MAI tabbar in basso, MAI class fk-tab, MAI chrome STUDIO/Tavolo.
+Filled mark in testata, gerarchia editoriale, card piene, tabella e pipeline vere. Vietato hero di 4 KPI a zero e admin sparso.
 Elenco/tabella con righe, filtri, form nuovo, numeri. Almeno 3 viste data-view.
 Lo schema è unico: ogni campo del form corrisponde alle colonne e all'entità del brief; mai campi inventario dentro un gestionale clienti o viceversa.
-CSS reale professionale (superfici chiare, gerarchia, tabella responsive, azioni, dialog, form), niente controlli browser nudi e niente palette marrone fangosa.
+CSS reale professionale (superfici chiare, contrasto forte, tabella responsive, azioni, dialog, form), niente controlli browser nudi e niente palette marrone fangosa.
 Tieni window.Fenix.load/save. Date in italiano.
 Restituisci META kind=dashboard + HTML completo montato.`;
 
-export const SITE_POLISH_INSTRUCTION = `FORMATO: sito web. kind=site. Rigenera un sito desktop, nav in alto, almeno 4 sezioni, footer.
-NON un'app telefono: niente nav.fk-tab, niente bottom-tab, niente template t-home, niente src/screens/*.tsx, niente 5 tab.
-Hero 16:9 persistita, testi veri, form con window.Fenix.load/save. Palette dal mestiere.`;
+export const SITE_POLISH_INSTRUCTION = `FORMATO: sito web. kind=site. Rigenera un sito desktop premium, nav in alto, almeno 4 sezioni, footer.
+NON un'app telefono: niente nav.fk-tab, niente bottom-tab, niente template t-home, niente src/screens/*.tsx, niente 5 tab, niente 0-KPI.
+Testata editoriale, filled mark, lastre/sezioni piene, gerarchia e contrasto. Tipo e marche, non foto stock. Vietato 0-KPI e STUDIO. Form con window.Fenix.load/save. Palette dal mestiere.`;
 
 
 export const APP_SHELL_HTML = `<!DOCTYPE html>

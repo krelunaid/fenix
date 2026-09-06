@@ -9,6 +9,7 @@ import {
   isFieldProductBrief,
   isLibraryBrief,
   isShopBrief,
+  isPremiumDefaultBrief,
   wantsCrispCraftMark,
 } from "./app-identity.ts";
 import { craftNavIcon } from "./craft-icons.ts";
@@ -93,13 +94,28 @@ describe("library and barber craft identity", () => {
     assert.notEqual(shears, book);
   });
 
-  it("asks a filled chip for barber, library, and generic utility/editorial/ops", () => {
+  it("asks a filled chip for barber, library, and unmatched generic/paper/ops", () => {
     assert.equal(wantsCrispCraftMark(BARBER_IPHONE_BRIEF, "booking"), true);
     assert.equal(wantsCrispCraftMark(LIBRARY_IPHONE_BRIEF, "paper"), true);
     assert.equal(wantsCrispCraftMark("Taglia foto ritaglio in tasca", "utility"), true);
     assert.equal(wantsCrispCraftMark("Atelier Carta: portfolio editoriale", "editorial"), true);
     assert.equal(wantsCrispCraftMark("Nord Ledger kpi di vendita pipeline vendite", "ops"), true);
+    assert.equal(wantsCrispCraftMark("Un diario per escursioni e sentieri", "paper"), true);
+    assert.equal(wantsCrispCraftMark("Note e promemoria per la giornata", ""), true);
     assert.equal(wantsCrispCraftMark("App acqua bottiglia: botte/serbatoio", "paper"), false);
     assert.equal(wantsCrispCraftMark("Essenza: gestione profumi da vendere", "perfume"), false);
+  });
+
+  it("treats unmatched app/site/desk/tool as the premium system floor, not sector kits", () => {
+    assert.equal(isPremiumDefaultBrief("Note e promemoria per la giornata", "paper"), true);
+    assert.equal(isPremiumDefaultBrief("FORMATO: sito web. kind=site. atlante delle maree", "paper"), true);
+    assert.equal(isPremiumDefaultBrief("Gestionale ufficio: pratiche, scadenze e clienti.", "paper"), true);
+    assert.equal(isPremiumDefaultBrief("Segnale Mono: strumento a contrasto alto", "paper"), true);
+    assert.equal(isPremiumDefaultBrief(ACQUA_BOTTIGLIA_BRIEF, "paper"), false);
+    assert.equal(isPremiumDefaultBrief(BARBER_IPHONE_BRIEF, "booking"), false);
+    assert.equal(isPremiumDefaultBrief(LIBRARY_IPHONE_BRIEF, "paper"), false);
+    assert.equal(isPremiumDefaultBrief("Essenza: gestione profumi da vendere", "perfume"), false);
+    assert.equal(appIdentityLabel("Note e promemoria per la giornata", "paper"), "Elenco");
+    assert.notEqual(appIdentityLabel("Note e promemoria per la giornata", "paper"), "Ufficio");
   });
 });
