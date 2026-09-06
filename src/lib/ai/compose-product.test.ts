@@ -1139,7 +1139,6 @@ describe("graphic pipeline prompt→plan→generate→visual→QA", () => {
     assert.match(splash, /data-fenix-shears-fill="1"/);
     assert.match(splash, /salon-cta-prenota/);
     assert.match(splash, /data-view="prenota">Prenota →/);
-    assert.match(product.html, /salon-header-prenota/);
     assert.match(product.html, /<header[\s\S]*data-view="prenota">Prenota<\/button>/);
     assert.match(hero, /<path /);
     assert.doesNotMatch(hero, /<img\b|unsplash|pexels|corto/i);

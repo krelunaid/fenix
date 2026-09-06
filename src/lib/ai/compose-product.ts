@@ -1508,9 +1508,6 @@ html[data-fenix-luxe] .fx-splash .fx-mark{box-shadow:var(--shadow-float)}
 function barberChromeCss(): string {
   return `html[data-fenix-barber],html[data-fenix-barber] body{background-color:#0B0908;background-image:radial-gradient(90% 50% at 80% -10%,color-mix(in srgb,#D2BFA6 18%,transparent),transparent 58%),radial-gradient(70% 40% at 0% 100%,color-mix(in srgb,#D2BFA6 8%,transparent),transparent 62%);color:#F4EEE6}
 html[data-fenix-barber] header{position:sticky;top:0;z-index:6;padding:14px 18px 12px;background:color-mix(in srgb,#0B0908 82%,transparent);-webkit-backdrop-filter:saturate(1.4) blur(16px);backdrop-filter:saturate(1.4) blur(16px)}
-html[data-fenix-barber] .salon-header-prenota{flex:0 0 auto;min-height:40px;padding:8px 16px;border-radius:999px;background:#D2BFA6;color:#0B0908;font:700 14px/1 var(--body),system-ui,sans-serif}
-html[data-fenix-barber] .salon-splash-cta{margin-top:18px;width:min(280px,80%)}
-html[data-fenix-barber] .salon-splash-cta .salon-cta-prenota{width:100%}
 html[data-fenix-barber] .brand{font-family:var(--display),ui-serif,Georgia,serif;font-weight:650;letter-spacing:-.04em;color:#F4EEE6}
 html[data-fenix-barber] .place{letter-spacing:.16em;text-transform:uppercase;font:650 11px/1.3 var(--body),system-ui,sans-serif;color:#D2BFA6}
 html[data-fenix-barber] header .app-mark{width:48px;height:48px;flex:0 0 48px;background:transparent;box-shadow:0 8px 18px rgba(11,9,8,.45);overflow:visible;border-radius:14px}
@@ -1803,7 +1800,7 @@ function productHtml(spec: PipelineSpec, tokens: DesignTokens, grammar: LayoutGr
   const splash = desk
     ? ""
     : barber
-      ? `<div class="fx-splash" id="fx-splash" data-fenix-splash data-fenix-slot="splash"><span class="fx-mark">${premiumMark}</span><strong>${spec.name}</strong><div class="salon-hero-cta salon-splash-cta"><button class="btn salon-cta-prenota" type="button" data-view="prenota">Prenota →</button></div></div>`
+      ? `<div class="fx-splash" id="fx-splash" data-fenix-splash data-fenix-slot="splash"><span class="fx-mark">${premiumMark}</span><strong>${spec.name}</strong><button class="btn salon-cta-prenota" type="button" data-view="prenota">Prenota →</button></div>`
       : `<div class="fx-splash" id="fx-splash" data-fenix-splash data-fenix-slot="splash"><span class="fx-mark">${premiumMark}</span><strong>${spec.name}</strong><span class="fx-spin" aria-hidden="true"></span><p class="notes">${campo ? "Apertura" : grammar.voice.load}…</p></div>`;
   const wantsPremiumBoot =
     premiumDefault &&
@@ -1900,7 +1897,7 @@ ${splash}
     <h1 class="brand">${spec.name}</h1>
     </div>
   </div>
-  ${barber ? `<button class="btn salon-cta-prenota salon-header-prenota" type="button" data-view="prenota">Prenota</button>` : `<p class="place">${spec.place}</p>`}
+  ${barber ? `<button class="btn salon-cta-prenota" type="button" data-view="prenota">Prenota</button>` : `<p class="place">${spec.place}</p>`}
 </header>
 <nav class="${navClass}" id="tabs" aria-label="Navigazione">
 ${navButtons}
@@ -1958,23 +1955,23 @@ const FX_DROP_MARK='<svg viewBox="0 0 24 24" width="22" height="22" fill="none" 
   var splash=document.getElementById("fx-splash");
   if(!splash) return;
   if(document.documentElement.getAttribute("data-fx-splash")==="hold") return;
-  setTimeout(function(){ splash.setAttribute("hidden",""); }, barberProduct?180:720);
-  splash.addEventListener("click",function(e){
+  setTimeout(function(){ splash.setAttribute("hidden",""); }, ${barber ? 180 : 720});
+${barber ? `  splash.addEventListener("click",function(e){
     var b=e.target.closest("[data-view]");
     if(!b) return;
     view=b.getAttribute("data-view")||view;
     splash.setAttribute("hidden","");
     render();
-  });
+  });` : ""}
 })();
-document.querySelector("header") && document.querySelector("header").addEventListener("click",function(e){
+${barber ? `document.querySelector("header")&&document.querySelector("header").addEventListener("click",function(e){
   var b=e.target.closest("[data-view]");
   if(!b) return;
   view=b.getAttribute("data-view")||view;
   var splash=document.getElementById("fx-splash");
   if(splash) splash.setAttribute("hidden","");
   render();
-});
+});` : ""}
 const KICKER_CYCLE={scouting:"trattativa",trattativa:"firma",firma:"chiuso",chiuso:"scouting","in-forno":"al-passo","al-passo":"in-sala","in-sala":"in-forno",arrivo:"in-house","in-house":"partenza",partenza:"arrivo"};
 function artOf(item, fit){
   var slot=0;

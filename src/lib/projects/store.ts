@@ -468,7 +468,8 @@ export const useProjectStore = create<ProjectStore>()(
             html: composed.html,
             files: composed.files,
             palette: composed.tokens.palette,
-            ...snap,
+            lastStableHtml: snap.lastStableHtml ?? composed.html,
+            lastStableFiles: snap.lastStableFiles ?? composed.files,
           };
           set((s) => ({ projects: trimList([seeded, ...s.projects]) }));
           rememberLiveStudio(seeded);
