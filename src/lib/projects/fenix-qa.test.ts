@@ -654,8 +654,6 @@ describe("focus-visible and worker model", () => {
     const edge = readFileSync(join(root, "netlify/edge-functions/build.ts"), "utf8");
     assert.match(edge, /SITE_PROMPT/);
     assert.match(edge, /const desk = lockKind === "site"/);
-    assert.match(edge, /if \(composed && result\)/);
-    assert.match(edge, /finish\(\{ t: "ok", result \}\)/);
     assert.doesNotMatch(runBuild, /Pronto\. \$\{result\.name\} è in anteprima/);
     const resume = runBuild.slice(
       runBuild.indexOf("export async function resumePolish"),

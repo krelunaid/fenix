@@ -639,13 +639,6 @@ export default async function build(request: Request) {
               ),
             });
           }
-          // Composed creates already have a valid seed/plan. Extra Edge repair
-          // passes (45s each) blow the ~50s isolate kill and drop the stream
-          // before the client stores HTML ("Interrotto. Riprova.").
-          if (composed && result) {
-            finish({ t: "ok", result });
-            return;
-          }
           const gated = await gateResult(apiKey, prompt, result, send, contract, compositionPalette, instruction);
           if ("error" in gated) finish({ t: "err", error: gated.error });
           else finish({ t: "ok", result: gated.result });

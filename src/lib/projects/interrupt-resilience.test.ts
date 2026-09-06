@@ -82,7 +82,5 @@ describe("interrupted generation resilience", () => {
     assert.match(runBuild, /Resta la bozza composta/);
     const home = readFileSync(join(root, "routes/index.tsx"), "utf8");
     assert.match(home, /if \(!hydrated\) return;/);
-    const edge = readFileSync(join(root, "../netlify/edge-functions/build.ts"), "utf8");
-    assert.match(edge, /if \(composed && result\) \{\s*finish\(\{ t: "ok", result \}\);/s);
   });
 });
