@@ -841,7 +841,9 @@ describe("graphic pipeline prompt→plan→generate→visual→QA", () => {
     const bootHome = system.html.match(/<main id="root"[^>]*>([\s\S]*?)<\/main>/)?.[1] || "";
     assert.match(bootHome, /data-fenix-pane="home"/);
     assert.match(bootHome, /home-aside/);
-    assert.match(bootHome, /Panoramica/);
+    assert.match(bootHome, /fx-hello/);
+    assert.match(bootHome, /Niente in lista/);
+    assert.doesNotMatch(bootHome, /Panoramica|fx-board|fx-tank|<b>0<\/b>/);
     assert.doesNotMatch(bootHome, /pocket-list/);
     assert.doesNotMatch(bootHome, /data-fenix-pane="persona"/);
     assert.match(system.html, /html\+='<ul class="pocket-list">'/);
