@@ -1073,11 +1073,13 @@ describe("graphic pipeline prompt→plan→generate→visual→QA", () => {
     assert.equal(appIdentityLabel(libraryBrief, library.tokens.family), "Libri");
     assert.match(barberMark, /data-fenix-barber-mark="1"/);
     assert.match(barberMark, /data-fenix-shears-fill="1"/);
+    assert.match(barberMark, /data-fenix-shears-defined="1"/);
     assert.match(barberMark, /data-fenix-crisp-mark="1"/);
-    assert.match(barberMark, /M10\.2 17\.6 19\.2 3\.8/);
+    assert.match(barberMark, /M22\.8 3\.9 26\.4 6\.85/);
+    assert.match(barberMark, /fill-rule="evenodd"/);
     assert.match(barberMark, /<path /);
     assert.match(barberMark, /#0B0908|#1C1612/);
-    assert.doesNotMatch(barberMark, /fill="none"|fill-opacity="\.18"/);
+    assert.doesNotMatch(barberMark, /fill-opacity="\.18"/);
     assert.match(libraryMark, /data-fenix-book-mark="1"/);
     assert.match(libraryMark, /M8\.2 6\.2h13\.4/);
     assert.doesNotMatch(libraryMark, /fill="none"|fill-opacity="\.18"/);
@@ -1157,16 +1159,27 @@ describe("graphic pipeline prompt→plan→generate→visual→QA", () => {
     const favicon = decodeURIComponent(iconHref.replace(/^data:image\/svg\+xml;charset=utf-8,/, ""));
     assert.match(headerMark, /data-fenix-barber-mark="1"/);
     assert.match(headerMark, /data-fenix-shears-fill="1"/);
-    assert.match(headerMark, /M10\.2 17\.6 19\.2 3\.8/);
+    assert.match(headerMark, /data-fenix-shears-defined="1"/);
+    assert.match(headerMark, /M22\.8 3\.9 26\.4 6\.85/);
+    assert.match(headerMark, /fill-rule="evenodd"/);
     assert.match(headerMark, /<path /);
     assert.match(favicon, /data-fenix-barber-mark="1"/);
     assert.match(favicon, /data-fenix-shears-fill="1"/);
-    assert.match(favicon, /M10\.2 17\.6 19\.2 3\.8/);
+    assert.match(favicon, /data-fenix-shears-defined="1"/);
+    assert.match(favicon, /M22\.8 3\.9 26\.4 6\.85/);
     assert.equal(iconHref, touchHref);
-    assert.doesNotMatch(headerMark, /fill="none"|fill-opacity="\.18"/);
+    assert.doesNotMatch(headerMark, /fill-opacity="\.18"/);
     assert.doesNotMatch(product.html, /FX_BARBER_MARK/);
     assert.match(product.html, /Fraunces/);
+    assert.match(product.html, /9\.\.144,800/);
     assert.match(product.html, /#0B0908|#F4EEE6|#D2BFA6/i);
+    assert.match(product.html, /html\[data-fenix-barber\] header\{[^}]*blur\(8px\)/);
+    assert.match(product.html, /html\[data-fenix-barber\] nav\.tabs\{[^}]*blur\(6px\)/);
+    assert.match(product.html, /html\[data-fenix-barber\] \.salon-display\{[^}]*font:800/);
+    assert.match(product.html, /\.btn\.salon-cta-prenota\{[^}]*border:1\.5px solid #E4D3B8/);
+    assert.match(product.html, /\.btn\.salon-cta-prenota:active\{[^}]*background:#C4A882/);
+    assert.match(product.html, /border:1px solid #4A3C30/);
+    assert.doesNotMatch(product.html, /html\[data-fenix-barber\] nav\.tabs\{[^}]*blur\(18px\)/);
     assert.equal(product.tokens.fonts.display, "Fraunces");
     assert.equal(product.tokens.fonts.body, "Figtree");
     assert.equal(product.tokens.palette.accent.toLowerCase(), "#d2bfa6");
@@ -1179,7 +1192,8 @@ describe("graphic pipeline prompt→plan→generate→visual→QA", () => {
     assert.doesNotMatch(product.html, /M10 7V5\.8A1\.8|M4 12h10M11\.2 8\.8/);
     const mark = barberHomeHeaderMark();
     assert.match(mark, /data-fenix-barber-mark="1"/);
-    assert.match(mark, /M10\.2 17\.6 19\.2 3\.8/);
+    assert.match(mark, /data-fenix-shears-defined="1"/);
+    assert.match(mark, /M22\.8 3\.9 26\.4 6\.85/);
     const water = composeProduct(
       formatPrefix("app") +
         "App acqua bottiglia: home con botte/serbatoio acqua, livello, e tab Ordina. Stile iPhone.",

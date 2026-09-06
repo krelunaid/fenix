@@ -1746,7 +1746,7 @@ describe("graphic pipeline visual QA D/T/M", () => {
       {
         brief: formatPrefix("app") + "App barbiere: agenda tagli e clienti, stile iPhone.",
         attr: "data-fenix-barber-mark",
-        path: "M10.2 17.6 19.2 3.8",
+        path: "M22.8 3.9 26.4 6.85",
       },
       {
         brief: formatPrefix("app") + "App libreria: catalogo libri, prestiti e scaffali, stile iPhone.",
@@ -1787,8 +1787,10 @@ describe("graphic pipeline visual QA D/T/M", () => {
             return {
               attr: mark?.getAttribute(attr),
               shearsFill: mark?.getAttribute("data-fenix-shears-fill"),
+              shearsDefined: mark?.getAttribute("data-fenix-shears-defined"),
               crisp: mark?.getAttribute("data-fenix-crisp-mark"),
-              path: mark?.innerHTML.includes("M10.2") || mark?.innerHTML.includes("M8.2") || false,
+              path: mark?.innerHTML.includes("M22.8") || mark?.innerHTML.includes("M8.2") || false,
+              evenodd: mark?.innerHTML.includes('fill-rule="evenodd"') || false,
               pathCount,
               filled,
               chipW: chip?.getBoundingClientRect().width ?? 0,
@@ -1797,7 +1799,15 @@ describe("graphic pipeline visual QA D/T/M", () => {
               headerHidden,
               appMarks: document.querySelectorAll('[data-fenix-id="icon:app"]').length,
               homeMarks: document.querySelectorAll(".fx-app-mark").length,
-              faviconShears: favicon.includes("data-fenix-shears-fill") && favicon.includes("M10.2"),
+              faviconShears: favicon.includes("data-fenix-shears-fill") && favicon.includes("M22.8"),
+              prenotaBorder: prenota ? getComputedStyle(prenota).borderTopWidth : "",
+              displayWeight: display ? getComputedStyle(display).fontWeight : "",
+              tabBlur: (() => {
+                const el = document.querySelector("nav.tabs");
+                if (!el) return "";
+                const s = getComputedStyle(el);
+                return s.backdropFilter || String((s as unknown as { webkitBackdropFilter?: string }).webkitBackdropFilter || "");
+              })(),
               faviconBook: favicon.includes("data-fenix-book-mark"),
               transparentChip: !rgb || (Number(rgb[1]) === 0 && Number(rgb[2]) === 0 && Number(rgb[3]) === 0) || bg === "transparent",
               appleTouch: !!document.querySelector('link[rel="apple-touch-icon"]'),
@@ -1819,12 +1829,17 @@ describe("graphic pipeline visual QA D/T/M", () => {
           assert.equal(paint.exit, false);
           if (row.attr === "data-fenix-barber-mark") {
             assert.equal(paint.shearsFill, "1");
-            assert.ok(paint.pathCount >= 2, `shears need blade paths, got ${paint.pathCount}`);
+            assert.equal(paint.shearsDefined, "1");
+            assert.equal(paint.evenodd, true);
+            assert.ok(paint.pathCount >= 4, `shears need tapered blades + rings, got ${paint.pathCount}`);
             assert.equal(paint.appMarks, 1, "barber keeps one header shears mark");
             assert.equal(paint.homeMarks, 0, "barber Home does not add a second chip");
             assert.equal(paint.headerHidden, false);
             assert.equal(paint.faviconShears, true);
             assert.ok(paint.prenotaH >= 48, `Prenota CTA ${paint.prenotaH}`);
+            assert.ok(parseFloat(paint.prenotaBorder) >= 1.4, `Prenota edge ${paint.prenotaBorder}`);
+            assert.ok(Number(paint.displayWeight) >= 700, `display weight ${paint.displayWeight}`);
+            assert.match(String(paint.tabBlur), /blur\(([1-9]|1[0-2])px\)|none/i);
             assert.match(paint.prenotaText, /Prenota/);
             assert.match(paint.mieiText, /I miei appuntamenti/);
             assert.match(paint.displayFont, /Fraunces|Georgia|serif/i);

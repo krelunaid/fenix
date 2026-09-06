@@ -722,29 +722,29 @@ function barberAtmosphereSvg(): string {
 </defs>
 <rect width="390" height="460" fill="url(#sa-bg)"/>
 <rect width="390" height="460" fill="url(#sa-lamp)"/>
-<rect x="214" y="36" width="156" height="168" rx="10" fill="url(#sa-wood)"/>
-<rect x="226" y="50" width="132" height="58" rx="6" fill="#0B0908"/>
+<rect x="214" y="36" width="156" height="168" rx="10" fill="url(#sa-wood)" stroke="#D2BFA6" stroke-opacity=".28"/>
+<rect x="226" y="50" width="132" height="58" rx="6" fill="#0B0908" stroke="#4A3C30"/>
 <rect x="234" y="62" width="18" height="36" rx="6" fill="#C4A882"/>
 <rect x="258" y="58" width="22" height="40" rx="7" fill="#D2BFA6"/>
 <rect x="286" y="64" width="16" height="34" rx="6" fill="#8A6A4A"/>
 <rect x="308" y="60" width="20" height="38" rx="7" fill="#E4D3B8"/>
-<ellipse cx="243" cy="60" rx="8" ry="4" fill="#F4EEE6" opacity=".45"/>
-<ellipse cx="269" cy="56" rx="9" ry="4" fill="#F4EEE6" opacity=".5"/>
-<rect x="226" y="122" width="132" height="66" rx="6" fill="#16110E"/>
-<path d="M238 168h108" stroke="#D2BFA6" stroke-opacity=".28"/>
+<ellipse cx="243" cy="60" rx="8" ry="4" fill="#F4EEE6" opacity=".55"/>
+<ellipse cx="269" cy="56" rx="9" ry="4" fill="#F4EEE6" opacity=".6"/>
+<rect x="226" y="122" width="132" height="66" rx="6" fill="#16110E" stroke="#4A3C30"/>
+<path d="M238 168h108" stroke="#D2BFA6" stroke-opacity=".42"/>
 <rect x="18" y="248" width="354" height="14" rx="3" fill="#2A221C"/>
 <ellipse cx="118" cy="248" rx="78" ry="11" fill="#0B0908" opacity=".45"/>
-<path d="M52 248c8-54 28-92 66-92s58 38 66 92" fill="url(#sa-leather)"/>
-<rect x="96" y="86" width="44" height="78" rx="18" fill="#2A221C"/>
+<path d="M52 248c8-54 28-92 66-92s58 38 66 92" fill="url(#sa-leather)" stroke="#4A3C30"/>
+<rect x="96" y="86" width="44" height="78" rx="18" fill="#2A221C" stroke="#4A3C30"/>
 <rect x="108" y="48" width="20" height="46" rx="6" fill="url(#sa-chrome)"/>
 <ellipse cx="118" cy="46" rx="16" ry="7" fill="#D2BFA6"/>
 <rect x="108" y="248" width="20" height="18" rx="3" fill="#3A2E24"/>
-<rect x="248" y="214" width="118" height="34" rx="8" fill="#1C1612"/>
+<rect x="248" y="214" width="118" height="34" rx="8" fill="#1C1612" stroke="#4A3C30"/>
 <rect x="260" y="222" width="54" height="10" rx="2" fill="#D2BFA6"/>
-<path d="M328 220 368 238 360 254 320 236z" fill="#C4A882"/>
+<path d="M328 220 368 238 360 254 320 236z" fill="#C4A882" stroke="#E4D3B8" stroke-width=".8"/>
 <circle cx="334" cy="232" r="5" fill="#F4EEE6"/>
 <circle cx="356" cy="246" r="5" fill="#F4EEE6"/>
-<path d="M24 430h342" stroke="#D2BFA6" stroke-opacity=".16" stroke-width="2"/>
+<path d="M24 430h342" stroke="#D2BFA6" stroke-opacity=".28" stroke-width="2"/>
 </svg>`;
 }
 
@@ -1506,50 +1506,53 @@ html[data-fenix-luxe] .fx-splash .fx-mark{box-shadow:var(--shadow-float)}
 }
 
 function barberChromeCss(): string {
-  return `html[data-fenix-barber],html[data-fenix-barber] body{background-color:#0B0908;background-image:radial-gradient(90% 50% at 80% -10%,color-mix(in srgb,#D2BFA6 18%,transparent),transparent 58%),radial-gradient(70% 40% at 0% 100%,color-mix(in srgb,#D2BFA6 8%,transparent),transparent 62%);color:#F4EEE6}
-html[data-fenix-barber] header{position:sticky;top:0;z-index:6;padding:14px 18px 12px;background:color-mix(in srgb,#0B0908 82%,transparent);-webkit-backdrop-filter:saturate(1.4) blur(16px);backdrop-filter:saturate(1.4) blur(16px)}
-html[data-fenix-barber] .brand{font-family:var(--display),ui-serif,Georgia,serif;font-weight:650;letter-spacing:-.04em;color:#F4EEE6}
-html[data-fenix-barber] .place{letter-spacing:.16em;text-transform:uppercase;font:650 11px/1.3 var(--body),system-ui,sans-serif;color:#D2BFA6}
-html[data-fenix-barber] header .app-mark{width:48px;height:48px;flex:0 0 48px;background:transparent;box-shadow:0 8px 18px rgba(11,9,8,.45);overflow:visible;border-radius:14px}
+  return `html[data-fenix-barber],html[data-fenix-barber] body{background-color:#0B0908;background-image:radial-gradient(80% 42% at 82% -8%,color-mix(in srgb,#D2BFA6 10%,transparent),transparent 56%),radial-gradient(62% 34% at 0% 100%,color-mix(in srgb,#D2BFA6 6%,transparent),transparent 60%);color:#F4EEE6}
+html[data-fenix-barber] header{position:sticky;top:0;z-index:6;padding:14px 18px 12px;background:color-mix(in srgb,#0B0908 94%,transparent);border-bottom:1px solid #4A3C30;-webkit-backdrop-filter:saturate(1.15) blur(8px);backdrop-filter:saturate(1.15) blur(8px)}
+html[data-fenix-barber] .brand{font-family:var(--display),ui-serif,Georgia,serif;font-weight:750;letter-spacing:-.046em;color:#F4EEE6}
+html[data-fenix-barber] .place{letter-spacing:.18em;text-transform:uppercase;font:700 10.5px/1.25 var(--body),system-ui,sans-serif;color:#D2BFA6}
+html[data-fenix-barber] header .app-mark{width:48px;height:48px;flex:0 0 48px;background:transparent;box-shadow:0 1px 0 rgba(228,211,184,.22),0 6px 12px rgba(0,0,0,.45);overflow:visible;border-radius:12px}
 html[data-fenix-barber] header .app-mark svg,html[data-fenix-barber] header .app-mark svg[data-fenix-premium-mark]{width:48px;height:48px;display:block}
-html[data-fenix-barber] nav.tabs{grid-template-columns:repeat(3,minmax(0,1fr));margin:0 12px calc(10px + env(safe-area-inset-bottom));border:1px solid #3A2E24;border-top-color:#3A2E24;border-radius:22px;background:color-mix(in srgb,#16110E 92%,transparent);box-shadow:0 -10px 28px rgba(0,0,0,.35);-webkit-backdrop-filter:saturate(1.5) blur(18px);backdrop-filter:saturate(1.5) blur(18px)}
-html[data-fenix-barber] nav.tabs svg{width:24px;height:24px;stroke-width:1.9}
-html[data-fenix-barber][data-grammar="agenda"] nav.tabs button.on{background:#1C1612;color:#D2BFA6;border-radius:16px}
-html[data-fenix-barber] .kicker,.salon-kicker{letter-spacing:.16em;text-transform:uppercase;font:650 11px/1.3 var(--body),system-ui,sans-serif;color:#D2BFA6}
+html[data-fenix-barber] nav.tabs{grid-template-columns:repeat(3,minmax(0,1fr));margin:0 12px calc(10px + env(safe-area-inset-bottom));border:1px solid #4A3C30;border-top-color:#4A3C30;border-radius:20px;background:#16110E;box-shadow:0 1px 0 rgba(228,211,184,.14),0 -6px 16px rgba(0,0,0,.4);-webkit-backdrop-filter:saturate(1.1) blur(6px);backdrop-filter:saturate(1.1) blur(6px)}
+html[data-fenix-barber] nav.tabs svg{width:24px;height:24px;stroke-width:2.05}
+html[data-fenix-barber][data-grammar="agenda"] nav.tabs button.on{background:#1C1612;color:#E4D3B8;border:1px solid #D2BFA6;border-radius:14px;box-shadow:inset 0 1px 0 rgba(244,238,230,.12)}
+html[data-fenix-barber] .kicker,.salon-kicker{letter-spacing:.18em;text-transform:uppercase;font:700 10.5px/1.25 var(--body),system-ui,sans-serif;color:#D2BFA6}
 html[data-fenix-barber] .fx-hello-row{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin:2px 0 10px}
-html[data-fenix-barber] .fx-hello{margin:0;font:600 var(--fx-t-display)/1.05 var(--display),ui-serif,Georgia,serif;letter-spacing:-.03em;color:#F4EEE6}
-html[data-fenix-barber] .fx-role{margin:0 0 4px;font:650 11px/1.3 var(--body),system-ui,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#D2BFA6}
-html[data-fenix-barber] .fx-app-mark{width:48px;height:48px;border:0;border-radius:14px;background:#16110E;color:#D2BFA6;display:grid;place-items:center;flex:0 0 48px;overflow:hidden;box-shadow:0 10px 22px rgba(0,0,0,.4)}
+html[data-fenix-barber] .fx-hello{margin:0;font:750 var(--fx-t-display)/1.02 var(--display),ui-serif,Georgia,serif;letter-spacing:-.042em;color:#F4EEE6}
+html[data-fenix-barber] .fx-role{margin:0 0 4px;font:700 10.5px/1.25 var(--body),system-ui,sans-serif;letter-spacing:.18em;text-transform:uppercase;color:#D2BFA6}
+html[data-fenix-barber] .fx-app-mark{width:48px;height:48px;border:1px solid #4A3C30;border-radius:12px;background:#16110E;color:#D2BFA6;display:grid;place-items:center;flex:0 0 48px;overflow:hidden;box-shadow:0 1px 0 rgba(228,211,184,.16),0 6px 12px rgba(0,0,0,.42)}
 html[data-fenix-barber] .fx-app-mark svg{width:48px;height:48px;display:block}
-html[data-fenix-barber] .salon-display{margin:0 0 10px;font:700 clamp(2.2rem,9vw,2.9rem)/1.02 var(--display),ui-serif,Georgia,serif;letter-spacing:-.038em;color:#F4EEE6}
-html[data-fenix-barber] .salon-lead{margin:0 0 4px;max-width:32ch;font:400 15px/1.45 var(--body),system-ui,sans-serif;color:#B9A894}
-html[data-fenix-barber] .salon-hero{position:relative;margin:0 0 18px;border-radius:24px;overflow:hidden;border:1px solid #3A2E24;background:#16110E;min-height:min(48vw,260px);display:flex;flex-direction:column;justify-content:flex-end}
+html[data-fenix-barber] .salon-display{margin:0 0 10px;font:800 clamp(2.28rem,9.2vw,3.05rem)/1 var(--display),ui-serif,Georgia,serif;letter-spacing:-.044em;color:#F4EEE6}
+html[data-fenix-barber] .salon-lead{margin:0 0 4px;max-width:32ch;font:500 15px/1.4 var(--body),system-ui,sans-serif;color:#C8B8A2}
+html[data-fenix-barber] .salon-hero{position:relative;margin:0 0 18px;border-radius:22px;overflow:hidden;border:1px solid #4A3C30;background:#16110E;min-height:min(48vw,260px);display:flex;flex-direction:column;justify-content:flex-end;box-shadow:0 1px 0 rgba(228,211,184,.16)}
 html[data-fenix-barber] .salon-hero>svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
-html[data-fenix-barber] .salon-hero-card{position:relative;z-index:1;padding:28px 18px 18px;background:linear-gradient(180deg,transparent,rgba(11,9,8,.42) 18%,rgba(11,9,8,.94) 72%)}
+html[data-fenix-barber] .salon-hero-card{position:relative;z-index:1;padding:28px 18px 18px;background:linear-gradient(180deg,transparent 0%,rgba(11,9,8,.78) 48%,#0B0908 100%)}
 html[data-fenix-barber] .salon-hero-cta{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}
-html[data-fenix-barber] .btn.salon-cta-prenota{flex:1 1 160px;min-height:52px;padding:14px 22px;border-radius:999px;background:#D2BFA6;color:#0B0908;font:700 17px/1.2 var(--body),system-ui,sans-serif}
-html[data-fenix-barber] .btn.salon-cta-miei{flex:1 1 148px;min-height:48px;border-radius:999px;background:transparent;color:#F4EEE6;border:1px solid #D2BFA6;font:650 15px/1.2 var(--body),system-ui,sans-serif}
-html[data-fenix-barber] .salon-next,.salon-book,.day-rail{margin:0 0 16px;padding:16px;border:1px solid #3A2E24;border-radius:20px;background:#16110E}
-html[data-fenix-barber] .salon-next h2,.salon-book h2,.slot-body h2{font-family:var(--display),ui-serif,Georgia,serif;color:#F4EEE6}
+html[data-fenix-barber] .btn.salon-cta-prenota{flex:1 1 160px;min-height:52px;padding:14px 22px;border-radius:999px;background:#D2BFA6;color:#0B0908;border:1.5px solid #E4D3B8;box-shadow:inset 0 1px 0 #F4EEE6,0 1px 0 #0B0908;font:750 17px/1.15 var(--body),system-ui,sans-serif}
+html[data-fenix-barber] .btn.salon-cta-prenota:hover{background:#E4D3B8;border-color:#F4EEE6;filter:none;box-shadow:inset 0 1px 0 #F4EEE6,0 1px 0 #0B0908}
+html[data-fenix-barber] .btn.salon-cta-prenota:active{background:#C4A882;border-color:#D2BFA6;filter:none;transform:translateY(1px);box-shadow:inset 0 1px 0 rgba(11,9,8,.2)}
+html[data-fenix-barber] .btn.salon-cta-miei{flex:1 1 148px;min-height:48px;border-radius:999px;background:transparent;color:#F4EEE6;border:1.5px solid #D2BFA6;font:700 15px/1.15 var(--body),system-ui,sans-serif}
+html[data-fenix-barber] .salon-next,.salon-book,.day-rail{margin:0 0 16px;padding:16px;border:1px solid #4A3C30;border-radius:18px;background:#16110E;box-shadow:0 1px 0 rgba(228,211,184,.1)}
+html[data-fenix-barber] .salon-next h2,.salon-book h2,.slot-body h2{font-family:var(--display),ui-serif,Georgia,serif;font-weight:750;letter-spacing:-.03em;color:#F4EEE6}
 html[data-fenix-barber] .salon-catalog{display:grid;gap:10px;margin:0 0 18px}
-html[data-fenix-barber] .salon-service{display:grid;grid-template-columns:18px minmax(0,1fr) auto;gap:12px;align-items:center;width:100%;text-align:left;padding:16px;border:1px solid #3A2E24;border-radius:18px;background:#16110E;color:#F4EEE6;min-height:64px}
-html[data-fenix-barber] .salon-service.on{border-color:#D2BFA6;box-shadow:0 0 0 1px #D2BFA6}
-html[data-fenix-barber] .salon-service b{display:block;font:600 1.2rem/1.2 var(--display),ui-serif,Georgia,serif}
-html[data-fenix-barber] .salon-service em{font:650 14px/1 var(--body),system-ui,sans-serif;color:#D2BFA6;font-style:normal}
+html[data-fenix-barber] .salon-service{display:grid;grid-template-columns:18px minmax(0,1fr) auto;gap:12px;align-items:center;width:100%;text-align:left;padding:16px;border:1px solid #4A3C30;border-radius:16px;background:#16110E;color:#F4EEE6;min-height:64px;box-shadow:0 1px 0 rgba(228,211,184,.08)}
+html[data-fenix-barber] .salon-service.on{border-color:#D2BFA6;box-shadow:0 0 0 1.5px #D2BFA6}
+html[data-fenix-barber] .salon-service b{display:block;font:700 1.22rem/1.15 var(--display),ui-serif,Georgia,serif;letter-spacing:-.028em}
+html[data-fenix-barber] .salon-service em{font:750 14px/1 var(--body),system-ui,sans-serif;color:#D2BFA6;font-style:normal}
 html[data-fenix-barber] .salon-radio{width:14px;height:14px;border-radius:50%;border:1.5px solid #D2BFA6}
 html[data-fenix-barber] .salon-service.on .salon-radio{background:#D2BFA6}
 html[data-fenix-barber] .salon-progress{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 14px}
-html[data-fenix-barber] .salon-bar{flex:1;height:2px;background:#3A2E24;border-radius:99px;overflow:hidden}
+html[data-fenix-barber] .salon-bar{flex:1;height:2px;background:#4A3C30;border-radius:99px;overflow:hidden}
 html[data-fenix-barber] .salon-bar i{display:block;height:100%;width:66%;background:#D2BFA6}
-html[data-fenix-barber] .btn{background:#D2BFA6;color:#0B0908;border-radius:999px}
-html[data-fenix-barber] .btn.ghost{background:transparent;color:#F4EEE6;border-color:#3A2E24}
-html[data-fenix-barber] .slot{padding:16px;background:transparent;border-color:#3A2E24}
+html[data-fenix-barber] .btn{background:#D2BFA6;color:#0B0908;border-radius:999px;border:1.5px solid #E4D3B8}
+html[data-fenix-barber] .btn.ghost{background:transparent;color:#F4EEE6;border:1.5px solid #4A3C30}
+html[data-fenix-barber] .slot{padding:16px;background:transparent;border-color:#4A3C30}
 html[data-fenix-barber] .slot .time{color:#D2BFA6;font-weight:750}
-html[data-fenix-barber] .chip.prenotato{color:#D2BFA6;border-color:color-mix(in srgb,#D2BFA6 45%,#3A2E24);background:color-mix(in srgb,#D2BFA6 12%,#16110E)}
-html[data-fenix-barber] .chip.confermato,.chip.in-corso{color:#8FBF9A;border-color:color-mix(in srgb,#8FBF9A 45%,#3A2E24)}
-html[data-fenix-barber] .card,.field,input.field{background:#16110E;border-color:#3A2E24;color:#F4EEE6}
+html[data-fenix-barber] .chip.prenotato{color:#D2BFA6;border-color:color-mix(in srgb,#D2BFA6 55%,#4A3C30);background:color-mix(in srgb,#D2BFA6 12%,#16110E)}
+html[data-fenix-barber] .chip.confermato,.chip.in-corso{color:#8FBF9A;border-color:color-mix(in srgb,#8FBF9A 55%,#4A3C30)}
+html[data-fenix-barber] .card,.field,input.field{background:#16110E;border-color:#4A3C30;color:#F4EEE6}
 html[data-fenix-barber] .fx-splash{background:#0B0908;color:#F4EEE6}
-html[data-fenix-barber] .state-empty{border-color:#3A2E24;color:#B9A894}
+html[data-fenix-barber] .fx-splash .btn.salon-cta-prenota{margin-top:18px}
+html[data-fenix-barber] .state-empty{border-color:#4A3C30;color:#C8B8A2}
 `;
 }
 
@@ -3175,7 +3178,7 @@ function polishFor(
       : isLibraryBrief(brief)
         ? "Chrome da libreria: catalogo, prestiti, scaffali, scheda. Vietato Tavolo/Registra/Studio, 0-KPI Oggi/Media/Voci/Aperti, e desk STUDIO."
       : isBarberBrief(brief)
-        ? "Chrome da salon cliente: tab Home/Prenota/I miei, serif editoriale Fraunces, espresso/crema/tan, hero con CTA Prenota dominante e atmosfera SVG originale, un solo mark forbici piene in header/favicon. Vietato quadrato vuoto, foto stock, Corto, Oggi/Nuovo/Settimana/Archivio e KPI in sala."
+        ? "Chrome da salon cliente: tab Home/Prenota/I miei, serif editoriale Fraunces 800, espresso/crema/tan, hairline #4A3C30, CTA Prenota solida con bordo e press, mark forbici piene definite (lame strette, anelli evenodd) in header/favicon. Vietato blur molle, quadrato vuoto, foto stock, Corto, Oggi/Nuovo/Settimana/Archivio e KPI in sala."
       : isPremiumDefaultBrief(brief, tokens.family)
         ? "Chrome premium di sistema: filled mark, gerarchia editoriale, layout calmo. Vietato Tavolo/Registra/Studio, 0-KPI, icone outline vuote, hero fotografico, desk utility come default."
       : grammar.id === "phone-seed"

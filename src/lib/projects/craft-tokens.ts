@@ -340,7 +340,10 @@ function categoryCss(s: CraftSurfaces, domain: CraftDomain): string {
 }
 
 function shadowCss(s: CraftSurfaces, domain: CraftDomain): string {
-  if (domain === "luxe" || domain === "barber") {
+  if (domain === "barber") {
+    return `--shadow-card:0 1px 0 color-mix(in srgb,${s.brand} 38%,transparent),0 6px 14px rgba(0,0,0,.42);--shadow-float:0 4px 12px rgba(0,0,0,.5)`;
+  }
+  if (domain === "luxe") {
     return `--shadow-card:0 1px 0 color-mix(in srgb,${s.brand} 22%,transparent),0 18px 40px rgba(0,0,0,.48);--shadow-float:0 16px 44px color-mix(in srgb,${s.brand} 32%,transparent)`;
   }
   if (domain === "generic") {

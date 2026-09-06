@@ -704,7 +704,7 @@ const LIBRARY_FONTS = {
 const BARBER_FONTS = {
   display: "Fraunces",
   body: "Figtree",
-  href: "https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,700&display=swap",
+  href: "https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,700;9..144,800&display=swap",
 };
 
 function namedSerifFace(display: string): boolean {
@@ -856,7 +856,7 @@ export function tokensInstruction(tokens: DesignTokens, brief = ""): string {
     tokens.family === "repo"
       ? "Dominio repository: attività commit, rami, stato sync, timeline/diff. Vietato home universale con hero grigio + due KPI + CTA + empty card. Non copiare GitHub."
       : isBarberBrief(brief)
-        ? "Dominio salon cliente: tab Home/Prenota/I miei, serif editoriale + sans metadata, espresso/crema/tan, schede servizio con durata/prezzo/professionista, progresso prenota, mark forbici piene. Vietato dashboard staff Oggi/Nuovo/Settimana/Archivio e KPI in sala. Non clonare Corto."
+        ? "Dominio salon cliente: tab Home/Prenota/I miei, serif editoriale 800 + sans metadata, espresso/crema/tan, hairline #4A3C30, Prenota solida con bordo e press, schede servizio con durata/prezzo/professionista, mark forbici piene definite. Vietato blur molle, dashboard staff Oggi/Nuovo/Settimana/Archivio e KPI in sala. Non clonare Corto."
       : tokens.family === "booking" && intent.type !== "system"
         ? "Dominio agenda: binario orario, tab Oggi/Nuovo/Settimana/Archivio, tipo 17/headline da tasca (sans operativa, non serif da rivista), icone griglia 24, target 44px. Vietato hero KPI e tab Home/Elenco."
         : `Asse dominio=${axes.domain}.`,

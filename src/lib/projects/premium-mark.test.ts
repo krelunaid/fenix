@@ -56,12 +56,15 @@ describe("premium app mark", () => {
     const book = crispBookMarkSvg("library-header");
     assert.match(shears, /data-fenix-barber-mark="1"/);
     assert.match(shears, /data-fenix-shears-fill="1"/);
+    assert.match(shears, /data-fenix-shears-defined="1"/);
     assert.match(shears, /data-fenix-crisp-mark="1"/);
     assert.match(shears, /#0B0908|#1C1612/);
-    assert.match(shears, /#D2BFA6|#F4EEE6/);
-    assert.match(shears, /M10\.2 17\.6 19\.2 3\.8/);
+    assert.match(shears, /#E4D3B8|#F4EEE6|#C4A882/);
+    assert.match(shears, /M22\.8 3\.9 26\.4 6\.85/);
+    assert.match(shears, /fill-rule="evenodd"/);
     assert.match(shears, /<path /);
-    assert.doesNotMatch(shears, /fill="none"|fill-opacity="\.18"/);
+    assert.doesNotMatch(shears, /fill-opacity="\.18"/);
+    assert.doesNotMatch(shears, /M10\.2 17\.6 19\.2 3\.8/);
     assert.match(book, /data-fenix-book-mark="1"/);
     assert.match(book, /#082338|#0F3A5C/);
     assert.match(book, /M8\.2 6\.2h13\.4/);

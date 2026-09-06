@@ -122,5 +122,7 @@ describe("craft surface tokens", () => {
     assert.notEqual(barber.palette.accent.toLowerCase(), WATER_CRAFT.brand.toLowerCase());
     assert.notEqual(library.palette.accent.toLowerCase(), WATER_CRAFT.brand.toLowerCase());
     assert.doesNotMatch(barber.palette.accent, /#b51246|#b01e47|#a61d4c/i);
+    assert.match(craftTokenCss(b, { domain: "barber" }), /--shadow-card:0 1px 0 color-mix\(in srgb,#D2BFA6 38%/);
+    assert.doesNotMatch(craftTokenCss(b, { domain: "barber" }), /0 18px 40px/);
   });
 });
