@@ -1,0 +1,38 @@
+{
+  "id": "barber-corto",
+  "category": "ui-patterns",
+  "title": "Barber Corto-level salon booking",
+  "extractNotClone": true,
+  "teacher": "Corto (quality only)",
+  "appliesWhen": ["barber", "parrucchier", "barbiere", "salon", "hair salon"],
+  "rules": [
+    {
+      "id": "barber-corto.espresso",
+      "title": "Espresso + cream + tan, never raspberry",
+      "severity": "must",
+      "statement": "Salon paper is espresso (#0B0908 / #16110E), cream ink (#F4EEE6), tan brand (#D2BFA6). AA tan-on-espresso. Mode is salon, consumer radii.",
+      "mustNot": ["raspberry #b51246 / #b01e47 / #a61d4c", "water sky #0EA5E9", "pale booking teal"]
+    },
+    {
+      "id": "barber-corto.client-ia",
+      "title": "Client salon IA, not staff KPI",
+      "severity": "must",
+      "statement": "Tabs Home / Prenota / I miei. Service cards show duration, price, professional. Book flow has visible progress. Editorial serif on display, sans on metadata.",
+      "mustNot": ["staff dashboard Oggi/Nuovo/Settimana/Archivio", "0-KPI Oggi/Media/Voci/Aperti in sala", "generic Home/Nuovo/Elenco"]
+    },
+    {
+      "id": "barber-corto.mark",
+      "title": "Filled shears chip, original still-life",
+      "severity": "must",
+      "statement": "Header/favicon use a filled shears (or shears+comb) chip. Atmosphere art is original SVG still-life.",
+      "mustNot": ["Corto screens or copy", "Gentleman Barber", "Il dettaglio fa la differenza", "pale X outline", "exit-door scrap"]
+    },
+    {
+      "id": "barber-corto.voice",
+      "title": "In-chair client voice",
+      "severity": "should",
+      "statement": "Voice is the client in the chair: servizio, durata, prezzo, professionista. Label Taglio. CTA Prenota — not Registra in ledger.",
+      "mustNot": ["clone Corto layout or photography"]
+    }
+  ]
+}

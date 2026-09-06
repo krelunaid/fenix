@@ -1,0 +1,16 @@
+{
+  "id": "ai-features-scaffold",
+  "category": "ai-features",
+  "title": "AI features scaffold",
+  "extractNotClone": true,
+  "appliesWhen": ["ai", "llm", "chatbot", "teleprompter"],
+  "rules": [
+    {
+      "id": "ai-features.no-clone-wizard",
+      "title": "Do not clone teacher AI wizards",
+      "severity": "scaffold",
+      "statement": "If a brief asks for AI, ship an original flow. Do not copy ActStage Scene Wizard, teleprompter, or LikeSwift chat.",
+      "mustNot": ["cloned teacher chat or teleprompter"]
+    }
+  ]
+}

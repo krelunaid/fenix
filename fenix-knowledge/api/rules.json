@@ -1,0 +1,16 @@
+{
+  "id": "api-scaffold",
+  "category": "api",
+  "title": "API scaffold",
+  "extractNotClone": true,
+  "appliesWhen": ["api", "backend", "endpoint", "full-stack"],
+  "rules": [
+    {
+      "id": "api.scaffold",
+      "title": "Same-origin, no eval, no secrets",
+      "severity": "scaffold",
+      "statement": "A full-stack brief may add a portable Node API on the same origin. No eval, no secrets in the tree.",
+      "mustNot": ["eval", "iframe allow-same-origin sandbox holes"]
+    }
+  ]
+}

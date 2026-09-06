@@ -32,6 +32,12 @@ import { crispAppMarkSvg, crispBarberMarkSvg, crispBookMarkSvg, crispWaterDropMa
 import { craftModeOf, craftRhythmOf, craftTokenCss, surfacesFromPalette, type CraftDomain } from "../projects/craft-tokens.ts";
 import { accentButtonPair, contrastRatio } from "../projects/visual-quality.ts";
 import type { Palette, ProjectKind } from "../projects/types.ts";
+import {
+  consultKnowledge,
+  fenixReviewer,
+  type FenixReview,
+  type KnowledgeConsult,
+} from "../fenix-knowledge/index.ts";
 
 export type PipelineRow = {
   id: string;
@@ -64,6 +70,8 @@ export type ComposedProduct = {
   html: string;
   polish: string;
   files: { path: string; content: string }[];
+  knowledge: KnowledgeConsult;
+  review: FenixReview;
 };
 
 /** Parent SHA of the five-brief before/after. Frozen bffc58f baseline, not a quality score. */
@@ -2933,7 +2941,12 @@ setTimeout(function(){ if(bootDone) return; finishBoot(false); }, 500);
 </html>`;
 }
 
-function polishFor(tokens: DesignTokens, grammar: LayoutGrammar, brief = ""): string {
+function polishFor(
+  tokens: DesignTokens,
+  grammar: LayoutGrammar,
+  brief = "",
+  knowledge?: KnowledgeConsult,
+): string {
   const intent = graphicIntentFromBrief(brief);
   const chrome =
     intent.chrome === "semantic"
@@ -2957,23 +2970,30 @@ function polishFor(tokens: DesignTokens, grammar: LayoutGrammar, brief = ""): st
     chrome,
     "Il seed HTML è già il prodotto. Rifinisci copy se serve, non riciclare lo scheletro telefono, non boxed 1080, non placeholder geometrici.",
     "Stati empty/loading/success/error visibili. Motion solo con prefers-reduced-motion: no-preference. Target ≥24px, focus visibile, AA.",
-  ].join("\n");
+    knowledge?.instruction,
+  ]
+    .filter(Boolean)
+    .join("\n");
 }
 
 export function composeProduct(brief: string, opts?: TokenOptions): ComposedProduct {
   const tokens = tokensFromBrief(brief, opts);
   const grammar = grammarFromBrief(brief);
+  const knowledge = consultKnowledge(brief, grammar.kind);
   const spec = specForBrief(brief);
   const used = spec || synthesizeSpec(brief);
   const html = enforceGraphicIntent(productHtml(used, tokens, grammar), brief);
+  const review = fenixReviewer({ html, brief, kind: grammar.kind, knowledge });
   return {
     brief,
     tokens,
     grammar,
     spec,
     html,
-    polish: polishFor(tokens, grammar, brief),
+    polish: polishFor(tokens, grammar, brief, knowledge),
     files: [{ path: "index.html", content: html }],
+    knowledge,
+    review,
   };
 }
 

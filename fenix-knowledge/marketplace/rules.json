@@ -1,0 +1,16 @@
+{
+  "id": "marketplace-scaffold",
+  "category": "marketplace",
+  "title": "Marketplace scaffold",
+  "extractNotClone": true,
+  "appliesWhen": ["marketplace", "lavoretti", "incarichi", "tasker", "gig"],
+  "rules": [
+    {
+      "id": "marketplace.chips",
+      "title": "Category chips, consumer rhythm",
+      "severity": "scaffold",
+      "statement": "Micro-task briefs use consumer radii, navy brand, category chips. Tabs stay Incarichi — not Tracking/Chat.",
+      "mustNot": ["LikeSwift Chat or Tracking screens", "water sky on a lavoretti brief"]
+    }
+  ]
+}

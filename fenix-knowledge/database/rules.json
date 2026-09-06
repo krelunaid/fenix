@@ -1,0 +1,16 @@
+{
+  "id": "database-scaffold",
+  "category": "database",
+  "title": "Database scaffold",
+  "extractNotClone": true,
+  "appliesWhen": ["database", "sqlite", "postgres", "collection", "crud"],
+  "rules": [
+    {
+      "id": "database.scaffold",
+      "title": "Named collections, no leaked runtime text",
+      "severity": "scaffold",
+      "statement": "When a brief needs data, use a named Fenix collection and visible empty/error states. Do not print undefined/null/NaN.",
+      "mustNot": ["localStorage as the only durable store when a backend is required"]
+    }
+  ]
+}

@@ -1,4 +1,5 @@
 import { composeProduct } from "./compose-product.ts";
+import { consultKnowledge } from "../fenix-knowledge/index.ts";
 import { isPhoneKind } from "../projects/infer.ts";
 import type { ProjectKind } from "../projects/types.ts";
 import type { TokenOptions } from "../projects/design-tokens.ts";
@@ -28,12 +29,14 @@ export function createBuildRequest(input: {
   if (instruction) return { prompt, html: html || "", instruction, kind, recentPalettes, operation: "edit" as const };
   // Desktop gestionale/sito must not start from a phone seed or iPhone tabbar.
   if (!isPhoneKind(kind)) {
+    const knowledge = consultKnowledge(prompt, kind);
     return {
       prompt,
       html: html || "",
       instruction: "",
       kind,
       recentPalettes,
+      knowledge,
       operation: "create" as const,
     };
   }
@@ -45,6 +48,8 @@ export function createBuildRequest(input: {
     kind,
     recentPalettes,
     palette: composed.tokens.palette,
+    knowledge: composed.knowledge,
+    review: composed.review,
     operation: "create" as const,
   };
 }

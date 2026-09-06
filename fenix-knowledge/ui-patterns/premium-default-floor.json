@@ -1,0 +1,38 @@
+{
+  "id": "premium-default-floor",
+  "category": "ui-patterns",
+  "title": "Premium-default quality floor",
+  "extractNotClone": true,
+  "teacher": "Fenix graphic + native floor",
+  "appliesWhen": ["always"],
+  "rules": [
+    {
+      "id": "premium-default.aa",
+      "title": "AA contrast and visible focus",
+      "severity": "must",
+      "statement": "Text/control contrast ≥ 4.5. :focus-visible on interactive chrome. Selected nav text is foreground-on-surface, not accent-on-tint.",
+      "mustNot": ["accent-on-tinted-surface nav that fails AA"]
+    },
+    {
+      "id": "premium-default.targets",
+      "title": "Tap targets and type ramp",
+      "severity": "must",
+      "statement": "Phone: tap targets ≥ 44px, type ramp 12–40 (display up to 46 on luxe), spacing token 8px, tabular figures on numbers. Desk keeps desktop IA — premium is not an iPhone tabbar.",
+      "mustNot": ["boxed 1080 phone shell on a gestionale", "targets under 24px"]
+    },
+    {
+      "id": "premium-default.states",
+      "title": "Empty / loading / success / error",
+      "severity": "must",
+      "statement": "Every compose ships visible empty, loading, success, and error states. Motion only with prefers-reduced-motion: no-preference.",
+      "mustNot": ["Nessun elemento as the only empty copy", "leaked undefined/null/NaN"]
+    },
+    {
+      "id": "premium-default.original",
+      "title": "Original marks, no clone set",
+      "severity": "must",
+      "statement": "Sector pictograms are original. Filled navy chips for utility/editorial/ops. No placeholder geometry, no hotlinked Unsplash/Apple/Emergent bitmaps.",
+      "mustNot": ["#f5f5f7 + #0071e3 + San Francisco as a set", "Ciao / Operatore generic chrome"]
+    }
+  ]
+}
