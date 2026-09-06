@@ -111,34 +111,42 @@ function openIdb(): Promise<IDBDatabase | null> {
   });
 }
 
-export async function readIndexedDb(): Promise<AppDb> {
+export async function readDurableValue<T>(key: string): Promise<T | null> {
   const db = await openIdb();
-  if (!db) return {};
+  if (!db) return null;
   return new Promise((resolve) => {
     try {
       const tx = db.transaction(IDB_STORE, "readonly");
-      const g = tx.objectStore(IDB_STORE).get(APP_DB_KEY);
-      g.onsuccess = () => resolve((g.result as AppDb) || {});
-      g.onerror = () => resolve({});
+      const g = tx.objectStore(IDB_STORE).get(key);
+      g.onsuccess = () => resolve((g.result as T) ?? null);
+      g.onerror = () => resolve(null);
     } catch {
-      resolve({});
+      resolve(null);
     }
   });
 }
 
-export async function writeIndexedDb(data: AppDb): Promise<boolean> {
+export async function writeDurableValue(key: string, value: unknown): Promise<boolean> {
   const db = await openIdb();
   if (!db) return false;
   return new Promise((resolve) => {
     try {
       const tx = db.transaction(IDB_STORE, "readwrite");
-      tx.objectStore(IDB_STORE).put(data, APP_DB_KEY);
+      tx.objectStore(IDB_STORE).put(value, key);
       tx.oncomplete = () => resolve(true);
       tx.onerror = () => resolve(false);
     } catch {
       resolve(false);
     }
   });
+}
+
+export async function readIndexedDb(): Promise<AppDb> {
+  return (await readDurableValue<AppDb>(APP_DB_KEY)) ?? {};
+}
+
+export async function writeIndexedDb(data: AppDb): Promise<boolean> {
+  return writeDurableValue(APP_DB_KEY, data);
 }
 
 export function writeWebStorage(data: AppDb): { local: boolean; session: boolean } {

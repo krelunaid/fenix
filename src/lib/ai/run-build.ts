@@ -33,6 +33,7 @@ import {
   readPersistedBuild,
   restoreStablePatch,
 } from "@/lib/projects/studio-lock";
+import { rememberLiveStudio } from "@/lib/projects/persist-projects";
 import { uid } from "@/lib/utils";
 import {
   applyIconRevision,
@@ -77,7 +78,14 @@ function persistComposedSeed(
   const html = payload.html || "";
   if (!html) return false;
   const current = useProjectStore.getState().getProject(projectId);
-  if (current?.html) return true;
+  if (current?.html) {
+    if (!current.lastStableHtml) {
+      const snap = captureStableSnapshot(current);
+      if (snap.lastStableHtml) useProjectStore.getState().updateProject(projectId, snap);
+    }
+    rememberLiveStudio(useProjectStore.getState().getProject(projectId) ?? current);
+    return true;
+  }
   const name =
     html.match(/<title>([^<]+)<\/title>/i)?.[1]?.trim().slice(0, 80) ||
     current?.name ||
@@ -103,6 +111,13 @@ function persistComposedSeed(
     },
     "building",
   );
+  if (report.syntaxOk) {
+    const live = useProjectStore.getState().getProject(projectId);
+    const snap = captureStableSnapshot(live ?? { html, files: [{ path: "index.html", content: html }] });
+    if (snap.lastStableHtml) useProjectStore.getState().updateProject(projectId, snap);
+    const next = useProjectStore.getState().getProject(projectId);
+    if (next) rememberLiveStudio(next);
+  }
   return report.syntaxOk;
 }
 

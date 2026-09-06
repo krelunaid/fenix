@@ -25,6 +25,7 @@ import { runBuild, resumePolish } from "@/lib/ai/run-build";
 import { suggestEdits } from "@/lib/ai/suggest";
 import { codePaneFiles } from "@/lib/projects/fenix2";
 import { useProjectStore } from "@/lib/projects/store";
+import { mergeProjectLists, rescueLiveStudio } from "@/lib/projects/persist-projects";
 import { isPublishable, needsResume, shouldResumePolish, shouldStartCreateBuild } from "@/lib/projects/recover";
 import { isStudioLocked } from "@/lib/projects/studio-lock";
 import type { ProjectKind } from "@/lib/projects/types";
@@ -67,10 +68,16 @@ function StudioPage() {
 
   useEffect(() => {
     if (!hydrated) return;
-    if (!project) {
-      void navigate({ to: "/" });
+    if (project) return;
+    const rescued = rescueLiveStudio(projectId);
+    if (rescued) {
+      useProjectStore.setState((s) => ({
+        projects: mergeProjectLists(s.projects, [rescued]),
+      }));
+      return;
     }
-  }, [hydrated, project, navigate]);
+    void navigate({ to: "/" });
+  }, [hydrated, project, projectId, navigate]);
 
   useEffect(() => {
     if (!hydrated || !project) return;

@@ -93,7 +93,13 @@ describe("focus-visible and worker model", () => {
     assert.doesNotMatch(store, /existing\?\.kind \?\? result\.kind/);
     assert.match(store, /kind: ProjectKind = "app"/);
     assert.match(store, /recoverPersistedProject/);
-    assert.match(store, /MAX_PROJECTS = 48/);
+    assert.match(store, /MAX_PROJECTS/);
+    assert.match(store, /mergeProjectLists/);
+    assert.match(store, /rememberLiveStudio/);
+    const persistProjects = readFileSync(join(root, "src/lib/projects/persist-projects.ts"), "utf8");
+    assert.match(persistProjects, /MAX_PROJECTS = 48/);
+    assert.match(persistProjects, /mergeProjectLists/);
+    assert.match(persistProjects, /homeVetrinaList/);
     assert.match(store, /stripPhoneChromeFromSite/);
     assert.match(store, /if \(!known\) return/);
     assert.match(store, /restoreRevision/);

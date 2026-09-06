@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { AppShell } from "@/components/app-shell";
 import { ProjectCard } from "@/components/project-card";
-import { useProjectStore } from "@/lib/projects/store";
+import { homeVetrinaList, useProjectStore } from "@/lib/projects/store";
 
 export const Route = createFileRoute("/vetrina")({ component: VetrinaPage });
 
@@ -9,7 +9,7 @@ function VetrinaPage() {
   const hydrated = useProjectStore((s) => s.hydrated);
   const projects = useProjectStore((s) => s.projects);
   const removeProject = useProjectStore((s) => s.removeProject);
-  const list = hydrated ? [...projects].sort((a, b) => b.updatedAt - a.updatedAt) : [];
+  const list = homeVetrinaList(projects, hydrated);
 
   return (
     <AppShell>

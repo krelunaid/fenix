@@ -1134,6 +1134,12 @@ describe("graphic pipeline prompt→plan→generate→visual→QA", () => {
     const hero = product.html.match(/class="salon-hero"[^>]*>([\s\S]*?)<\/div><\/div>/)?.[1] || "";
     assert.match(hero, /data-view="prenota">Prenota →/);
     assert.match(hero, /data-view="miei">I miei appuntamenti/);
+    const splash = product.html.match(/id="fx-splash"[^>]*>([\s\S]*?)<\/div>/)?.[1] || "";
+    assert.match(splash, /data-fenix-barber-mark="1"/);
+    assert.match(splash, /data-fenix-shears-fill="1"/);
+    assert.match(splash, /salon-cta-prenota/);
+    assert.match(splash, /data-view="prenota">Prenota →/);
+    assert.match(product.html, /<header[\s\S]*data-view="prenota">Prenota<\/button>/);
     assert.match(hero, /<path /);
     assert.doesNotMatch(hero, /<img\b|unsplash|pexels|corto/i);
     assert.match(product.html, /Passaggio 1 di 2/);

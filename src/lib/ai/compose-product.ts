@@ -1523,7 +1523,7 @@ html[data-fenix-barber] .fx-app-mark{width:48px;height:48px;border:0;border-radi
 html[data-fenix-barber] .fx-app-mark svg{width:48px;height:48px;display:block}
 html[data-fenix-barber] .salon-display{margin:0 0 10px;font:700 clamp(2.2rem,9vw,2.9rem)/1.02 var(--display),ui-serif,Georgia,serif;letter-spacing:-.038em;color:#F4EEE6}
 html[data-fenix-barber] .salon-lead{margin:0 0 4px;max-width:32ch;font:400 15px/1.45 var(--body),system-ui,sans-serif;color:#B9A894}
-html[data-fenix-barber] .salon-hero{position:relative;margin:0 0 18px;border-radius:24px;overflow:hidden;border:1px solid #3A2E24;background:#16110E;min-height:min(72vw,420px);display:flex;flex-direction:column;justify-content:flex-end}
+html[data-fenix-barber] .salon-hero{position:relative;margin:0 0 18px;border-radius:24px;overflow:hidden;border:1px solid #3A2E24;background:#16110E;min-height:min(48vw,260px);display:flex;flex-direction:column;justify-content:flex-end}
 html[data-fenix-barber] .salon-hero>svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
 html[data-fenix-barber] .salon-hero-card{position:relative;z-index:1;padding:28px 18px 18px;background:linear-gradient(180deg,transparent,rgba(11,9,8,.42) 18%,rgba(11,9,8,.94) 72%)}
 html[data-fenix-barber] .salon-hero-cta{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}
@@ -1799,7 +1799,9 @@ function productHtml(spec: PipelineSpec, tokens: DesignTokens, grammar: LayoutGr
     : `<section class="home-overview" data-fenix-pane="home" data-fenix-slot="home-boot"><div class="home-hero"><div class="fx-hello-row"><div><p class="fx-hello">${spec.name}</p><p class="fx-role">${spec.place}</p></div><span class="fx-app-mark" data-fenix-id="icon:app" aria-hidden="true">${pocketMark}</span></div><p class="fx-date">${bootDate}</p><div class="home-first" data-state="empty"><div class="mark" aria-hidden="true">${pocketMark}</div><h2>Niente in lista</h2><p class="notes">Aggiungi la prima voce. Qui non ci sono dati di prova.</p><button class="btn" type="button" data-view="${spec.tabs[1]!.id}">${spec.cta}</button></div></div><aside class="home-aside"><article class="card"><p class="kicker">Elenco</p><h2>In tasca</h2><p class="notes">Le voci restano nella lista, con azioni visibili.</p></article><article class="card"><p class="kicker">Privacy</p><h2>Solo qui</h2><p class="notes">Storage locale, senza profilo inventato.</p></article></aside></section>`;
   const splash = desk
     ? ""
-    : `<div class="fx-splash" id="fx-splash" data-fenix-splash data-fenix-slot="splash"><span class="fx-mark">${premiumMark}</span><strong>${spec.name}</strong><span class="fx-spin" aria-hidden="true"></span><p class="notes">${campo ? "Apertura" : grammar.voice.load}…</p></div>`;
+    : barber
+      ? `<div class="fx-splash" id="fx-splash" data-fenix-splash data-fenix-slot="splash"><span class="fx-mark">${premiumMark}</span><strong>${spec.name}</strong><button class="btn salon-cta-prenota" type="button" data-view="prenota">Prenota →</button></div>`
+      : `<div class="fx-splash" id="fx-splash" data-fenix-splash data-fenix-slot="splash"><span class="fx-mark">${premiumMark}</span><strong>${spec.name}</strong><span class="fx-spin" aria-hidden="true"></span><p class="notes">${campo ? "Apertura" : grammar.voice.load}…</p></div>`;
   const wantsPremiumBoot =
     premiumDefault &&
     grammar.id !== "agenda" &&
@@ -1895,7 +1897,7 @@ ${splash}
     <h1 class="brand">${spec.name}</h1>
     </div>
   </div>
-  <p class="place">${spec.place}</p>
+  ${barber ? `<button class="btn salon-cta-prenota" type="button" data-view="prenota">Prenota</button>` : `<p class="place">${spec.place}</p>`}
 </header>
 <nav class="${navClass}" id="tabs" aria-label="Navigazione">
 ${navButtons}
@@ -1953,8 +1955,23 @@ const FX_DROP_MARK='<svg viewBox="0 0 24 24" width="22" height="22" fill="none" 
   var splash=document.getElementById("fx-splash");
   if(!splash) return;
   if(document.documentElement.getAttribute("data-fx-splash")==="hold") return;
-  setTimeout(function(){ splash.setAttribute("hidden",""); }, 720);
+  setTimeout(function(){ splash.setAttribute("hidden",""); }, ${barber ? 180 : 720});
+${barber ? `  splash.addEventListener("click",function(e){
+    var b=e.target.closest("[data-view]");
+    if(!b) return;
+    view=b.getAttribute("data-view")||view;
+    splash.setAttribute("hidden","");
+    render();
+  });` : ""}
 })();
+${barber ? `document.querySelector("header")&&document.querySelector("header").addEventListener("click",function(e){
+  var b=e.target.closest("[data-view]");
+  if(!b) return;
+  view=b.getAttribute("data-view")||view;
+  var splash=document.getElementById("fx-splash");
+  if(splash) splash.setAttribute("hidden","");
+  render();
+});` : ""}
 const KICKER_CYCLE={scouting:"trattativa",trattativa:"firma",firma:"chiuso",chiuso:"scouting","in-forno":"al-passo","al-passo":"in-sala","in-sala":"in-forno",arrivo:"in-house","in-house":"partenza",partenza:"arrivo"};
 function artOf(item, fit){
   var slot=0;
