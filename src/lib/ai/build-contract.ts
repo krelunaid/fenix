@@ -1,4 +1,5 @@
 import { FENIX_MODEL } from "./model.ts";
+import { productIntent } from "./product-intent.ts";
 import type { ProjectFile } from "../projects/files.ts";
 import { bundleProjectHtml, fileLooksLikeSecret, ingestProjectFiles } from "../projects/files.ts";
 import {
@@ -214,11 +215,13 @@ function intentFrom(brief: string): string {
 /** Deterministic planner. No LLM, no tokens. */
 export function planContract(brief: string): BuildContract {
   const kind = kindFromPrompt(brief) ?? inferKind(brief);
-  const screens = screensFor(kind);
-  const entities = entitiesFor(kind, brief);
+  const product = productIntent(brief, kind);
+  const screens = product?.screens || screensFor(kind);
+  const entities = product?.entities || entitiesFor(kind, brief);
   const crud = entities.some((e) => e.crud);
   const tokens = tokensFromBrief(brief);
   const acceptance = [
+    ...(product?.acceptance || []),
     "HTML completo, JS che compila",
     "window.Fenix.load/save, niente localStorage",
     crud ? "CRUD o persistenza su entità" : "form che conferma",
@@ -234,7 +237,7 @@ export function planContract(brief: string): BuildContract {
     screens,
     routes: routesFor(kind, screens),
     entities,
-    journeys: journeysFor(kind),
+    journeys: product?.journeys || journeysFor(kind),
     acceptance,
     visual: {
       dna: tokens.dna,
@@ -469,8 +472,13 @@ export function evaluateContract(input: {
   const collectionCode = rewriteFenixCollectionCode(code);
   const collectionHits = extractFenixCollectionHits(collectionCode);
   const collectionErr = invalidFenixCollectionError(collectionCode);
+  const intent = productIntent(input.brief || input.contract.intent, kind);
+  const plannedScreens = intent?.screens || [];
+  const missingScreens = plannedScreens.filter(screen => !runtimeHtml.includes(`data-screen="${screen}"`));
 
   const checks: ContractCheck[] = [
+    ...(intent ? [check("product-screens", missingScreens.length === 0,
+      missingScreens.length ? `Mancano le schermate del prodotto: ${missingScreens.join(", ")}` : "Schermate pianificate presenti; comportamento da verificare nel browser")] : []),
     check("html", report.ok, report.ok ? "HTML valido" : report.errors.slice(0, 3).join(" · ")),
     check(
       "kind-lock",

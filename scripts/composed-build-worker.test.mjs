@@ -26,7 +26,7 @@ test("composed /build applies one functional plan, retries bad finds, and keeps 
         assert.ok(job.log.some(line => /seed composto invariato/.test(line)),prompt);
         assert.equal(job.error,null,prompt);
       } else {
-        expectedCalls += 1;
+        expectedCalls += prompt === "LENGTH_FIXTURE" ? 3 : 1;
         assert.equal(job.status,"err",prompt);
         assert.equal(job.html,null,prompt);
         assert.ok(job.error,prompt);

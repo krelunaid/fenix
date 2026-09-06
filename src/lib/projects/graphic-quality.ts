@@ -5,6 +5,7 @@
 import { familyFromBrief, isProductFamily, tokensFromBrief, type TokenFamily } from "./design-tokens.ts";
 import { looksLikeIosWidgetHome } from "./craft-icons.ts";
 import { auditCraft, extractCssVars } from "./visual-quality.ts";
+import { genericBriefMismatch } from "./brief-match.ts";
 
 export type GraphicAxis =
   | "hierarchy"
@@ -291,6 +292,8 @@ export function auditGraphicQuality(
   const findings: GraphicFinding[] = [];
   const craft = auditCraft(text);
   const product = isProductFamily(family);
+  const mismatch = genericBriefMismatch(text, brief);
+  if (mismatch) findings.push(finding("state", "fail", "brief-mismatch", mismatch, "Note / bozza generica"));
 
   if (leakedRuntimeText(text) || opts?.rendered?.leakedText) {
     findings.push(

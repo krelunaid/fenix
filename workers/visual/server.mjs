@@ -3,6 +3,7 @@ import { readWorkerBody } from "./request-body.mjs";
 import {
   applyComposedBuildPlan,
   applyComposedBuildPlanOrSeed,
+  isRetryableComposedPlanError,
   composedBaseSha,
   composedBuildPalette,
   composedBuildUserContent,
@@ -357,9 +358,11 @@ async function generate(prompt, html, instruction, kind, operation, inputPalette
     const outcome = await applyComposedBuildPlanOrSeed(
       html,
       (plan) => applyComposedBuildPlan(html, plan),
-      await requestPlan(),
+      () => requestPlan(),
       requestPlan,
     );
+    if (!outcome.applied && outcome.error &&
+      (outcome.error.name === "IncompleteModelResponse" || !isRetryableComposedPlanError(outcome.error))) throw outcome.error;
     // Syntax and the existing client runtime/ready gates still run afterwards.
     // Never turn a rejected plan into a full rewrite or another image call.
     // Exhausted apply retries keep the composed seed instead of BLOCCATO.

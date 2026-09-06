@@ -15,7 +15,10 @@ export function completeResponseText(payload) {
   // Some recorded/compatible responses omit finish_reason. Explicit non-stop
   // responses, especially token exhaustion, must never replace a stable app.
   if (choice?.finish_reason != null && choice.finish_reason !== "stop") {
-    throw new Error("Risposta del modello incompleta. La versione precedente resta invariata.");
+    const error = new Error("Risposta del modello incompleta. La versione precedente resta invariata.");
+    // Retry only token exhaustion, never content filtering or unknown reasons.
+    if (choice.finish_reason === "length") error.name = "IncompleteModelResponse";
+    throw error;
   }
   return choice?.message?.content ?? "";
 }

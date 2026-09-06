@@ -19,6 +19,32 @@ const html = '<!doctype html><html data-grammar="agenda"><head><style data-fenix
 const plan = (changes, base = html) => ({ version: 1, baseSha256: composedBaseSha(base), changes });
 const edit = {find:'window.saved="original";',replace:'window.saved="literal $& $` $\'";'};
 
+test("initial and repeated token exhaustion share the two-repair budget", async () => {
+  let calls = 0;
+  const request = async () => {
+    calls++;
+    if (calls < 3) {
+      const error = new Error("Risposta del modello incompleta");
+      error.name = "IncompleteModelResponse";
+      throw error;
+    }
+    return JSON.stringify(plan([edit]));
+  };
+  const result = await applyComposedBuildPlanOrSeed(html, p => applyComposedBuildPlan(html, p), request, request);
+  assert.equal(calls, 3);
+  assert.equal(result.applied, true);
+  assert.equal(result.attempts, 3);
+});
+
+test("provider errors are not retried and do not mutate the seed", async () => {
+  let retries = 0;
+  const result = await applyComposedBuildPlanOrSeed(html, p => applyComposedBuildPlan(html, p),
+    async () => { throw new Error("xAI 401"); }, async () => { retries++; return ""; });
+  assert.equal(retries, 0);
+  assert.equal(result.applied, false);
+  assert.equal(result.html, html);
+});
+
 test("Node and Web Crypto protocols produce identical bytes for Unicode and literal edits", async () => {
   for (const base of [html, html.replace("In attesa", "Già pronto · 日本語 🗓️")]) {
     assert.equal(await composedBaseShaWeb(base), composedBaseSha(base));

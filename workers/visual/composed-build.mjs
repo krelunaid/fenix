@@ -9,6 +9,7 @@ export {
   COMPOSED_PLAN_APPLY_RETRIES,
   COMPOSED_PLAN_DEGRADED_LOG,
   applyComposedBuildPlanOrSeed,
+  isRetryableComposedPlanError,
   composedBuildUserContent,
   composedPlanRetryFeedback,
   composedSeedAnchors,

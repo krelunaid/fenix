@@ -4,6 +4,8 @@
  */
 import { formatPrefix, kindFromPrompt, inferKind } from "../projects/infer.ts";
 import { websiteProductHtml } from "./website-product.ts";
+import { arcadeProductHtml } from "./arcade-product.ts";
+import { productIntent } from "./product-intent.ts";
 import { productDesignCss } from "../projects/product-design-system.ts";
 import {
   tokensFromBrief,
@@ -3220,7 +3222,8 @@ export function composeProduct(brief: string, opts?: TokenOptions): ComposedProd
   const used = spec || synthesizeSpec(brief);
   const requestedKind = kindFromPrompt(brief) ?? inferKind(brief);
   const website = requestedKind === "site" || requestedKind === "landing";
-  const html = enforceGraphicIntent(website ? websiteProductHtml(brief, tokens) : productHtml(used, tokens, grammar), brief);
+  const product = productIntent(brief, requestedKind);
+  const html = enforceGraphicIntent(product?.domain === "arcade" ? arcadeProductHtml(tokens) : website ? websiteProductHtml(brief, tokens) : productHtml(used, tokens, grammar), brief);
   const review = fenixReviewer({ html, brief, kind: grammar.kind, knowledge });
   return {
     brief,
@@ -3228,7 +3231,7 @@ export function composeProduct(brief: string, opts?: TokenOptions): ComposedProd
     grammar,
     spec,
     html,
-    polish: polishFor(tokens, grammar, brief, knowledge),
+    polish: product ? ["PIANO PRODOTTO:", JSON.stringify(product), "Preserva i giochi funzionanti, personalizza secondo il brief. Non sostituire con un CRUD Note.", tokensInstruction(tokens)].join("\n") : polishFor(tokens, grammar, brief, knowledge),
     files: [{ path: "index.html", content: html }],
     knowledge,
     review,

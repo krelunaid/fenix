@@ -47,6 +47,8 @@ jobs:
       - run: pnpm build
       - run: pnpm test
       - run: pnpm test:product-design
+      - run: node --experimental-strip-types --test src/lib/projects/brief-match.test.ts
+      - run: node --experimental-strip-types --test src/lib/ai/arcade-product.test.ts
 
   postgres-reliability:
     name: postgres-16-reliability

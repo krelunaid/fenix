@@ -670,6 +670,7 @@ export function fenixRuntimeScript(projectId: string, kind?: string) {
   var items = [];
   function productOwnsList(){
     if (window.__fenixCrud) return true;
+    if (document.documentElement.hasAttribute("data-fenix-managed-ui")) return true;
     if (document.querySelector("table thead") && document.querySelector("table tbody")) return true;
     if (document.querySelector("[data-fenix-rail], [data-fenix-week], article.slot, [data-agenda-form]")) return true;
     if (document.documentElement.hasAttribute("data-fenix-campo")) return true;

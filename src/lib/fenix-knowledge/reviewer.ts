@@ -1,5 +1,6 @@
 import { isPhoneKind } from "../projects/infer.ts";
 import { leakedRuntimeText } from "../projects/graphic-quality.ts";
+import { genericBriefMismatch } from "../projects/brief-match.ts";
 import type { ProjectKind } from "../projects/types.ts";
 import {
   DEFAULT_COMPLETENESS_THRESHOLD,
@@ -72,6 +73,8 @@ export function fenixReviewer(input: {
     deduct("ui", 40, "nessun markup");
     deduct("architecture", 40, "nessuna struttura");
   } else {
+    const mismatch = genericBriefMismatch(html, brief);
+    if (mismatch) deduct("completeness", 80, mismatch);
     if (html.length < 400) deduct("completeness", 25, "HTML troppo corto per un prodotto");
     if (text.length < 40) deduct("completeness", 20, "testo visibile insufficiente");
     if (!has(/<!doctype html/i, html)) deduct("completeness", 8, "manca doctype");

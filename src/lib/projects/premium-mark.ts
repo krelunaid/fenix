@@ -116,7 +116,7 @@ export function crispBookMarkSvg(id: string): string {
 export function crispFilledGlyphMarkSvg(id: string, glyphSvg: string): string {
   const glyph = innerSvg(glyphSvg);
   return `${crispChipOpen(id, 'data-fenix-glyph-mark="1"', "")}
-<g fill="#E0F2FE" stroke="#E0F2FE" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" transform="translate(3.4 3.4) scale(1.05)">
+<g fill="none" color="#E0F2FE" stroke="#E0F2FE" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" transform="translate(3.4 3.4) scale(1.05)">
 ${glyph}
 </g>
 </svg>`;

@@ -39,17 +39,18 @@ export const COMPOSED_BUILD_FIND_EXAMPLES = [
 ];
 
 export const COMPOSED_BUILD_SYSTEM = `Completa le funzionalità richieste dal brief sull'app Fenix già composta.
-Non restituire un documento HTML intero. Preserva head, palette, tipografia, icone e layout esistenti.
+Non restituire un documento HTML intero. Preserva head e token grafici, ma la bozza NON è il prodotto richiesto.
+Adatta nome visibile, schermate, navigazione e icone al BRIEF. Una bozza Note non soddisfa una richiesta di videogiochi. Non limitarti a rifinire un prodotto diverso.
 Puoi aggiungere HTML nel body e modificare funzioni JavaScript per realizzare il comportamento richiesto: NON limitarti a cambiare colori o testi se mancano funzioni.
 Usa le classi esistenti, le API Fenix.load/save o Fenix.data e le viste già presenti. Nessuna credenziale, import esterno o seconda app.
-Il body ha ancore uniche /*fenix-slot:NOME*/ e data-fenix-slot="NOME". Prefissa ogni find con un'ancora copiata verbatim. Modifica le funzioni JS (save, render, form, home), non lo splash, non le icone SVG e non il markup statico in #root: al boot viene sostituito da render().
+Il body ha ancore uniche /*fenix-slot:NOME*/ e data-fenix-slot="NOME". Prefissa ogni find con un'ancora copiata verbatim. Modifica le funzioni JS (save, render, form, home) e le definizioni di navigazione/icone per il dominio richiesto, non solo il markup statico in #root: al boot viene sostituito da render().
 Non usare come find frammenti SVG (path, d=, gradient, botte, marca splash/header): sono ripetuti e restano invariati.
 Esempi validi, unici nel body, da copiare così come sono:
 {"find":"${COMPOSED_BUILD_FIND_EXAMPLES[0]}","replace":"${COMPOSED_BUILD_FIND_EXAMPLES[0]} /* hook brief */"}
 {"find":"${COMPOSED_BUILD_FIND_EXAMPLES[1]}","replace":"${COMPOSED_BUILD_FIND_EXAMPLES[1]} /* campi brief */"}
 {"find":"${COMPOSED_BUILD_FIND_EXAMPLES[2]}","replace":"${COMPOSED_BUILD_FIND_EXAMPLES[2]} /* vista brief */"}
 Rispondi SOLO JSON: {"version":1,"baseSha256":"SHA fornito","changes":[{"find":"testo esatto unico nel body originale","replace":"nuovo testo"}]}.
-Da 1 a 12 cambiamenti disgiunti sul documento ORIGINALE; find 12–12000 caratteri, replace massimo 24000. Nessuna sostituzione del body intero, del root o della navigazione.
+Da 1 a 12 cambiamenti disgiunti sul documento ORIGINALE; find 12–12000 caratteri, replace massimo 24000. Nessuna sostituzione del body intero o del root. Mantieni la navigazione funzionante e realizza le schermate richieste.
 Non aggiungere style/link: la direzione grafica è già definita. Mantieni logica, dati e schermate non interessati. Output atomico: niente markdown o META/HTML.`;
 
 export const COMPOSED_PLAN_APPLY_RETRIES = 2;
@@ -67,7 +68,8 @@ export function composedPlanError(error) {
 
 /** @param {unknown} error */
 export function isRetryableComposedPlanError(error) {
-  return RETRYABLE_COMPOSED_PLAN.test(composedPlanError(error).message);
+  return composedPlanError(error).name === "IncompleteModelResponse"
+    || RETRYABLE_COMPOSED_PLAN.test(composedPlanError(error).message);
 }
 
 /** @param {string} html */
@@ -181,28 +183,25 @@ export function parseComposedBuildPlan(text) {
  * retries return the seed unchanged — never a full rewrite.
  * @param {string} html
  * @param {(plan: unknown) => string | Promise<string>} applyPlan
- * @param {string} text
+ * @param {string | (() => Promise<string>)} text
  * @param {(feedback: string) => Promise<string>} [retryPlan]
  * @returns {Promise<{html: string, applied: boolean, attempts: number, log: string[], error?: Error}>}
  */
 export async function applyComposedBuildPlanOrSeed(html, applyPlan, text, retryPlan) {
   let lastError;
-  let current = text;
+  let current = "";
   let attempts = 0;
   for (let attempt = 0; attempt <= COMPOSED_PLAN_APPLY_RETRIES; attempt++) {
     attempts = attempt + 1;
     try {
+      current = attempt === 0
+        ? (typeof text === "function" ? await text() : text)
+        : await retryPlan?.(composedPlanRetryFeedback(lastError, html)) || "";
       const result = await applyPlan(parseComposedBuildPlan(current));
       return { html: result, applied: true, attempts, log: [] };
     } catch (error) {
       lastError = composedPlanError(error);
       if (attempt === COMPOSED_PLAN_APPLY_RETRIES || !retryPlan || !isRetryableComposedPlanError(lastError)) {
-        break;
-      }
-      try {
-        current = await retryPlan(composedPlanRetryFeedback(lastError, html));
-      } catch (retryError) {
-        lastError = composedPlanError(retryError);
         break;
       }
     }
