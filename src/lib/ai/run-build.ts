@@ -6,6 +6,7 @@ import {
   RESUME_ERROR,
   useProjectStore,
 } from "@/lib/projects/store";
+import { TIMEOUT_ERROR, isTimeoutInterrupt } from "@/lib/projects/recover";
 import { parseBuildOutput, type BuildResult } from "./parse";
 import { isWeakPreview, lookInstruction, resetAudit, waitPreviewAudit, waitPreviewShot, waitPreviewBoot, getPreviewBootError, getPreviewBootOk, rememberBootError } from "./look";
 import { DASHBOARD_POLISH_INSTRUCTION, SITE_POLISH_INSTRUCTION } from "./app-shell";
@@ -52,6 +53,10 @@ const polishedOnce = new Set<string>();
 
 export const WORKER_POLL_MAX = 30;
 const WORKER_POLL_MS = 2000;
+/** Railway cold start + 50–120k composed body. 8s aborted live barber creates. */
+export const WORKER_START_MS = 30_000;
+/** Client backstop past the 175s /api/build abort. */
+export const STREAM_WAIT_MS = 180_000;
 /** 2s ticks while a persisted job is live. Overlay stays locked. */
 export const WORKER_JOB_POLL_MAX = 180;
 /** Match the visible promise: generation never owns the UI for more than 10 min. */
@@ -62,6 +67,43 @@ function isTransientNetwork(msg: string) {
   return /load failed|failed to fetch|network error|timeout|aborted|ERR_NETWORK|Failed to fetch/i.test(
     String(msg || ""),
   );
+}
+
+function persistComposedSeed(
+  projectId: string,
+  payload: { html?: string; kind?: string; palette?: { bg?: string; surface?: string; fg?: string; muted?: string; accent?: string; line?: string } },
+  fallbackKind: ReturnType<typeof resolveProjectKind>,
+) {
+  const html = payload.html || "";
+  if (!html) return false;
+  const current = useProjectStore.getState().getProject(projectId);
+  if (current?.html) return true;
+  const name =
+    html.match(/<title>([^<]+)<\/title>/i)?.[1]?.trim().slice(0, 80) ||
+    current?.name ||
+    "Studio";
+  const palette = {
+    bg: payload.palette?.bg || current?.palette.bg || "#f4efe6",
+    surface: payload.palette?.surface || current?.palette.surface || "#fffaf3",
+    fg: payload.palette?.fg || current?.palette.fg || "#2a241c",
+    muted: payload.palette?.muted || current?.palette.muted || "#6f675c",
+    accent: payload.palette?.accent || current?.palette.accent || "#b85c38",
+    line: payload.palette?.line || current?.palette.line,
+  };
+  const report = applyBuildResult(
+    projectId,
+    {
+      name,
+      tagline: current?.tagline || "",
+      kind: (payload.kind as typeof fallbackKind) || fallbackKind,
+      summary: current?.summary || "",
+      palette,
+      html,
+      files: [{ path: "index.html", content: html }],
+    },
+    "building",
+  );
+  return report.syntaxOk;
 }
 
 function stillCurrent(projectId: string, epoch: number, jobId?: string): boolean {
@@ -321,7 +363,7 @@ async function consumeViaWorker(
           "Idempotency-Key": projectId,
         },
         body: JSON.stringify({ ...body, projectId }),
-        signal: AbortSignal.timeout(8000),
+        signal: AbortSignal.timeout(WORKER_START_MS),
       });
       if (base === "/__worker") proxyAnswered = true;
       if (started.status !== 202) {
@@ -402,6 +444,7 @@ async function consumeStream(
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ ...body, recentPalettes }),
+    signal: AbortSignal.timeout(STREAM_WAIT_MS),
   });
 
   if (!res.ok || !res.body) {
@@ -844,8 +887,24 @@ export async function runBuild(projectId: string, instruction?: string) {
     metrics: { credits: cost },
   });
 
-  const epoch = nextBuildEpoch(project.buildEpoch);
-  const snap = captureStableSnapshot(project);
+  const kind = resolveProjectKind({
+    stored: project.kind,
+    requested: project.requestedKind,
+    prompt: project.prompt,
+  });
+  const payload = createBuildRequest({
+    prompt: project.prompt,
+    html: project.html,
+    kind,
+    instruction,
+    recentPalettes: store.recentPalettes ?? [],
+  });
+  if (!instruction && isComposedCreation(payload)) {
+    persistComposedSeed(projectId, payload, kind);
+  }
+  const seeded = useProjectStore.getState().getProject(projectId) ?? project;
+  const epoch = nextBuildEpoch(seeded.buildEpoch);
+  const snap = captureStableSnapshot(seeded);
   store.updateProject(projectId, {
     status: "building",
     error: undefined,
@@ -866,22 +925,13 @@ export async function runBuild(projectId: string, instruction?: string) {
   let charged = true;
   try {
     let streamed = false;
-    const kind = resolveProjectKind({
-      stored: project.kind,
-      requested: project.requestedKind,
-      prompt: project.prompt,
-    });
     const phone = isPhoneKind(kind);
     const desk = kind === "site" || kind === "landing" || kind === "dashboard";
-    const payload = createBuildRequest({
-      prompt: project.prompt,
-      html: project.html,
-      kind,
-      instruction,
-      recentPalettes: store.recentPalettes ?? [],
-    });
+    const composedCreate = isComposedCreation(payload);
     try {
-      streamed = isIOS() || desk
+      // Composed phone creates go to the Railway worker. Netlify Edge /api/build
+      // is killed around 50s — before gate/repair — so the client never stores HTML.
+      streamed = isIOS() || desk || composedCreate
         ? await consumeViaWorker(projectId, payload, true, epoch)
         : await consumeStream(projectId, payload, true, epoch);
     } catch (first) {
@@ -889,12 +939,23 @@ export async function runBuild(projectId: string, instruction?: string) {
       if (msg === STALE_JOB) throw first;
       if (msg === JOB_STILL_RUNNING) throw first;
       // A rejected/uncertain composed worker build must not become a second
-      // POST or a full-document stream rewrite. The outer failure path recovers.
-      if ((isIOS() || desk) && isComposedCreation(payload)) throw first;
-      // A lost/rejected atomic Edge response is uncertain, not authority to
-      // send the same paid creation to a second provider/worker job.
-      if (isAtomicStreamCreation(payload)) throw first;
-      if (isTransientNetwork(msg)) {
+      // POST or a full-document stream rewrite. Keep the compose seed instead.
+      if (composedCreate) {
+        persistComposedSeed(projectId, payload, kind);
+        const latest = useProjectStore.getState().getProject(projectId);
+        if (latest?.html) {
+          store.updateProject(projectId, {
+            buildLog: mergeUniqueLogs(latest.buildLog, [
+              `Creazione worker interrotta: ${msg || "timeout"}. Resta la bozza composta.`,
+            ]),
+          });
+          streamed = true;
+        } else {
+          throw first;
+        }
+      } else if (isAtomicStreamCreation(payload)) {
+        throw first;
+      } else if (isTransientNetwork(msg)) {
         streamed = await consumeViaWorker(projectId, payload, true, epoch);
       } else if (isIOS() || desk) {
         streamed = await consumeStream(projectId, payload, true, epoch);
@@ -1079,7 +1140,10 @@ export async function runBuild(projectId: string, instruction?: string) {
       return;
     }
     if (charged) refundBuildCredit(projectId, cost);
-    abandonVisualJob(projectId, message);
+    abandonVisualJob(
+      projectId,
+      isTimeoutInterrupt(message) ? TIMEOUT_ERROR : message,
+    );
   } finally {
     inflight.delete(projectId);
   }

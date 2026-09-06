@@ -7,9 +7,14 @@ import { DEMOS } from "./demos.ts";
 import {
   STALE_BUILD_MS,
   RESUME_ERROR,
+  INTERRUPT_ERROR,
+  TIMEOUT_ERROR,
   recoverPersistedProject,
   isPublishable,
   needsResume,
+  shouldStartCreateBuild,
+  shouldResumePolish,
+  isTimeoutInterrupt,
 } from "./recover.ts";
 import { canPublishHtml } from "./validate-html.ts";
 import { looksLikeLeakedCss } from "./color-scheme.ts";
@@ -49,11 +54,30 @@ describe("recoverPersistedProject", () => {
     assert.equal(needsResume(recovered), false);
   });
 
-  it("marks building without HTML as interrupted", () => {
+  it("keeps a just-created building studio without HTML so persist merge cannot Interrotto it", () => {
     const recovered = recoverPersistedProject(seed({ html: "", updatedAt: Date.now() - 1_000 }));
-    assert.equal(recovered.status, "error");
-    assert.match(recovered.error || "", /Interrotto/);
+    assert.equal(recovered.status, "building");
+    assert.equal(recovered.error, undefined);
     assert.equal(isPublishable(recovered), false);
+    assert.equal(shouldStartCreateBuild(recovered), true);
+  });
+
+  it("marks an abandoned create (buildEpoch, no HTML) as interrupted", () => {
+    const recovered = recoverPersistedProject(
+      seed({ html: "", buildEpoch: 1, updatedAt: Date.now() - 1_000 }),
+    );
+    assert.equal(recovered.status, "error");
+    assert.equal(recovered.error, INTERRUPT_ERROR);
+    assert.equal(isPublishable(recovered), false);
+    assert.equal(shouldStartCreateBuild(recovered), false);
+  });
+
+  it("marks a stale empty building studio as interrupted", () => {
+    const recovered = recoverPersistedProject(
+      seed({ html: "", updatedAt: Date.now() - STALE_BUILD_MS - 1_000 }),
+    );
+    assert.equal(recovered.status, "error");
+    assert.equal(recovered.error, INTERRUPT_ERROR);
   });
 
   it("demotes ready without a valid final srcdoc", () => {
@@ -318,5 +342,27 @@ describe("isPublishable", () => {
     assert.equal(isPublishable({ status: "building", html: VALID, kind: "app", id: "p1" }), false);
     assert.equal(isPublishable({ status: "error", html: VALID, kind: "app", id: "p1" }), false);
     assert.equal(isPublishable({ status: "ready", html: "", kind: "app", id: "p1" }), false);
+  });
+});
+
+describe("create vs polish autostart", () => {
+  it("starts create for a seeded studio that has not begun a build epoch", () => {
+    assert.equal(shouldStartCreateBuild({ status: "building", html: VALID }), true);
+    assert.equal(shouldResumePolish({ status: "building", html: VALID }), false);
+    assert.equal(shouldStartCreateBuild({ status: "building", html: "" }), true);
+  });
+
+  it("resumes polish when a job, log, or epoch is already live", () => {
+    assert.equal(shouldStartCreateBuild({ status: "building", html: VALID, buildEpoch: 1 }), false);
+    assert.equal(shouldResumePolish({ status: "building", html: VALID, buildEpoch: 1 }), true);
+    assert.equal(shouldStartCreateBuild({ status: "building", html: VALID, visualJobId: "j" }), false);
+    assert.equal(shouldResumePolish({ status: "building", html: VALID, visualJobId: "j" }), true);
+    assert.equal(shouldStartCreateBuild({ status: "building", html: VALID, buildLog: ["Partito"] }), false);
+  });
+
+  it("classifies abort/timeout as a durable generation timeout", () => {
+    assert.equal(isTimeoutInterrupt("The operation was aborted due to timeout"), true);
+    assert.equal(isTimeoutInterrupt(TIMEOUT_ERROR), true);
+    assert.equal(isTimeoutInterrupt("HTML non valido"), false);
   });
 });

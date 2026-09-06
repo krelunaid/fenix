@@ -25,7 +25,7 @@ import { runBuild, resumePolish } from "@/lib/ai/run-build";
 import { suggestEdits } from "@/lib/ai/suggest";
 import { codePaneFiles } from "@/lib/projects/fenix2";
 import { useProjectStore } from "@/lib/projects/store";
-import { isPublishable, needsResume } from "@/lib/projects/recover";
+import { isPublishable, needsResume, shouldResumePolish, shouldStartCreateBuild } from "@/lib/projects/recover";
 import { isStudioLocked } from "@/lib/projects/studio-lock";
 import type { ProjectKind } from "@/lib/projects/types";
 import { cn } from "@/lib/utils";
@@ -74,12 +74,12 @@ function StudioPage() {
 
   useEffect(() => {
     if (!hydrated || !project) return;
-    if (project.status === "building" && !project.html) {
+    if (shouldStartCreateBuild(project)) {
       void runBuild(project.id);
-    } else if (project.status === "building" && project.html) {
+    } else if (shouldResumePolish(project)) {
       void resumePolish(project.id);
     }
-  }, [hydrated, project?.id, project?.status, project?.html]);
+  }, [hydrated, project?.id, project?.status, project?.html, project?.buildEpoch]);
 
   useEffect(() => {
     const el = threadRef.current;

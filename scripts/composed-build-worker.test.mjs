@@ -48,8 +48,14 @@ test("controller wiring keeps composed worker failures out of automatic full-doc
   const worker = controller.slice(controller.indexOf("async function consumeViaWorker("),controller.indexOf("async function consumeStream("));
   assert.match(worker,/if \(isComposedCreation\(body\)\) throw err/);
   assert.match(worker,/if \(isComposedCreation\(body\)\) throw new Error\(lastErr\)/);
-  const guard=controller.indexOf("if ((isIOS() || desk) && isComposedCreation(payload)) throw first");
+  assert.match(controller,/WORKER_START_MS = 30_000/);
+  assert.match(controller,/AbortSignal\.timeout\(WORKER_START_MS\)/);
+  assert.doesNotMatch(controller,/AbortSignal\.timeout\(8000\)/);
+  assert.match(controller,/composedCreate\s*=\s*isComposedCreation\(payload\)/);
+  assert.match(controller,/isIOS\(\) \|\| desk \|\| composedCreate/);
+  const guard=controller.indexOf("if (composedCreate)");
   assert.ok(guard>0 && guard<controller.indexOf("if (isTransientNetwork(msg))",guard));
-  const edgeGuard=controller.indexOf("if (isAtomicStreamCreation(payload)) throw first");
+  assert.match(controller.slice(guard, guard+500), /persistComposedSeed/);
+  const edgeGuard=controller.indexOf("if (isAtomicStreamCreation(payload))");
   assert.ok(edgeGuard>guard && edgeGuard<controller.indexOf("if (isTransientNetwork(msg))",guard));
 });

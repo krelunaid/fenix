@@ -42,6 +42,10 @@ describe("focus-visible and worker model", () => {
     assert.match(src, /fetched\.state === "missing"/);
     assert.match(src, /if \(refund\) refundBuildCredit\(projectId, refund\)/);
     assert.match(src, /charged = !finishPolish/);
+    assert.match(src, /WORKER_START_MS = 30_000/);
+    assert.match(src, /persistComposedSeed/);
+    assert.match(src, /isIOS\(\) \|\| desk \|\| composedCreate/);
+    assert.match(src, /TIMEOUT_ERROR/);
   });
 
   it("uses grok-build-0.1 on the visual worker with no reasoningEffort", () => {
@@ -81,7 +85,7 @@ describe("focus-visible and worker model", () => {
     assert.match(card, /validatePublishable/);
     assert.match(card, /report\?\.syntaxOk/);
     const recover = readFileSync(join(root, "src/lib/projects/recover.ts"), "utf8");
-    assert.match(recover, /STALE_BUILD_MS = 120_000/);
+    assert.match(recover, /STALE_BUILD_MS = 10 \* 60 \* 1000/);
     assert.doesNotMatch(recover, /status = "ready"/);
     assert.match(recover, /stripPhoneChromeFromSite/);
     const store = readFileSync(join(root, "src/lib/projects/store.ts"), "utf8");
@@ -94,7 +98,11 @@ describe("focus-visible and worker model", () => {
     assert.match(store, /if \(!known\) return/);
     assert.match(store, /restoreRevision/);
     assert.match(store, /commitIfChanged/);
+    assert.match(store, /composeProduct/);
+    assert.match(store, /isPhoneKind\(project\.kind\)/);
     const studio = readFileSync(join(root, "src/routes/studio.$projectId.tsx"), "utf8");
+    assert.match(studio, /shouldStartCreateBuild/);
+    assert.match(studio, /shouldResumePolish/);
     assert.match(studio, /isPublishable/);
     assert.match(studio, /isStudioLocked/);
     assert.match(studio, /data-studio-lock/);
