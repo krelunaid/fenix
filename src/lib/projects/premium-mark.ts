@@ -72,16 +72,16 @@ export function crispBarberMarkSvg(id: string): string {
   </linearGradient>
 </defs>
 <rect x="0.55" y="0.55" width="30.9" height="30.9" rx="8.5" fill="url(#ccm-plate-${uid})" stroke="#D2BFA6" stroke-width="1.5"/>
-<g data-fenix-shears-glyph="1" fill="#F4EEE6">
-  <path d="M12.2 18.8 24.6 4.4c.62-.7 1.78-.58 2.22.26l.62 1.12c.36.64.08 1.46-.58 1.84L14.1 20.2z"/>
-  <path d="M19.8 18.8 7.4 4.4c-.62-.7-1.78-.58-2.22.26l-.62 1.12c-.36.64-.08 1.46.58 1.84L17.9 20.2z"/>
-  <circle cx="9.15" cy="23.35" r="5.2"/>
-  <circle cx="22.85" cy="23.35" r="5.2"/>
+<g data-fenix-shears-glyph="1">
+  <path fill="#F4EEE6" d="M10.2 17.6 19.2 3.8 26.6 7 14.8 21.6z"/>
+  <path fill="#F4EEE6" d="M21.8 17.6 12.8 3.8 5.4 7 17.2 21.6z"/>
+  <circle fill="#F4EEE6" cx="9.1" cy="23.4" r="5.45"/>
+  <circle fill="#F4EEE6" cx="22.9" cy="23.4" r="5.45"/>
 </g>
-<circle cx="9.15" cy="23.35" r="2.2" fill="#0B0908"/>
-<circle cx="22.85" cy="23.35" r="2.2" fill="#0B0908"/>
-<circle cx="16" cy="17.15" r="2.15" fill="#C4A882"/>
-<circle cx="16" cy="17.15" r="0.85" fill="#0B0908"/>
+<circle cx="9.1" cy="23.4" r="2.15" fill="#0B0908"/>
+<circle cx="22.9" cy="23.4" r="2.15" fill="#0B0908"/>
+<circle cx="16" cy="17.3" r="2.35" fill="#C4A882"/>
+<circle cx="16" cy="17.3" r="0.9" fill="#0B0908"/>
 </svg>`;
 }
 

@@ -59,7 +59,7 @@ describe("premium app mark", () => {
     assert.match(shears, /data-fenix-crisp-mark="1"/);
     assert.match(shears, /#0B0908|#1C1612/);
     assert.match(shears, /#D2BFA6|#F4EEE6/);
-    assert.match(shears, /M12\.2 18\.8 24\.6 4\.4/);
+    assert.match(shears, /M10\.2 17\.6 19\.2 3\.8/);
     assert.match(shears, /<path /);
     assert.doesNotMatch(shears, /fill="none"|fill-opacity="\.18"/);
     assert.match(book, /data-fenix-book-mark="1"/);

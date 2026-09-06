@@ -1746,7 +1746,7 @@ describe("graphic pipeline visual QA D/T/M", () => {
       {
         brief: formatPrefix("app") + "App barbiere: agenda tagli e clienti, stile iPhone.",
         attr: "data-fenix-barber-mark",
-        path: "M12.2 18.8 24.6 4.4",
+        path: "M10.2 17.6 19.2 3.8",
       },
       {
         brief: formatPrefix("app") + "App libreria: catalogo libri, prestiti e scaffali, stile iPhone.",
@@ -1788,7 +1788,7 @@ describe("graphic pipeline visual QA D/T/M", () => {
               attr: mark?.getAttribute(attr),
               shearsFill: mark?.getAttribute("data-fenix-shears-fill"),
               crisp: mark?.getAttribute("data-fenix-crisp-mark"),
-              path: mark?.innerHTML.includes("M12.2") || mark?.innerHTML.includes("M8.2") || false,
+              path: mark?.innerHTML.includes("M10.2") || mark?.innerHTML.includes("M8.2") || false,
               pathCount,
               filled,
               chipW: chip?.getBoundingClientRect().width ?? 0,
@@ -1797,7 +1797,7 @@ describe("graphic pipeline visual QA D/T/M", () => {
               headerHidden,
               appMarks: document.querySelectorAll('[data-fenix-id="icon:app"]').length,
               homeMarks: document.querySelectorAll(".fx-app-mark").length,
-              faviconShears: favicon.includes("data-fenix-shears-fill") && favicon.includes("M12.2"),
+              faviconShears: favicon.includes("data-fenix-shears-fill") && favicon.includes("M10.2"),
               faviconBook: favicon.includes("data-fenix-book-mark"),
               transparentChip: !rgb || (Number(rgb[1]) === 0 && Number(rgb[2]) === 0 && Number(rgb[3]) === 0) || bg === "transparent",
               appleTouch: !!document.querySelector('link[rel="apple-touch-icon"]'),
