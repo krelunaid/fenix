@@ -49,7 +49,9 @@ export const generateBuild = createServerFn({ method: "POST" })
       contractInstruction(planContract(data.prompt)),
       composed
         ? composed.polish
-        : "Gestionale/sito desktop: elenco, filtri, form, numeri. Niente tabbar iPhone, niente scheletro telefono.",
+        : kind === "site" || kind === "landing"
+          ? "Sito pubblico: hero, offerta, approccio, contatti e footer. Contenuti per il visitatore, NON elenchi operativi, KPI o pannelli staff. Nessun dato commerciale inventato."
+          : "Gestionale desktop: elenco, filtri, form, numeri. Niente tabbar iPhone, niente scheletro telefono.",
       composed
         ? `VINCOLO UNICITÀ: prodotto visivamente unico, nato dal brief. Token cromatici del contratto. Vietato clone #f5f5f7 + Manrope + hero centrato. Vietato beige/terracotta se il brief non è ceramica. Grammatica ${composed.grammar.id}, non la stessa phone-shell.`
         : "VINCOLO UNICITÀ: prodotto visivamente unico, nato dal brief. Colori dal mestiere e dal brief esplicito, non una palette di casa. Niente tabbar iPhone.",

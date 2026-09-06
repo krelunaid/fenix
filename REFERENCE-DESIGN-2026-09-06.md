@@ -43,10 +43,22 @@ The first full-suite attempt was invalidated by rebuilding the preview while tes
 
 Final full suite: 617/617 application/browser tests, 139 suites, zero failures/skips; script suite 269 passed, zero failed, four existing skips (273 total). Full command exit 0; application duration 487004.630459 ms. Log: `/tmp/fenix-reference-full-final.log`. Targeted screenshots: `/tmp/fenix-reference-shots`. No source changes during the final full run; generated fixture artifacts are intentionally not included in the source commit.
 
-## Remaining findings / not accepted as premium
+## Completion pass — public websites and functional verification
 
-- Restaurant website seed still uses kitchen operations content; a website-specific content/layout path is required, not more styling of a dashboard.
-- Generic photographer website seed is sparse and exposes generic editorial scaffolding. It needs brief-derived sections and meaningful imagery/content.
-- Icons/illustrations have not been redesigned in this change. The inherited barber mark remains; no claim of an icon quality upgrade.
+- Public site/landing format now wins over domain operations recipes. Restaurant websites no longer start as kitchen boards; dashboards and apps retain their own composition paths.
+- New original website builder separates hero, offer, approach, contact and footer. Six content directions cover food, photography, beauty, hospitality, collection and general services. These are structural starting points, not a substitute for satisfying the full brief; the worker instruction explicitly requires that customization.
+- Website requests use the same builder before transport selection, preserving explicit edits and keeping phone-only atomic worker handling unchanged.
+- Responsive top navigation, a single page heading, semantic form labels, minimum 44px controls, native validation, focus and reduced motion. Existing domain palette and explicit font intent are preserved.
+- Contact uses the real Fenix load/save bridge; acknowledged success resets the form, rejected saves retain input and allow retry. It explicitly does not claim email delivery or booking/payment confirmation. No fictitious addresses, prices or reviews are supplied by this website seed.
+- Original repository illustrations provide four scene placements. Photography uses editorial scenes and an original camera glyph rather than document illustrations. Captions disclose illustrations, not photographs.
+- Updated old site tests assert public sections/form/top navigation instead of enforcing phone navigation, operation-loader IDs or the obsolete editorial scaffolding. Existing app assertions and contract/graphic gates remain active.
+- `test:product-design` now includes 8 tests, 28 screenshot cases (seven briefs at four widths), touch-target checks, and a real srcdoc persistence/rejected-save/retry test. Reproduce screenshots with the same environment variable above.
+- An additional contrast check found secondary ink below 4.5:1 on three website palette/surface combinations. Website CSS now falls back to primary ink only where needed, preserving brand/background colors. The new regression checks both surfaces and action ink across six domains.
+- Completion-pass targeted tests and typecheck pass; complete clean-checkout suite results are recorded in the handoff after execution, not inferred from the earlier run.
+
+## Remaining limitations / not accepted as universal premium
+
+- Arbitrary niche briefs still need worker customization and real, user-approved content/assets. The six seed directions are not proof of every possible app/site.
+- Inherited app marks remain; the camera mark is specific to the new photography website direction, not a claim that every icon has been redesigned.
 - Worker live output, real external font loading and production behavior remain unverified for this change. Offline screenshots use fallback fonts for externally hosted faces.
 - No deploy, no new paid generations, no credit consumption. No 10/10 or Emergent parity claim.

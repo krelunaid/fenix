@@ -258,11 +258,12 @@ describe("graphic pipeline prompt→plan→generate→visual→QA", () => {
       assert.equal(run.plan.kind, run.generated.contract.kind);
       assert.ok(run.generated.spec, run.brief);
       assert.match(run.generated.html, /data-imagery="domain"/);
-      assert.match(run.generated.html, /data-fenix-craft/);
+      assert.match(run.generated.html, /data-fenix-craft|data-fenix-site/);
       assert.match(run.generated.html, /:focus-visible/);
       assert.match(run.generated.html, /Fenix\.load/);
       assert.match(run.generated.html, /Fenix\.save/);
       assert.match(run.generated.html, /state-empty|prefers-reduced-motion/);
+      if (run.plan.kind !== "site" && run.plan.kind !== "landing") {
       assert.match(run.generated.html, /@media\(min-width:768px\)/);
       assert.match(run.generated.html, /data-slot="/);
       assert.match(run.generated.html, /data-fenix-flash/);
@@ -284,6 +285,13 @@ describe("graphic pipeline prompt→plan→generate→visual→QA", () => {
         assert.match(svg, /height="24"/);
         assert.match(svg, /overflow="visible"/);
       }
+      } else {
+        assert.match(run.generated.html, /@media\(max-width:700px\)/);
+        assert.match(run.generated.html, /<nav aria-label="Navigazione principale"/);
+        assert.match(run.generated.html, /id="contact-form"/);
+        assert.match(run.generated.html, /role="status"/);
+        assert.doesNotMatch(run.generated.html, /data-craft-nav="1"|nav\.tabs/);
+      }
       assert.doesNotMatch(run.generated.html, /Ciao/);
       assert.doesNotMatch(run.generated.html, /localStorage/);
       assert.doesNotMatch(run.generated.html, /#f5f5f7/);
@@ -301,9 +309,11 @@ describe("graphic pipeline prompt→plan→generate→visual→QA", () => {
         assert.match(run.generated.html, /ledger-art/);
         assert.doesNotMatch(run.generated.html, /height:40%[\s\S]*height:70%[\s\S]*height:55%[\s\S]*height:90%[\s\S]*height:62%/);
       }
+      if (run.plan.kind !== "site" && run.plan.kind !== "landing") {
       assert.match(run.generated.html, /--t-h1:/);
       assert.match(run.generated.html, /--t-h2:/);
       assert.match(run.generated.html, /--ink-quiet:/);
+      }
       if (run.tokens.family !== "ceramic") {
         assert.doesNotMatch(run.generated.html.slice(0, 2500), /#efe6d4/);
       }
@@ -352,11 +362,11 @@ describe("graphic pipeline prompt→plan→generate→visual→QA", () => {
     assert.match(crudo.html, /width:96px;height:80px/);
     assert.match(crudo.html, /function artOf\(/);
     assert.match(atelier.html, /data-scene="pozzo"/);
-    assert.match(atelier.html, /data-scene=\\"olivo\\"/);
-    assert.match(atelier.html, /data-scene=\\"fienile\\"/);
+    assert.match(atelier.html, /data-scene="olivo"/);
+    assert.match(atelier.html, /data-scene="fienile"/);
     assert.match(atelier.html, /data-part="type"/);
-    assert.match(atelier.html, /#copertina\{grid-column:1/);
-    assert.match(atelier.html, /function artOf\(/);
+    assert.match(atelier.html, /class="feature-art"/);
+    assert.match(atelier.html, /grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);
     const osso = composeProduct(
       `${formatPrefix("app")}Vesti Osso: moda e vendite, lookbook in avorio, capi in osso e cassa.`,
     );
@@ -1272,11 +1282,11 @@ describe("graphic pipeline prompt→plan→generate→visual→QA", () => {
 
     assert.equal(site.grammar.id, "magazine");
     assert.equal(site.grammar.chrome, "masthead");
-    assert.match(site.html, /<html[^>]*data-fenix-premium[\s>]/);
-    assert.match(site.html, /<span>Copertina<\/span>/);
-    assert.match(site.html, /fx-hello/);
-    assert.match(site.html, /data-fenix-crisp-mark|data-fenix-premium-mark/);
-    assert.match(site.html, /Fascicolo editoriale/);
+    assert.match(site.html, /<html[^>]*data-fenix-website/);
+    assert.match(site.html, /class="identity"/);
+    assert.match(site.html, /class="hero"/);
+    assert.match(site.html, /id="contatti"/);
+    assert.doesNotMatch(site.html, /Fascicolo editoriale/);
     assert.doesNotMatch(site.html, /<span>Tavolo<\/span>/);
     assert.doesNotMatch(site.html, /nav\.tabs/);
     assert.doesNotMatch(site.html, /<p class="place">Studio<\/p>/);

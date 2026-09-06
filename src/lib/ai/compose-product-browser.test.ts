@@ -875,6 +875,7 @@ describe("graphic pipeline visual QA D/T/M", () => {
                 assert.equal(pressed, true, `${fix.id}/${vp} pressed`);
               }
             }
+            if (kind !== "site" && kind !== "landing") {
             assert.equal(await page.locator("#load").count(), 1);
             await page.evaluate(() => {
               const n = document.getElementById("load");
@@ -885,6 +886,12 @@ describe("graphic pipeline visual QA D/T/M", () => {
               const n = document.getElementById("load");
               if (n) n.hidden = true;
             });
+            } else {
+              assert.equal(await page.locator("main > section").count(), 4);
+              assert.equal(await page.locator("#contact-form [required]").count(), 3);
+              assert.equal(await page.getByRole("status").count(), 1);
+              assert.equal(await page.locator(".feature-art svg").count(), 3);
+            }
             const primary = page.locator("[data-act='advance'], [data-act='wear']").first();
             if ((await primary.count()) > 0) {
               await primary.click();
@@ -918,7 +925,7 @@ describe("graphic pipeline visual QA D/T/M", () => {
             assert.ok(title.length > 2, `${fix.id} title`);
             if (vp === "D") {
               const appWidth = await page.evaluate(() => {
-                const app = document.querySelector(".app") as HTMLElement | null;
+                const app = document.querySelector(".app, html[data-fenix-website] main") as HTMLElement | null;
                 return app ? Math.round(app.getBoundingClientRect().width) : 0;
               });
               assert.ok(appWidth >= 1000, `${fix.id} desktop app width ${appWidth}`);

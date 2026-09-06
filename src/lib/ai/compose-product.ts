@@ -2,7 +2,8 @@
  * Deterministic graphic pipeline: prompt → plan → generate → visual → QA.
  * 0 LLM credits. Seed HTML is the product the worker then polishes.
  */
-import { formatPrefix } from "../projects/infer.ts";
+import { formatPrefix, kindFromPrompt, inferKind } from "../projects/infer.ts";
+import { websiteProductHtml } from "./website-product.ts";
 import { productDesignCss } from "../projects/product-design-system.ts";
 import {
   tokensFromBrief,
@@ -3201,7 +3202,9 @@ function polishFor(
     tokensInstruction(tokens, brief),
     grammarInstruction(grammar),
     chrome,
-    "Il seed HTML è già il prodotto. Rifinisci copy se serve, non riciclare lo scheletro telefono, non boxed 1080, non placeholder geometrici.",
+    grammar.kind === "site" || grammar.kind === "landing"
+      ? "Il seed HTML è una base strutturale pubblica, NON la realizzazione completa del brief. Personalizza offerta, contenuti, navigazione e composizione in base a TUTTE le richieste. Sostituisci i testi generici; non inventare prezzi, indirizzi, recensioni o disponibilità. Conserva form funzionanti e stati onesti; non dichiarare email inviate o prenotazioni confermate senza integrazione reale. Niente pannelli staff o tabbar telefono nei siti pubblici."
+      : "Il seed HTML è già il prodotto. Rifinisci copy se serve, non riciclare lo scheletro telefono, non boxed 1080, non placeholder geometrici.",
     "Stati empty/loading/success/error visibili. Motion solo con prefers-reduced-motion: no-preference. Target ≥24px, focus visibile, AA.",
     knowledge?.instruction,
   ]
@@ -3215,7 +3218,9 @@ export function composeProduct(brief: string, opts?: TokenOptions): ComposedProd
   const knowledge = consultKnowledge(brief, grammar.kind);
   const spec = specForBrief(brief);
   const used = spec || synthesizeSpec(brief);
-  const html = enforceGraphicIntent(productHtml(used, tokens, grammar), brief);
+  const requestedKind = kindFromPrompt(brief) ?? inferKind(brief);
+  const website = requestedKind === "site" || requestedKind === "landing";
+  const html = enforceGraphicIntent(website ? websiteProductHtml(brief, tokens) : productHtml(used, tokens, grammar), brief);
   const review = fenixReviewer({ html, brief, kind: grammar.kind, knowledge });
   return {
     brief,

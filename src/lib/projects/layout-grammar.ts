@@ -73,6 +73,14 @@ export function grammarFromBrief(brief: string): LayoutGrammar {
   const family = familyFromBrief(brief);
   const kind = kindOf(brief);
   const variant = variantFromBrief(brief);
+  // Format intent wins over domain recipes: a restaurant website is not a kitchen board.
+  if (kind === "site" || kind === "landing") return {
+    id: "magazine", family, kind, chrome: "masthead", stage: "magazine",
+    desktop: "testata e nav superiore, hero 2 colonne, sezioni di offerta e racconto, contatti e footer; niente tabbar e niente 0-KPI operativi",
+    tablet: "hero fluido, griglia adattiva, navigazione superiore leggibile",
+    mobile: "sezioni in colonna, controlli 44px, niente tabbar o dashboard operativa",
+    voice: { census: "in evidenza", empty: "Nessuna richiesta inviata.", load: "Apro il sito", ok: "Richiesta salvata", err: "La richiesta non è stata salvata." },
+  };
   // Bookstore / library is a phone craft — never magazine masthead or desk STUDIO.
   if (isLibraryBrief(brief) && kind !== "dashboard") {
     return {
@@ -99,7 +107,7 @@ export function grammarFromBrief(brief: string): LayoutGrammar {
     return {
       id: "source-timeline",
       family,
-      kind: kind === "site" || kind === "landing" ? kind : "app",
+      kind: "app",
       chrome: "desk",
       stage: "timeline",
       desktop: variant
@@ -210,25 +218,6 @@ export function grammarFromBrief(brief: string): LayoutGrammar {
           load: "Apro l'elenco",
           ok: "In elenco",
           err: "La voce non è salvata.",
-        },
-      };
-    }
-    if (kind === "site" || kind === "landing") {
-      return {
-        id: "magazine",
-        family,
-        kind,
-        chrome: "masthead",
-        stage: "magazine",
-        desktop: "testata editoriale + lastre a tutta larghezza, niente tabbar e niente 0-KPI",
-        tablet: "copertina e lastre in colonna",
-        mobile: "copertina, lastre, nav in testata",
-        voice: {
-          census: "in pagina",
-          empty: "Nessuna lastra. Scrivine una.",
-          load: "Apro le pagine",
-          ok: "In pagina",
-          err: "Lastra non registrata.",
         },
       };
     }

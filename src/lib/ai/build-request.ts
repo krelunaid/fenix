@@ -27,6 +27,12 @@ export function createBuildRequest(input: {
 }) {
   const { prompt, html, instruction, kind, recentPalettes = [] } = input;
   if (instruction) return { prompt, html: html || "", instruction, kind, recentPalettes, operation: "edit" as const };
+  if ((kind === "site" || kind === "landing") && !html) {
+    const composed = composeProduct(`kind=${kind}.\n${prompt}`, { recent: recentPalettes });
+    return { prompt, html: composed.html, instruction: composed.polish, kind, recentPalettes,
+      palette: composed.tokens.palette, knowledge: composed.knowledge, review: composed.review,
+      operation: "create" as const };
+  }
   // Desktop gestionale/sito must not start from a phone seed or iPhone tabbar.
   if (!isPhoneKind(kind)) {
     const knowledge = consultKnowledge(prompt, kind);

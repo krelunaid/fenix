@@ -3,6 +3,53 @@ import { it } from "node:test";
 import { composeProduct } from "../ai/compose-product.ts";
 import { productDesignCss, productDesignInstruction } from "./product-design-system.ts";
 import { tokensFromBrief, tokensInstruction } from "./design-tokens.ts";
+import { createBuildRequest, isAtomicStreamCreation } from "../ai/build-request.ts";
+import { validateProductHtml } from "./validate-html.ts";
+import { websiteDirection } from "../ai/website-product.ts";
+import { contrastRatio, extractCssVars } from "./visual-quality.ts";
+
+it("keeps website text and action ink AA across page and card backgrounds", () => {
+  for (const domain of ["ristorante", "fotografo", "barbiere stile iPhone", "hotel", "profumi", "consulenza"]) {
+    const result = composeProduct(`kind=site sito web ${domain}`);
+    const vars = extractCssVars(result.html);
+    for (const background of [vars.bg, vars.surface]) {
+      assert.ok(contrastRatio(vars.fg!, background!) >= 4.5, domain);
+      assert.ok(contrastRatio(vars.muted!, background!) >= 4.5, domain);
+    }
+    assert.ok(contrastRatio(vars["accent-ink"]!,vars.accent!) >= 4.5, domain);
+    assert.equal(vars.accent,result.tokens.palette.accent);
+    assert.equal(vars.bg,result.tokens.palette.bg);
+  }
+});
+
+it("creates public websites across domains without choosing operations recipes", () => {
+  for (const [domain, expected] of [
+    ["ristorante", "food"],
+    ["fotografo", "editorial"],
+    ["barbiere", "beauty"],
+    ["hotel", "hospitality"],
+    ["profumi", "collection"],
+    ["consulenza", "service"],
+  ]) {
+    const prompt = `sito web ${domain} chiamato "Luce" stile iPhone`;
+    const request = createBuildRequest({ prompt, kind: "site" });
+    assert.equal(websiteDirection(prompt).domain, expected);
+    assert.equal(request.operation, "create");
+    assert.equal(isAtomicStreamCreation(request), false);
+    assert.match(request.html, /<title>Luce<\/title>/);
+    assert.match(request.html, /data-fenix-website/);
+    assert.doesNotMatch(request.html, /nav\.tabs|data-craft-nav|function spark\(/);
+    assert.equal(validateProductHtml(request.html, { kind: "site" }).ok, true, domain);
+    const edit = createBuildRequest({
+      prompt,
+      kind: "site",
+      html: request.html,
+      instruction: "Cambia solo icona",
+    });
+    assert.equal(edit.html, request.html);
+    assert.equal(edit.operation, "edit");
+  }
+});
 
 it("shares policy across domains and app/site/desk without rewriting their identities", () => {
   for (const brief of [
@@ -30,7 +77,10 @@ it("does not assign domain colors or font faces and differentiates web typograph
 });
 
 it("preserves explicitly requested system or editorial font direction", () => {
-  for (const brief of ["kind=app agenda stile iPhone", "kind=site portfolio Fraunces serif primario"]) {
+  for (const brief of [
+    "kind=app agenda stile iPhone",
+    "kind=site portfolio Fraunces serif primario",
+  ]) {
     const tokens = tokensFromBrief(brief);
     const output = tokensInstruction(tokens, brief);
     assert.ok(output.includes(`font: ${tokens.fonts.display} + ${tokens.fonts.body}`));
