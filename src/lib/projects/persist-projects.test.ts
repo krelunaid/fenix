@@ -107,6 +107,14 @@ describe("seeded studio persist union", () => {
     assert.ok(merged);
     const bag = JSON.parse(merged) as { state: { projects: Project[] } };
     assert.equal(bag.state.projects.some((p) => p.id === "json-seed" && /Prenota/.test(p.html)), true);
+    const localOnly = buildingSeed("local-first", composed.html, 100);
+    const staleSession = { ...localOnly, html: "", lastStableHtml: undefined, files: undefined };
+    const preferLocal = mergePersistJson(
+      JSON.stringify({ state: { projects: [localOnly] }, version: 3 }),
+      JSON.stringify({ state: { projects: [staleSession] }, version: 3 }),
+    );
+    const preferBag = JSON.parse(preferLocal || "{}") as { state: { projects: Project[] } };
+    assert.ok(preferBag.state.projects[0]?.html.includes("Prenota"));
     const compact = compactPersistJson(liveBlob);
     assert.match(compact, /json-seed/);
   });

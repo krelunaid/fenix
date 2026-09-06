@@ -55,7 +55,13 @@ export function pickProjectRevision(
   const existingSeed = hasSeed(existing);
   if (incomingSeed && !existingSeed) return incoming;
   if (existingSeed && !incomingSeed) return existing;
-  return (incoming.updatedAt || 0) >= (existing.updatedAt || 0) ? incoming : existing;
+  if ((incoming.updatedAt || 0) !== (existing.updatedAt || 0)) {
+    return (incoming.updatedAt || 0) > (existing.updatedAt || 0) ? incoming : existing;
+  }
+  const incomingFiles = incoming.files?.length ?? 0;
+  const existingFiles = existing.files?.length ?? 0;
+  if (incomingFiles !== existingFiles) return incomingFiles > existingFiles ? incoming : existing;
+  return incoming;
 }
 
 /**
@@ -134,6 +140,10 @@ function parseBag(raw: string | null | undefined): PersistBag | null {
   }
 }
 
+export function projectsFromPersistJson(raw: string | null | undefined): PersistableProject[] {
+  return parseBag(raw)?.state?.projects ?? [];
+}
+
 export function mergePersistJson(...raws: Array<string | null | undefined>): string | null {
   const bags = raws.map(parseBag).filter((b): b is PersistBag => Boolean(b));
   if (!bags.length) return null;
@@ -142,11 +152,14 @@ export function mergePersistJson(...raws: Array<string | null | undefined>): str
   let recentPalettes: unknown;
   let version = 3;
   for (const bag of bags) {
-    projects = mergeProjectLists(projects, bag.state?.projects);
-    if (typeof bag.state?.creditsRemaining === "number") {
+    // First source wins on equal updatedAt (local before session/live).
+    projects = mergeProjectLists(bag.state?.projects, projects);
+    if (typeof bag.state?.creditsRemaining === "number" && creditsRemaining == null) {
       creditsRemaining = bag.state.creditsRemaining;
     }
-    if (bag.state?.recentPalettes) recentPalettes = bag.state.recentPalettes;
+    if (bag.state?.recentPalettes && recentPalettes == null) {
+      recentPalettes = bag.state.recentPalettes;
+    }
     if (typeof bag.version === "number") version = bag.version;
   }
   return JSON.stringify({
@@ -237,30 +250,29 @@ export async function writeProjectsIdb(raw: string): Promise<boolean> {
 
 function projectStateStorage(): StateStorage {
   return {
-    getItem: async (name) => {
+    getItem: (name) => {
       const local = safeGet(webLocal(), name);
       const session = safeGet(webSession(), name);
       const live = safeGet(webSession(), LIVE_STUDIOS_KEY);
-      const idb = await readProjectsIdb();
-      return mergePersistJson(local, session, idb, live);
+      return mergePersistJson(local, session, live);
     },
-    setItem: async (name, value) => {
+    setItem: (name, value) => {
       rememberLiveStudiosFromPersistJson(value);
       const localOk = safeSet(webLocal(), name, value);
       safeSet(webSession(), name, value);
-      await writeProjectsIdb(value);
+      void writeProjectsIdb(value);
       if (!localOk) {
         const compact = compactPersistJson(value);
         safeSet(webLocal(), name, compact);
         safeSet(webSession(), name, compact);
-        await writeProjectsIdb(compact);
+        void writeProjectsIdb(compact);
       }
     },
-    removeItem: async (name) => {
+    removeItem: (name) => {
       safeRemove(webLocal(), name);
       safeRemove(webSession(), name);
       safeRemove(webSession(), LIVE_STUDIOS_KEY);
-      await writeProjectsIdb("");
+      void writeProjectsIdb("");
     },
   };
 }

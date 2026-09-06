@@ -3,6 +3,8 @@ import { persist } from "zustand/middleware";
 import {
   mergeProjectLists,
   projectPersistStorage,
+  projectsFromPersistJson,
+  readProjectsIdb,
   rememberLiveStudio,
   trimProjectList,
 } from "./persist-projects";
@@ -721,6 +723,7 @@ export const useProjectStore = create<ProjectStore>()(
         void (async () => {
           const idb = await readIndexedDb();
           idbSnap = idb;
+          const idbProjects = projectsFromPersistJson(await readProjectsIdb());
           if (state) {
             state.projects = state.projects.map((p) => {
               const recovered = recoverPersistedProject(p);
@@ -755,7 +758,10 @@ export const useProjectStore = create<ProjectStore>()(
             }
             state.appDb = merged;
             useProjectStore.setState({
-              projects: mergeProjectLists(state.projects, useProjectStore.getState().projects),
+              projects: mergeProjectLists(
+                idbProjects,
+                mergeProjectLists(state.projects, useProjectStore.getState().projects),
+              ),
               appDb: merged,
               creditsRemaining: state.creditsRemaining,
               hydrated: true,
