@@ -44,6 +44,8 @@ Un brief **full-stack** esplicito esporta un'app avviabile con `npm start`: fron
 
 `npm install` poi `npm run dev`. `npm test` e `npm run typecheck`.
 
+Su create phone, Fenix persiste un seed TypeScript all'istante (anteprima e fallback) e chiede a **grok-build-0.1** un documento HTML originale. Se parse o JS non sono validi resta il seed; non è il prodotto. Le modifiche successive restano find/replace atomici sul documento già accettato.
+
 Carico e recovery su PostgreSQL 16 reale (non PGlite), con la stessa fixture di CI:
 
 ```bash

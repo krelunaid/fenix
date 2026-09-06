@@ -1,14 +1,14 @@
 import { createServer } from "node:http";
 import { readWorkerBody } from "./request-body.mjs";
 import {
-  applyComposedBuildPlan,
-  applyComposedBuildPlanOrSeed,
-  isRetryableComposedPlanError,
-  composedBaseSha,
+  applyCreatedDocumentOrSeed,
   composedBuildPalette,
-  composedBuildUserContent,
-  COMPOSED_BUILD_SYSTEM,
+  composedCreateRetryFeedback,
+  composedCreateUserContent,
+  COMPOSED_CREATE_SYSTEM,
   COMPOSED_PLAN_DEGRADED_LOG,
+  isModelCreatedArtifact,
+  looksLikeFenixComposeSeed,
 } from "./composed-build.mjs";
 import { restoreHome, keepScripts } from "./artifact-restore.mjs";
 import { isComposedVisualArtifact, VISUAL_STYLE_SELECTORS } from "./visual-style.mjs";
@@ -334,42 +334,75 @@ function stripPhoneChromeFromSite(html) {
   return next;
 }
 
+function paletteFromHtml(html) {
+  const found = {};
+  const re = /--(bg|surface|fg|muted|accent)\s*:\s*(#[a-f0-9]{6})/gi;
+  let match;
+  while ((match = re.exec(String(html || "")))) found[match[1].toLowerCase()] = match[2];
+  return {
+    bg: found.bg || "#1a1612",
+    surface: found.surface || "#2a241c",
+    fg: found.fg || "#e6dcc8",
+    muted: found.muted || "#9a8f7a",
+    accent: found.accent || "#c45c26",
+  };
+}
+
 async function generate(prompt, html, instruction, kind, operation, inputPalette) {
   const apiKey = (process.env.XAI_API_KEY || "").trim();
   if (!apiKey) throw new Error("Manca XAI_API_KEY");
   if (operation === "create" && ["app", "tool", "game"].includes(kind) && isComposedVisualArtifact(html)) {
     const palette = composedBuildPalette(inputPalette);
-    const digest = composedBaseSha(html);
-    const requestPlan = async (feedback) => {
+    const requestCreate = async (feedback) => {
       const response = await fetch(XAI, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
         body: JSON.stringify({
-          model: MODEL, temperature: 0.4, max_tokens: 8000, stream: false,
+          model: MODEL, temperature: 0.8, max_tokens: 20000, stream: false,
           messages: [
-            { role: "system", content: COMPOSED_BUILD_SYSTEM },
-            { role: "user", content: composedBuildUserContent({ prompt, instruction, html, digest, feedback }) },
+            { role: "system", content: COMPOSED_CREATE_SYSTEM },
+            { role: "user", content: composedCreateUserContent({ prompt, instruction, feedback }) },
           ],
         }),
       });
       if (!response.ok) throw new Error(`xAI ${response.status}`);
       return completeResponseText(await response.json());
     };
-    const outcome = await applyComposedBuildPlanOrSeed(
-      html,
-      (plan) => applyComposedBuildPlan(html, plan),
-      () => requestPlan(),
-      requestPlan,
-    );
-    if (!outcome.applied && outcome.error &&
-      (outcome.error.name === "IncompleteModelResponse" || !isRetryableComposedPlanError(outcome.error))) throw outcome.error;
-    // Syntax and the existing client runtime/ready gates still run afterwards.
-    // Never turn a rejected plan into a full rewrite or another image call.
-    // Exhausted apply retries keep the composed seed instead of BLOCCATO.
-    const log = outcome.applied
-      ? ["Creazione mirata sulla composizione", "Head e palette preservati; avvio da verificare"]
-      : [COMPOSED_PLAN_DEGRADED_LOG, "Head e palette preservati; avvio da verificare"];
-    return { html: outcome.html, meta: { kind, palette }, files: [], log };
+    // Seed is t0 preview + crash fallback. The model must return a full original
+    // document. Invalid parse/JS/incomplete answers keep the seed; they are not
+    // success of an atomic plan.
+    let outcome;
+    let text = "";
+    try {
+      text = await requestCreate();
+      outcome = applyCreatedDocumentOrSeed(html, text);
+      if (!outcome.applied) {
+        text = await requestCreate(composedCreateRetryFeedback());
+        outcome = applyCreatedDocumentOrSeed(html, text);
+      }
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : String(error);
+      if (/incompleta|troppo grande/i.test(reason)) {
+        outcome = { html, applied: false, log: [COMPOSED_PLAN_DEGRADED_LOG, reason] };
+      } else {
+        throw error;
+      }
+    }
+    const parsed = outcome.applied ? parseHtml(text) : null;
+    let nextPalette = palette;
+    if (parsed?.meta?.palette) {
+      try {
+        nextPalette = composedBuildPalette(parsed.meta.palette);
+      } catch {
+        nextPalette = palette;
+      }
+    }
+    return {
+      html: outcome.html,
+      meta: { ...(parsed?.meta || {}), kind, palette: nextPalette },
+      files: [],
+      log: [...outcome.log, "Avvio da verificare"],
+    };
   }
   const dashboard = looksDashboard(prompt, instruction, kind);
   const site = looksSite(prompt, instruction, kind, html);
@@ -786,10 +819,30 @@ async function polish(prompt, html, instruction, kind) {
     current = stripPhoneChromeFromSite(current);
     return { html: current, meta: { kind: "site" }, log, files: [] };
   }
-  // Automatic refinement only. An explicit functional edit must never be
-  // silently downgraded to a style-only response.
-  if (!instruction && isComposedVisualArtifact(html)) {
-    return polishComposedStyle(apiKey, prompt, html);
+  // A Fenix compose seed is never the product. Ask grok-build for an original
+  // document instead of CSS-only rhythm tweaks.
+  if (looksLikeFenixComposeSeed(html)) {
+    const result = await generate(
+      prompt,
+      html,
+      instruction,
+      kind || "app",
+      "create",
+      paletteFromHtml(html),
+    );
+    return {
+      ...result,
+      log: ["grok-build riscrive il seed", ...(result.log || [])],
+    };
+  }
+  // Original grok-build HTML is already the product. Do not screen-patch it.
+  if (isModelCreatedArtifact(html)) {
+    return {
+      html,
+      meta: {},
+      log: ["Documento originale dal modello; rifinitura CSS/tab saltata"],
+      files: [],
+    };
   }
   const log = [];
   let current = html;

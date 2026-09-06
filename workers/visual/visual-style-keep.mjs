@@ -1,5 +1,5 @@
-import { COMPOSED_PLAN_DEGRADED_LOG } from './composed-protocol.mjs';
 import { isComposedVisualArtifact } from './visual-style.mjs';
+import { isModelCreatedArtifact, looksLikeFenixComposeSeed } from './composed-create.mjs';
 
 /** Browser-safe keep-seed helpers. Do not import Playwright from this module. */
 
@@ -11,15 +11,14 @@ export function isTerminalVisualPolishError(reason) {
 }
 
 /**
- * After create falls back to the unchanged seed, skip automatic style polish.
- * Explicit edits still go through the worker.
- * @param {{instruction?: string, html?: string, buildLog?: string[]}} input
+ * TypeScript seed is never the product: polish must ask grok-build for an original
+ * document. An already-original grok-build artifact must not be CSS/tab-patched.
+ * @param {{instruction?: string, html?: string, buildLog?: string[]}} [input]
  */
 export function shouldSkipComposedPolish(input) {
-  return !input?.instruction
-    && isComposedVisualArtifact(input?.html || "")
-    && Array.isArray(input?.buildLog)
-    && input.buildLog.includes(COMPOSED_PLAN_DEGRADED_LOG);
+  const html = String(input?.html || "");
+  if (looksLikeFenixComposeSeed(html)) return false;
+  return isModelCreatedArtifact(html);
 }
 
 /**

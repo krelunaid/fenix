@@ -225,6 +225,44 @@ describe("deterministic evaluator on 6 distinct fixtures", () => {
       criticBudget({ kind: "app", instruction: "sposta il bottone", evaluation: { ...evaluation, ok: false } }),
       { call: false, reason: "iterate" },
     );
+    const seedHtml = `<!DOCTYPE html><html data-grammar="agenda"><head><style data-fenix-craft>body{}</style></head><body></body></html>`;
+    assert.deepEqual(criticBudget({ kind: "app", evaluation, html: seedHtml }), {
+      call: true,
+      reason: "seed-chrome",
+    });
+    assert.deepEqual(
+      criticBudget({
+        kind: "app",
+        evaluation,
+        html: seedHtml.replace("<html", '<html data-fenix-model-create="1"'),
+      }),
+      { call: false, reason: "static-ok" },
+    );
+    assert.deepEqual(
+      criticBudget({
+        kind: "app",
+        instruction: "direzione di mestiere",
+        operation: "create",
+        evaluation,
+        html: seedHtml,
+      }),
+      { call: true, reason: "seed-chrome" },
+    );
+    assert.deepEqual(
+      criticBudget({
+        kind: "app",
+        operation: "create",
+        evaluation: {
+          ...evaluation,
+          ok: false,
+          checks: evaluation.checks.map((c) =>
+            c.id === "graphic" ? { ...c, ok: false, detail: "seed" } : c,
+          ),
+        },
+        html: seedHtml,
+      }),
+      { call: true, reason: "seed-chrome" },
+    );
     assert.deepEqual(criticBudget({ kind: "app", evaluation: { ...evaluation, ok: false } }), {
       call: true,
       reason: "incomplete",

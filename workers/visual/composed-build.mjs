@@ -16,6 +16,19 @@ export {
   composedFindStatus,
 } from "./composed-protocol.mjs";
 
+export {
+  applyCreatedDocumentOrSeed,
+  composedCreateRetryFeedback,
+  composedCreateUserContent,
+  COMPOSED_CREATE_APPLIED_LOG,
+  COMPOSED_CREATE_SYSTEM,
+  createdDocumentBeatsSeed,
+  extractCreatedHtml,
+  isModelCreatedArtifact,
+  looksLikeFenixComposeSeed,
+  markModelCreatedHtml,
+} from "./composed-create.mjs";
+
 /** Synchronous Node entrypoint retained for the existing worker.
  * @param {string} html
  */

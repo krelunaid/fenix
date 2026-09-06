@@ -155,12 +155,21 @@ describe("controller build request preserves generated artifacts", () => {
     }
     assert.equal(isComposedCreation({operation:"create",kind:"site"}), false);
   });
+  it("tells grok-build the compose seed is fallback, not the product", () => {
+    const polish = composeProduct(formatPrefix("app") + "Agenda studio: appuntamenti e prenotazioni, stile iPhone.").polish;
+    assert.match(polish, /solo fallback/);
+    assert.doesNotMatch(polish, /Il seed HTML è già il prodotto/);
+  });
   it("keeps a usable acqua-bottiglia seed when visual polish rejects font-size after create fallback", () => {
     const composed = composeProduct(formatPrefix("app") + "App acqua bottiglia: home con botte/serbatoio acqua, livello, e tab Ordina. Stile iPhone.");
     assert.equal(isComposedVisualArtifact(composed.html), true);
     assert.equal(shouldSkipComposedPolish({
       html: composed.html,
       buildLog: [COMPOSED_PLAN_DEGRADED_LOG, "QA · saltato"],
+    }), false);
+    assert.equal(shouldSkipComposedPolish({
+      html: '<!doctype html><html data-fenix-model-create="1" lang="it"><body><main>Sala</main></body></html>',
+      buildLog: ["Documento originale dal modello; seed solo fallback"],
     }), true);
     assert.equal(canKeepComposedSeedAfterPolishError(
       "Stile non consentito: font-size. Tocca Riprendi rifinitura.",

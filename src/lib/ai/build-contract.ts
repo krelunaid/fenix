@@ -112,7 +112,7 @@ export type RoleReceipt = {
 
 export type CriticBudget = {
   call: boolean;
-  reason: "desk" | "static-ok" | "iterate" | "incomplete" | "graphic";
+  reason: "desk" | "static-ok" | "iterate" | "incomplete" | "graphic" | "seed-chrome";
 };
 
 function asKind(value: unknown): ProjectKind | null {
@@ -629,9 +629,18 @@ export function criticBudget(input: {
   instruction?: string;
   shot?: boolean;
   evaluation: ContractEval;
+  html?: string;
+  operation?: string;
 }): CriticBudget {
   if (isDeskKind(input.kind)) return { call: false, reason: "desk" };
-  if (input.instruction) return { call: false, reason: "iterate" };
+  // Compose polish rides on create as DIREZIONE, not as a user edit.
+  if (input.instruction && input.operation !== "create") return { call: false, reason: "iterate" };
+  const html = input.html || "";
+  const seedChrome =
+    /<html\b[^>]*\bdata-grammar=["'][^"']+["']/i.test(html) &&
+    /<style\b[^>]*\bdata-fenix-craft(?:\s|>)/i.test(html) &&
+    !/<html\b[^>]*\bdata-fenix-model-create=["']1["']/i.test(html);
+  if (seedChrome) return { call: true, reason: "seed-chrome" };
   const graphicFail = input.evaluation.checks.some((c) => c.id === "graphic" && !c.ok);
   if (graphicFail) return { call: false, reason: "graphic" };
   if (input.evaluation.ok) return { call: false, reason: "static-ok" };

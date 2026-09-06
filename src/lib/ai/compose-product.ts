@@ -3206,7 +3206,7 @@ function polishFor(
     chrome,
     grammar.kind === "site" || grammar.kind === "landing"
       ? "Il seed HTML è una base strutturale pubblica, NON la realizzazione completa del brief. Personalizza offerta, contenuti, navigazione e composizione in base a TUTTE le richieste. Sostituisci i testi generici; non inventare prezzi, indirizzi, recensioni o disponibilità. Conserva form funzionanti e stati onesti; non dichiarare email inviate o prenotazioni confermate senza integrazione reale. Niente pannelli staff o tabbar telefono nei siti pubblici."
-      : "Il seed HTML è già il prodotto. Rifinisci copy se serve, non riciclare lo scheletro telefono, non boxed 1080, non placeholder geometrici.",
+      : "Il seed HTML è solo fallback se il modello fallisce. Scrivi un prodotto originale dal brief: identità, layout, icone e copy nuovi. Non copiare data-fenix-craft, data-grammar, fenix-slot, Corto, Emergent o Apple. Non boxed 1080, non placeholder geometrici.",
     "Stati empty/loading/success/error visibili. Motion solo con prefers-reduced-motion: no-preference. Target ≥24px, focus visibile, AA.",
     knowledge?.instruction,
   ]

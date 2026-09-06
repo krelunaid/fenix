@@ -64,11 +64,13 @@ test('accepted visual plans still apply; transport and oversize stay terminal',a
   await assert.rejects(repairVisualStyleOrKeep('<html>plain</html>',async()=>'{}',async()=>{throw new Error('Stile non consentito: font-size');}),/Stile non consentito: font-size/);
 });
 
-test('automatic polish skips after create seed fallback, never after an explicit edit',()=>{
-  assert.equal(shouldSkipComposedPolish({html:seed,buildLog:[COMPOSED_PLAN_DEGRADED_LOG]}),true);
+test('automatic polish does not skip after create seed fallback; grok-build still rewrites',()=>{
+  const original = '<!doctype html><html data-fenix-model-create="1" lang="it"><head></head><body><main>Sala</main></body></html>';
+  assert.equal(shouldSkipComposedPolish({html:seed,buildLog:[COMPOSED_PLAN_DEGRADED_LOG]}),false);
   assert.equal(shouldSkipComposedPolish({html:seed,buildLog:['Creazione mirata sulla composizione']}),false);
   assert.equal(shouldSkipComposedPolish({instruction:'Aggiungi tab Ordina',html:seed,buildLog:[COMPOSED_PLAN_DEGRADED_LOG]}),false);
   assert.equal(shouldSkipComposedPolish({html:'<html></html>',buildLog:[COMPOSED_PLAN_DEGRADED_LOG]}),false);
+  assert.equal(shouldSkipComposedPolish({html:original,instruction:'direzione di mestiere'}),true);
   assert.equal(canKeepComposedSeedAfterPolishError('Stile non consentito: font-size. Tocca Riprendi rifinitura.',{html:seed}),true);
   assert.equal(canKeepComposedSeedAfterPolishError('Stile non consentito: font-size',{instruction:'Cambia il titolo',html:seed}),false);
   assert.equal(canKeepComposedSeedAfterPolishError('JOB_STILL_RUNNING',{html:seed}),false);

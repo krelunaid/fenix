@@ -21,15 +21,16 @@ import type { ProjectKind } from "../../src/lib/projects/types.ts";
 import { enforceGraphicIntent } from "../../src/lib/projects/graphic-intent.ts";
 import { repairFilesContext } from "../../src/lib/ai/repair-context.ts";
 import { isComposedVisualArtifact } from "../../workers/visual/visual-style.mjs";
+import { composedBuildPalette } from "../../workers/visual/composed-protocol.mjs";
 import {
-  applyComposedBuildPlanOrSeed,
-  applyComposedBuildPlanWeb,
-  composedBaseShaWeb,
-  composedBuildPalette,
-  composedBuildUserContent,
-  COMPOSED_BUILD_SYSTEM,
+  applyCreatedDocumentOrSeed,
+  composedCreateRetryFeedback,
+  composedCreateUserContent,
+  COMPOSED_CREATE_APPLIED_LOG,
+  COMPOSED_CREATE_SYSTEM,
   COMPOSED_PLAN_DEGRADED_LOG,
-} from "../../workers/visual/composed-protocol.mjs";
+  looksLikeFenixComposeSeed,
+} from "../../workers/visual/composed-create.mjs";
 
 const MODEL = "grok-build-0.1";
 const XAI_URL = "https://api.x.ai/v1/chat/completions";
@@ -59,7 +60,7 @@ function composedProduct(html: string, palette: PaletteHex, kind: ProjectKind): 
   };
 }
 
-async function retryComposedPlan(apiKey: string, prompt: string, instruction: string, html: string, feedback: string) {
+async function retryCreatedDocument(apiKey: string, prompt: string, instruction: string, feedback: string) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 45_000);
   try {
@@ -72,20 +73,14 @@ async function retryComposedPlan(apiKey: string, prompt: string, instruction: st
       signal: controller.signal,
       body: JSON.stringify({
         model: MODEL,
-        temperature: 0.4,
-        max_tokens: 8000,
+        temperature: 0.8,
+        max_tokens: 20000,
         stream: false,
         messages: [
-          { role: "system", content: COMPOSED_BUILD_SYSTEM },
+          { role: "system", content: COMPOSED_CREATE_SYSTEM },
           {
             role: "user",
-            content: composedBuildUserContent({
-              prompt,
-              instruction,
-              html,
-              digest: await composedBaseShaWeb(html),
-              feedback,
-            }),
+            content: composedCreateUserContent({ prompt, instruction, feedback }),
           },
         ],
       }),
@@ -101,22 +96,24 @@ async function retryComposedPlan(apiKey: string, prompt: string, instruction: st
   }
 }
 
-async function composedResult(
+function createdProduct(
   output: string,
-  base: string,
+  seed: string,
   palette: PaletteHex,
   kind: ProjectKind,
-  retryPlan?: (feedback: string) => Promise<string>,
-  onDegraded?: (message: string) => void,
-): Promise<GatedProduct> {
-  const outcome = await applyComposedBuildPlanOrSeed(
-    base,
-    (plan) => applyComposedBuildPlanWeb(base, plan),
-    output,
-    retryPlan,
-  );
-  if (!outcome.applied) onDegraded?.(COMPOSED_PLAN_DEGRADED_LOG);
-  return composedProduct(outcome.html, palette, kind);
+  onStage?: (message: string) => void,
+): { product: GatedProduct; applied: boolean } {
+  const outcome = applyCreatedDocumentOrSeed(seed, output);
+  onStage?.(outcome.applied ? COMPOSED_CREATE_APPLIED_LOG : COMPOSED_PLAN_DEGRADED_LOG);
+  if (!outcome.applied) {
+    return { product: composedProduct(seed, palette, kind), applied: false };
+  }
+  const parsed = parseResult(output, kind);
+  const product = parsed
+    ? { ...parsed, html: outcome.html, kind, palette: parsed.palette || palette }
+    : composedProduct(outcome.html, palette, kind);
+  product.html = outcome.html;
+  return { product, applied: true };
 }
 
 function sse(event: StreamEvent) {
@@ -299,7 +296,11 @@ export async function repairPass(apiKey: string, prompt: string, html: string, e
   try {
     const filesContext = repairFilesContext(files);
     const content = composed
-      ? `BRIEF:\n${prompt}\nERRORI:\n${error}\nBASE_SHA256:${await composedBaseShaWeb(html)}\nHTML ORIGINALE:\n${artifactContext(html)}`
+      ? composedCreateUserContent({
+          prompt,
+          instruction: "",
+          feedback: `ERRORI:\n${error}\nRiscrivi META+HTML originale. Non copiare il seed, non rispondere JSON.`,
+        })
       : `BRIEF:\n${prompt}\n\nERRORI:\n${error}\n\nHTML:\n${artifactContext(html)}${filesContext}\n\nRestituisci META + eventuali <<<FILE path="...">>> + <<<HTML>>> + <<<END>>>. Niente server inventato.`;
     const response = await fetch(XAI_URL, {
       method: "POST",
@@ -310,11 +311,11 @@ export async function repairPass(apiKey: string, prompt: string, html: string, e
       signal: controller.signal,
       body: JSON.stringify({
         model: MODEL,
-        temperature: 0.2,
-        max_tokens: 8000,
+        temperature: composed ? 0.8 : 0.2,
+        max_tokens: composed ? 20000 : 8000,
         stream: false,
         messages: [
-          { role: "system", content: composed ? COMPOSED_BUILD_SYSTEM : REPAIR_PROMPT },
+          { role: "system", content: composed ? COMPOSED_CREATE_SYSTEM : REPAIR_PROMPT },
           {
             role: "user",
             content,
@@ -363,13 +364,8 @@ async function gateResult(
     repair: async ({ html, error, files }) => {
       const fixed = await repairPass(apiKey, prompt, html, error, files, Boolean(compositionPalette));
       if (compositionPalette) {
-        return composedResult(
-          fixed,
-          html,
-          compositionPalette,
-          contract.kind,
-          (feedback) => retryComposedPlan(apiKey, prompt, instruction, html, feedback),
-        );
+        const next = createdProduct(fixed, html, compositionPalette, contract.kind);
+        return next.applied ? next.product : composedProduct(html, compositionPalette, contract.kind);
       }
       return parseResult(fixed, kindFromPrompt(prompt), prompt);
     },
@@ -418,12 +414,7 @@ export default async function build(request: Request) {
   if (composed) {
     try {
       compositionPalette = composedBuildPalette(body.palette) as PaletteHex;
-      compositionContext = composedBuildUserContent({
-        prompt,
-        instruction,
-        html: currentHtml,
-        digest: await composedBaseShaWeb(currentHtml),
-      });
+      compositionContext = composedCreateUserContent({ prompt, instruction });
     } catch {
       return Response.json({ t: "err", error: "Composizione o palette non valida. La versione precedente resta invariata." }, { status: 400 });
     }
@@ -511,7 +502,7 @@ export default async function build(request: Request) {
             max_tokens: 20000,
             stream: true,
             messages: [
-              { role: "system", content: composed ? COMPOSED_BUILD_SYSTEM : lockKind === "site" || lockKind === "landing" ? SITE_PROMPT : SYSTEM_PROMPT },
+              { role: "system", content: composed ? COMPOSED_CREATE_SYSTEM : lockKind === "site" || lockKind === "landing" ? SITE_PROMPT : SYSTEM_PROMPT },
               {
                 role: "user",
                 content: composed ? compositionContext : shot
@@ -547,6 +538,7 @@ export default async function build(request: Request) {
           const reason = json.choices?.[0]?.finish_reason;
           if (reason === "stop") completed = true;
           if (reason != null && reason !== "stop") {
+            if (composed) return;
             finish({ t: "err", error: "Risposta del modello incompleta. La versione precedente resta invariata." });
             return;
           }
@@ -558,7 +550,7 @@ export default async function build(request: Request) {
           if (!piece.content) return;
           output += piece.content;
           if (composed && output.length > MAX_ARTIFACT_CHARS) {
-            finish({ t: "err", error: "Piano di creazione troppo grande. La versione precedente resta invariata." });
+            output = "";
             return;
           }
           const nextStage = stage(output);
@@ -594,17 +586,40 @@ export default async function build(request: Request) {
           return;
         }
         if (!terminal) {
-          if (composed && !completed) throw new Error("Risposta del modello incompleta");
-          let result = compositionPalette
-            ? await composedResult(
-              output,
-              currentHtml,
-              compositionPalette,
-              contract.kind,
-              (feedback) => retryComposedPlan(apiKey, prompt, instruction, currentHtml, feedback),
-              (message) => send({ t: "s", s: message }),
-            )
-            : parseResult(output, lockKind, prompt);
+          let result;
+          if (compositionPalette) {
+            const first = completed
+              ? createdProduct(
+                  output,
+                  currentHtml,
+                  compositionPalette,
+                  contract.kind,
+                  (message) => send({ t: "s", s: message }),
+                )
+              : { product: composedProduct(currentHtml, compositionPalette, contract.kind), applied: false };
+            if (!first.applied) {
+              if (!completed) send({ t: "s", s: COMPOSED_PLAN_DEGRADED_LOG });
+              const retryText = await retryCreatedDocument(
+                apiKey,
+                prompt,
+                instruction,
+                composedCreateRetryFeedback(completed ? undefined : "risposta incompleta"),
+              );
+              result = retryText
+                ? createdProduct(
+                    retryText,
+                    currentHtml,
+                    compositionPalette,
+                    contract.kind,
+                    (message) => send({ t: "s", s: message }),
+                  ).product
+                : first.product;
+            } else {
+              result = first.product;
+            }
+          } else {
+            result = parseResult(output, lockKind, prompt);
+          }
           const desk = lockKind === "site" || lockKind === "landing" || lockKind === "dashboard";
           const evaluation = result
             ? evaluateContract({
@@ -620,11 +635,43 @@ export default async function build(request: Request) {
             instruction,
             shot: Boolean(shot),
             evaluation,
+            html: result?.html,
+            operation: body.operation,
           });
-          if (result && !desk && budget.call && !composed) {
+          if (result && !desk && budget.call) {
             send({ t: "s", s: "QA" });
-            const reviewed = await reviewPass(apiKey, prompt, result.html, spec);
-            result = parseResult(reviewed, lockKind, prompt) ?? result;
+            if (compositionPalette && looksLikeFenixComposeSeed(result.html)) {
+              const rewritten = await retryCreatedDocument(
+                apiKey,
+                prompt,
+                instruction,
+                composedCreateRetryFeedback("seed Fenix non è il prodotto"),
+              );
+              const next = createdProduct(
+                rewritten,
+                currentHtml,
+                compositionPalette,
+                contract.kind,
+                (message) => send({ t: "s", s: message }),
+              );
+              if (next.applied) result = next.product;
+            } else {
+              const reviewed = await reviewPass(apiKey, prompt, result.html, spec);
+              const reviewedProduct = parseResult(reviewed, lockKind, prompt);
+              if (reviewedProduct) {
+                if (compositionPalette) {
+                  const next = createdProduct(
+                    reviewed,
+                    currentHtml,
+                    compositionPalette,
+                    contract.kind,
+                  );
+                  if (next.applied) result = next.product;
+                } else {
+                  result = reviewedProduct;
+                }
+              }
+            }
           } else if (result) {
             send({
               t: "s",
@@ -633,23 +680,31 @@ export default async function build(request: Request) {
                   role: "critic",
                   ok: evaluation.ok,
                   skipped: true,
-                  reason: composed ? "atomic-contract-gate" : budget.reason,
+                  reason: budget.reason,
                   checks: evaluation.checks.filter((c) => c.ok).map((c) => c.id),
                 }),
               ),
             });
           }
           const gated = await gateResult(apiKey, prompt, result, send, contract, compositionPalette, instruction);
-          if ("error" in gated) finish({ t: "err", error: gated.error });
-          else finish({ t: "ok", result: gated.result });
+          if ("error" in gated) {
+            if (composed && compositionPalette) {
+              send({ t: "s", s: COMPOSED_PLAN_DEGRADED_LOG });
+              finish({ t: "ok", result: composedProduct(currentHtml, compositionPalette, contract.kind) });
+            } else {
+              finish({ t: "err", error: gated.error });
+            }
+          } else {
+            finish({ t: "ok", result: gated.result });
+          }
         }
       } catch (error) {
         if (terminal) return;
-        if (composed) {
-          finish({ t: "err", error: `Creazione non completata: ${error instanceof Error ? error.message : "piano non valido"}. La versione precedente resta invariata.` });
+        if (composed && compositionPalette) {
+          send({ t: "s", s: COMPOSED_PLAN_DEGRADED_LOG });
+          finish({ t: "ok", result: composedProduct(currentHtml, compositionPalette, contract.kind) });
           return;
         }
-        // A rejected atomic plan must never be interpreted as a full HTML rewrite.
         const salvage = parseResult(output, lockKind, prompt);
         if (salvage) {
           const gated = await gateResult(apiKey, prompt, salvage, send, contract);

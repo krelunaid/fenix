@@ -22,7 +22,11 @@ export function looksCheap(html: string, kind?: string) {
   const noTabs = !h.includes("data-view") && !h.includes("tabbar") && !h.includes("id=\"tabs\"");
   const skeletal = h.includes("ciao") && h.includes("operatore") && (h.match(/fk-stat/g) || []).length >= 4;
   const emptyLie = h.includes("nessun elemento") && (h.match(/id:\s*["']e?\d/g) || []).length >= 2;
-  return appleClone || noMark || noTabs || svgs < 6 || skeletal || emptyLie;
+  const fenixSeed =
+    h.includes("data-grammar=") &&
+    h.includes("data-fenix-craft") &&
+    !h.includes("data-fenix-model-create");
+  return appleClone || noMark || noTabs || svgs < 6 || skeletal || emptyLie || fenixSeed;
 }
 
 export async function reviewBuild(input: {
@@ -54,7 +58,7 @@ export async function reviewBuild(input: {
             `BRIEF:\n${input.prompt}`,
             input.spec ? `DIREZIONE VISIVA (legge):\n${input.spec}` : "",
             `HTML DA RIVEDERE (anteprima telefono):\n${input.html.slice(0, 40000)}`,
-            "Se non sembra un'app da tasca (tab, icone, form, metriche), rifai il chrome. Tieni le funzioni. META+HTML.",
+            "Se è ancora un seed Fenix (data-fenix-craft, data-grammar) o non sembra un'app da tasca (tab, icone, form, metriche), riscrivi il documento originale. Tieni le funzioni. META+HTML.",
           ]
             .filter(Boolean)
             .join("\n\n"),

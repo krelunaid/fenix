@@ -354,7 +354,7 @@ describe("focus-visible and worker model", () => {
     const createFn = runBuild.slice(runBuild.indexOf("export async function runBuild"));
     assert.ok(
       createFn.indexOf("shouldSkipComposedPolish") < createFn.indexOf("polishDraft("),
-      "seed-fallback create must skip automatic visual polish",
+      "seed-fallback create still decides polish before polishDraft",
     );
     const worker = readFileSync(join(root, "workers/visual/server.mjs"), "utf8");
     assert.match(worker, /repairVisualStyleOrKeep/);

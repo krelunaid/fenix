@@ -2,10 +2,12 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import build from "../netlify/edge-functions/build.ts";
 import { createBuildRequest, isAtomicStreamCreation } from "../src/lib/ai/build-request.ts";
-import { composedBaseSha, composedBuildPalette } from "../workers/visual/composed-build.mjs";
+import { composedBuildPalette } from "../workers/visual/composed-build.mjs";
 import { ensureDomainImagery, upgradeProductChrome } from "../src/lib/ai/domain-imagery.ts";
 import { validateProductHtml } from "../src/lib/projects/validate-html.ts";
 import { grammarFromBrief } from "../src/lib/projects/layout-grammar.ts";
+import { isModelCreatedArtifact } from "../workers/visual/composed-create.mjs";
+import { createdMetaHtml } from "./fixtures/composed-create-html.mjs";
 
 const brief = "FORMATO: app. kind=app. Agenda studio: appuntamenti e prenotazioni, stile iPhone.";
 const request = body => new Request("https://fixture.invalid/api/build", {
@@ -13,14 +15,14 @@ const request = body => new Request("https://fixture.invalid/api/build", {
 });
 const events = async response => (await response.text()).split("\n")
   .filter(line => line.startsWith("data:")).map(line => JSON.parse(line.slice(5)));
-const planFor = html => ({ version:1, baseSha256:composedBaseSha(html), changes:[{
-  find:"boot();\nsetTimeout(function(){ if(bootDone) return; finishBoot(false); }, 500);",
-  replace:"boot();\n// Atomic transport fixture; not a visual quality improvement.\nsetTimeout(function(){ if(bootDone) return; finishBoot(false); }, 500);",
-}] });
 const stream = (content, reason = "stop") => new Response(
   `data: ${JSON.stringify({choices:[{delta:{content}, ...(reason ? {finish_reason:reason} : {})}]})}\n\ndata: [DONE]\n\n`,
   {headers:{"Content-Type":"text/event-stream"}},
 );
+
+function isCreateSystem(payload) {
+  return /documento HTML originale/.test(payload.messages[0].content);
+}
 
 async function withProvider(provider, run) {
   const previousFetch = globalThis.fetch;
@@ -40,7 +42,7 @@ async function withProvider(provider, run) {
   }
 }
 
-test("actual Edge create preserves composed head and palette through the normal product gate", async () => {
+test("actual Edge create applies original grok-build HTML instead of patching the seed", async () => {
   const body = createBuildRequest({prompt:brief,kind:"app"});
   assert.equal(isAtomicStreamCreation(body),true);
   assert.equal(isAtomicStreamCreation({...body,operation:"edit"}),false);
@@ -48,74 +50,82 @@ test("actual Edge create preserves composed head and palette through the normal 
   let calls = 0;
   await withProvider(payload => {
     calls++;
-    assert.equal(calls,1,"no full-document QA rewrite for a valid composition");
-    assert.match(payload.messages[0].content,/Rispondi SOLO JSON/);
-    assert.ok(payload.messages[1].content.endsWith(body.html));
-    assert.ok(payload.messages[1].content.includes(`BASE_SHA256:${composedBaseSha(body.html)}`));
-    return stream(JSON.stringify(planFor(body.html)));
+    assert.equal(isCreateSystem(payload), true);
+    assert.doesNotMatch(payload.messages[0].content, /Rispondi SOLO JSON/);
+    assert.doesNotMatch(payload.messages[1].content, /HTML ORIGINALE:/);
+    assert.doesNotMatch(payload.messages[1].content, /BASE_SHA256:/);
+    return stream(createdMetaHtml());
   }, async () => {
     const result = await events(await build(request(body)));
     assert.equal(result.at(-1).t,"ok",JSON.stringify(result.at(-1)));
-    assert.equal(result.at(-1).result.html.split("<body")[0],body.html.split("<body")[0]);
-    assert.deepEqual(result.at(-1).result.palette,composedBuildPalette(body.palette));
-    assert.match(result.at(-1).result.html,/Atomic transport fixture/);
+    const html = result.at(-1).result.html;
+    assert.ok(isModelCreatedArtifact(html));
+    assert.notEqual(html.split("<body")[0], body.html.split("<body")[0]);
+    assert.match(html, /Atelier Nova/);
+    assert.deepEqual(result.at(-1).result.palette, composedBuildPalette({
+      bg:"#1b1410",surface:"#2a211c",fg:"#f4ece4",muted:"#b9a89a",accent:"#c45c26",
+    }));
+    assert.equal(calls,1,"valid original HTML skips critic and atomic retries");
   });
 });
 
-test("Barber shop request uses appointments and repairs broken JS string quoting through actual Edge", async () => {
+test("Barber shop request keeps the seed at t0 and replaces it with a model document", async () => {
   const prompt = "FORMATO: app telefono 390×844. kind=app. Tab in basso, 5 schermate. NON un sito.\n\nmi crei un app da parrucchieri stile Barber shop";
   const body = createBuildRequest({prompt, kind:"app"});
   assert.equal(grammarFromBrief(prompt).id,"agenda");
   assert.equal(isAtomicStreamCreation(body),true);
   assert.match(body.html,/<nav[^>]*id="tabs"/);
-  assert.match(body.html,/data-act="advance"/);
-  const broken = "const barberLabel = 'Barber\nshop';\nboot();";
-  const fixed = "const barberLabel = 'Barber shop';\nboot();";
-  const initial = planFor(body.html);
-  initial.changes[0].replace = broken;
-  const damaged = body.html.replace(initial.changes[0].find,()=>broken);
   let calls = 0;
   await withProvider(payload => {
     calls++;
-    assert.match(payload.messages[0].content,/Rispondi SOLO JSON/);
-    if (calls === 1) return stream(JSON.stringify(initial));
-    assert.equal(calls,2,"one located repair must complete without another generation");
-    assert.match(payload.messages[1].content,/Script 1 \(riga \d+:\d+\)/);
-    assert.ok(payload.messages[1].content.includes(`BASE_SHA256:${composedBaseSha(damaged)}`));
-    const plan = {version:1,baseSha256:composedBaseSha(damaged),changes:[{find:broken,replace:fixed}]};
-    return Response.json({choices:[{finish_reason:"stop",message:{content:JSON.stringify(plan)}}]});
+    assert.equal(isCreateSystem(payload), true);
+    return stream(createdMetaHtml("Sala Nova"));
   }, async () => {
     const output = await events(await build(request(body)));
     assert.equal(output.at(-1).t,"ok",JSON.stringify(output.at(-1)));
     const html = output.at(-1).result.html;
     assert.equal(validateProductHtml(html,{kind:"app"}).ok,true);
-    assert.ok(html.includes(fixed));
-    assert.equal(html.split("<body")[0],body.html.split("<body")[0]);
-    assert.deepEqual(output.at(-1).result.palette,composedBuildPalette(body.palette));
-    assert.equal(calls,2);
+    assert.ok(isModelCreatedArtifact(html));
+    assert.match(html,/Sala Nova/);
+    assert.doesNotMatch(html,/data-fenix-craft/);
+    assert.equal(calls,1);
   });
 });
 
-test("a syntactically invalid atomic result gets at most two atomic repairs, never full rewrites", async () => {
+test("invalid create documents retry once then keep the seed if QA also fails", async () => {
   const body=createBuildRequest({prompt:brief,kind:"app"});
   let calls=0;
   await withProvider(payload=>{
     calls++;
-    assert.match(payload.messages[0].content,/Rispondi SOLO JSON/);
-    if(calls===1){
-      const plan=planFor(body.html);
-      plan.changes[0].replace="const = ;";
-      return stream(JSON.stringify(plan));
+    if (isCreateSystem(payload)) {
+      return calls === 1 ? stream("not-html") : Response.json({choices:[{finish_reason:"stop",message:{content:"still-not-html"}}]});
     }
-    assert.ok(calls<=7,"two repairs, each with up to two apply retries");
-    assert.equal(payload.stream,false);
-    assert.match(payload.messages[1].content,/ERRORI:|ERRORE SUL PIANO PRECEDENTE/);
-    return Response.json({choices:[{finish_reason:"stop",message:{content:JSON.stringify({...planFor(body.html),baseSha256:"0".repeat(64)})}}]});
+    return Response.json({choices:[{finish_reason:"stop",message:{content:""}}]});
   },async()=>{
-    const output=await events(await build(request(body)));
-    assert.equal(output.at(-1).t,"err");
-    assert.ok(calls>=3 && calls<=7);
-    assert.equal(output.some(event=>event.t==="ok"),false);
+    const output = await events(await build(request(body)));
+    assert.equal(output.at(-1).t,"ok");
+    assert.equal(output.at(-1).result.html, body.html);
+    assert.ok(output.some(event => event.t==="s" && /seed composto invariato/.test(event.s)));
+    assert.ok(calls>=2 && calls<=3);
+  });
+});
+
+test("QA after a Fenix seed can still apply an original grok-build document", async () => {
+  const body=createBuildRequest({prompt:brief,kind:"app"});
+  let calls=0;
+  await withProvider(payload=>{
+    calls++;
+    assert.equal(isCreateSystem(payload), true);
+    if (calls <= 2) {
+      return calls === 1 ? stream("not-html") : Response.json({choices:[{finish_reason:"stop",message:{content:"still-not-html"}}]});
+    }
+    return Response.json({choices:[{finish_reason:"stop",message:{content:createdMetaHtml()}}]});
+  },async()=>{
+    const output = await events(await build(request(body)));
+    assert.equal(output.at(-1).t,"ok",JSON.stringify(output.at(-1)));
+    assert.ok(isModelCreatedArtifact(output.at(-1).result.html));
+    assert.match(output.at(-1).result.html,/Atelier Nova/);
+    assert.ok(calls>=3);
   });
 });
 
@@ -136,82 +146,66 @@ test("imagery adaptation cannot rewrite JS templates or break a composed app at 
   assert.equal(validateProductHtml(result,{kind:"app"}).syntaxOk,true);
 });
 
-test("first atomic plan with a missing find retries on the original html and then applies", async () => {
+test("first invalid create retries on the original brief and then applies", async () => {
   const body = createBuildRequest({prompt:brief,kind:"app"});
   let calls = 0;
   await withProvider(payload => {
     calls++;
-    assert.match(payload.messages[0].content,/Rispondi SOLO JSON/);
-    assert.ok(payload.messages[1].content.includes(`BASE_SHA256:${composedBaseSha(body.html)}`));
-    assert.ok(payload.messages[1].content.includes(body.html));
-    if (calls === 1) {
-      const plan = planFor(body.html);
-      plan.changes[0].find = "function doesNotExist(){";
-      return stream(JSON.stringify(plan));
-    }
+    if (isCreateSystem(payload) && calls === 1) return stream("not-html");
     assert.equal(payload.stream, false);
-    assert.match(payload.messages[1].content, /ERRORE SUL PIANO PRECEDENTE/);
-    assert.match(payload.messages[1].content, /verbatim dall'HTML ORIGINALE/);
-    assert.match(payload.messages[1].content, /unico nel body/);
-    return Response.json({choices:[{finish_reason:"stop",message:{content:JSON.stringify(planFor(body.html))}}]});
+    return Response.json({choices:[{finish_reason:"stop",message:{content:createdMetaHtml()}}]});
   }, async () => {
     const result = await events(await build(request(body)));
     assert.equal(result.at(-1).t,"ok",JSON.stringify(result.at(-1)));
-    assert.match(result.at(-1).result.html,/Atomic transport fixture/);
-    assert.equal(result.at(-1).result.html.split("<body")[0],body.html.split("<body")[0]);
+    assert.ok(isModelCreatedArtifact(result.at(-1).result.html));
+    assert.match(result.at(-1).result.html,/Atelier Nova/);
     assert.equal(calls,2);
   });
 });
 
-test("exhausted composed plan retries keep the seed and never rewrite the document", async () => {
+test("exhausted create retries keep the seed and never require a JSON plan", async () => {
   const body = createBuildRequest({prompt:brief,kind:"app"});
   let calls = 0;
   await withProvider(payload => {
     calls++;
-    assert.ok(payload.messages[1].content.includes(body.html));
-    assert.ok(payload.messages[1].content.includes(`BASE_SHA256:${composedBaseSha(body.html)}`));
-    const plan = planFor(body.html);
-    plan.changes[0].find = "function doesNotExist(){";
-    if (calls === 1) return stream(JSON.stringify(plan));
-    assert.equal(payload.stream, false);
-    assert.match(payload.messages[1].content, /ERRORE SUL PIANO PRECEDENTE/);
-    return Response.json({choices:[{finish_reason:"stop",message:{content:JSON.stringify(plan)}}]});
+    assert.doesNotMatch(payload.messages[1].content, /HTML ORIGINALE:/);
+    if (isCreateSystem(payload)) {
+      return calls === 1 ? stream("not-html") : Response.json({choices:[{finish_reason:"stop",message:{content:JSON.stringify({version:1,changes:[]})}}]});
+    }
+    return Response.json({choices:[{finish_reason:"stop",message:{content:""}}]});
   }, async () => {
     const output = await events(await build(request(body)));
     assert.equal(output.at(-1).t,"ok",JSON.stringify(output.at(-1)));
     assert.equal(output.at(-1).result.html, body.html);
     assert.ok(output.some(event => event.t==="s" && /seed composto invariato/.test(event.s)));
-    assert.equal(calls,3);
+    assert.ok(calls>=2 && calls<=3);
   });
 });
 
-test("invalid atomic plans retry then keep the seed; incomplete streams still fail closed", async () => {
+test("invalid or incomplete create answers keep the seed; palette still fails closed", async () => {
   const body = createBuildRequest({prompt:brief,kind:"app"});
-  for (const mode of ["stale","rewrite","length","missing-stop","oversize"]) {
+  for (const mode of ["rewrite","length","missing-stop","oversize"]) {
     let calls = 0;
     await withProvider(payload => {
       calls++;
-      const plan = planFor(body.html);
-      if (mode === "stale") plan.baseSha256="0".repeat(64);
-      const content = mode === "rewrite" ? body.html : mode === "oversize" ? "x".repeat(120001) : JSON.stringify(plan);
-      if (calls === 1) {
+      const content = mode === "rewrite"
+        ? body.html
+        : mode === "oversize" ? "x".repeat(120001)
+        : createdMetaHtml();
+      if (isCreateSystem(payload) && payload.stream) {
         return stream(content, mode === "length" ? "length" : mode === "missing-stop" ? "" : "stop");
       }
-      assert.ok(mode === "stale" || mode === "rewrite", mode);
-      assert.equal(payload.stream, false);
-      assert.match(payload.messages[1].content, /ERRORE SUL PIANO PRECEDENTE/);
-      return Response.json({choices:[{finish_reason:"stop",message:{content}}]});
+      if (isCreateSystem(payload)) {
+        return Response.json({choices:[{finish_reason:"stop",message:{content:"not-html"}}]});
+      }
+      return Response.json({choices:[{finish_reason:"stop",message:{content:""}}]});
     }, async () => {
       const output = await events(await build(request(body)));
-      if (mode === "stale" || mode === "rewrite") {
-        assert.equal(output.at(-1).t,"ok",mode);
+      assert.equal(output.at(-1).t,"ok",mode);
+      if (mode === "rewrite" || mode === "length" || mode === "missing-stop" || mode === "oversize") {
         assert.equal(output.at(-1).result.html, body.html, mode);
-        assert.equal(calls,3,mode);
-      } else {
-        assert.equal(output.filter(event=>event.t==="ok").length,0,mode);
-        assert.equal(output.filter(event=>event.t==="err").length,1,mode);
-        assert.equal(calls,1,mode);
       }
+      assert.ok(calls>=1,mode);
     });
   }
   await withProvider(()=>assert.fail("invalid palette must fail before provider call"),async()=>{

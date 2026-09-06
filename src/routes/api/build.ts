@@ -31,6 +31,7 @@ type Body = {
   html?: string;
   instruction?: string;
   shot?: string;
+  operation?: string;
   recentPalettes?: PaletteRecord[];
 };
 
@@ -361,6 +362,8 @@ export const Route = createFileRoute("/api/build")({
                   instruction,
                   shot: Boolean(shot),
                   evaluation,
+                  html: parsed.html,
+                  operation: body.operation,
                 });
                 const desk = lockKind === "site" || lockKind === "landing" || lockKind === "dashboard";
                 const shouldReview = !desk && budget.call && (!instruction || looksCheap(parsed.html, lockKind));
