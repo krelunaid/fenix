@@ -1777,6 +1777,8 @@ describe("graphic pipeline visual QA D/T/M", () => {
             });
             const bg = chip ? getComputedStyle(chip).backgroundColor : "";
             const rgb = bg.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+            const icon = document.querySelector('link[rel="icon"]')?.getAttribute("href") || "";
+            const favicon = decodeURIComponent(icon.replace(/^data:image\/svg\+xml;charset=utf-8,/, ""));
             return {
               attr: mark?.getAttribute(attr),
               crisp: mark?.getAttribute("data-fenix-crisp-mark"),
@@ -1786,6 +1788,10 @@ describe("graphic pipeline visual QA D/T/M", () => {
               markW: mark?.getBoundingClientRect().width ?? 0,
               bg,
               headerHidden,
+              appMarks: document.querySelectorAll('[data-fenix-id="icon:app"]').length,
+              homeMarks: document.querySelectorAll(".fx-app-mark").length,
+              faviconShears: favicon.includes("data-fenix-barber-mark") && favicon.includes("M9.4"),
+              faviconBook: favicon.includes("data-fenix-book-mark"),
               transparentChip: !rgb || (Number(rgb[1]) === 0 && Number(rgb[2]) === 0 && Number(rgb[3]) === 0) || bg === "transparent",
               appleTouch: !!document.querySelector('link[rel="apple-touch-icon"]'),
               exit: /M10 7V5\.8A1\.8/.test(document.body.innerHTML),
@@ -1799,6 +1805,14 @@ describe("graphic pipeline visual QA D/T/M", () => {
           assert.ok(paint.markW >= 44, `header svg ${paint.markW}`);
           assert.equal(paint.appleTouch, true);
           assert.equal(paint.exit, false);
+          if (row.attr === "data-fenix-barber-mark") {
+            assert.equal(paint.appMarks, 1, "barber keeps one header shears mark");
+            assert.equal(paint.homeMarks, 0, "barber Home does not add a second chip");
+            assert.equal(paint.headerHidden, false);
+            assert.equal(paint.faviconShears, true);
+          } else {
+            assert.equal(paint.faviconBook, true);
+          }
           const home = await page.evaluate(() => {
             const tabs = [...document.querySelectorAll("nav.tabs button span")].map((el) => el.textContent || "");
             const place = document.querySelector("header .place")?.textContent || "";

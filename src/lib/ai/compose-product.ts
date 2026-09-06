@@ -709,7 +709,7 @@ function barberHomeBoot(spec: PipelineSpec): string {
   const nextCard = next
     ? `<article class="salon-next" data-id="${next.id}"><p class="kicker">Prossimo passaggio</p><h2>${next.title}</h2><p class="notes"><time class="time" datetime="${next.kicker}">${next.kicker}</time> · ${next.note} · ${next.meta}</p></article>`
     : "";
-  return `<section class="salon-home" data-fenix-slot="salon-home"><div class="fx-hello-row"><div><p class="fx-role">${spec.place}</p><p class="fx-hello">${spec.name}</p></div><span class="fx-app-mark" data-fenix-id="icon:app" aria-hidden="true">${barberHomeHeaderMark()}</span></div><p class="kicker salon-kicker">Il mestiere, in tasca</p><h2 class="salon-display">Il taglio, al tuo ritmo.</h2><p class="notes salon-lead">Scegli il servizio. Durata, prezzo e professionista restano in chiaro.</p><div class="salon-hero">${barberAtmosphereSvg()}</div>${nextCard}<div class="salon-catalog" data-fenix-slot="salon-services"><p class="kicker">Servizi</p>${salonServiceCards("Taglio e piega", false)}</div><button class="btn" type="button" data-view="prenota">Prenota il taglio →</button></section>`;
+  return `<section class="salon-home" data-fenix-slot="salon-home"><p class="kicker salon-kicker">Il mestiere, in tasca</p><h2 class="salon-display">Il taglio, al tuo ritmo.</h2><p class="notes salon-lead">Scegli il servizio. Durata, prezzo e professionista restano in chiaro.</p><div class="salon-hero">${barberAtmosphereSvg()}</div>${nextCard}<div class="salon-catalog" data-fenix-slot="salon-services"><p class="kicker">Servizi</p>${salonServiceCards("Taglio e piega", false)}</div><button class="btn" type="button" data-view="prenota">Prenota il taglio →</button></section>`;
 }
 
 function italianLongDate(d = new Date()): string {
@@ -1444,7 +1444,6 @@ html[data-fenix-luxe] .fx-splash .fx-mark{box-shadow:var(--shadow-float)}
 function barberChromeCss(): string {
   return `html[data-fenix-barber],html[data-fenix-barber] body{background-color:#0B0908;background-image:radial-gradient(90% 50% at 80% -10%,color-mix(in srgb,#D2BFA6 18%,transparent),transparent 58%),radial-gradient(70% 40% at 0% 100%,color-mix(in srgb,#D2BFA6 8%,transparent),transparent 62%);color:#F4EEE6}
 html[data-fenix-barber] header{position:sticky;top:0;z-index:6;padding:14px 18px 12px;background:color-mix(in srgb,#0B0908 82%,transparent);-webkit-backdrop-filter:saturate(1.4) blur(16px);backdrop-filter:saturate(1.4) blur(16px)}
-html[data-fenix-barber]:has(nav.tabs button:first-child.on) header{display:none}
 html[data-fenix-barber] .brand{font-family:var(--display),ui-serif,Georgia,serif;color:#F4EEE6}
 html[data-fenix-barber] .place{letter-spacing:.14em;text-transform:uppercase;font:650 11px/1.3 var(--body),system-ui,sans-serif;color:#D2BFA6}
 html[data-fenix-barber] .app-mark{background:transparent;box-shadow:0 8px 18px rgba(11,9,8,.45)}
@@ -1625,12 +1624,14 @@ function productHtml(spec: PipelineSpec, tokens: DesignTokens, grammar: LayoutGr
     phone: grammar.id === "phone-seed" && !campo && !luxe,
   });
   const identityLabel = appIdentityLabel(spec.brief, tokens.family);
-  const premiumMark = campo
-    ? glossyWaterMarkSvg(spec.id, p)
-    : wantsCrispCraftMark(spec.brief, tokens.family)
-      ? crispAppMarkSvg(spec.id, identityLabel)
-      : premiumAppMarkSvg(spec.id, p, identityGlyph);
-  const iconMark = campo ? crispWaterDropMarkSvg(spec.id) : premiumMark;
+  const premiumMark = barber
+    ? crispBarberMarkSvg(spec.id)
+    : campo
+      ? glossyWaterMarkSvg(spec.id, p)
+      : wantsCrispCraftMark(spec.brief, tokens.family)
+        ? crispAppMarkSvg(spec.id, identityLabel)
+        : premiumAppMarkSvg(spec.id, p, identityGlyph);
+  const iconMark = barber ? premiumMark : campo ? crispWaterDropMarkSvg(spec.id) : premiumMark;
   const markHref = premiumMarkDataUri(iconMark);
   const bootDate = italianLongDate();
   const pocketEmpty = library
@@ -1770,7 +1771,6 @@ const FX_PAUSE_MARK=${JSON.stringify(FX_PAUSE_MARK)};
 const FX_CHEVRON_MARK=${JSON.stringify(FX_CHEVRON_MARK)};
 const FX_WATER_MARK=${JSON.stringify(campo ? campoHomeHeaderMark() : "")};
 const FX_BOOK_MARK=${JSON.stringify(library ? libraryHomeHeaderMark() : "")};
-const FX_BARBER_MARK=${JSON.stringify(barber ? barberHomeHeaderMark() : "")};
 const FX_DROP_MARK='<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4.8s5.8 6.6 5.8 10.2a5.8 5.8 0 0 1-11.6 0C6.2 11.4 12 4.8 12 4.8z"/></svg>';
 (function dismissSplash(){
   var splash=document.getElementById("fx-splash");
@@ -2614,7 +2614,7 @@ ${barber ? `function salonCatalog(selected){
 function renderBarberHome(){
   hydrateAgenda();
   var upcoming=data.items.slice().sort(function(a,b){return String(a.day||"").localeCompare(String(b.day||""))||String(a.kicker).localeCompare(String(b.kicker));})[0];
-  var html='<section class="salon-home" data-fenix-slot="salon-home"><div class="fx-hello-row"><div><p class="fx-role">'+place+'</p><p class="fx-hello">'+specName()+'</p></div><span class="fx-app-mark" data-fenix-id="icon:app" aria-hidden="true">'+FX_BARBER_MARK+"</span></div>";
+  var html='<section class="salon-home" data-fenix-slot="salon-home">';
   html+='<p class="kicker salon-kicker">Il mestiere, in tasca</p><h2 class="salon-display">Il taglio, al tuo ritmo.</h2><p class="notes salon-lead">Scegli il servizio. Durata, prezzo e professionista restano in chiaro.</p>';
   html+='<div class="salon-hero">'+${JSON.stringify(barberAtmosphereSvg())}+"</div>";
   if(upcoming){
