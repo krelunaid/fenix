@@ -20,6 +20,8 @@ describe("interrupted generation resilience", () => {
   it("keeps a fresh barber compose seed building so preview is not Interrotto", () => {
     const composed = composeProduct(BARBER);
     assert.match(composed.html, /Prenota|forbici|shears|barber/i);
+    assert.match(composed.html, /salon-cta-prenota/);
+    assert.match(composed.html, /data-fenix-shears-fill/);
     const recovered = recoverPersistedProject({
       id: "barber-live",
       status: "building" as const,
@@ -82,5 +84,15 @@ describe("interrupted generation resilience", () => {
     assert.match(runBuild, /Resta la bozza composta/);
     const home = readFileSync(join(root, "routes/index.tsx"), "utf8");
     assert.match(home, /if \(!hydrated\) return;/);
+    assert.match(home, /homeVetrinaList/);
+    const store = readFileSync(join(root, "lib/projects/store.ts"), "utf8");
+    assert.match(store, /mergeProjectLists/);
+    assert.match(store, /lastStableHtml/);
+    assert.match(store, /rememberLiveStudio/);
+    const persist = readFileSync(join(root, "lib/projects/persist-projects.ts"), "utf8");
+    assert.match(persist, /function mergeProjectLists/);
+    assert.match(persist, /homeVetrinaList/);
+    const studio = readFileSync(join(root, "routes/studio.\$projectId.tsx"), "utf8");
+    assert.match(studio, /rescueLiveStudio/);
   });
 });

@@ -1,5 +1,13 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import {
+  mergeProjectLists,
+  projectPersistStorage,
+  rememberLiveStudio,
+  trimProjectList,
+} from "./persist-projects";
+import { captureStableSnapshot } from "./studio-lock";
+export { MAX_PROJECTS, homeVetrinaList, mergeProjectLists, rememberLiveStudio } from "./persist-projects";
 import { uid } from "@/lib/utils";
 import type { ProjectFile } from "./files";
 import { projectFiles } from "./files";
@@ -64,7 +72,6 @@ import {
   type AppDb,
 } from "./durable-db";
 
-const MAX_PROJECTS = 48;
 export { STALE_BUILD_MS, RESUME_ERROR, INTERRUPT_ERROR };
 export { APP_DB_KEY };
 
@@ -180,7 +187,7 @@ function publishDiag(
 }
 
 function trimList(projects: Project[]) {
-  return [...projects].sort((a, b) => b.updatedAt - a.updatedAt).slice(0, MAX_PROJECTS);
+  return trimProjectList(projects);
 }
 
 function withStatusActivity(previous: Project, next: Project): Project {
@@ -452,6 +459,7 @@ export const useProjectStore = create<ProjectStore>()(
         const project = blankProject(prompt.trim(), kind ?? "app");
         if (isPhoneKind(project.kind)) {
           const composed = composeProduct(project.prompt, { recent: get().recentPalettes });
+          const snap = captureStableSnapshot({ html: composed.html, files: composed.files });
           const seeded = {
             ...project,
             name:
@@ -460,11 +468,14 @@ export const useProjectStore = create<ProjectStore>()(
             html: composed.html,
             files: composed.files,
             palette: composed.tokens.palette,
+            ...snap,
           };
           set((s) => ({ projects: trimList([seeded, ...s.projects]) }));
+          rememberLiveStudio(seeded);
           return seeded;
         }
         set((s) => ({ projects: trimList([project, ...s.projects]) }));
+        rememberLiveStudio(project);
         return project;
       },
       importArchive: ({ bytes, filename }) => {
@@ -669,6 +680,7 @@ export const useProjectStore = create<ProjectStore>()(
     }),
     {
       name: "officina-projects",
+      storage: projectPersistStorage,
       version: 3,
       migrate: (persistedState, version) => {
         const state = persistedState as Pick<
@@ -692,9 +704,7 @@ export const useProjectStore = create<ProjectStore>()(
       }),
       merge: (persisted, current) => {
         const incoming = (persisted ?? {}) as Partial<ProjectStore>;
-        const projects = (incoming.projects ?? current.projects).map((p) =>
-          recoverPersistedProject(p),
-        );
+        const projects = mergeProjectLists(incoming.projects, current.projects);
         return {
           ...current,
           ...incoming,
@@ -744,7 +754,7 @@ export const useProjectStore = create<ProjectStore>()(
             }
             state.appDb = merged;
             useProjectStore.setState({
-              projects: state.projects,
+              projects: mergeProjectLists(state.projects, useProjectStore.getState().projects),
               appDb: merged,
               creditsRemaining: state.creditsRemaining,
               hydrated: true,

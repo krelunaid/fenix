@@ -7,7 +7,7 @@ import { ProjectCard } from "@/components/project-card";
 import { Textarea } from "@/components/ui/textarea";
 import { getAiStatus } from "@/lib/ai/generate";
 import { formatPrefix, inferKind, type ProductChoice } from "@/lib/projects/infer";
-import { useProjectStore } from "@/lib/projects/store";
+import { homeVetrinaList, useProjectStore } from "@/lib/projects/store";
 import { MAX_PROJECT_ARCHIVE_BYTES } from "@/lib/projects/zip";
 
 export const Route = createFileRoute("/")({ component: Home });
@@ -77,7 +77,7 @@ function Home() {
     }
   }
 
-  const recents = mounted && hydrated ? projects.slice(0, 6) : [];
+  const recents = mounted ? homeVetrinaList(projects, hydrated).slice(0, 6) : [];
   const emptyCredits = mounted && hydrated && creditsRemaining < 1;
 
   return (
