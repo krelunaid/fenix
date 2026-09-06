@@ -27,7 +27,7 @@ import { auditGraphicQuality, type GraphicReport } from "../projects/graphic-qua
 import { domainIllustration, altForBrief } from "./domain-imagery.ts";
 import { DASHBOARD_POLISH_INSTRUCTION, SITE_POLISH_INSTRUCTION } from "./app-shell.ts";
 import { craftNavIcon } from "../projects/craft-icons.ts";
-import { appIdentityIcon, appIdentityLabel, isAccountantBrief, isBarberBrief, isFieldProductBrief, isLibraryBrief, isLuxeBrief, isMarketplaceBrief, isShopBrief, wantsCrispCraftMark } from "../projects/app-identity.ts";
+import { appIdentityIcon, appIdentityLabel, isAccountantBrief, isBarberBrief, isFieldProductBrief, isLibraryBrief, isLuxeBrief, isMarketplaceBrief, isPremiumDefaultBrief, isShopBrief, wantsCrispCraftMark } from "../projects/app-identity.ts";
 import { crispAppMarkSvg, crispBarberMarkSvg, crispBookMarkSvg, crispWaterDropMarkSvg, glossyWaterMarkSvg, premiumAppMarkSvg, premiumMarkDataUri } from "../projects/premium-mark.ts";
 import { craftModeOf, craftRhythmOf, craftTokenCss, surfacesFromPalette, type CraftDomain } from "../projects/craft-tokens.ts";
 import { accentButtonPair, contrastRatio } from "../projects/visual-quality.ts";
@@ -1638,6 +1638,42 @@ html[data-fenix-craft-desk] .ledger-art{display:none}
 `;
 }
 
+/** System premium floor for unmatched app/site/gestionale/tool — not a sector kit. */
+function premiumFloorCss(): string {
+  return `html[data-fenix-premium] .brand{font-weight:750;letter-spacing:-.04em}
+html[data-fenix-premium] .fx-hello{margin:0;font:750 var(--fx-t-display)/1.05 var(--display),system-ui,sans-serif;letter-spacing:-.04em;color:var(--on-surface)}
+html[data-fenix-premium] .fx-role{margin:6px 0 0;font:500 var(--fx-t-14)/1.3 var(--body),system-ui,sans-serif;color:var(--muted)}
+html[data-fenix-premium] .fx-hello-row{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin:0 0 16px}
+html[data-fenix-premium] .fx-app-mark{width:48px;height:48px;border:0;border-radius:14px;background:var(--inverse);color:var(--brand-soft);display:grid;place-items:center;flex:0 0 48px;overflow:hidden;box-shadow:0 10px 22px color-mix(in srgb,var(--inverse) 36%,transparent)}
+html[data-fenix-premium] .fx-app-mark svg{width:48px;height:48px;display:block}
+html[data-fenix-premium] .app-mark{background:var(--inverse);overflow:hidden}
+html[data-fenix-premium] .mast-lead{padding:8px 0 24px}
+html[data-fenix-premium] .mast-lead .fx-hello{margin:8px 0 12px}
+html[data-fenix-premium] .home-first{margin:0 0 16px;padding:22px 18px;border:1px solid var(--border,var(--line));border-radius:22px;background:var(--surface);box-shadow:var(--shadow-card)}
+html[data-fenix-premium] .home-first .mark{width:48px;height:48px;margin:0 0 14px;color:var(--brand)}
+html[data-fenix-premium] .home-first .mark svg{width:48px;height:48px;display:block}
+html[data-fenix-premium] .home-first h2{margin:0 0 8px;font:750 var(--fx-t-24)/1.15 var(--display),system-ui,sans-serif;letter-spacing:-.03em}
+html[data-fenix-premium][data-grammar="magazine"] #copertina .hero,
+html[data-fenix-premium][data-grammar="pocket-tool"] .hero,
+html[data-fenix-premium][data-grammar="split-stage"] .hero,
+html[data-fenix-premium][data-grammar="service-board"] .hero{display:none;min-height:0;height:0;margin:0;border:0}
+html[data-fenix-premium][data-grammar="magazine"] #copertina{min-height:0;gap:16px}
+html[data-fenix-premium] .card,.home-first{box-shadow:var(--shadow-card)}
+`;
+}
+
+function premiumDeskBoot(spec: PipelineSpec): string {
+  return `<div class="desk-hello"><div><p class="fx-hello">${spec.name}</p><p class="fx-role">${spec.place}</p></div></div><section class="desk-empty" data-state="empty"><h2>Nessuna riga in ledger</h2><p class="notes">Registra la prima pratica. Qui non mostriamo KPI a zero come hero.</p><button class="btn" type="button" data-view="${spec.tabs[1]!.id}">${spec.cta}</button></section>`;
+}
+
+function premiumMagazineBoot(spec: PipelineSpec): string {
+  return `<section id="copertina" class="mast-lead" data-fenix-slot="home-boot"><p class="kicker">${spec.kicker}</p><h2 class="fx-hello">${spec.name}</h2><p class="fx-role">${spec.place}</p><div class="card span"><p class="notes">Fascicolo editoriale. Tipo e marche, niente stock e niente telefono boxed.</p></div></section>`;
+}
+
+function premiumTypeBoot(spec: PipelineSpec, mark: string): string {
+  return `<section class="home-overview" data-fenix-slot="home-boot"><div class="fx-hello-row"><div><p class="fx-hello">${spec.name}</p><p class="fx-role">${spec.place}</p></div><span class="fx-app-mark" data-fenix-id="icon:app" aria-hidden="true">${mark}</span></div><div class="home-first" data-state="empty"><div class="mark" aria-hidden="true">${mark}</div><h2>Niente in lista</h2><p class="notes">Aggiungi la prima voce. Qui non ci sono dati di prova.</p><button class="btn" type="button" data-view="${spec.tabs[1]!.id}">${spec.cta}</button></div></section>`;
+}
+
 function visualKitCss(t: DesignTokens, grammar: LayoutGrammar): string {
   const desk = grammar.chrome !== "tabs";
   return `${typeRampCss(t)}
@@ -1721,6 +1757,7 @@ function productHtml(spec: PipelineSpec, tokens: DesignTokens, grammar: LayoutGr
   const barber = isBarberBrief(spec.brief) && grammar.id === "agenda";
   const shop = isShopBrief(spec.brief) && grammar.id === "phone-seed" && !campo && !market && !luxe && !library;
   const pocket = grammar.id === "phone-seed" && !campo && !market && !luxe && !library && !shop;
+  const premiumDefault = isPremiumDefaultBrief(spec.brief, tokens.family);
   const craftDomain: CraftDomain = campo
     ? "water"
     : market
@@ -1741,6 +1778,7 @@ function productHtml(spec: PipelineSpec, tokens: DesignTokens, grammar: LayoutGr
     barber,
     library,
     phone: grammar.id === "phone-seed" && !campo && !luxe,
+    premium: premiumDefault && !desk && !campo && !luxe,
   });
   const identityLabel = appIdentityLabel(spec.brief, tokens.family);
   const premiumMark = barber
@@ -1762,6 +1800,11 @@ function productHtml(spec: PipelineSpec, tokens: DesignTokens, grammar: LayoutGr
   const splash = desk
     ? ""
     : `<div class="fx-splash" id="fx-splash" data-fenix-splash data-fenix-slot="splash"><span class="fx-mark">${premiumMark}</span><strong>${spec.name}</strong><span class="fx-spin" aria-hidden="true"></span><p class="notes">${campo ? "Apertura" : grammar.voice.load}…</p></div>`;
+  const wantsPremiumBoot =
+    premiumDefault &&
+    grammar.id !== "agenda" &&
+    grammar.id !== "source-timeline" &&
+    grammar.id !== "phone-seed";
   const bootMain =
     grammar.id === "source-timeline"
       ? `<section class="repo-stage" data-repo-stage="activity"><div class="timeline-art">${hero}</div></section>`
@@ -1769,7 +1812,13 @@ function productHtml(spec: PipelineSpec, tokens: DesignTokens, grammar: LayoutGr
         ? agendaRailMarkup(spec, grammar)
         : grammar.id === "phone-seed"
           ? pocketEmpty
-          : `<div class="hero">${hero}</div>`;
+          : wantsPremiumBoot && grammar.id === "ops-desk"
+            ? premiumDeskBoot(spec)
+            : wantsPremiumBoot && grammar.id === "magazine"
+              ? premiumMagazineBoot(spec)
+              : wantsPremiumBoot
+                ? premiumTypeBoot(spec, pocketMark)
+                : `<div class="hero">${hero}</div>`;
   const navButtons = spec.tabs
     .map(
       (tab, i) =>
@@ -1788,7 +1837,7 @@ function productHtml(spec: PipelineSpec, tokens: DesignTokens, grammar: LayoutGr
             : "clamp(1.18rem, 2.2vw, 1.55rem)";
   const large = isOperationalApp(tokens) ? "2.125rem" : "1.75rem";
   return `<!DOCTYPE html>
-<html lang="it" data-family="${tokens.family}" data-grammar="${grammar.id}" data-chroma="${tokens.chroma}" data-intent-type="${graphicIntentFromBrief(spec.brief).type}" data-intent-chrome="${graphicIntentFromBrief(spec.brief).chrome}" data-craft-mode="${craftMode}" data-craft-rhythm="${craftRhythm}" data-craft-domain="${craftDomain}"${desk ? " data-fenix-craft-desk" : ""}${campo ? " data-fenix-campo" : ""}${market ? " data-fenix-market" : ""}${luxe ? " data-fenix-luxe" : ""}${library ? " data-fenix-libreria" : ""}${barber ? " data-fenix-barber" : ""}${pocket ? " data-fenix-pocket" : ""}>
+<html lang="it" data-family="${tokens.family}" data-grammar="${grammar.id}" data-chroma="${tokens.chroma}" data-intent-type="${graphicIntentFromBrief(spec.brief).type}" data-intent-chrome="${graphicIntentFromBrief(spec.brief).chrome}" data-craft-mode="${craftMode}" data-craft-rhythm="${craftRhythm}" data-craft-domain="${craftDomain}"${desk ? " data-fenix-craft-desk" : ""}${campo ? " data-fenix-campo" : ""}${market ? " data-fenix-market" : ""}${luxe ? " data-fenix-luxe" : ""}${library ? " data-fenix-libreria" : ""}${barber ? " data-fenix-barber" : ""}${pocket ? " data-fenix-pocket" : ""}${premiumDefault ? " data-fenix-premium" : ""}>
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
@@ -1831,6 +1880,7 @@ ${luxe ? luxeChromeCss() : ""}
 ${barber ? barberChromeCss() : ""}
 ${library ? libraryChromeCss() : ""}
 ${pocket ? genericChromeCss() : ""}
+${premiumDefault ? premiumFloorCss() : ""}
 ${desk ? deskChromeCss() : ""}
 </style>
 </head>
@@ -1864,9 +1914,9 @@ let view=${JSON.stringify(homeView)};
 let selectedDay="";
 let editId=null;
 var wipeAsk=false;
-const arts=${JSON.stringify(grammar.id === "phone-seed" || grammar.id === "agenda" ? [] : slices)};
-const meets=${JSON.stringify(grammar.id === "phone-seed" ? [] : meets)};
-const hero=${JSON.stringify(grammar.id === "phone-seed" ? "" : hero)};
+const arts=${JSON.stringify(grammar.id === "phone-seed" || grammar.id === "agenda" || wantsPremiumBoot ? [] : slices)};
+const meets=${JSON.stringify(grammar.id === "phone-seed" || wantsPremiumBoot ? [] : meets)};
+const hero=${JSON.stringify(grammar.id === "phone-seed" || wantsPremiumBoot ? "" : hero)};
 const tabDefs=${JSON.stringify(spec.tabs)};
 const glyphs=${JSON.stringify(spec.tabs.map((t, i) => tabSvg(t, i, campo, barber)))};
 const grammarId=${JSON.stringify(grammar.id)};
@@ -1885,6 +1935,7 @@ const shopProduct=${shop ? "true" : "false"};
 const libraryProduct=${library ? "true" : "false"};
 const barberProduct=${barber ? "true" : "false"};
 const pocketProduct=${pocket ? "true" : "false"};
+const premiumDefault=${premiumDefault ? "true" : "false"};
 const AGENDA_CYCLE={prenotato:"confermato",confermato:"in-corso","in-corso":"concluso",concluso:"prenotato"};
 const AGENDA_ACTION_LABELS=${JSON.stringify(AGENDA_ACTION_LABELS)};
 const AGENDA_STATUS_LABELS=${JSON.stringify(AGENDA_STATUS_LABELS)};
@@ -1896,7 +1947,7 @@ const FX_PAUSE_MARK=${JSON.stringify(FX_PAUSE_MARK)};
 const FX_CHEVRON_MARK=${JSON.stringify(FX_CHEVRON_MARK)};
 const FX_WATER_MARK=${JSON.stringify(campo ? campoHomeHeaderMark() : "")};
 const FX_BOOK_MARK=${JSON.stringify(library ? libraryHomeHeaderMark() : "")};
-const FX_POCKET_MARK=${JSON.stringify(pocket ? pocketMark : "")};
+const FX_POCKET_MARK=${JSON.stringify(pocket || premiumDefault ? pocketMark : "")};
 const FX_DROP_MARK='<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4.8s5.8 6.6 5.8 10.2a5.8 5.8 0 0 1-11.6 0C6.2 11.4 12 4.8 12 4.8z"/></svg>';
 (function dismissSplash(){
   var splash=document.getElementById("fx-splash");
@@ -2266,7 +2317,7 @@ ${grammar.id === "phone-seed" ? `function pocketLine(e){
   return parts.join(" · ");
 }
 function pocketEmptyInner(){
-  return '<div class="mark" aria-hidden="true">'+(pocketProduct?FX_POCKET_MARK:'${POCKET_EMPTY_MARK}')+'</div><h2>Niente in lista</h2><p class="notes">Aggiungi la prima voce. Qui non ci sono dati di prova.</p><button class="btn" type="button" data-view="'+tabDefs[1].id+'">'+cta+"</button>";
+  return '<div class="mark" aria-hidden="true">'+(FX_POCKET_MARK||'${POCKET_EMPTY_MARK}')+'</div><h2>Niente in lista</h2><p class="notes">Aggiungi la prima voce. Qui non ci sono dati di prova.</p><button class="btn" type="button" data-view="'+tabDefs[1].id+'">'+cta+"</button>";
 }
 function italianLongDateJs(){
   var raw=nowDate().toLocaleDateString("it-IT",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
@@ -2682,7 +2733,19 @@ function renderDesk(){
   return html;
 }
 function renderMagazine(){
-  var html='<section id="copertina"><div class="hero">'+hero+'</div><div class="card span"><p class="kicker">'+kicker+"</p><h2>"+specName()+" in lastre</h2><p class=\\"notes\\">Rivista di lastre fotografiche. Niente stock, niente telefono boxed.</p></div></section>";
+${
+  premiumDefault
+    ? `  var html='<section id="copertina" class="mast-lead"><p class="kicker">'+kicker+'</p><h2 class="fx-hello">'+specName()+'</h2><p class="fx-role">'+place+'</p><div class="card span"><p class="notes">Fascicolo editoriale. Tipo e marche, niente stock e niente telefono boxed.</p></div></section>';
+  html+='<section id="lastre" class="lastre">';
+  data.items.forEach(function(e,i){
+    html+='<article class="plate card" data-id="'+e.id+'" data-act="wear" data-state="'+(i===0?"on":"idle")+'"><h2>'+e.title+'</h2><p class="notes">'+e.note+" · "+e.meta+"</p></article>";
+  });
+  html+="</section>";
+  html+='<section id="studio" class="card span"><p class="kicker">Fascicolo</p><h2>'+data.items.length+" lastre in fascicolo</h2><p class=\\"notes\\">"+place+"</p></section>";
+  html+=renderForm();
+  if(!data.items.length) html+=emptyBox();
+  return html;`
+    : `  var html='<section id="copertina"><div class="hero">'+hero+'</div><div class="card span"><p class="kicker">'+kicker+"</p><h2>"+specName()+" in lastre</h2><p class=\\"notes\\">Rivista di lastre fotografiche. Niente stock, niente telefono boxed.</p></div></section>";
   html+='<section id="lastre" class="lastre">';
   data.items.forEach(function(e,i){
     html+='<article class="plate card" data-id="'+e.id+'" data-act="wear" data-state="'+(i===0?"on":"idle")+'">'+artOf(e,"slice")+"<h2>"+e.title+'</h2><p class="notes">'+e.note+" · "+e.meta+"</p></article>";
@@ -2691,7 +2754,8 @@ function renderMagazine(){
   html+='<section id="studio" class="card span"><p class="kicker">Fascicolo</p><h2>'+data.items.length+" lastre in fascicolo</h2><p class=\\"notes\\">"+place+"</p></section>";
   html+=renderForm();
   if(!data.items.length) html+=emptyBox();
-  return html;
+  return html;`
+}
 }`}
 function specName(){ return ${JSON.stringify(spec.name)}; }
 /*fenix-slot:form*/function renderForm(){
@@ -2725,6 +2789,7 @@ ${grammar.id === "phone-seed" ? `function renderHome(){ return renderPocketHome(
   return html;
 }
 function renderStats(){
+  if(premiumDefault) return '<div class="card span"><p class="kicker">Fascicolo</p><h2>'+data.items.length+" "+census+'</h2><p class="notes">'+place+"</p></div>";
   return '<div class="hero">'+hero+'</div><div class="card span"><p class="kicker">Fascicolo</p><h2>'+data.items.length+" "+census+'</h2><p class="notes">'+place+"</p></div>";
 }
 function slotMarkup(e,i){
@@ -2844,9 +2909,25 @@ function renderSource(mode){
   }
   return html;
 }
-function renderHome(){
+${
+  premiumDefault
+    ? `function renderPremiumHome(){
+  var html='<section class="home-overview" data-fenix-slot="home"><div class="fx-hello-row"><div><p class="fx-hello">'+specName()+'</p><p class="fx-role">'+place+'</p></div><span class="fx-app-mark" aria-hidden="true">'+FX_POCKET_MARK+"</span></div>";
+  if(!data.items.length){
+    html+='<div class="home-first" data-state="empty"><div class="mark" aria-hidden="true">'+FX_POCKET_MARK+'</div><h2>Niente in lista</h2><p class="notes">Aggiungi la prima voce. Qui non ci sono dati di prova.</p><button class="btn" type="button" data-view="'+tabDefs[1].id+'">'+cta+"</button></div>";
+    return html+"</section>";
+  }
+  data.items.forEach(function(e){
+    html+='<article class="card" data-id="'+e.id+'"><p class="kicker">'+e.kicker+'</p><h2>'+e.title+'</h2><p class="notes">'+(e.note||"")+(e.meta?" · "+e.meta:"")+"</p></article>";
+  });
+  return html+"</section>";
+}
+`
+    : ""
+}function renderHome(){
   if(grammarId==="lookbook") return renderLookbook();
   if(grammarId==="hospitality") return renderRooms();
+  if(premiumDefault && (grammarId==="service-board"||grammarId==="split-stage"||grammarId==="pocket-tool")) return renderPremiumHome();
   if(grammarId==="service-board") return renderTickets();
   if(grammarId==="ops-desk") return renderDesk();
   if(grammarId==="magazine") return renderMagazine();
@@ -2854,9 +2935,10 @@ function renderHome(){
   if(grammarId==="agenda") return renderAgenda();
   if(grammarId==="pocket-tool") return renderTool();
   if(grammarId==="phone-seed") return renderPocketHome();
-  return renderPerfume();
+  return premiumDefault?renderPremiumHome():renderPerfume();
 }
 function renderTool(){
+  if(premiumDefault) return renderPremiumHome();
   var html='<div class="hero">'+hero+'<div class="caption"><p class="kicker">'+kicker+"</p><h2>"+data.items.length+" "+census+"</h2></div></div>";
   if(!data.items.length) return html+emptyBox();
   data.items.forEach(function(e,i){
@@ -3077,6 +3159,8 @@ function polishFor(
         ? "Chrome da libreria: catalogo, prestiti, scaffali, scheda. Vietato Tavolo/Registra/Studio, 0-KPI Oggi/Media/Voci/Aperti, e desk STUDIO."
       : isBarberBrief(brief)
         ? "Chrome da salon cliente: tab Home/Prenota/I miei, serif editoriale Fraunces, espresso/crema/tan, hero con CTA Prenota dominante e atmosfera SVG originale, un solo mark forbici piene in header/favicon. Vietato quadrato vuoto, foto stock, Corto, Oggi/Nuovo/Settimana/Archivio e KPI in sala."
+      : isPremiumDefaultBrief(brief, tokens.family)
+        ? "Chrome premium di sistema: filled mark, gerarchia editoriale, layout calmo. Vietato Tavolo/Registra/Studio, 0-KPI, icone outline vuote, hero fotografico, desk utility come default."
       : grammar.id === "phone-seed"
         ? "Chrome da tasca premium: filled mark, gerarchia, card piene, tipo ritmato. Vietato Tavolo/Registra/Studio, 0-KPI Oggi/Media/Voci/Aperti come hero, icone outline doppie."
       : grammar.id === "agenda"

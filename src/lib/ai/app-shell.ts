@@ -24,7 +24,7 @@ Restituisci META kind=dashboard + HTML completo montato.`;
 
 export const SITE_POLISH_INSTRUCTION = `FORMATO: sito web. kind=site. Rigenera un sito desktop premium, nav in alto, almeno 4 sezioni, footer.
 NON un'app telefono: niente nav.fk-tab, niente bottom-tab, niente template t-home, niente src/screens/*.tsx, niente 5 tab, niente 0-KPI.
-Testata editoriale, filled mark, lastre/sezioni piene, gerarchia e contrasto. Hero 16:9 persistita, testi veri, form con window.Fenix.load/save. Palette dal mestiere.`;
+Testata editoriale, filled mark, lastre/sezioni piene, gerarchia e contrasto. Tipo e marche, non foto stock. Vietato 0-KPI e STUDIO. Form con window.Fenix.load/save. Palette dal mestiere.`;
 
 
 export const APP_SHELL_HTML = `<!DOCTYPE html>

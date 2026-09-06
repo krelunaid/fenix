@@ -31,6 +31,31 @@ export function wantsCrispCraftMark(brief: string, family = ""): boolean {
   return true;
 }
 
+/**
+ * Unmatched compose — premium is the SYSTEM floor for app/site/gestionale/tool.
+ * Sector kits (water, barber, library, market, luxe, shop, accountant) and
+ * dedicated product families keep their own craft. Not a palette.
+ */
+export function isPremiumDefaultBrief(brief: string, family = ""): boolean {
+  if (isFieldProductBrief(brief) || isBarberBrief(brief) || isLibraryBrief(brief)) return false;
+  if (isMarketplaceBrief(brief) || isLuxeBrief(brief) || isShopBrief(brief) || isAccountantBrief(brief)) {
+    return false;
+  }
+  if (
+    family === "perfume" ||
+    family === "fashion" ||
+    family === "hospitality" ||
+    family === "food" ||
+    family === "editorial" ||
+    family === "ops" ||
+    family === "repo" ||
+    family === "booking"
+  ) {
+    return false;
+  }
+  return true;
+}
+
 /** Commercialista / tax / ledger activity. Not a palette and not an iPhone tabbar. */
 export function isAccountantBrief(brief: string): boolean {
   return /commercialist|contabilit|ragionier|partita\s*iva|fiscale|fatturazione|dichiarazion|\bf24\b|gestionale(?:\s+\w+){0,3}\s+per\s+commercialist/i.test(
@@ -132,7 +157,7 @@ export function appIdentityLabel(brief: string, family: string): string {
   };
   if (labels[family]) return labels[family]!;
   if (isShopBrief(brief)) return "Negozio";
-  return "Ufficio";
+  return "Elenco";
 }
 
 /** Original sector pictogram, present in the seed without model calls. */

@@ -190,11 +190,12 @@ export function craftRhythmOf(flags: {
   phone?: boolean;
   barber?: boolean;
   library?: boolean;
+  premium?: boolean;
 }): CraftRhythm {
   if (flags.desk && !flags.luxe) return "desk";
   if (flags.field) return "utility";
   if (flags.luxe) return "luxe";
-  if (flags.market || flags.phone || flags.barber || flags.library) return "consumer";
+  if (flags.market || flags.phone || flags.barber || flags.library || flags.premium) return "consumer";
   return "utility";
 }
 

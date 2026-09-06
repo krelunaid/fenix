@@ -75,6 +75,8 @@ describe("layout grammar from brief", () => {
     assert.equal(docs.id, "magazine");
     assert.equal(pastel.id, "service-board");
     assert.equal(signal.id, "pocket-tool");
+    assert.match(signal.desktop, /filled mark|niente hero/i);
+    assert.doesNotMatch(signal.desktop, /tavolo di taglio/i);
   });
 
   it("gives an unmatched site magazine masthead, not phone-seed desk STUDIO", () => {

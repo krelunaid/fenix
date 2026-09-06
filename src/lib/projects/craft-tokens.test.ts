@@ -87,6 +87,7 @@ describe("craft surface tokens", () => {
     assert.equal(craftRhythmOf({ barber: true }), "consumer");
     assert.equal(craftRhythmOf({ library: true }), "consumer");
     assert.equal(craftRhythmOf({ phone: true }), "consumer");
+    assert.equal(craftRhythmOf({ premium: true }), "consumer");
     assert.equal(craftModeOf({}), "generic");
   });
 
