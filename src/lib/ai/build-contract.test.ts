@@ -62,6 +62,10 @@ describe("BuildContract planner (deterministic, no LLM)", () => {
     assert.equal(app.kind, "app");
     assert.deepEqual(app.screens, ["home", "new", "list", "stats", "more"]);
 
+    const feed = planContract(`${formatPrefix("app")}mi crei un app simile tik tok`);
+    assert.deepEqual(feed.screens, ["feed", "crea", "salvati", "profilo"]);
+    assert.equal(feed.entities[0]?.name, "clip");
+
     const site = planContract(`${formatPrefix("site")}Vetrina bottega.`);
     assert.equal(site.kind, "site");
     assert.ok(site.screens.length >= 4);

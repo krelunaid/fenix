@@ -25,6 +25,7 @@ Identità, layout, tipografia, icone SVG e copy nascono dal brief. Ogni mestiere
 JS in <script> classico. Mai \${espressione} nel markup. Dati: window.Fenix.load e window.Fenix.save (coppia obbligatoria). CRUD: window.Fenix.data.query/insert/update/remove con collection [A-Za-z0-9._-]{1,80}. Mai localStorage. Mai login o server inventati.
 
 DEFAULT: app telefono 390×844, colonna 100dvh, 4–5 tab in basso con data-view, SVG 24 originali diverse, form che salvano, liste oneste, empty solo se length===0.
+Se il brief chiede feed / reel / video verticali / «simile TikTok»: NON è un'agenda e NON sono 5 tab CRUD. Home = CLIP a tutto schermo 390×844 (poster CSS+SVG, caption overlay, azioni laterali originali). Dock: Feed, Crea, Salvati, Profilo. Tap/swipe cambia clip da Fenix.data. Crea salva titolo+città+nota. Nome originale dal mestiere. Vietato clonare marchio TikTok/Instagram, logo nota musicale, «For You».
 Italiano. Testi veri (città, prezzi, orari, nomi dal brief). Niente lorem, "Welcome to your app", Ciao/Operatore, Grok, Fenix, Inter, Manrope, emoji.
 Palette DAL MESTIERE in :root --bg --surface --fg --muted --accent --line. Mai la coppia clone #f5f5f7+#0071e3. Contrasto AA 4.5:1.
 Qualità nativa da tasca: tipo, ritmo 8px, materiali, motion ridotto. Vietato clonare Corto, Emergent, Apple, SF Symbols, Unsplash hotlink.
@@ -238,10 +239,26 @@ export function isUserIterateInstruction(instruction) {
 }
 
 /**
+ * Vertical short-clip feed. Original craft, not a TikTok clone.
+ * @param {string} text
+ */
+export function looksLikeClipFeedBrief(text) {
+  const p = String(text || "").toLowerCase();
+  return (
+    /tik\s*tok|tiktok|douyin/.test(p) ||
+    /\breels?\b|\bshorts?\b|\bfyp\b|for\s*you/.test(p) ||
+    /video\s*(vertical[ei]?|cort[io]|social|a tutto schermo)/.test(p) ||
+    /clip\s*vertical|scroll(?:are)?\s+(?:i\s+)?video|app\s+(?:di\s+)?video/.test(p) ||
+    /simile\s+(?:a\s+)?(?:tik|instagram)|tipo\s+(?:tiktok|instagram\s*reel)/.test(p)
+  );
+}
+
+/**
  * @param {{prompt: string, html: string, instruction?: string, feedback?: string, surface?: string}} input
  */
 export function composedGraphicUserContent(input) {
   const desk = input.surface === "desk";
+  const feed = !desk && looksLikeClipFeedBrief(`${input.prompt || ""} ${input.instruction || ""}`);
   return [
     `BRIEF:\n${input.prompt}`,
     input.instruction && !isUserIterateInstruction(input.instruction)
@@ -251,8 +268,12 @@ export function composedGraphicUserContent(input) {
     input.feedback || "",
     desk
       ? "Lo screenshot è il desktop 1280×800. Se manca, giudica dall'HTML. Rispondi META+HTML completo."
-      : "Lo screenshot è il telefono 390×844. Se manca, giudica dall'HTML. Rispondi META+HTML completo.",
-    "NON clonare Corto, Emergent, Apple. NON tornare al seed Fenix.",
+      : feed
+        ? "Lo screenshot è il telefono 390×844. Deve essere UN clip a tutto schermo. Se vedi card/KPI/agenda, rifai. Rispondi META+HTML completo."
+        : "Lo screenshot è il telefono 390×844. Se manca, giudica dall'HTML. Rispondi META+HTML completo.",
+    feed
+      ? "NON clonare TikTok, Instagram, Corto, Emergent, Apple. NON tornare al seed Fenix."
+      : "NON clonare Corto, Emergent, Apple. NON tornare al seed Fenix.",
   ]
     .filter(Boolean)
     .join("\n\n");
@@ -279,15 +300,23 @@ export function composedDeskCreateUserContent(input) {
     .join("\n\n");
 }
 export function composedCreateUserContent(input) {
+  const feed = looksLikeClipFeedBrief(`${input.prompt || ""} ${input.instruction || ""}`);
   return [
     `BRIEF:\n${input.prompt}`,
     input.instruction
       ? `DIREZIONE (vincoli di mestiere, NON un layout da copiare):\n${input.instruction}`
       : "",
     input.feedback || "",
-    "Contratto runtime: window.Fenix.load/save, <script> classico, tab data-view, italiano, niente lorem.",
+    feed
+      ? "Contratto runtime: window.Fenix.load/save, <script> classico, clip a tutto schermo, dock Feed/Crea/Salvati/Profilo (data-view), italiano, niente lorem. NON agenda e NON 5 tab CRUD."
+      : "Contratto runtime: window.Fenix.load/save, <script> classico, tab data-view, italiano, niente lorem.",
     "NON copiare CSS/copy/SVG del seed Fenix. NON usare data-fenix-craft, data-grammar, fenix-slot.",
-    "NON clonare Corto, Emergent, Apple. Il seed TypeScript è solo fallback di parse/sintassi.",
+    feed
+      ? "NON clonare TikTok, Instagram, Corto, Emergent, Apple. Nome originale. Vinci sulla grafica: clip pieno, overlay, materiale firma. Non card, non 4 KPI."
+      : "NON clonare Corto, Emergent, Apple. Il seed TypeScript è solo fallback di parse/sintassi.",
+    feed
+      ? "Vinci sulla grafica da tasca: un clip 390×844, caption overlay, azioni laterali originali, tipo in coppia."
+      : "Vinci sulla grafica da tasca: scena del mestiere, materiale firma, tipo in coppia, icone silhouette. Non 4 KPI. Non dashboard SaaS.",
   ]
     .filter(Boolean)
     .join("\n\n");

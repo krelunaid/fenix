@@ -30,7 +30,7 @@ documento unico già montato (stesse 5 schermate)
 <<<END>>>
 
 DIREZIONE VISIVA: se c'è, è legge. Copia i valori hex in :root, i font nel <link>, il raggio, l'icona, le tab e la foto. Non ispirarti: esegui.
-Se c'è GRAMMATICA DI LAYOUT, è legge: split-stage, lookbook, agenda, hospitality, service-board, magazine, ops-desk, source-timeline. Non riciclare la stessa phone-shell su brief diversi.
+Se c'è GRAMMATICA DI LAYOUT, è legge: split-stage, lookbook, agenda, hospitality, service-board, magazine, ops-desk, source-timeline, clip-feed. Non riciclare la stessa phone-shell su brief diversi.
 
 COLORE — già al primo HTML, DAL BRIEF:
 - Token cromatici del mestiere: --bg --surface --elevated --fg --muted --accent --line --accent-ink. Mai la stessa beige/terracotta su ogni progetto. Mai cadere su #101114/#191b20/#e1693f.

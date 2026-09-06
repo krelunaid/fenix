@@ -17,7 +17,7 @@ import {
 } from "../projects/validate-html.ts";
 import { auditCraft, contrastRatio, extractCssVars } from "../projects/visual-quality.ts";
 import { tokensFromBrief, tokensInstruction } from "../projects/design-tokens.ts";
-import { grammarFromBrief, grammarInstruction } from "../projects/layout-grammar.ts";
+import { grammarFromBrief, grammarInstruction, isClipFeedBrief } from "../projects/layout-grammar.ts";
 import {
   auditGraphicQuality,
   formatGraphicErrors,
@@ -137,9 +137,10 @@ function asStringList(value: unknown, max = 12, itemMax = 80): string[] {
   return out;
 }
 
-function screensFor(kind: ProjectKind): string[] {
+function screensFor(kind: ProjectKind, brief = ""): string[] {
   if (kind === "dashboard") return ["elenco", "nuovo", "numeri"];
   if (kind === "site" || kind === "landing") return ["home", "lavori", "visita", "contatto"];
+  if (isClipFeedBrief(brief)) return ["feed", "crea", "salvati", "profilo"];
   return ["home", "new", "list", "stats", "more"];
 }
 
@@ -161,15 +162,21 @@ function entitiesFor(kind: ProjectKind, brief: string): ContractEntity[] {
   if (kind === "site" || kind === "landing") {
     return [{ name: "messaggi", fields: ["nome", "testo"], crud: false }];
   }
+  if (isClipFeedBrief(brief)) {
+    return [{ name: "clip", fields: ["titolo", "citta", "nota"], crud: true }];
+  }
   return [{ name: collectionForBrief(brief, "voci"), fields: ["nome", "valore"], crud: true }];
 }
 
-function journeysFor(kind: ProjectKind): ContractJourney[] {
+function journeysFor(kind: ProjectKind, brief = ""): ContractJourney[] {
   if (kind === "dashboard") {
     return [{ id: "crud", steps: ["apri elenco", "nuovo", "salva riga", "vedi in tabella"] }];
   }
   if (kind === "site" || kind === "landing") {
     return [{ id: "contatto", steps: ["nav", "form", "conferma"] }];
+  }
+  if (isClipFeedBrief(brief)) {
+    return [{ id: "feed", steps: ["guarda clip", "avanti", "salva", "crea clip"] }];
   }
   return [{ id: "salva", steps: ["apri nuovo", "compila", "salva", "vedi in lista"] }];
 }
@@ -216,7 +223,7 @@ function intentFrom(brief: string): string {
 export function planContract(brief: string): BuildContract {
   const kind = kindFromPrompt(brief) ?? inferKind(brief);
   const product = productIntent(brief, kind);
-  const screens = product?.screens || screensFor(kind);
+  const screens = product?.screens || screensFor(kind, brief);
   const entities = product?.entities || entitiesFor(kind, brief);
   const crud = entities.some((e) => e.crud);
   const tokens = tokensFromBrief(brief);
@@ -237,7 +244,7 @@ export function planContract(brief: string): BuildContract {
     screens,
     routes: routesFor(kind, screens),
     entities,
-    journeys: product?.journeys || journeysFor(kind),
+    journeys: product?.journeys || journeysFor(kind, brief),
     acceptance,
     visual: {
       dna: tokens.dna,

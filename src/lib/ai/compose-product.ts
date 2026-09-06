@@ -355,7 +355,9 @@ function seedNameFromBrief(brief: string): string {
         ? "Contabilità"
         : isShopBrief(brief)
           ? "Negozio"
-          : grammarFromBrief(brief).id === "agenda"
+          : grammarFromBrief(brief).id === "clip-feed"
+            ? "Clip"
+            : grammarFromBrief(brief).id === "agenda"
             ? "Agenda"
             : "Note";
   const named = raw.match(/(?:chiamata|chiamala|nome(?: dell.app)?|titolo)\s*[:=]?\s*["«]([^"»]{1,80})["»]/i)?.[1]?.trim();
@@ -373,6 +375,29 @@ function synthesizeSpec(brief: string): PipelineSpec {
   const grammar = grammarFromBrief(brief);
   const intent = graphicIntentFromBrief(brief);
   const name = seedNameFromBrief(brief);
+  if (grammar.id === "clip-feed") {
+    return {
+      id: `${tokens.family}-clip`,
+      name: name === "Note" ? "Clip" : name,
+      kicker: grammar.voice.census,
+      place: "In onda",
+      collection: "clip",
+      brief,
+      tabs: [
+        { id: "feed", label: "Feed" },
+        { id: "crea", label: "Crea" },
+        { id: "salvati", label: "Salvati" },
+        { id: "profilo", label: "Profilo" },
+      ],
+      rows: [
+        { id: "c1", title: "Luce di Brera", kicker: "in onda", note: "Marta · Milano", meta: "12s" },
+        { id: "c2", title: "Passo in cortile", kicker: "in onda", note: "Leo · Torino", meta: "8s" },
+        { id: "c3", title: "Sera al porto", kicker: "in onda", note: "Noa · Genova", meta: "15s" },
+      ],
+      formTitle: "Nuovo clip",
+      cta: "Metti in onda",
+    };
+  }
   if (intent.chrome === "semantic") {
     return {
       id: `${tokens.family}-seed`,
@@ -1064,6 +1089,15 @@ function phoneCss(id: GrammarId): string {
   html[data-grammar="phone-seed"] [data-fenix-crud] .btn{width:100%;border-radius:14px}
   html[data-chroma="chroma-pulse"] .home-hero,html[data-chroma="ink-terminal"] .home-hero{background:color-mix(in srgb,var(--accent) 16%,var(--surface))}
   html[data-chroma="pastel-studio"] .home-hero,html[data-chroma="luminous-paper"] .home-hero{background:color-mix(in srgb,var(--accent) 10%,var(--surface))}`
+            : id === "clip-feed"
+              ? `html[data-grammar="clip-feed"] header{position:absolute;z-index:4;background:linear-gradient(180deg,color-mix(in srgb,var(--bg) 72%,transparent),transparent);border:0;width:100%}
+  html[data-grammar="clip-feed"] .app{height:100dvh;max-height:100dvh}
+  html[data-grammar="clip-feed"] main{padding:0;overflow:hidden}
+  html[data-grammar="clip-feed"] .hero{min-height:100%;height:100%;margin:0;border:0;border-radius:0;position:relative}
+  html[data-grammar="clip-feed"] .hero svg{width:100%;height:100%;min-height:72vh;display:block}
+  html[data-grammar="clip-feed"] .hero .caption{position:absolute;left:16px;right:72px;bottom:24px;background:none;padding:0}
+  html[data-grammar="clip-feed"] .collection,.fragrance{display:none}
+  html[data-grammar="clip-feed"] nav.tabs{background:color-mix(in srgb,var(--bg) 55%,transparent);border-color:transparent}`
             : "";
   return `${stage}
 .app{display:grid;grid-template-rows:auto 1fr auto;grid-template-areas:"head" "main" "nav";width:100%;min-height:100dvh}
@@ -3195,6 +3229,8 @@ function polishFor(
         ? "Chrome da tasca premium: filled mark, gerarchia, card piene, tipo ritmato. Vietato Tavolo/Registra/Studio, 0-KPI Oggi/Media/Voci/Aperti come hero, icone outline doppie."
       : grammar.id === "agenda"
         ? "Chrome da agenda: binario orario, tab Oggi/Nuovo/Settimana/Archivio, tipo 17/headline, target 44px. Vietato hero KPI, tab Home/Elenco, riquadri vuoti."
+        : grammar.id === "clip-feed"
+        ? "Chrome da feed verticale: clip a tutto schermo, overlay caption, dock Feed/Crea/Salvati/Profilo. Vietato agenda, 5 tab CRUD, card KPI, clone TikTok/Instagram."
         : grammar.chrome === "desk"
         ? DASHBOARD_POLISH_INSTRUCTION
         : grammar.chrome === "masthead"

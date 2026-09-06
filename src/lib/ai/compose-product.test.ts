@@ -1230,6 +1230,18 @@ describe("graphic pipeline prompt→plan→generate→visual→QA", () => {
     assert.doesNotMatch(product.html, /<html[^>]*data-fenix-libreria/);
   });
 
+  it("composes a TikTok-like brief as clip-feed, not Home/Aggiungi/Elenco", () => {
+    const product = composeProduct(formatPrefix("app") + "mi crei un app simile tik tok");
+    assert.equal(product.grammar.id, "clip-feed");
+    assert.match(product.html, /data-grammar="clip-feed"/);
+    assert.match(product.html, /<span>Feed<\/span>/);
+    assert.match(product.html, /<span>Crea<\/span>/);
+    assert.match(product.html, /<span>Profilo<\/span>/);
+    assert.doesNotMatch(product.html.replace(/<script[\s\S]*?<\/script>/gi, ""), /<span>Aggiungi<\/span>/);
+    assert.match(product.polish, /clip a tutto schermo/);
+    assert.doesNotMatch(product.html, /For You/);
+  });
+
   it("raises default compose for a plain brief above the old utility floor", () => {
     const appBrief = formatPrefix("app") + "Note e promemoria per la giornata.";
     const deskBrief = formatPrefix("dashboard") + "Gestionale ufficio: pratiche, scadenze e clienti.";

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { formatPrefix } from "./infer.ts";
-import { grammarFromBrief } from "./layout-grammar.ts";
+import { grammarFromBrief, isClipFeedBrief } from "./layout-grammar.ts";
 import { familyFromBrief, tokensFromBrief, variantFromBrief } from "./design-tokens.ts";
 import { LIBRARY_IPHONE_BRIEF } from "./app-identity.test.ts";
 
@@ -85,6 +85,17 @@ describe("layout grammar from brief", () => {
     assert.equal(g.chrome, "masthead");
     assert.match(g.desktop, /niente tabbar/i);
     assert.match(g.desktop, /niente 0-KPI|lastre/i);
+  });
+
+  it("gives a TikTok-like brief clip-feed chrome, not agenda or five CRUD tabs", () => {
+    const brief = `${formatPrefix("app")}mi crei un app simile tik tok`;
+    const g = grammarFromBrief(brief);
+    assert.equal(g.id, "clip-feed");
+    assert.equal(g.stage, "feed");
+    assert.match(g.mobile, /clip 100dvh/);
+    assert.match(g.mobile, /niente agenda/);
+    assert.equal(isClipFeedBrief("video verticali a tutto schermo"), true);
+    assert.equal(isClipFeedBrief("agenda studio prenotazioni"), false);
   });
 
   it("gives a library iPhone brief phone-seed bookstore voice, not magazine or desk", () => {

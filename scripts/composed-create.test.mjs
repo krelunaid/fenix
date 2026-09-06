@@ -59,6 +59,11 @@ test("create system asks for a full original document and never for an atomic JS
   assert.match(user, /DIREZIONE/);
   assert.doesNotMatch(user, /HTML ORIGINALE:/);
   assert.doesNotMatch(user, /BASE_SHA256/);
+  assert.match(COMPOSED_CREATE_SYSTEM, /CLIP a tutto schermo/);
+  const feed = composedCreateUserContent({ prompt: "mi crei un app simile tik tok" });
+  assert.match(feed, /clip a tutto schermo/);
+  assert.match(feed, /NON agenda/);
+  assert.doesNotMatch(feed, /For You/);
 });
 
 test("desktop create accepts original site HTML and rejects the magazine seed", () => {

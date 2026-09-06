@@ -9,7 +9,7 @@ import {
   type TokenFamily,
 } from "./design-tokens.ts";
 import { extractBriefAxes } from "./palette-engine.ts";
-import { inferKind, kindFromPrompt } from "./infer.ts";
+import { inferKind, isPhoneKind, kindFromPrompt } from "./infer.ts";
 import { isLibraryBrief } from "./app-identity.ts";
 import type { ProjectKind } from "./types.ts";
 
@@ -23,6 +23,7 @@ export type GrammarId =
   | "magazine"
   | "pocket-tool"
   | "source-timeline"
+  | "clip-feed"
   | "phone-seed";
 
 export type GrammarChrome = "tabs" | "desk" | "masthead";
@@ -32,7 +33,7 @@ export type LayoutGrammar = {
   family: TokenFamily | "unknown";
   kind: ProjectKind;
   chrome: GrammarChrome;
-  stage: "split" | "plates" | "agenda" | "rooms" | "tickets" | "table" | "magazine" | "tool" | "timeline" | "seed";
+  stage: "split" | "plates" | "agenda" | "rooms" | "tickets" | "table" | "magazine" | "tool" | "timeline" | "feed" | "seed";
   desktop: string;
   tablet: string;
   mobile: string;
@@ -47,6 +48,18 @@ export type LayoutGrammar = {
 
 function kindOf(brief: string): ProjectKind {
   return kindFromPrompt(brief) ?? inferKind(brief);
+}
+
+/** Vertical short-clip feed. Not a TikTok/Instagram clone: original name, materials, chrome. */
+export function isClipFeedBrief(brief: string): boolean {
+  const p = String(brief || "").toLowerCase();
+  return (
+    /tik\s*tok|tiktok|douyin/.test(p) ||
+    /\breels?\b|\bshorts?\b|\bfyp\b|for\s*you/.test(p) ||
+    /video\s*(vertical[ei]?|cort[io]|social|a tutto schermo)/.test(p) ||
+    /clip\s*vertical|scroll(?:are)?\s+(?:i\s+)?video|app\s+(?:di\s+)?video/.test(p) ||
+    /simile\s+(?:a\s+)?(?:tik|instagram)|tipo\s+(?:tiktok|instagram\s*reel)/.test(p)
+  );
 }
 
 function opsDeskGrammar(family: TokenFamily | "unknown", variant: number): LayoutGrammar {
@@ -81,6 +94,25 @@ export function grammarFromBrief(brief: string): LayoutGrammar {
     mobile: "sezioni in colonna, controlli 44px, niente tabbar o dashboard operativa",
     voice: { census: "in evidenza", empty: "Nessuna richiesta inviata.", load: "Apro il sito", ok: "Richiesta salvata", err: "La richiesta non è stata salvata." },
   };
+  if (isPhoneKind(kind) && isClipFeedBrief(brief)) {
+    return {
+      id: "clip-feed",
+      family,
+      kind,
+      chrome: "tabs",
+      stage: "feed",
+      desktop: "colonna telefono centrata: clip a tutta altezza, niente dashboard KPI e niente 5 tab CRUD",
+      tablet: "clip a tutta altezza, dock in basso",
+      mobile: "clip 100dvh, overlay caption, azioni laterali, dock Feed/Crea/Salvati/Profilo, niente agenda",
+      voice: {
+        census: "in onda",
+        empty: "Nessun clip in feed. Registrane uno.",
+        load: "Apro il feed",
+        ok: "In onda",
+        err: "Il clip non è in feed.",
+      },
+    };
+  }
   // Bookstore / library is a phone craft — never magazine masthead or desk STUDIO.
   if (isLibraryBrief(brief) && kind !== "dashboard") {
     return {
@@ -385,6 +417,8 @@ export function grammarInstruction(grammar: LayoutGrammar): string {
     "Vietato riciclare la stessa phone-shell, «3 in casa», Ciao/Operatore, tab Home/Nuovo/Elenco.",
     grammar.id === "source-timeline"
       ? "Repository: attività, rami, sync, diff. Vietato home universale hero grigio + due KPI + CTA + empty card. Non copiare GitHub, Apple o Emergent."
-      : "Stati empty/loading/success/error visibili. Motion solo se prefers-reduced-motion: no-preference. Target ≥24px, focus visibile, AA.",
+      : grammar.id === "clip-feed"
+        ? "Feed verticale originale: clip a tutto schermo, overlay, dock Feed/Crea/Salvati/Profilo. Vietato agenda, 5 tab Home/Nuovo/Elenco/Stats, card KPI. Non clonare TikTok, Instagram, marchio o «For You»."
+        : "Stati empty/loading/success/error visibili. Motion solo se prefers-reduced-motion: no-preference. Target ≥24px, focus visibile, AA.",
   ].join("\n");
 }
