@@ -1150,8 +1150,8 @@ main{grid-area:main;min-height:0;overflow:auto;padding:8px 16px 20px}
   .clip-stage{display:grid;grid-template-columns:minmax(16px,1fr) min(480px,42vw) minmax(260px,360px) minmax(16px,1fr);grid-template-rows:minmax(0,1fr);align-items:center;gap:0 28px}
   .clip-ambient{display:block;position:absolute;inset:-18%;z-index:0;pointer-events:none;filter:blur(58px) saturate(1.35);opacity:.5;transform:scale(1.06)}
   .clip-frame{position:relative;grid-column:2;z-index:2;width:100%;height:min(86dvh,760px);border-radius:28px;overflow:hidden;box-shadow:0 40px 110px rgba(0,0,0,.58),0 0 0 1px color-mix(in srgb,#fff 14%,transparent)}
-  .clip-copy{position:relative;grid-column:3;left:auto;right:auto;bottom:auto;z-index:2;max-width:34ch;padding:8px 0;align-self:end;margin-bottom:max(8px,calc(86dvh - 760px))}
-  .clip-brand{display:block;margin:0 0 18px;font:700 13px/1 var(--display),sans-serif;letter-spacing:.18em;text-transform:uppercase;opacity:.7}
+  .clip-copy{position:relative;grid-column:3;left:auto;right:auto;bottom:auto;z-index:2;max-width:34ch;padding:12px 0;align-self:center;height:min(86dvh,760px);display:flex;flex-direction:column;justify-content:flex-end}
+  .clip-brand{display:block;margin:0 0 auto;font:700 13px/1 var(--display),sans-serif;letter-spacing:.18em;text-transform:uppercase;opacity:.7}
   .clip-copy h1{font-size:clamp(2rem,3.4vw,2.8rem);margin:10px 0 12px}
   .clip-after{display:block;margin:18px 0 0;font:650 12px/1.4 var(--body),sans-serif;color:color-mix(in srgb,#f4e8ff 70%,transparent)}
   .clip-rail{position:relative;left:auto;right:auto;bottom:auto;flex-direction:row;gap:10px;margin-top:22px}
@@ -1222,7 +1222,8 @@ main{grid-area:main;min-height:0;overflow:auto;padding:8px 16px 20px}
   html[data-grammar="clip-feed"] main:has(.clip-create),html[data-grammar="clip-feed"] main:has(.clip-saved),html[data-grammar="clip-feed"] main:has(.clip-profile){padding:32px 40px 40px}
   html[data-grammar="clip-feed"] .app{width:100%;max-width:none;height:100dvh;min-height:0}
   .clip-stage{grid-template-columns:minmax(24px,1fr) min(520px,40vw) minmax(280px,380px) minmax(24px,1fr);gap:0 36px}
-  .clip-frame{height:min(88dvh,780px);border-radius:32px}`
+  .clip-frame{height:min(88dvh,780px);border-radius:32px}
+  .clip-copy{height:min(88dvh,780px)}`
       : `header,nav.tabs{padding-left:40px;padding-right:40px}
   main{padding:28px 40px}`
   }
@@ -1840,66 +1841,58 @@ function clipPosterSvg(slot: number, tokens: DesignTokens): string {
   const warm = "#e2b56a";
   const teal = "#2ec8c0";
   const scenes = [
-    `<defs><linearGradient id="${g}s" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1a0c28"/><stop offset="1" stop-color="${sky}"/></linearGradient><radialGradient id="${g}w" cx=".72" cy=".22" r=".42"><stop offset="0" stop-color="${warm}" stop-opacity=".7"/><stop offset="1" stop-color="${warm}" stop-opacity="0"/></radialGradient></defs>
+    `<defs><linearGradient id="${g}s" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2a1638"/><stop offset=".45" stop-color="#1a0c28"/><stop offset="1" stop-color="${sky}"/></linearGradient><radialGradient id="${g}w" cx=".78" cy=".18" r=".5"><stop offset="0" stop-color="${warm}" stop-opacity=".85"/><stop offset="1" stop-color="${warm}" stop-opacity="0"/></radialGradient></defs>
     <rect width="390" height="844" fill="url(#${g}s)"/>
-    <ellipse cx="286" cy="168" rx="150" ry="120" fill="url(#${g}w)"/>
-    <rect x="0" y="430" width="390" height="414" fill="${elev}"/>
-    <path d="M0 430h390v24H0z" fill="${acc}" opacity=".35"/>
-    <rect x="28" y="470" width="88" height="210" fill="${sky}"/>
-    <rect x="40" y="490" width="28" height="46" fill="${warm}" opacity=".85"/>
-    <rect x="72" y="512" width="28" height="46" fill="${warm}" opacity=".55"/>
-    <rect x="40" y="572" width="60" height="40" fill="${warm}" opacity=".4"/>
-    <path d="M150 470v248" stroke="${ink}" opacity=".18" stroke-width="10"/>
-    <path d="M150 470h170v90H150z" fill="none" stroke="${ink}" opacity=".28" stroke-width="8"/>
-    <rect x="168" y="488" width="134" height="54" fill="${warm}" opacity=".9"/>
-    <rect x="168" y="580" width="54" height="138" fill="${sky}"/>
-    <rect x="248" y="580" width="54" height="138" fill="${sky}"/>
-    <ellipse cx="118" cy="708" rx="22" ry="58" fill="#0a0610"/>
-    <circle cx="118" cy="632" r="16" fill="#0a0610"/>`,
-    `<defs><linearGradient id="${g}s" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2a1420"/><stop offset="1" stop-color="${sky}"/></linearGradient></defs>
+    <ellipse cx="310" cy="120" rx="170" ry="150" fill="url(#${g}w)"/>
+    <circle cx="52" cy="70" r="1.6" fill="${ink}" opacity=".45"/><circle cx="120" cy="40" r="1.2" fill="${ink}" opacity=".35"/><circle cx="210" cy="88" r="1.4" fill="${ink}" opacity=".4"/><circle cx="300" cy="36" r="1" fill="${ink}" opacity=".3"/>
+    <rect x="18" y="96" width="354" height="268" fill="${elev}"/>
+    <rect x="36" y="118" width="48" height="72" fill="${warm}" opacity=".95"/><rect x="96" y="118" width="48" height="72" fill="${warm}" opacity=".55"/><rect x="156" y="118" width="48" height="72" fill="${warm}" opacity=".8"/><rect x="216" y="118" width="48" height="72" fill="${warm}" opacity=".4"/><rect x="276" y="118" width="72" height="72" fill="${warm}" opacity=".7"/>
+    <rect x="36" y="208" width="48" height="72" fill="${warm}" opacity=".45"/><rect x="96" y="208" width="48" height="72" fill="${teal}" opacity=".28"/><rect x="156" y="208" width="132" height="72" fill="${warm}" opacity=".9"/><rect x="300" y="208" width="48" height="72" fill="${warm}" opacity=".5"/>
+    <rect x="36" y="298" width="312" height="48" fill="${acc}" opacity=".28"/>
+    <rect x="0" y="364" width="390" height="480" fill="${elev}"/>
+    <path d="M0 364h390v18H0z" fill="${acc}" opacity=".4"/>
+    <rect x="24" y="410" width="92" height="220" fill="${sky}"/><rect x="38" y="428" width="28" height="52" fill="${warm}" opacity=".9"/><rect x="72" y="452" width="28" height="52" fill="${warm}" opacity=".5"/><rect x="38" y="524" width="64" height="44" fill="${warm}" opacity=".35"/>
+    <path d="M148 410v248" stroke="${ink}" opacity=".2" stroke-width="12"/>
+    <path d="M148 410h196v96H148z" fill="none" stroke="${ink}" opacity=".3" stroke-width="8"/>
+    <rect x="168" y="428" width="156" height="62" fill="${warm}"/>
+    <rect x="168" y="530" width="64" height="128" fill="${sky}"/><rect x="256" y="530" width="64" height="128" fill="${sky}"/>
+    <ellipse cx="118" cy="720" rx="24" ry="62" fill="#0a0610"/><circle cx="118" cy="640" r="17" fill="#0a0610"/>
+    <path d="M0 780h390v64H0z" fill="#07040c" opacity=".55"/>`,
+    `<defs><linearGradient id="${g}s" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3a1a22"/><stop offset="1" stop-color="${sky}"/></linearGradient></defs>
     <rect width="390" height="844" fill="url(#${g}s)"/>
-    <rect x="0" y="220" width="390" height="624" fill="${elev}"/>
-    <rect x="18" y="250" width="354" height="28" fill="${acc}" opacity=".22"/>
-    <rect x="36" y="300" width="70" height="110" fill="${warm}" opacity=".55"/>
-    <rect x="120" y="288" width="52" height="90" fill="${warm}" opacity=".8"/>
-    <rect x="186" y="312" width="64" height="98" fill="${teal}" opacity=".35"/>
-    <rect x="268" y="276" width="80" height="130" fill="${warm}" opacity=".4"/>
-    <path d="M20 430h350" stroke="${ink}" opacity=".2" stroke-width="6"/>
-    <path d="M48 448 340 410" stroke="${ink}" opacity=".28" stroke-width="3"/>
-    <path d="M40 470 330 436" stroke="${acc}" opacity=".4" stroke-width="2"/>
-    <rect x="0" y="560" width="390" height="284" fill="#120814"/>
-    <ellipse cx="200" cy="560" rx="210" ry="36" fill="${elev}"/>
-    <ellipse cx="168" cy="700" rx="20" ry="54" fill="#07040c"/>
-    <circle cx="168" cy="628" r="15" fill="#07040c"/>
-    <rect x="70" y="640" width="14" height="90" fill="${warm}" opacity=".35"/>
-    <rect x="300" y="620" width="14" height="110" fill="${teal}" opacity=".3"/>`,
-    `<defs><linearGradient id="${g}s" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#081018"/><stop offset=".48" stop-color="#152038"/><stop offset="1" stop-color="#0a1828"/></linearGradient><linearGradient id="${g}w" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1c3a52"/><stop offset="1" stop-color="#071018"/></linearGradient></defs>
+    <rect x="0" y="70" width="390" height="774" fill="${elev}"/>
+    <rect x="0" y="70" width="390" height="36" fill="${acc}" opacity=".25"/>
+    <rect x="22" y="122" width="78" height="130" fill="${warm}" opacity=".7"/><rect x="112" y="108" width="64" height="144" fill="${warm}"/><rect x="188" y="130" width="70" height="122" fill="${teal}" opacity=".32"/><rect x="270" y="96" width="96" height="156" fill="${warm}" opacity=".5"/>
+    <rect x="22" y="270" width="346" height="22" fill="${ink}" opacity=".16"/>
+    <rect x="36" y="310" width="58" height="96" fill="${warm}" opacity=".45"/><rect x="110" y="298" width="90" height="108" fill="${warm}" opacity=".75"/><rect x="214" y="318" width="58" height="88" fill="${teal}" opacity=".24"/><rect x="286" y="292" width="70" height="114" fill="${warm}" opacity=".38"/>
+    <path d="M18 430h354" stroke="${ink}" opacity=".22" stroke-width="8"/>
+    <path d="M40 456 350 412" stroke="${ink}" opacity=".3" stroke-width="3"/><path d="M28 478 338 438" stroke="${acc}" opacity=".45" stroke-width="2"/>
+    <rect x="0" y="520" width="390" height="324" fill="#120814"/>
+    <ellipse cx="196" cy="520" rx="220" ry="40" fill="${elev}"/>
+    <rect x="48" y="560" width="16" height="140" fill="${warm}" opacity=".4"/><rect x="320" y="548" width="16" height="160" fill="${teal}" opacity=".28"/>
+    <ellipse cx="176" cy="730" rx="22" ry="58" fill="#07040c"/><circle cx="176" cy="654" r="16" fill="#07040c"/>`,
+    `<defs><linearGradient id="${g}s" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0a1828"/><stop offset=".4" stop-color="#152038"/><stop offset="1" stop-color="#071018"/></linearGradient></defs>
     <rect width="390" height="844" fill="url(#${g}s)"/>
-    <circle cx="300" cy="120" r="36" fill="${ink}" opacity=".22"/>
-    <path d="M0 430h390v414H0z" fill="url(#${g}w)"/>
-    <path d="M0 430 80 390 160 438 250 360 340 420 390 380v70H0z" fill="${teal}" opacity=".22"/>
-    <rect x="40" y="300" width="18" height="160" fill="${ink}" opacity=".35"/>
-    <path d="M49 300h120v14H49z" fill="${acc}" opacity=".55"/>
-    <rect x="220" y="250" width="22" height="200" fill="${ink}" opacity=".4"/>
-    <path d="M231 250h90v16H231z" fill="${warm}" opacity=".7"/>
-    <rect x="70" y="500" width="250" height="70" fill="#0b1520"/>
-    <rect x="90" y="518" width="40" height="18" fill="${warm}" opacity=".8"/>
-    <rect x="150" y="518" width="28" height="18" fill="${warm}" opacity=".45"/>
-    <path d="M0 620 60 600 140 640 220 580 310 630 390 590v254H0z" fill="${teal}" opacity=".12"/>
-    <ellipse cx="260" cy="720" rx="18" ry="50" fill="#05080e"/>
-    <circle cx="260" cy="652" r="14" fill="#05080e"/>`,
-    `<defs><radialGradient id="${g}f" cx=".5" cy=".58" r=".5"><stop offset="0" stop-color="${warm}"/><stop offset=".35" stop-color="${acc}" stop-opacity=".85"/><stop offset="1" stop-color="${sky}"/></radialGradient></defs>
+    <circle cx="308" cy="96" r="42" fill="${ink}" opacity=".2"/>
+    <circle cx="40" cy="48" r="1.4" fill="${ink}" opacity=".4"/><circle cx="90" cy="80" r="1" fill="${ink}" opacity=".3"/><circle cx="170" cy="36" r="1.6" fill="${ink}" opacity=".45"/>
+    <rect x="28" y="160" width="22" height="220" fill="${ink}" opacity=".4"/><path d="M39 160h140v16H39z" fill="${acc}" opacity=".6"/>
+    <rect x="210" y="120" width="26" height="250" fill="${ink}" opacity=".45"/><path d="M223 120h110v18H223z" fill="${warm}" opacity=".75"/>
+    <rect x="120" y="210" width="16" height="180" fill="${ink}" opacity=".28"/><path d="M128 210h70v12H128z" fill="${teal}" opacity=".4"/>
+    <path d="M0 380 70 340 150 400 240 310 330 380 390 340v90H0z" fill="${teal}" opacity=".22"/>
+    <rect x="0" y="420" width="390" height="424" fill="#0a1824"/>
+    <path d="M0 420 80 400 170 448 260 370 350 430 390 400v50H0z" fill="${teal}" opacity=".16"/>
+    <rect x="60" y="500" width="270" height="78" fill="#071018"/><rect x="82" y="518" width="46" height="20" fill="${warm}"/><rect x="142" y="518" width="30" height="20" fill="${warm}" opacity=".5"/><rect x="188" y="518" width="22" height="20" fill="${teal}" opacity=".45"/>
+    <path d="M0 610 70 590 160 640 250 560 340 620 390 580v264H0z" fill="${teal}" opacity=".12"/>
+    <ellipse cx="250" cy="740" rx="20" ry="54" fill="#05080e"/><circle cx="250" cy="668" r="15" fill="#05080e"/>`,
+    `<defs><radialGradient id="${g}f" cx=".5" cy=".52" r=".58"><stop offset="0" stop-color="${warm}"/><stop offset=".32" stop-color="${acc}" stop-opacity=".9"/><stop offset="1" stop-color="${sky}"/></radialGradient></defs>
     <rect width="390" height="844" fill="${sky}"/>
-    <ellipse cx="196" cy="470" rx="170" ry="220" fill="url(#${g}f)"/>
-    <path d="M40 180h310v520H40z" fill="none" stroke="${ink}" opacity=".22" stroke-width="14"/>
-    <path d="M70 240h80v120H70z" fill="${warm}" opacity=".25"/>
-    <circle cx="196" cy="430" r="54" fill="${warm}" opacity=".55"/>
-    <circle cx="196" cy="430" r="22" fill="${ink}" opacity=".35"/>
-    <circle cx="132" cy="560" r="28" fill="${teal}" opacity=".28"/>
-    <circle cx="262" cy="548" r="20" fill="${ink}" opacity=".2"/>
-    <rect x="118" y="620" width="154" height="90" fill="#0a0610" opacity=".55"/>
-    <ellipse cx="196" cy="710" rx="24" ry="64" fill="#07040c"/>
-    <circle cx="196" cy="628" r="18" fill="#07040c"/>`,
+    <ellipse cx="196" cy="400" rx="200" ry="280" fill="url(#${g}f)"/>
+    <path d="M28 90h334v640H28z" fill="none" stroke="${ink}" opacity=".22" stroke-width="16"/>
+    <rect x="58" y="130" width="90" height="150" fill="${warm}" opacity=".28"/><rect x="242" y="150" width="80" height="130" fill="${teal}" opacity=".2"/>
+    <circle cx="196" cy="390" r="78" fill="${warm}" opacity=".7"/><circle cx="196" cy="390" r="32" fill="${ink}" opacity=".3"/>
+    <circle cx="110" cy="520" r="36" fill="${teal}" opacity=".3"/><circle cx="286" cy="508" r="26" fill="${ink}" opacity=".22"/><circle cx="154" cy="250" r="18" fill="${warm}" opacity=".35"/>
+    <rect x="108" y="600" width="174" height="110" fill="#0a0610" opacity=".6"/>
+    <ellipse cx="196" cy="730" rx="26" ry="70" fill="#07040c"/><circle cx="196" cy="640" r="20" fill="#07040c"/>`,
   ];
   const inner = scenes[((slot % scenes.length) + scenes.length) % scenes.length]!;
   return `<svg class="clip-poster" data-imagery="domain" data-fenix-clip-art="${slot}" viewBox="0 0 390 844" width="390" height="844" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">${inner}</svg>`;
