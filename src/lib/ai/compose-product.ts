@@ -1091,42 +1091,58 @@ function phoneCss(id: GrammarId): string {
   html[data-chroma="chroma-pulse"] .home-hero,html[data-chroma="ink-terminal"] .home-hero{background:color-mix(in srgb,var(--accent) 16%,var(--surface))}
   html[data-chroma="pastel-studio"] .home-hero,html[data-chroma="luminous-paper"] .home-hero{background:color-mix(in srgb,var(--accent) 10%,var(--surface))}`
             : id === "clip-feed"
-              ? `html[data-grammar="clip-feed"]{--bg:#0a0708;--surface:#16100f;--elevated:#221714;--fg:#f4ece4;--muted:#c4b4a6;--accent:#e7a36a;--line:#3a2a24;--accent-ink:#1a100c}
+              ? `html[data-grammar="clip-feed"]{--bg:#080605;--surface:#16100e;--elevated:#241814;--fg:#f7efe6;--muted:#cbb9a8;--accent:#e8a56c;--line:#3d2c24;--accent-ink:#1a100c}
   html[data-grammar="clip-feed"] #fx-splash{display:none!important}
   html[data-grammar="clip-feed"] header{display:none}
-  html[data-grammar="clip-feed"] .app{grid-template-rows:minmax(0,1fr) auto;grid-template-areas:"main" "nav";height:100dvh;max-height:100dvh;background:#0a0708}
-  html[data-grammar="clip-feed"] main{padding:0;overflow:hidden;background:#0a0708}
+  html[data-grammar="clip-feed"] .app{grid-template-rows:minmax(0,1fr) auto;grid-template-areas:"main" "nav";height:100dvh;max-height:100dvh;background:#080605}
+  html[data-grammar="clip-feed"] main{padding:0;overflow:hidden;background:#080605}
   html[data-grammar="clip-feed"] main:has(.clip-create),html[data-grammar="clip-feed"] main:has(.clip-saved),html[data-grammar="clip-feed"] main:has(.clip-profile){overflow:auto;padding:18px 16px 22px}
-  html[data-grammar="clip-feed"] nav.tabs{background:color-mix(in srgb,#0a0708 48%,transparent);border-color:transparent;-webkit-backdrop-filter:blur(22px);backdrop-filter:blur(22px)}
-  html[data-grammar="clip-feed"] nav.tabs button.on{color:#fff;background:color-mix(in srgb,var(--accent) 32%,transparent);border-radius:14px}
+  html[data-grammar="clip-feed"] nav.tabs{background:color-mix(in srgb,#080605 55%,transparent);border-color:transparent;-webkit-backdrop-filter:blur(24px);backdrop-filter:blur(24px)}
+  html[data-grammar="clip-feed"] nav.tabs button.on{color:#fff;background:color-mix(in srgb,var(--accent) 34%,transparent);border-radius:16px}
   html[data-grammar="clip-feed"] .collection,.fragrance,.hero{display:none}
-  .clip-stage{position:relative;min-height:100%;height:100%;overflow:hidden;color:#f4ece4;background:#0a0708;container-type:size}
+  .clip-stage{position:relative;min-height:100%;height:100%;overflow:hidden;color:#f7efe6;background:#080605;container-type:size}
   .clip-ambient{display:none}
   .clip-stack{position:absolute;inset:0}
-  .clip-frame{position:absolute;inset:0;overflow:hidden;background:#0a0708}
-  .clip-frame::before{content:"";position:absolute;inset:0;z-index:2;pointer-events:none;background:radial-gradient(ellipse 90% 46% at 82% -8%,rgba(255,176,96,.28),transparent 58%)}
+  .clip-frame{position:absolute;inset:0;overflow:hidden;background:#080605}
+  .clip-frame::before{content:"";position:absolute;inset:0;z-index:2;pointer-events:none;background:radial-gradient(ellipse 80% 42% at 50% 18%,rgba(255,186,110,.22),transparent 62%)}
   .clip-frame .clip-poster,.clip-ambient .clip-poster{position:absolute;inset:0;width:100%;height:100%;display:block;object-fit:cover;transform-origin:center}
-  .clip-frame::after{content:"";position:absolute;inset:0;z-index:3;pointer-events:none;opacity:.2;mix-blend-mode:overlay;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='80' height='80'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .55 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>")}
-  .clip-vignette{position:absolute;inset:0;z-index:4;pointer-events:none;background:linear-gradient(180deg,rgba(10,7,8,.28),transparent 22%,transparent 62%,rgba(10,7,8,.58) 86%,rgba(10,7,8,.82))}
-  .clip-progress{position:absolute;top:0;left:0;right:0;height:2px;z-index:6;background:color-mix(in srgb,#fff 14%,transparent)}
-  .clip-progress>i{display:block;height:100%;width:0;background:#fff;transform-origin:left}
-  .clip-live{position:absolute;top:16px;left:16px;z-index:7;margin:0;padding:6px 10px;border-radius:999px;border:1px solid color-mix(in srgb,#fff 20%,transparent);background:color-mix(in srgb,#0a0708 42%,transparent);font:650 10px/1 var(--body),sans-serif;letter-spacing:.16em;text-transform:uppercase;color:#f4ece4;-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)}
+  .clip-frame::after{content:"";position:absolute;inset:0;z-index:3;pointer-events:none;opacity:.18;mix-blend-mode:overlay;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='80' height='80'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.75' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .5 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>")}
+  .clip-vignette{position:absolute;inset:0;z-index:4;pointer-events:none;background:linear-gradient(180deg,rgba(8,6,5,.5),transparent 18%,transparent 58%,rgba(8,6,5,.42) 78%,rgba(8,6,5,.88))}
+  .clip-beats{position:absolute;top:10px;left:14px;right:14px;z-index:8;display:flex;gap:4px}
+  .clip-beats i{flex:1;height:2px;border-radius:99px;background:rgba(255,255,255,.22);overflow:hidden}
+  .clip-beats i.did{background:#fff}
+  .clip-beats i.on{background:rgba(255,255,255,.28)}
+  .clip-beats i.on>b{display:block;height:100%;width:0;background:#fff;border-radius:99px}
+  .clip-live{position:absolute;top:22px;left:16px;z-index:7;margin:0;padding:5px 9px;border-radius:999px;border:1px solid color-mix(in srgb,#fff 18%,transparent);background:color-mix(in srgb,#080605 46%,transparent);font:650 10px/1 var(--body),sans-serif;letter-spacing:.18em;text-transform:uppercase;color:#f7efe6;-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)}
   .clip-brand{display:none}
-  .clip-copy{position:absolute;left:18px;right:86px;bottom:22px;z-index:7;pointer-events:none}
+  .clip-who{display:flex;align-items:center;gap:10px}
+  .clip-ava{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;font:700 13px/1 var(--display),sans-serif;background:color-mix(in srgb,var(--accent) 55%,#1a100c);color:#1a100c;border:1px solid color-mix(in srgb,#fff 28%,transparent);flex:0 0 36px}
+  .clip-copy{position:absolute;left:16px;right:86px;bottom:20px;z-index:7;pointer-events:none}
   .clip-after{display:none}
-  .clip-handle{margin:0;font:650 13px/1.2 var(--body),sans-serif;opacity:.92}
-  .clip-copy h1{margin:8px 0 8px;font:750 1.8rem/1.04 var(--display),sans-serif;letter-spacing:-.05em;font-size:clamp(1.6rem,12cqi,2.35rem);text-wrap:balance;text-shadow:0 10px 28px rgba(0,0,0,.45)}
-  .clip-rail{position:absolute;right:12px;left:auto;bottom:22px;z-index:8;display:flex;flex-direction:column;gap:12px}
-  .clip-rail-btn{width:52px;height:52px;border-radius:50%;border:1px solid color-mix(in srgb,#fff 22%,transparent);background:color-mix(in srgb,#140c0a 55%,transparent);color:#fff;display:grid;place-items:center;padding:0;-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
+  .clip-handle{margin:0;font:650 14px/1.2 var(--body),sans-serif}
+  .clip-copy h1{margin:8px 0 6px;font:750 1.85rem/1.02 var(--display),sans-serif;letter-spacing:-.055em;font-size:clamp(1.7rem,13cqi,2.5rem);text-wrap:balance;text-shadow:0 12px 32px rgba(0,0,0,.55)}
+  .clip-copy .notes{margin:0;font-size:13px;color:color-mix(in srgb,#f7efe6 78%,transparent)}
+  .clip-rail{position:absolute;right:12px;left:auto;bottom:22px;z-index:8;display:flex;flex-direction:column;gap:14px;align-items:center}
+  .clip-rail-btn{width:54px;height:54px;border-radius:50%;border:1px solid color-mix(in srgb,#fff 20%,transparent);background:color-mix(in srgb,#120c0a 58%,transparent);color:#fff;display:grid;place-items:center;padding:0;-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px)}
   .clip-rail-btn span{display:none}
   .clip-create,.clip-saved,.clip-profile{max-width:40rem}
-  .clip-create h2,.clip-saved h2,.clip-profile h2{font-family:var(--display);letter-spacing:-.03em}
-  .clip-create .btn{width:100%;margin-top:14px}
+  .clip-create .card,.clip-saved .card,.clip-profile .card{background:transparent;border:0;box-shadow:none;padding:0;margin:0}
+  .clip-create h2,.clip-saved h2,.clip-profile h2{font-family:var(--display);letter-spacing:-.04em;font-size:clamp(1.6rem,6vw,2.2rem)}
+  .clip-create .btn{width:100%;margin-top:14px;border-radius:16px}
+  .clip-mosaic{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:18px}
+  .clip-tile{position:relative;aspect-ratio:9/16;border:0;padding:0;border-radius:18px;overflow:hidden;background:#120c0a;color:#fff;cursor:pointer;min-height:44px}
+  .clip-tile .clip-poster{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+  .clip-tile span{position:absolute;left:10px;right:10px;bottom:10px;z-index:1;font:700 13px/1.2 var(--display),sans-serif;text-align:left;text-shadow:0 6px 16px #000}
+  .clip-strip{display:flex;gap:8px;overflow:auto;margin-top:18px;padding-bottom:6px}
+  .clip-strip .clip-tile{flex:0 0 92px;width:92px}
+  .clip-stats{display:flex;gap:18px;margin:16px 0 0;font:650 13px/1.3 var(--body),sans-serif;color:var(--muted)}
+  .clip-stats b{display:block;font:750 1.4rem/1 var(--display),sans-serif;color:var(--fg)}
+  .clip-ava-lg{width:72px;height:72px;flex-basis:72px;font-size:1.4rem;margin-bottom:12px}
   @media(prefers-reduced-motion:no-preference){
-    .clip-frame .clip-poster{animation:clip-drift 26s ease-in-out infinite alternate}
-    .clip-progress>i{animation:clip-bar 12s linear infinite}
+    .clip-frame .clip-poster{animation:clip-drift 28s ease-in-out infinite alternate}
+    .clip-beats i.on>b{animation:clip-bar 12s linear infinite}
   }
-  @keyframes clip-drift{from{transform:scale(1.04)}to{transform:scale(1.14) translate3d(0,-2.2%,0)}}
+  @keyframes clip-drift{from{transform:scale(1.03)}to{transform:scale(1.12) translate3d(0,-1.8%,0)}}
   @keyframes clip-bar{from{width:0}to{width:100%}}`
             : "";
   return `${stage}
@@ -1140,26 +1156,28 @@ main{grid-area:main;min-height:0;overflow:auto;padding:8px 16px 20px}
 @media(min-width:768px){
   ${
     id === "clip-feed"
-      ? `html[data-grammar="clip-feed"],html[data-grammar="clip-feed"] body{background:#0a0708;min-height:100dvh;height:100%;overflow:hidden}
+      ? `html[data-grammar="clip-feed"],html[data-grammar="clip-feed"] body{background:#080605;min-height:100dvh;height:100%;overflow:hidden}
   html[data-grammar="clip-feed"] body{display:block;padding:0}
   html[data-grammar="clip-feed"] .app{position:relative;z-index:1;width:100%;max-width:none;height:100dvh;max-height:100dvh;min-height:0;margin:0;border-radius:0;box-shadow:none;grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr) auto;grid-template-areas:"main" "nav";overflow:hidden}
   html[data-grammar="clip-feed"] header{display:none}
   html[data-grammar="clip-feed"] main{padding:0;overflow:hidden;min-height:0;display:grid}
   html[data-grammar="clip-feed"] main:has(.clip-create),html[data-grammar="clip-feed"] main:has(.clip-saved),html[data-grammar="clip-feed"] main:has(.clip-profile){overflow:auto;padding:28px 32px 36px;place-items:center}
-  html[data-grammar="clip-feed"] .clip-create,html[data-grammar="clip-feed"] .clip-saved,html[data-grammar="clip-feed"] .clip-profile{width:min(460px,100%);padding:28px 26px;border-radius:24px;background:color-mix(in srgb,#140c0a 74%,transparent);border:1px solid color-mix(in srgb,#fff 12%,transparent);-webkit-backdrop-filter:blur(22px);backdrop-filter:blur(22px)}
-  html[data-grammar="clip-feed"] nav.tabs{position:relative;justify-self:center;width:min(420px,calc(100% - 48px));margin:12px auto 18px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));flex-direction:unset;flex-wrap:nowrap;height:56px;min-height:56px;border:1px solid color-mix(in srgb,#fff 12%,transparent);border-radius:999px;padding:5px;background:color-mix(in srgb,#0a0708 58%,transparent);-webkit-backdrop-filter:blur(22px);backdrop-filter:blur(22px)}
+  html[data-grammar="clip-feed"] .clip-create,html[data-grammar="clip-feed"] .clip-saved,html[data-grammar="clip-feed"] .clip-profile{width:min(520px,100%);padding:32px 28px;border-radius:28px;background:color-mix(in srgb,#120c0a 78%,transparent);border:1px solid color-mix(in srgb,#fff 10%,transparent);-webkit-backdrop-filter:blur(28px);backdrop-filter:blur(28px)}
+  html[data-grammar="clip-feed"] nav.tabs{position:relative;justify-self:center;width:min(420px,calc(100% - 48px));margin:12px auto 18px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));flex-direction:unset;flex-wrap:nowrap;height:56px;min-height:56px;border:1px solid color-mix(in srgb,#fff 12%,transparent);border-radius:999px;padding:5px;background:color-mix(in srgb,#080605 58%,transparent);-webkit-backdrop-filter:blur(22px);backdrop-filter:blur(22px)}
   html[data-grammar="clip-feed"] nav.tabs button{flex-direction:column;font:600 10px/1.1 var(--body),sans-serif;min-height:44px;padding:4px 2px;gap:2px;border-radius:999px}
   html[data-grammar="clip-feed"] nav.tabs svg{display:block;margin-inline:auto}
   .clip-stage{display:grid;place-items:center}
-  .clip-ambient{display:block;position:absolute;inset:-20%;z-index:0;pointer-events:none;filter:blur(64px) saturate(1.4) brightness(1.05);opacity:.62;transform:scale(1.08)}
+  .clip-stage::before{content:"";position:absolute;left:18%;right:18%;bottom:8%;height:14%;background:radial-gradient(ellipse at center,rgba(0,0,0,.55),transparent 72%);z-index:1;pointer-events:none}
+  .clip-ambient{display:block;position:absolute;inset:-18%;z-index:0;pointer-events:none;filter:blur(72px) saturate(1.45) brightness(1.08);opacity:.7;transform:scale(1.1)}
   .clip-stack{position:relative;z-index:2;width:min(540px,48vw,calc(min(100%, calc(100dvh - 104px), 820px) * .5625));height:min(100%,calc(100dvh - 104px),820px,calc(min(540px,48vw) * 16 / 9))}
-  .clip-frame{position:absolute;inset:0;border-radius:28px;overflow:hidden;box-shadow:0 40px 120px rgba(0,0,0,.62),0 0 0 1px color-mix(in srgb,#fff 12%,transparent)}
-  .clip-brand{display:block;position:absolute;top:18px;left:50%;transform:translateX(-50%);z-index:7;margin:0;font:700 11px/1 var(--display),sans-serif;letter-spacing:.22em;text-transform:uppercase;opacity:.72}
-  .clip-copy{left:22px;right:86px;bottom:28px}
-  .clip-copy h1{font-size:clamp(1.7rem,4.2cqi,2.15rem)}
-  .clip-after{display:block;margin:10px 0 0;font:650 12px/1.4 var(--body),sans-serif;color:color-mix(in srgb,#f4ece4 68%,transparent)}
+  .clip-frame{position:absolute;inset:0;border-radius:28px;overflow:hidden;box-shadow:0 48px 140px rgba(0,0,0,.7),0 0 0 1px color-mix(in srgb,#fff 14%,transparent)}
+  .clip-brand{display:block;position:absolute;top:26px;left:50%;transform:translateX(-50%);z-index:7;margin:0;font:700 11px/1 var(--display),sans-serif;letter-spacing:.28em;text-transform:uppercase;opacity:.78}
+  .clip-copy{left:22px;right:88px;bottom:28px}
+  .clip-copy h1{font-size:clamp(1.75rem,4.4cqi,2.25rem)}
+  .clip-after{display:block;margin:10px 0 0;font:650 12px/1.4 var(--body),sans-serif;color:color-mix(in srgb,#f7efe6 68%,transparent)}
   .clip-rail{left:auto;right:14px;bottom:28px}
-  .clip-live{left:18px;top:18px}
+  .clip-live{left:18px;top:26px}
+  .clip-mosaic{grid-template-columns:repeat(3,minmax(0,1fr))}
 `
       : `.app{grid-template-rows:auto 1fr;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"head nav" "main main"}
   header{padding:14px 22px;border-bottom:1px solid var(--line);align-items:center}
@@ -1832,62 +1850,80 @@ ${familyChromeCss(t, grammar)}
 /* ${t.family}/${t.variant} device-aware */`;
 }
 
+function clipSilhouette(cx: number, cy: number, fill: string): string {
+  return `<g fill="${fill}"><circle cx="${cx}" cy="${cy}" r="18"/><path d="M${cx - 28} ${cy + 14}c6-14 50-14 56 4l8 80H${cx - 32}z"/><rect x="${cx - 16}" y="${cy + 94}" width="13" height="66" rx="5"/><rect x="${cx + 4}" y="${cy + 94}" width="13" height="66" rx="5"/></g>`;
+}
+
 function clipPosterSvg(slot: number, _tokens?: DesignTokens): string {
   const g = `cg${slot}`;
   const scenes = [
     `<defs>
-      <linearGradient id="${g}s" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2b140c"/><stop offset=".55" stop-color="#12090a"/><stop offset="1" stop-color="#070405"/></linearGradient>
-      <radialGradient id="${g}l" cx=".78" cy=".18" r=".62"><stop offset="0" stop-color="#ffd19a"/><stop offset=".35" stop-color="#e08a4a" stop-opacity=".85"/><stop offset="1" stop-color="#e08a4a" stop-opacity="0"/></radialGradient>
-      <filter id="${g}b" x="-35%" y="-35%" width="170%" height="170%"><feGaussianBlur stdDeviation="32"/></filter>
+      <linearGradient id="${g}s" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3c2418"/><stop offset=".4" stop-color="#1a0e0c"/><stop offset="1" stop-color="#0b0607"/></linearGradient>
+      <linearGradient id="${g}f" x1=".5" y1="0" x2=".5" y2="1"><stop offset="0" stop-color="#6a3a22" stop-opacity=".2"/><stop offset="1" stop-color="#c4783a" stop-opacity=".38"/></linearGradient>
+      <radialGradient id="${g}l" cx=".5" cy=".3" r=".46"><stop offset="0" stop-color="#ffe4b5"/><stop offset=".4" stop-color="#e08a4a" stop-opacity=".75"/><stop offset="1" stop-color="#e08a4a" stop-opacity="0"/></radialGradient>
+      <filter id="${g}b" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="16"/></filter>
     </defs>
     <rect width="390" height="844" fill="url(#${g}s)"/>
-    <ellipse cx="196" cy="210" rx="180" ry="220" fill="url(#${g}l)" filter="url(#${g}b)"/>
-    <ellipse cx="196" cy="250" rx="70" ry="110" fill="#ffe7c4" opacity=".55" filter="url(#${g}b)"/>
-    <path d="M-10 844 V280 C40 220 90 250 118 200 V844z" fill="#12080a" opacity=".88"/>
-    <path d="M400 844 V270 C340 210 300 250 272 196 V844z" fill="#12080a" opacity=".88"/>
-    <path d="M118 844 V210 C118 150 148 118 196 96 C244 118 274 150 274 210 V844z" fill="#2a120e" opacity=".55"/>
-    <path d="M148 844 V240 C148 170 168 138 196 122 C224 138 244 170 244 240 V844z" fill="#f0b06a" opacity=".42"/>
-    <ellipse cx="196" cy="760" rx="90" ry="70" fill="#e08a4a" opacity=".28" filter="url(#${g}b)"/>
-    <path fill="#0a0608" d="M168 528c-20 4-36 20-38 40-2 16 8 32 22 40l-10 52c-22 14-34 44-30 84 4 28 10 86 8 140h40c4-62 8-112 6-152 20 8 32 26 38 50 6 22 20 96 22 134h36c-6-54-22-146-32-176-10-24-26-40-48-46 16-12 22-32 16-50-8-24-26-40-46-36z"/>
-    <ellipse cx="196" cy="820" rx="120" ry="18" fill="#000" opacity=".35"/>`,
+    <ellipse cx="196" cy="210" rx="150" ry="150" fill="url(#${g}l)" filter="url(#${g}b)"/>
+    <path d="M74 844 L132 300 H258 L316 844z" fill="url(#${g}f)"/>
+    <path d="M132 300 L74 844" stroke="#d4b08a" stroke-width="1.1" opacity=".3"/>
+    <path d="M258 300 L316 844" stroke="#d4b08a" stroke-width="1.1" opacity=".3"/>
+    <path d="M154 300 L128 844" stroke="#d4b08a" stroke-width=".55" opacity=".16"/>
+    <path d="M236 300 L262 844" stroke="#d4b08a" stroke-width=".55" opacity=".16"/>
+    <rect x="0" y="0" width="58" height="844" fill="#11080a"/>
+    <rect x="332" y="0" width="58" height="844" fill="#11080a"/>
+    <rect x="150" y="158" width="90" height="118" rx="2" fill="#140c0a" stroke="#e2b07a" stroke-width="3"/>
+    <rect x="158" y="166" width="74" height="102" fill="#f3c98a"/>
+    <rect x="158" y="166" width="74" height="102" fill="url(#${g}l)" opacity=".55"/>
+    ${clipSilhouette(198, 508, "#0a0608")}
+    <ellipse cx="198" cy="822" rx="88" ry="13" fill="#000" opacity=".4"/>`,
     `<defs>
-      <linearGradient id="${g}s" x1="0" y1="0" x2=".3" y2="1"><stop offset="0" stop-color="#4a2418"/><stop offset="1" stop-color="#14090a"/></linearGradient>
-      <radialGradient id="${g}l" cx=".28" cy=".32" r=".45"><stop offset="0" stop-color="#ffc07a"/><stop offset="1" stop-color="#ffc07a" stop-opacity="0"/></radialGradient>
-      <filter id="${g}b" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="26"/></filter>
+      <linearGradient id="${g}s" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#c47a4a"/><stop offset=".28" stop-color="#5a281c"/><stop offset="1" stop-color="#14090a"/></linearGradient>
+      <radialGradient id="${g}l" cx=".22" cy=".38" r=".38"><stop offset="0" stop-color="#ffd19a"/><stop offset="1" stop-color="#ffd19a" stop-opacity="0"/></radialGradient>
+      <filter id="${g}b" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="20"/></filter>
     </defs>
     <rect width="390" height="844" fill="url(#${g}s)"/>
-    <ellipse cx="110" cy="260" rx="160" ry="140" fill="url(#${g}l)" filter="url(#${g}b)"/>
-    <path d="M0 120h390v724H0z" fill="#2a1612" opacity=".45"/>
-    <path d="M0 120 C40 80 120 100 180 70 C250 40 320 90 390 50 V220 H0z" fill="#3a2018" opacity=".7"/>
-    <path d="M24 210 C90 190 160 230 240 200" fill="none" stroke="#c9a48a" stroke-width="2" opacity=".45"/>
-    <path d="M40 236 C120 214 190 250 280 220" fill="none" stroke="#c9a48a" stroke-width="1.5" opacity=".3"/>
-    <path fill="#070405" d="M214 610c18-8 28-28 22-46-6-16-24-26-40-22-14 4-24 18-24 34 0 10 4 18 12 24-22 18-34 52-28 92 6 36 8 84 4 140h38c6-58 8-108 2-148 16 4 30 18 36 36 8 24 22 88 26 124h34c-6-48-22-128-34-156-10-22-28-36-48-40z"/>
-    <ellipse cx="200" cy="828" rx="130" ry="16" fill="#000" opacity=".3"/>`,
+    <ellipse cx="86" cy="300" rx="130" ry="120" fill="url(#${g}l)" filter="url(#${g}b)"/>
+    <path d="M0 210h130v634H0z" fill="#1c0e0c"/>
+    <path d="M260 180h140v664H260z" fill="#160a0c"/>
+    <rect x="28" y="280" width="22" height="70" fill="#0a0506" opacity=".7"/>
+    <rect x="70" y="250" width="18" height="58" fill="#0a0506" opacity=".55"/>
+    <rect x="292" y="240" width="20" height="64" fill="#0a0506" opacity=".5"/>
+    <circle cx="118" cy="268" r="10" fill="#ffc07a" filter="url(#${g}b)"/>
+    <circle cx="118" cy="268" r="3" fill="#ffe7c4"/>
+    <path d="M200 210 C230 280 250 360 236 844 H168 C160 400 170 300 200 210z" fill="#0c0708" opacity=".88"/>
+    ${clipSilhouette(214, 548, "#070405")}
+    <ellipse cx="214" cy="828" rx="96" ry="12" fill="#000" opacity=".32"/>`,
     `<defs>
-      <linearGradient id="${g}s" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0b1c2a"/><stop offset=".45" stop-color="#0a1824"/><stop offset="1" stop-color="#071016"/></linearGradient>
-      <radialGradient id="${g}l" cx=".76" cy=".12" r=".4"><stop offset="0" stop-color="#f4efe2"/><stop offset="1" stop-color="#f4efe2" stop-opacity="0"/></radialGradient>
-      <linearGradient id="${g}w" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1c4a5c" stop-opacity=".5"/><stop offset="1" stop-color="#071018"/></linearGradient>
-      <filter id="${g}b" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="22"/></filter>
+      <linearGradient id="${g}s" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0c1c2e"/><stop offset=".48" stop-color="#0a1826"/><stop offset="1" stop-color="#071018"/></linearGradient>
+      <radialGradient id="${g}l" cx=".78" cy=".12" r=".38"><stop offset="0" stop-color="#f4efe4"/><stop offset="1" stop-color="#f4efe4" stop-opacity="0"/></radialGradient>
+      <linearGradient id="${g}w" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1a4a5e" stop-opacity=".55"/><stop offset="1" stop-color="#071018"/></linearGradient>
+      <filter id="${g}b" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="16"/></filter>
     </defs>
     <rect width="390" height="844" fill="url(#${g}s)"/>
-    <circle cx="300" cy="96" r="54" fill="url(#${g}l)" filter="url(#${g}b)"/>
-    <circle cx="300" cy="96" r="18" fill="#f7f1e4" opacity=".7"/>
-    <path d="M-10 390 C70 330 150 410 230 340 C310 270 360 360 410 320 V844 H-10z" fill="url(#${g}w)"/>
-    <path d="M48 200 v210 h8 v-70 h90" fill="none" stroke="#9eb8c4" stroke-width="5" opacity=".35"/>
-    <path d="M220 150 v250 h8 v-90 h80" fill="none" stroke="#cfe0e6" stroke-width="4" opacity=".28"/>
-    <path d="M0 560 C80 530 160 590 240 540 C310 500 360 560 390 530 V844 H0z" fill="#041018" opacity=".55"/>
-    <path fill="#05080c" d="M248 640c-16 2-30 16-32 32-2 12 6 24 16 30l-8 40c-16 12-26 36-22 68 4 24 8 70 6 114h32c4-48 6-88 4-122 14 6 24 20 28 38 4 16 16 74 18 104h30c-4-40-16-108-24-132-8-18-20-30-36-34 12-8 16-24 12-38-6-18-20-32-34-30z"/>`,
+    <circle cx="302" cy="92" r="48" fill="url(#${g}l)" filter="url(#${g}b)"/>
+    <circle cx="302" cy="92" r="16" fill="#f7f1e6" opacity=".85"/>
+    <circle cx="48" cy="40" r="1.4" fill="#dce8ee" opacity=".55"/><circle cx="120" cy="70" r="1.1" fill="#dce8ee" opacity=".4"/><circle cx="210" cy="36" r="1.3" fill="#dce8ee" opacity=".5"/>
+    <path d="M-12 390 C80 330 160 410 250 350 C320 300 370 360 410 330 V844 H-12z" fill="url(#${g}w)"/>
+    <path d="M0 430 80 418 160 442 250 408 340 436 390 420" fill="none" stroke="#9ec4d2" stroke-width="1.4" opacity=".35"/>
+    <path d="M0 470 90 458 180 486 270 450 360 478 390 466" fill="none" stroke="#9ec4d2" stroke-width="1" opacity=".22"/>
+    <path d="M42 160 v220 h7 v-80 h70" fill="none" stroke="#8eafbe" stroke-width="5" opacity=".38"/>
+    <path d="M236 130 v250 h7 v-100 h78" fill="none" stroke="#c5dbe4" stroke-width="4" opacity=".3"/>
+    <path d="M0 560 C90 530 170 590 260 545 C330 510 370 560 390 540 V844 H0z" fill="#041018" opacity=".6"/>
+    ${clipSilhouette(248, 575, "#05080c")}
+    <ellipse cx="248" cy="830" rx="80" ry="11" fill="#000" opacity=".35"/>`,
     `<defs>
-      <radialGradient id="${g}l" cx=".5" cy=".46" r=".55"><stop offset="0" stop-color="#ffe2a8"/><stop offset=".22" stop-color="#ff7a3a"/><stop offset=".55" stop-color="#8a1c18"/><stop offset="1" stop-color="#140806"/></radialGradient>
-      <filter id="${g}b" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="24"/></filter>
+      <radialGradient id="${g}l" cx=".5" cy=".46" r=".52"><stop offset="0" stop-color="#ffe7b0"/><stop offset=".2" stop-color="#ff7a38"/><stop offset=".52" stop-color="#8a1c16"/><stop offset="1" stop-color="#140806"/></radialGradient>
+      <filter id="${g}b" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="18"/></filter>
     </defs>
     <rect width="390" height="844" fill="#140806"/>
-    <ellipse cx="196" cy="390" rx="220" ry="280" fill="url(#${g}l)"/>
-    <ellipse cx="196" cy="370" rx="70" ry="80" fill="#ffe7b0" opacity=".55" filter="url(#${g}b)"/>
-    <path d="M0 0h78v844H0z" fill="#070405" opacity=".72"/>
-    <path d="M312 0h78v844H312z" fill="#070405" opacity=".72"/>
-    <path fill="#070405" d="M196 500c-22 2-40 20-42 42-2 16 8 32 22 40l-8 44c-20 12-32 40-28 78 4 26 8 80 6 140h38c4-58 8-108 6-148 18 6 30 24 36 46 6 20 18 90 20 128h34c-6-50-20-136-30-164-8-22-24-36-44-40 14-10 20-28 16-46-6-22-24-38-42-36z"/>
-    <ellipse cx="196" cy="826" rx="110" ry="14" fill="#000" opacity=".4"/>`,
+    <ellipse cx="196" cy="380" rx="210" ry="260" fill="url(#${g}l)"/>
+    <ellipse cx="196" cy="360" rx="64" ry="72" fill="#ffe7b0" opacity=".6" filter="url(#${g}b)"/>
+    <path d="M0 0h70v844H0z" fill="#070405" opacity=".78"/>
+    <path d="M320 0h70v844H320z" fill="#070405" opacity=".78"/>
+    <rect x="86" y="620" width="218" height="16" fill="#1a0a08" opacity=".8"/>
+    ${clipSilhouette(196, 500, "#070405")}
+    <ellipse cx="196" cy="826" rx="100" ry="12" fill="#000" opacity=".42"/>`,
   ];
   const inner = scenes[((slot % scenes.length) + scenes.length) % scenes.length]!;
   return `<svg class="clip-poster" data-imagery="domain" data-fenix-clip-art="${slot}" viewBox="0 0 390 844" width="390" height="844" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">${inner}</svg>`;
@@ -1913,8 +1949,12 @@ function clipFeedBootHtml(spec: PipelineSpec, tokens: DesignTokens): string {
   };
   const nxt = spec.rows[1]?.title || "";
   const handle = String(row.note || "in onda").split("·")[0]!.trim() || "in onda";
+  const initial = (handle[0] || "N").toUpperCase();
   const poster = clipPosterSvg(0, tokens);
-  return `<section class="clip-stage" data-fenix-clip="1" data-clip-id="${row.id}" data-fenix-slot="home-boot"><div class="clip-ambient" aria-hidden="true">${poster}</div><div class="clip-stack"><div class="clip-frame">${poster}<div class="clip-vignette"></div><div class="clip-progress" aria-hidden="true"><i></i></div><p class="clip-live">In onda</p><p class="clip-brand">${spec.name}</p><div class="clip-copy"><p class="clip-handle">${handle}</p><h1>${row.title}</h1><p class="notes">${row.meta || ""} · ${row.kicker || spec.kicker}</p>${nxt ? `<p class="clip-after">Dopo · ${nxt}</p>` : ""}</div><div class="clip-rail"><button type="button" class="clip-rail-btn" data-act="clip-keep" aria-label="Salva">${clipKeepGlyph(false)}<span>Salva</span></button><button type="button" class="clip-rail-btn" data-act="clip-next" aria-label="Avanti">${clipNextGlyph()}<span>Avanti</span></button></div></div></div></section>`;
+  const beats = spec.rows
+    .map((_, i) => (i === 0 ? `<i class="on"><b></b></i>` : `<i></i>`))
+    .join("");
+  return `<section class="clip-stage" data-fenix-clip="1" data-clip-id="${row.id}" data-fenix-slot="home-boot"><div class="clip-ambient" aria-hidden="true">${poster}</div><div class="clip-stack"><div class="clip-frame">${poster}<div class="clip-vignette"></div><div class="clip-beats" aria-hidden="true">${beats}</div><p class="clip-live">In onda</p><p class="clip-brand">${spec.name}</p><div class="clip-copy"><div class="clip-who"><span class="clip-ava">${initial}</span><p class="clip-handle">${handle}</p></div><h1>${row.title}</h1><p class="notes">${row.meta || ""} · ${row.kicker || spec.kicker}</p>${nxt ? `<p class="clip-after">Dopo · ${nxt}</p>` : ""}</div><div class="clip-rail"><button type="button" class="clip-rail-btn" data-act="clip-keep" aria-label="Salva">${clipKeepGlyph(false)}<span>Salva</span></button><button type="button" class="clip-rail-btn" data-act="clip-next" aria-label="Avanti">${clipNextGlyph()}<span>Avanti</span></button></div></div></div></section>`;
 }
 
 function clipFeedRuntimeJs(): string {
@@ -1940,15 +1980,28 @@ function clipKeepMark(on){
     ? '<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true"><path d="M7.4 4.8h9.2v14.4L12 15.2 7.4 19.2z"/></svg>'
     : '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M7.4 4.8h9.2v14.4L12 15.2 7.4 19.2z"/></svg>';
 }
+function clipBeatsHtml(n,on){
+  var html="";
+  for(var i=0;i<n;i++){
+    if(i<on) html+='<i class="did"></i>';
+    else if(i===on) html+='<i class="on"><b></b></i>';
+    else html+="<i></i>";
+  }
+  return html;
+}
+function clipTile(e){
+  return '<button type="button" class="clip-tile" data-act="clip-open" data-id="'+e.id+'">'+clipPosterOf(e)+"<span>"+e.title+"</span></button>";
+}
 function renderClipFeed(){
   var e=clipAt();
   var handle=String(e.note||"in onda").split("·")[0].trim()||"in onda";
+  var initial=(handle.charAt(0)||"N").toUpperCase();
   var saved=!!e.saved;
   var poster=clipPosterOf(e);
   var rows=clipRows();
   var nxt=rows[(clipIndex+1)%rows.length];
   var after=nxt&&nxt.title!==e.title?nxt.title:"";
-  return '<section class="clip-stage" data-fenix-clip="1" data-clip-id="'+e.id+'"><div class="clip-ambient" aria-hidden="true">'+poster+'</div><div class="clip-stack"><div class="clip-frame">'+poster+'<div class="clip-vignette"></div><div class="clip-progress" aria-hidden="true"><i></i></div><p class="clip-live">In onda</p><p class="clip-brand">'+specName()+'</p><div class="clip-copy"><p class="clip-handle">'+handle+'</p><h1>'+e.title+'</h1><p class="notes">'+(e.meta||"")+(e.kicker?" · "+e.kicker:"")+'</p>'+(after?'<p class="clip-after">Dopo · '+after+"</p>":"")+'</div><div class="clip-rail"><button type="button" class="clip-rail-btn" data-act="clip-keep" aria-label="'+(saved?"Togli dai salvati":"Salva")+'">'+clipKeepMark(saved)+'<span>'+(saved?"In tasca":"Salva")+'</span></button><button type="button" class="clip-rail-btn" data-act="clip-next" aria-label="Avanti"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M6 10l6 6 6-6"/></svg><span>Avanti</span></button></div></div></div></section>';
+  return '<section class="clip-stage" data-fenix-clip="1" data-clip-id="'+e.id+'"><div class="clip-ambient" aria-hidden="true">'+poster+'</div><div class="clip-stack"><div class="clip-frame">'+poster+'<div class="clip-vignette"></div><div class="clip-beats" aria-hidden="true">'+clipBeatsHtml(rows.length,clipIndex)+'</div><p class="clip-live">In onda</p><p class="clip-brand">'+specName()+'</p><div class="clip-copy"><div class="clip-who"><span class="clip-ava">'+initial+'</span><p class="clip-handle">'+handle+'</p></div><h1>'+e.title+'</h1><p class="notes">'+(e.meta||"")+(e.kicker?" · "+e.kicker:"")+'</p>'+(after?'<p class="clip-after">Dopo · '+after+"</p>":"")+'</div><div class="clip-rail"><button type="button" class="clip-rail-btn" data-act="clip-keep" aria-label="'+(saved?"Togli dai salvati":"Salva")+'">'+clipKeepMark(saved)+'<span>'+(saved?"In tasca":"Salva")+'</span></button><button type="button" class="clip-rail-btn" data-act="clip-next" aria-label="Avanti"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M6 10l6 6 6-6"/></svg><span>Avanti</span></button></div></div></div></section>';
 }
 function renderClipCreate(){
   return '<section class="clip-create" data-fenix-crud>'+renderForm()+"</section>";
@@ -1957,14 +2010,20 @@ function renderClipSaved(){
   var rows=data.items.filter(function(x){return x.saved;});
   var html='<section class="clip-saved"><p class="kicker">In tasca</p><h2>'+(rows.length?rows.length+" salvati":"Nessun clip salvato")+"</h2>";
   if(!rows.length) html+='<p class="notes">Tieni un nastro dal feed. Resta sul dispositivo.</p>';
-  rows.forEach(function(e){
-    html+='<article class="card" data-id="'+e.id+'"><p class="kicker">'+(e.note||"")+"</p><h2>"+e.title+'</h2><p class="notes">'+(e.meta||"")+'</p><button class="btn ghost" type="button" data-act="clip-open" data-id="'+e.id+'">Guarda</button></article>';
-  });
+  else{
+    html+='<div class="clip-mosaic">';
+    rows.forEach(function(e){ html+=clipTile(e); });
+    html+="</div>";
+  }
   return html+"</section>";
 }
 function renderClipProfile(){
   var saved=data.items.filter(function(x){return x.saved;}).length;
-  return '<section class="clip-profile"><p class="kicker">Profilo</p><h2>'+specName()+'</h2><p class="notes">'+place+' · nastro originale, niente stock.</p><article class="card"><p class="kicker">In onda</p><h2>'+data.items.length+'</h2></article><article class="card"><p class="kicker">Salvati</p><h2>'+saved+'</h2></article><p class="notes">Collezione '+COL+' sul dispositivo. Nessun account inventato.</p></section>';
+  var html='<section class="clip-profile"><span class="clip-ava clip-ava-lg">'+(specName().charAt(0)||"N")+'</span><p class="kicker">Profilo</p><h2>'+specName()+'</h2><p class="notes">'+place+' · nastro originale, niente stock.</p><div class="clip-stats"><div><b>'+data.items.length+"</b>in onda</div><div><b>"+saved+"</b>salvati</div></div>";
+  html+='<div class="clip-strip">';
+  data.items.forEach(function(e){ html+=clipTile(e); });
+  html+='</div><p class="notes">Collezione '+COL+" sul dispositivo. Nessun account inventato.</p></section>";
+  return html;
 }
 `;
 }
