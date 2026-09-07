@@ -34,8 +34,37 @@ export type PreviewInfo = { live: boolean; url?: string; expiresAt?: number; err
 
 export const AGENT_JOBS_KEY = "fenix.agent.jobs";
 
+export type Byok = { provider: "anthropic" | "openai" | "xai"; key: string; model?: string };
+const BYOK_KEY = "fenix.agent.byok";
+
+/** User's own model key, kept in sessionStorage only (this tab), never sent anywhere but /api/agent/build. */
+export function readByok(): Byok | null {
+  try {
+    const raw = sessionStorage.getItem(BYOK_KEY);
+    const v = raw ? (JSON.parse(raw) as Byok) : null;
+    return v && v.key && v.provider ? v : null;
+  } catch {
+    return null;
+  }
+}
+
+export function writeByok(v: Byok | null) {
+  try {
+    if (v) sessionStorage.setItem(BYOK_KEY, JSON.stringify(v));
+    else sessionStorage.removeItem(BYOK_KEY);
+  } catch {
+    /* storage unavailable */
+  }
+}
+
 function headers(extra: Record<string, string> = {}): Record<string, string> {
   return { [OWNER_HEADER]: getOwnerCapability(), "content-type": "application/json", ...extra };
+}
+
+function byokHeaders(): Record<string, string> {
+  const b = readByok();
+  if (!b) return {};
+  return { "x-fenix-model-provider": b.provider, "x-fenix-model-key": b.key, ...(b.model ? { "x-fenix-model": b.model } : {}) };
 }
 
 async function parse<T>(res: Response): Promise<T> {
@@ -54,7 +83,7 @@ export function agentStatus(): Promise<AgentStatus> {
 }
 
 export function startAgentBuild(input: { brief?: string; kind?: "app" | "site"; name?: string; files?: { path: string; content: string }[]; instruction?: string }) {
-  return fetch("/api/agent/build", { method: "POST", headers: headers(), body: JSON.stringify(input) })
+  return fetch("/api/agent/build", { method: "POST", headers: headers(byokHeaders()), body: JSON.stringify(input) })
     .then((r) => parse<{ id: string; status: string; position?: number; credits: AgentCredits }>(r));
 }
 

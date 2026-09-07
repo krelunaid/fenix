@@ -17,7 +17,7 @@ import { SiteStore, SitePool, slugify } from "./sites.mjs";
 import { join } from "node:path";
 import { runAgent } from "./agent.mjs";
 import { createSandbox } from "./sandbox/index.mjs";
-import { AnthropicModel } from "./model/anthropic.mjs";
+import { byokFromHeaders, createModel } from "./model/index.mjs";
 import { PROJECT_KINDS, canonicalizePath, LIMITS } from "./contract.mjs";
 
 const MAX_BODY = 6 * 1024 * 1024;
@@ -25,7 +25,7 @@ const MAX_BODY = 6 * 1024 * 1024;
 export function createAgentServer({
   token = process.env.AGENT_TOKEN,
   origin = process.env.FENIX_ORIGIN || "",
-  modelFactory = () => new AnthropicModel(),
+  modelFactory = (byok) => createModel(byok || {}),
   sandboxFactory = (opts) => createSandbox(opts),
   dataDir = process.env.AGENT_DATA_DIR || null,
   store = new JobStore({ concurrency: Number(process.env.AGENT_CONCURRENCY || 2), dataDir }),
@@ -86,16 +86,21 @@ export function createAgentServer({
           try { canonicalizePath(f.path); } catch (err) { json(res, 400, { error: err.message }); return; }
         }
         if (instruction && files.length === 0) { json(res, 400, { error: "Una modifica richiede i file del progetto." }); return; }
+        // Optional per-request BYOK (provider/key/model). Kept in memory for this job only.
+        let byok = null;
+        try { byok = byokFromHeaders(req.headers); } catch (err) { json(res, err.status || 400, { error: err.message }); return; }
+        let model;
+        try { model = modelFactory(byok); } catch (err) { json(res, err.status || 503, { error: err.message }); return; }
 
         const job = store.create({
           owner,
-          input: { brief: brief.slice(0, 4000), kind, name: body.name ? String(body.name).slice(0, 80) : undefined, instruction },
+          input: { brief: brief.slice(0, 4000), kind, name: body.name ? String(body.name).slice(0, 80) : undefined, instruction, provider: byok?.provider || process.env.AGENT_PROVIDER || "anthropic", model: model.model },
           run: async ({ job, onEvent, signal }) => {
             const sandbox = await sandboxFactory({ jobId: job.id });
             try {
               for (const f of files) await sandbox.writeFile(f.path, f.content);
               return await runAgent({
-                model: modelFactory(),
+                model,
                 sandbox,
                 brief: brief.slice(0, 4000),
                 kind,

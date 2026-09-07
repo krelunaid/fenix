@@ -10,7 +10,10 @@ import {
   publicAppUrl,
   publishApp,
   readAgentJob,
+  readByok,
   unpublishApp,
+  writeByok,
+  type Byok,
   type PublishedApp,
   readRememberedJobs,
   rememberJob,
@@ -49,6 +52,8 @@ function AgentePage() {
   const [published, setPublished] = useState<PublishedApp[]>([]);
   const [slug, setSlug] = useState("");
   const [publishing, setPublishing] = useState(false);
+  const [byok, setByok] = useState<Byok | null>(null);
+  const [byokOpen, setByokOpen] = useState(false);
   const logRef = useRef<HTMLOListElement>(null);
 
   const refreshPublished = useCallback(() => {
@@ -57,6 +62,7 @@ function AgentePage() {
 
   useEffect(() => {
     setHistory(readRememberedJobs());
+    setByok(readByok());
     agentStatus()
       .then((s) => { setConfigured(s.configured); setHint(s.hint); setCredits(s.credits); setIdentity({ kind: s.identity ?? null, email: s.email }); if (s.configured) refreshPublished(); })
       .catch(() => { setConfigured(false); setHint("Il server di Fenix non risponde."); });
@@ -262,6 +268,38 @@ function AgentePage() {
             </Button>
           </div>
         </form>
+
+        <details className="mt-3 rounded-2xl border border-border bg-card px-4 py-3 text-sm" open={byokOpen} onToggle={(e) => setByokOpen((e.currentTarget as HTMLDetailsElement).open)}>
+          <summary className="cursor-pointer select-none text-muted-foreground">
+            Modello: {byok ? <strong className="text-foreground">{byok.provider}{byok.model ? ` · ${byok.model}` : ""} (chiave tua)</strong> : <strong className="text-foreground">Claude del server</strong>} — usa la tua chiave (BYOK)
+          </summary>
+          <form
+            className="mt-3 grid gap-2 sm:grid-cols-[140px_1fr_180px_auto]"
+            onSubmit={(e) => {
+              e.preventDefault();
+              const form = new FormData(e.currentTarget);
+              const provider = String(form.get("provider")) as Byok["provider"];
+              const key = String(form.get("key") || "").trim();
+              const model = String(form.get("model") || "").trim() || undefined;
+              if (!key) { writeByok(null); setByok(null); toast("Torno al modello del server."); return; }
+              const next = { provider, key, model };
+              writeByok(next); setByok(next); toast("Chiave salvata solo in questa scheda del browser.");
+            }}
+          >
+            <label className="sr-only" htmlFor="byok-provider">Provider</label>
+            <select id="byok-provider" name="provider" defaultValue={byok?.provider || "anthropic"} className="h-11 rounded-xl border border-border bg-background px-3 text-base">
+              <option value="anthropic">Anthropic</option>
+              <option value="openai">OpenAI</option>
+              <option value="xai">xAI (Grok)</option>
+            </select>
+            <label className="sr-only" htmlFor="byok-key">Chiave API</label>
+            <input id="byok-key" name="key" type="password" defaultValue={byok?.key || ""} placeholder="Chiave API (resta in questa scheda)" autoComplete="off" className="h-11 rounded-xl border border-border bg-background px-3 font-mono text-base" />
+            <label className="sr-only" htmlFor="byok-model">Modello</label>
+            <input id="byok-model" name="model" defaultValue={byok?.model || ""} placeholder="modello (opzionale)" className="h-11 rounded-xl border border-border bg-background px-3 font-mono text-base" />
+            <Button type="submit" variant="secondary" className="h-11 rounded-xl px-4">Salva</Button>
+          </form>
+          <p className="mt-2 text-xs text-muted-foreground">La chiave passa solo al server dell'agente per la singola build: non viene salvata né registrata. Con la tua chiave paghi tu il modello; i crediti Fenix restano per il servizio.</p>
+        </details>
 
         {job ? (
           <section className="mt-8">

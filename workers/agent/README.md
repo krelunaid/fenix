@@ -38,6 +38,10 @@ The owner header is a trusted-proxy assertion, NOT authentication by itself. The
 
 With `AGENT_DATA_DIR` set on the agent host, finished jobs are written to `<dir>/jobs/<id>.json` (7-day TTL) and survive restarts. `POST /agent/sites { jobId, slug? }` publishes a finished job under a public slug; the record and the app's SQLite data live in `<dir>/sites/` — the data directory is the only bind mount the sandbox ever receives (`/work/.fenix/data`, uid 1000). Published apps start on first request and stop after 10 idle minutes; data persists on the host. Fenix serves them at `/app/<slug>/…` (`netlify/functions/app-public.ts`, `src/routes/app.$slug.$.tsx`) with paths rewritten to that prefix. Owners list/delete their sites via `/api/agent/sites`.
 
+## Models and BYOK (added 2026-09-07)
+
+`workers/agent/model/index.mjs` picks the provider: `AGENT_PROVIDER=anthropic|openai|xai` with the matching `*_API_KEY` (server BYOK), or per request from the Studio (`x-fenix-model-provider`, `x-fenix-model-key`, `x-fenix-model` — user BYOK, kept in memory for that job only, never logged or stored; the Studio keeps the key in sessionStorage of the tab). `model/openai.mjs` translates the Anthropic-style tool loop to Chat Completions with function tools (OpenAI, xAI Grok 4, compatible proxies). One note: `grok-build-0.1` is not a tool-calling model and is not supported here.
+
 ## Remaining work before enabling customer traffic
 
 - Real model generation with a server-only Anthropic key (not provided in this environment).

@@ -81,13 +81,26 @@ async function readJson(request: Request): Promise<Record<string, unknown>> {
 
 type AgentJobView = { id: string; status: string; result?: { ok?: boolean } | null; error?: string | null };
 
-async function upstream(cfg: AgentConfig, owner: string, path: string, init: { method?: string; body?: string } = {}): Promise<Response> {
+const BYOK_HEADERS = ["x-fenix-model-provider", "x-fenix-model-key", "x-fenix-model"] as const;
+
+/** Per-request BYOK headers from the Studio, forwarded verbatim and never logged. */
+function byokHeaders(request: Request): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const h of BYOK_HEADERS) {
+    const v = request.headers.get(h);
+    if (v && v.length <= 400) out[h] = v;
+  }
+  return out;
+}
+
+async function upstream(cfg: AgentConfig, owner: string, path: string, init: { method?: string; body?: string; extraHeaders?: Record<string, string> } = {}): Promise<Response> {
   return fetch(`${cfg.url}${path}`, {
     method: init.method ?? "GET",
     headers: {
       authorization: `Bearer ${cfg.token}`,
       "x-fenix-owner": owner,
       "content-type": "application/json",
+      ...(init.extraHeaders || {}),
     },
     body: init.body,
     signal: AbortSignal.timeout(25_000),
@@ -152,6 +165,7 @@ export async function handleAgentRequest(request: Request, rest: string): Promis
       try {
         res = await upstream(cfg, owner, "/agent/build", {
           method: "POST",
+          extraHeaders: byokHeaders(request),
           body: JSON.stringify({
             brief,
             kind: body.kind === "site" ? "site" : "app",
