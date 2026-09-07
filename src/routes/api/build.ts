@@ -21,7 +21,7 @@ import {
   XAI_MISSING_KEY_ERROR,
   FENIX_MODEL,
 } from "@/lib/ai/model";
-import { formatPrefix, isPhoneKind, kindFromPrompt } from "@/lib/projects/infer";
+import { formatPrefix, isClipFeedBrief, isPhoneKind, kindFromPrompt } from "@/lib/projects/infer";
 import { composeProduct } from "@/lib/ai/compose-product";
 import { sanitizePaletteHistory, type PaletteRecord } from "@/lib/projects/palette-engine";
 import { MAX_ARTIFACT_CHARS } from "../../../workers/visual/artifact-context.mjs";
@@ -132,7 +132,7 @@ export const Route = createFileRoute("/api/build")({
         const composed = isPhoneKind(lockKind) ? composeProduct(prompt, { recent }) : null;
         const userParts = [
           `BRIEF:\n${prompt}`,
-          formatPrefix(lockKind).trim(),
+          formatPrefix(lockKind, prompt).trim(),
           contractInstruction(contract),
           composed
             ? composed.polish
@@ -144,6 +144,10 @@ export const Route = createFileRoute("/api/build")({
           );
         } else if (lockKind === "site" || lockKind === "landing") {
           userParts.push("COMPLETO: sito con sezioni, nav in alto, footer. NON un'app telefono. NON un gestionale: niente .orders, niente inventario magazzino, niente form Nuovo pezzo. Stato mai null.");
+        } else if (isClipFeedBrief(prompt)) {
+          userParts.push(
+            "COMPLETO: feed verticale 390×844, clip a tutto schermo, overlay, dock Feed/Crea/Salvati/Profilo. Collection clip. Vietato voci, agenda, 5 tab CRUD, clone TikTok.",
+          );
         } else {
           userParts.push(
             "COMPLETO: schermate di mestiere secondo la grammatica del contratto. Home con imagery di dominio originale, gerarchia vera, form che salvano, lista reale. Vietato Ciao/Operatore, tab Home/Nuovo/Elenco, hero geometrico, telefono boxed al centro del desktop.",

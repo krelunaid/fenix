@@ -4,6 +4,8 @@
  * Adapter/Fenix.data stay fail-closed — they do not slugify user input.
  * Known wardrobe aliases collapse to `capi` in the planner/adapter only.
  */
+import { isClipFeedBrief } from "./infer.ts";
+
 export const FENIX_COLLECTION_RE = /^[A-Za-z0-9._-]{1,80}$/;
 export const FENIX_COLLECTION_FORBIDDEN = ["__proto__", "prototype", "constructor"] as const;
 
@@ -207,5 +209,6 @@ export function collectionForBrief(brief: string, fallback = "voci"): string {
   if (/\bvesti\b|\bguardaroba\b|\barmadio\b|\babiti?\b|\bcapi\b|\boutfit\b|\blookbook\b/.test(p)) {
     return FENIX_CANONICAL_CAPI;
   }
+  if (isClipFeedBrief(brief)) return "clip";
   return parseFenixCollection(fallback) || "voci";
 }

@@ -74,6 +74,7 @@ describe("Fenix collection tokens", () => {
     assert.equal(normalizeFenixCollection("capi vesti", "capi"), "capi");
     assert.equal(collectionForBrief("Vesti armadio di casa"), "capi");
     assert.equal(collectionForBrief("Taccuino in tasca"), "voci");
+    assert.equal(collectionForBrief("mi crei un app simile tik tok"), "clip");
   });
 
   it("rewrites production COL to capi so the contract can ready, and still blocks slash tokens", () => {

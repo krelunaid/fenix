@@ -9,7 +9,7 @@ import {
   type TokenFamily,
 } from "./design-tokens.ts";
 import { extractBriefAxes } from "./palette-engine.ts";
-import { inferKind, isPhoneKind, kindFromPrompt } from "./infer.ts";
+import { inferKind, isClipFeedBrief, isPhoneKind, kindFromPrompt } from "./infer.ts";
 import { isLibraryBrief } from "./app-identity.ts";
 import type { ProjectKind } from "./types.ts";
 
@@ -50,17 +50,7 @@ function kindOf(brief: string): ProjectKind {
   return kindFromPrompt(brief) ?? inferKind(brief);
 }
 
-/** Vertical short-clip feed. Not a TikTok/Instagram clone: original name, materials, chrome. */
-export function isClipFeedBrief(brief: string): boolean {
-  const p = String(brief || "").toLowerCase();
-  return (
-    /tik\s*tok|tiktok|douyin/.test(p) ||
-    /\breels?\b|\bshorts?\b|\bfyp\b|for\s*you/.test(p) ||
-    /video\s*(vertical[ei]?|cort[io]|social|a tutto schermo)/.test(p) ||
-    /clip\s*vertical|scroll(?:are)?\s+(?:i\s+)?video|app\s+(?:di\s+)?video/.test(p) ||
-    /simile\s+(?:a\s+)?(?:tik|instagram)|tipo\s+(?:tiktok|instagram\s*reel)/.test(p)
-  );
-}
+export { isClipFeedBrief };
 
 function opsDeskGrammar(family: TokenFamily | "unknown", variant: number): LayoutGrammar {
   return {

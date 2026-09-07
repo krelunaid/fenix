@@ -33,6 +33,9 @@ describe("kindFromPrompt / resolveProjectKind", () => {
     assert.match(formatPrefix("site"), /NON un gestionale/);
     assert.match(formatPrefix("site"), /orders/);
     assert.equal(kindFromPrompt(formatPrefix("app") + "un'officina"), "app");
+    assert.match(formatPrefix("app", "mi crei un app simile tik tok"), /Feed verticale/);
+    assert.doesNotMatch(formatPrefix("app", "mi crei un app simile tik tok"), /5 schermate/);
+    assert.equal(kindFromPrompt(formatPrefix("app", "simile tik tok") + "feed"), "app");
     assert.equal(kindFromPrompt("un brief senza formato"), undefined);
   });
 

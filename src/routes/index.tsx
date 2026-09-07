@@ -54,7 +54,7 @@ function Home() {
       return;
     }
     const kind = choice === "auto" ? inferKind(text) : choice;
-    const project = createFromBrief({ prompt: `${formatPrefix(kind)}${text}`, kind });
+    const project = createFromBrief({ prompt: `${formatPrefix(kind, text)}${text}`, kind });
     void navigate({ to: "/studio/$projectId", params: { projectId: project.id } });
   }
 

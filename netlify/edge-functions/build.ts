@@ -424,7 +424,7 @@ export default async function build(request: Request) {
   const grammar = grammarFromBrief(prompt);
   const userParts = [
     `BRIEF:\n${prompt}`,
-    formatPrefix(lockKind ?? "app").trim(),
+    formatPrefix(lockKind ?? "app", prompt).trim(),
     contractInstruction(contract),
     tokensInstruction(tokens),
     grammarInstruction(grammar),
