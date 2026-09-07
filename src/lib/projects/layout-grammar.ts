@@ -91,7 +91,7 @@ export function grammarFromBrief(brief: string): LayoutGrammar {
       kind,
       chrome: "tabs",
       stage: "feed",
-      desktop: "sala nera centrata, telaio telefono 390×844, dock in basso nel frame, niente nav da sito a tutta larghezza",
+      desktop: "sala cinematografica a tutta pagina: wallpaper sfocato, lastre 9:16 ~480px, copy a destra, dock a pillola, niente iPhone boxed e niente poster spalmato",
       tablet: "clip a tutta altezza, dock in basso",
       mobile: "clip 100dvh, overlay caption, azioni laterali, dock Feed/Crea/Salvati/Profilo, niente agenda",
       voice: {
@@ -403,12 +403,12 @@ export function grammarInstruction(grammar: LayoutGrammar): string {
     `tablet: ${grammar.tablet}`,
     `mobile: ${grammar.mobile}`,
     `voce: ${grammar.voice.census}; empty="${grammar.voice.empty}"`,
-    "Navigazione device-aware: tabbar solo sotto 768px; tablet e desktop usano header/nav in testata. Vietato allargare la tabbar a tutta larghezza.",
+    "Navigazione device-aware: tabbar solo sotto 768px salvo clip-feed; tablet e desktop usano header/nav in testata. Vietato allargare la tabbar a tutta larghezza. Clip-feed su desktop: sala cinematografica, non tab in testata.",
     "Vietato riciclare la stessa phone-shell, «3 in casa», Ciao/Operatore, tab Home/Nuovo/Elenco.",
     grammar.id === "source-timeline"
       ? "Repository: attività, rami, sync, diff. Vietato home universale hero grigio + due KPI + CTA + empty card. Non copiare GitHub, Apple o Emergent."
       : grammar.id === "clip-feed"
-        ? "Feed verticale originale: PRIMO PAINT clip-stage a tutto schermo, overlay, rail, dock Feed/Crea/Salvati/Profilo. Desktop: colonna 390px centrata, niente tabbar allargata a sito. Vietato Niente in lista, voci, agenda, 5 tab Home/Nuovo/Elenco/Stats, card KPI. Non clonare TikTok, Instagram, marchio o «For You»."
+        ? "Feed verticale originale: PRIMO PAINT clip-stage a tutto schermo. Desktop: wallpaper sfocato dal poster, lastre 9:16 ~480px, colonna copy, dock a pillola. Vietato iPhone boxed, poster a 1280, Niente in lista, voci, agenda, 5 tab Home/Nuovo/Elenco/Stats, card KPI. Non clonare TikTok, Instagram, marchio o «For You»."
         : "Stati empty/loading/success/error visibili. Motion solo se prefers-reduced-motion: no-preference. Target ≥24px, focus visibile, AA.",
   ].join("\n");
 }

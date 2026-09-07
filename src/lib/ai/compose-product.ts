@@ -1093,23 +1093,38 @@ function phoneCss(id: GrammarId): string {
             : id === "clip-feed"
               ? `html[data-grammar="clip-feed"] #fx-splash{display:none!important}
   html[data-grammar="clip-feed"] header{display:none}
-  html[data-grammar="clip-feed"] .app{grid-template-rows:minmax(0,1fr) auto;grid-template-areas:"main" "nav";height:100dvh;max-height:100dvh;background:#08060c}
-  html[data-grammar="clip-feed"] main{padding:0;overflow:hidden;background:#08060c}
+  html[data-grammar="clip-feed"] .app{grid-template-rows:minmax(0,1fr) auto;grid-template-areas:"main" "nav";height:100dvh;max-height:100dvh;background:#07040c}
+  html[data-grammar="clip-feed"] main{padding:0;overflow:hidden;background:#07040c}
   html[data-grammar="clip-feed"] main:has(.clip-create),html[data-grammar="clip-feed"] main:has(.clip-saved),html[data-grammar="clip-feed"] main:has(.clip-profile){overflow:auto;padding:18px 16px 22px}
-  html[data-grammar="clip-feed"] nav.tabs{background:color-mix(in srgb,#08060c 72%,transparent);border-color:transparent;-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px)}
-  html[data-grammar="clip-feed"] nav.tabs button.on{color:#fff}
+  html[data-grammar="clip-feed"] nav.tabs{background:color-mix(in srgb,#07040c 55%,transparent);border-color:transparent;-webkit-backdrop-filter:blur(22px);backdrop-filter:blur(22px)}
+  html[data-grammar="clip-feed"] nav.tabs button.on{color:#fff;background:color-mix(in srgb,var(--accent) 28%,transparent);border-radius:14px}
   html[data-grammar="clip-feed"] .collection,.fragrance,.hero{display:none}
-  .clip-stage{position:relative;min-height:100%;height:100%;overflow:hidden;color:#f4e8ff;background:#08060c;container-type:size}
-  .clip-poster{position:absolute;inset:0;width:100%;height:100%;display:block;object-fit:cover}
-  .clip-vignette{position:absolute;inset:0;pointer-events:none;background:linear-gradient(180deg,rgba(8,6,12,.42),transparent 22%,transparent 48%,rgba(8,6,12,.92))}
-  .clip-live{position:absolute;top:14px;left:16px;z-index:3;margin:0;font:650 11px/1 var(--body),sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#f4e8ff}
-  .clip-caption{position:absolute;left:16px;right:88px;bottom:22px;z-index:3}
-  .clip-handle{margin:0;font:650 13px/1.2 var(--body),sans-serif;opacity:.88}
-  .clip-caption h1{margin:8px 0 8px;font:750 1.75rem/1.05 var(--display),sans-serif;letter-spacing:-.04em;font-size:clamp(1.5rem,11cqi,2.1rem)}
-  .clip-rail{position:absolute;right:10px;bottom:92px;z-index:4;display:flex;flex-direction:column;gap:12px}
-  .clip-rail-btn{width:52px;height:52px;border-radius:50%;border:1px solid color-mix(in srgb,#fff 22%,transparent);background:color-mix(in srgb,#14081c 58%,transparent);color:#fff;display:grid;place-items:center;padding:0}
+  .clip-stage{position:relative;min-height:100%;height:100%;overflow:hidden;color:#f4e8ff;background:#07040c;container-type:size}
+  .clip-ambient{display:none}
+  .clip-frame{position:absolute;inset:0;overflow:hidden;background:#07040c}
+  .clip-frame .clip-poster,.clip-ambient .clip-poster{position:absolute;inset:0;width:100%;height:100%;display:block;object-fit:cover;transform-origin:center}
+  .clip-frame::after{content:"";position:absolute;inset:0;pointer-events:none;opacity:.16;mix-blend-mode:overlay;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='80' height='80'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .5 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>")}
+  .clip-vignette{position:absolute;inset:0;pointer-events:none;background:linear-gradient(180deg,rgba(7,4,12,.5),transparent 24%,transparent 52%,rgba(7,4,12,.94))}
+  .clip-progress{position:absolute;top:0;left:0;right:0;height:3px;z-index:5;background:color-mix(in srgb,#fff 16%,transparent)}
+  .clip-progress>i{display:block;height:100%;width:0;background:#fff;transform-origin:left}
+  .clip-live{position:absolute;top:16px;left:16px;z-index:3;margin:0;padding:6px 10px;border-radius:999px;border:1px solid color-mix(in srgb,#fff 22%,transparent);background:color-mix(in srgb,#07040c 45%,transparent);font:650 10px/1 var(--body),sans-serif;letter-spacing:.16em;text-transform:uppercase;color:#f4e8ff;-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)}
+  .clip-copy{position:absolute;left:16px;right:88px;bottom:22px;z-index:3}
+  .clip-brand{display:none}
+  .clip-after{display:none}
+  .clip-handle{margin:0;font:650 13px/1.2 var(--body),sans-serif;opacity:.9}
+  .clip-copy h1{margin:8px 0 8px;font:750 1.75rem/1.05 var(--display),sans-serif;letter-spacing:-.045em;font-size:clamp(1.55rem,12cqi,2.2rem);text-wrap:balance}
+  .clip-rail{position:absolute;left:calc(100% + 16px);right:auto;bottom:0;z-index:4;display:flex;flex-direction:column;gap:12px}
+  .clip-rail-btn{width:52px;height:52px;border-radius:50%;border:1px solid color-mix(in srgb,#fff 22%,transparent);background:color-mix(in srgb,#14081c 58%,transparent);color:#fff;display:grid;place-items:center;padding:0;-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)}
+  .clip-rail-btn span{display:none}
+  .clip-create,.clip-saved,.clip-profile{max-width:40rem}
   .clip-create h2,.clip-saved h2,.clip-profile h2{font-family:var(--display);letter-spacing:-.03em}
-  .clip-create .btn{width:100%;margin-top:14px}`
+  .clip-create .btn{width:100%;margin-top:14px}
+  @media(prefers-reduced-motion:no-preference){
+    .clip-frame .clip-poster{animation:clip-drift 22s ease-in-out infinite alternate}
+    .clip-progress>i{animation:clip-bar 12s linear infinite}
+  }
+  @keyframes clip-drift{from{transform:scale(1.03)}to{transform:scale(1.12) translate3d(0,-2.4%,0)}}
+  @keyframes clip-bar{from{width:0}to{width:100%}}`
             : "";
   return `${stage}
 .app{display:grid;grid-template-rows:auto 1fr auto;grid-template-areas:"head" "main" "nav";width:100%;min-height:100dvh}
@@ -1122,16 +1137,27 @@ main{grid-area:main;min-height:0;overflow:auto;padding:8px 16px 20px}
 @media(min-width:768px){
   ${
     id === "clip-feed"
-      ? `html[data-grammar="clip-feed"],html[data-grammar="clip-feed"] body{background:#08060c;min-height:100dvh;height:100%;overflow:hidden}
-  html[data-grammar="clip-feed"] body{display:grid;place-items:center;padding:24px;box-sizing:border-box}
-  html[data-grammar="clip-feed"] body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;background:radial-gradient(ellipse 48% 58% at 50% 44%,#1c102c 0%,#08060c 70%)}
-  html[data-grammar="clip-feed"] .app{position:relative;z-index:1;width:min(390px,calc(100vw - 48px));max-width:390px;height:min(844px,calc(100dvh - 48px));max-height:calc(100dvh - 48px);min-height:0;margin:0 auto;grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr) auto;grid-template-areas:"main" "nav";border-radius:24px;overflow:hidden;box-shadow:0 28px 80px rgba(0,0,0,.55),0 0 0 1px color-mix(in srgb,#fff 12%,transparent)}
+      ? `html[data-grammar="clip-feed"],html[data-grammar="clip-feed"] body{background:#07040c;min-height:100dvh;height:100%;overflow:hidden}
+  html[data-grammar="clip-feed"] body{display:block;padding:0}
+  html[data-grammar="clip-feed"] .app{position:relative;z-index:1;width:100%;max-width:none;height:100dvh;max-height:100dvh;min-height:0;margin:0;border-radius:0;box-shadow:none;grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr) auto;grid-template-areas:"main" "nav";overflow:hidden}
   html[data-grammar="clip-feed"] header{display:none}
   html[data-grammar="clip-feed"] main{padding:0;overflow:hidden;min-height:0}
-  html[data-grammar="clip-feed"] main:has(.clip-create),html[data-grammar="clip-feed"] main:has(.clip-saved),html[data-grammar="clip-feed"] main:has(.clip-profile){overflow:auto;padding:18px 16px 22px}
-  html[data-grammar="clip-feed"] nav.tabs{position:relative;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));flex-direction:unset;flex-wrap:nowrap;height:calc(64px + env(safe-area-inset-bottom));min-height:64px;border:0;border-top:1px solid color-mix(in srgb,#fff 12%,transparent);border-bottom:0;padding:6px 6px calc(6px + env(safe-area-inset-bottom));justify-content:stretch;align-items:stretch;background:color-mix(in srgb,#08060c 78%,transparent)}
-  html[data-grammar="clip-feed"] nav.tabs button{flex-direction:column;font:600 10px/1.1 var(--body),sans-serif;min-height:44px;padding:4px 2px;gap:2px}
+  html[data-grammar="clip-feed"] main:has(.clip-create),html[data-grammar="clip-feed"] main:has(.clip-saved),html[data-grammar="clip-feed"] main:has(.clip-profile){overflow:auto;padding:28px 32px 36px;display:grid;place-items:center}
+  html[data-grammar="clip-feed"] .clip-create,html[data-grammar="clip-feed"] .clip-saved,html[data-grammar="clip-feed"] .clip-profile{width:min(460px,100%);padding:28px 26px;border-radius:24px;background:color-mix(in srgb,#14081c 72%,transparent);border:1px solid color-mix(in srgb,#fff 12%,transparent);-webkit-backdrop-filter:blur(22px);backdrop-filter:blur(22px)}
+  html[data-grammar="clip-feed"] nav.tabs{position:relative;justify-self:center;width:min(520px,calc(100% - 48px));margin:0 auto 16px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));flex-direction:unset;flex-wrap:nowrap;height:58px;min-height:58px;border:1px solid color-mix(in srgb,#fff 14%,transparent);border-radius:999px;padding:6px;background:color-mix(in srgb,#07040c 62%,transparent);-webkit-backdrop-filter:blur(22px);backdrop-filter:blur(22px)}
+  html[data-grammar="clip-feed"] nav.tabs button{flex-direction:column;font:600 10px/1.1 var(--body),sans-serif;min-height:44px;padding:4px 2px;gap:2px;border-radius:999px}
   html[data-grammar="clip-feed"] nav.tabs svg{display:block;margin-inline:auto}
+  .clip-stage{display:grid;grid-template-columns:minmax(16px,1fr) min(480px,42vw) minmax(260px,360px) minmax(16px,1fr);grid-template-rows:minmax(0,1fr);align-items:center;gap:0 28px}
+  .clip-ambient{display:block;position:absolute;inset:-18%;z-index:0;pointer-events:none;filter:blur(58px) saturate(1.35);opacity:.5;transform:scale(1.06)}
+  .clip-frame{position:relative;grid-column:2;z-index:2;width:100%;height:min(86dvh,760px);border-radius:28px;overflow:hidden;box-shadow:0 40px 110px rgba(0,0,0,.58),0 0 0 1px color-mix(in srgb,#fff 14%,transparent)}
+  .clip-copy{position:relative;grid-column:3;left:auto;right:auto;bottom:auto;z-index:2;max-width:34ch;padding:8px 0;align-self:end;margin-bottom:max(8px,calc(86dvh - 760px))}
+  .clip-brand{display:block;margin:0 0 18px;font:700 13px/1 var(--display),sans-serif;letter-spacing:.18em;text-transform:uppercase;opacity:.7}
+  .clip-copy h1{font-size:clamp(2rem,3.4vw,2.8rem);margin:10px 0 12px}
+  .clip-after{display:block;margin:18px 0 0;font:650 12px/1.4 var(--body),sans-serif;color:color-mix(in srgb,#f4e8ff 70%,transparent)}
+  .clip-rail{position:relative;left:auto;right:auto;bottom:auto;flex-direction:row;gap:10px;margin-top:22px}
+  .clip-rail-btn{width:auto;height:48px;padding:0 16px;border-radius:999px;grid-auto-flow:column;gap:8px}
+  .clip-rail-btn span{display:inline;font:650 12px/1 var(--body),sans-serif}
+  .clip-live{left:18px;top:18px}
 `
       : `.app{grid-template-rows:auto 1fr;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"head nav" "main main"}
   header{padding:14px 22px;border-bottom:1px solid var(--line);align-items:center}
@@ -1193,8 +1219,10 @@ main{grid-area:main;min-height:0;overflow:auto;padding:8px 16px 20px}
     id === "clip-feed"
       ? `html[data-grammar="clip-feed"] header,html[data-grammar="clip-feed"] nav.tabs{padding-left:6px;padding-right:6px}
   html[data-grammar="clip-feed"] main{padding:0}
-  html[data-grammar="clip-feed"] main:has(.clip-create),html[data-grammar="clip-feed"] main:has(.clip-saved),html[data-grammar="clip-feed"] main:has(.clip-profile){padding:18px 16px 22px}
-  html[data-grammar="clip-feed"] .app{width:min(390px,calc(100vw - 48px));max-width:390px;height:min(844px,calc(100dvh - 48px));min-height:0}`
+  html[data-grammar="clip-feed"] main:has(.clip-create),html[data-grammar="clip-feed"] main:has(.clip-saved),html[data-grammar="clip-feed"] main:has(.clip-profile){padding:32px 40px 40px}
+  html[data-grammar="clip-feed"] .app{width:100%;max-width:none;height:100dvh;min-height:0}
+  .clip-stage{grid-template-columns:minmax(24px,1fr) min(520px,40vw) minmax(280px,380px) minmax(24px,1fr);gap:0 36px}
+  .clip-frame{height:min(88dvh,780px);border-radius:32px}`
       : `header,nav.tabs{padding-left:40px;padding-right:40px}
   main{padding:28px 40px}`
   }
@@ -1804,41 +1832,87 @@ ${familyChromeCss(t, grammar)}
 
 function clipPosterSvg(slot: number, tokens: DesignTokens): string {
   const p = tokens.palette;
-  const hues = [
-    { a: p.accent, b: "#2ec8c0", c: p.bg, d: p.fg },
-    { a: "#ffb020", b: p.accent, c: p.surface, d: p.fg },
-    { a: "#3ecf8e", b: "#ff3d7f", c: p.bg, d: p.fg },
-    { a: "#6b8cff", b: p.accent, c: p.elevated, d: p.fg },
-  ];
-  const t = hues[((slot % hues.length) + hues.length) % hues.length]!;
-  const gid = `clipn${slot}`;
+  const g = `cg${slot}`;
+  const sky = p.bg;
+  const ink = p.fg;
+  const acc = p.accent;
+  const elev = p.elevated;
+  const warm = "#e2b56a";
+  const teal = "#2ec8c0";
   const scenes = [
-    `<rect width="390" height="844" fill="${t.c}"/>
-    <path d="M-40 620 L120 180 L240 420 L390 90 L430 844 L-40 844z" fill="${t.a}" opacity=".42"/>
-    <path d="M40 844 L190 220 L310 510 L430 140 V844z" fill="${t.b}" opacity=".28"/>
-    <circle cx="268" cy="210" r="92" fill="${t.d}" opacity=".12"/>
-    <rect x="48" y="540" width="86" height="220" fill="${t.d}" opacity=".16"/>
-    <rect x="148" y="480" width="70" height="280" fill="${t.a}" opacity=".22"/>
-    <rect x="232" y="580" width="96" height="180" fill="${t.b}" opacity=".18"/>`,
-    `<rect width="390" height="844" fill="${t.c}"/>
-    <ellipse cx="196" cy="300" rx="170" ry="220" fill="${t.a}" opacity=".35"/>
-    <ellipse cx="80" cy="520" rx="120" ry="160" fill="${t.b}" opacity=".28"/>
-    <path d="M0 640 Q120 520 210 640 T390 560 V844 H0z" fill="${t.d}" opacity=".14"/>
-    <rect x="0" y="0" width="24" height="844" fill="${t.a}" opacity=".45"/>
-    <rect x="366" y="0" width="24" height="844" fill="${t.b}" opacity=".4"/>`,
-    `<rect width="390" height="844" fill="${t.c}"/>
-    <path d="M40 80h310v684H40z" fill="none" stroke="${t.a}" stroke-width="18"/>
-    <circle cx="195" cy="360" r="118" fill="${t.b}" opacity=".32"/>
-    <path d="M70 620 195 240 320 620z" fill="${t.a}" opacity=".24"/>
-    <rect x="70" y="670" width="250" height="18" fill="${t.d}" opacity=".35"/>`,
-    `<rect width="390" height="844" fill="${t.c}"/>
-    <path d="M-20 200 L410 80 L410 280 L-20 400z" fill="${t.a}" opacity=".38"/>
-    <path d="M-20 420 L410 300 L410 500 L-20 620z" fill="${t.b}" opacity=".26"/>
-    <circle cx="300" cy="180" r="70" fill="${t.d}" opacity=".18"/>
-    <rect x="28" y="700" width="160" height="64" fill="${t.a}" opacity=".4"/>`,
+    `<defs><linearGradient id="${g}s" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1a0c28"/><stop offset="1" stop-color="${sky}"/></linearGradient><radialGradient id="${g}w" cx=".72" cy=".22" r=".42"><stop offset="0" stop-color="${warm}" stop-opacity=".7"/><stop offset="1" stop-color="${warm}" stop-opacity="0"/></radialGradient></defs>
+    <rect width="390" height="844" fill="url(#${g}s)"/>
+    <ellipse cx="286" cy="168" rx="150" ry="120" fill="url(#${g}w)"/>
+    <rect x="0" y="430" width="390" height="414" fill="${elev}"/>
+    <path d="M0 430h390v24H0z" fill="${acc}" opacity=".35"/>
+    <rect x="28" y="470" width="88" height="210" fill="${sky}"/>
+    <rect x="40" y="490" width="28" height="46" fill="${warm}" opacity=".85"/>
+    <rect x="72" y="512" width="28" height="46" fill="${warm}" opacity=".55"/>
+    <rect x="40" y="572" width="60" height="40" fill="${warm}" opacity=".4"/>
+    <path d="M150 470v248" stroke="${ink}" opacity=".18" stroke-width="10"/>
+    <path d="M150 470h170v90H150z" fill="none" stroke="${ink}" opacity=".28" stroke-width="8"/>
+    <rect x="168" y="488" width="134" height="54" fill="${warm}" opacity=".9"/>
+    <rect x="168" y="580" width="54" height="138" fill="${sky}"/>
+    <rect x="248" y="580" width="54" height="138" fill="${sky}"/>
+    <ellipse cx="118" cy="708" rx="22" ry="58" fill="#0a0610"/>
+    <circle cx="118" cy="632" r="16" fill="#0a0610"/>`,
+    `<defs><linearGradient id="${g}s" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2a1420"/><stop offset="1" stop-color="${sky}"/></linearGradient></defs>
+    <rect width="390" height="844" fill="url(#${g}s)"/>
+    <rect x="0" y="220" width="390" height="624" fill="${elev}"/>
+    <rect x="18" y="250" width="354" height="28" fill="${acc}" opacity=".22"/>
+    <rect x="36" y="300" width="70" height="110" fill="${warm}" opacity=".55"/>
+    <rect x="120" y="288" width="52" height="90" fill="${warm}" opacity=".8"/>
+    <rect x="186" y="312" width="64" height="98" fill="${teal}" opacity=".35"/>
+    <rect x="268" y="276" width="80" height="130" fill="${warm}" opacity=".4"/>
+    <path d="M20 430h350" stroke="${ink}" opacity=".2" stroke-width="6"/>
+    <path d="M48 448 340 410" stroke="${ink}" opacity=".28" stroke-width="3"/>
+    <path d="M40 470 330 436" stroke="${acc}" opacity=".4" stroke-width="2"/>
+    <rect x="0" y="560" width="390" height="284" fill="#120814"/>
+    <ellipse cx="200" cy="560" rx="210" ry="36" fill="${elev}"/>
+    <ellipse cx="168" cy="700" rx="20" ry="54" fill="#07040c"/>
+    <circle cx="168" cy="628" r="15" fill="#07040c"/>
+    <rect x="70" y="640" width="14" height="90" fill="${warm}" opacity=".35"/>
+    <rect x="300" y="620" width="14" height="110" fill="${teal}" opacity=".3"/>`,
+    `<defs><linearGradient id="${g}s" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#081018"/><stop offset=".48" stop-color="#152038"/><stop offset="1" stop-color="#0a1828"/></linearGradient><linearGradient id="${g}w" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1c3a52"/><stop offset="1" stop-color="#071018"/></linearGradient></defs>
+    <rect width="390" height="844" fill="url(#${g}s)"/>
+    <circle cx="300" cy="120" r="36" fill="${ink}" opacity=".22"/>
+    <path d="M0 430h390v414H0z" fill="url(#${g}w)"/>
+    <path d="M0 430 80 390 160 438 250 360 340 420 390 380v70H0z" fill="${teal}" opacity=".22"/>
+    <rect x="40" y="300" width="18" height="160" fill="${ink}" opacity=".35"/>
+    <path d="M49 300h120v14H49z" fill="${acc}" opacity=".55"/>
+    <rect x="220" y="250" width="22" height="200" fill="${ink}" opacity=".4"/>
+    <path d="M231 250h90v16H231z" fill="${warm}" opacity=".7"/>
+    <rect x="70" y="500" width="250" height="70" fill="#0b1520"/>
+    <rect x="90" y="518" width="40" height="18" fill="${warm}" opacity=".8"/>
+    <rect x="150" y="518" width="28" height="18" fill="${warm}" opacity=".45"/>
+    <path d="M0 620 60 600 140 640 220 580 310 630 390 590v254H0z" fill="${teal}" opacity=".12"/>
+    <ellipse cx="260" cy="720" rx="18" ry="50" fill="#05080e"/>
+    <circle cx="260" cy="652" r="14" fill="#05080e"/>`,
+    `<defs><radialGradient id="${g}f" cx=".5" cy=".58" r=".5"><stop offset="0" stop-color="${warm}"/><stop offset=".35" stop-color="${acc}" stop-opacity=".85"/><stop offset="1" stop-color="${sky}"/></radialGradient></defs>
+    <rect width="390" height="844" fill="${sky}"/>
+    <ellipse cx="196" cy="470" rx="170" ry="220" fill="url(#${g}f)"/>
+    <path d="M40 180h310v520H40z" fill="none" stroke="${ink}" opacity=".22" stroke-width="14"/>
+    <path d="M70 240h80v120H70z" fill="${warm}" opacity=".25"/>
+    <circle cx="196" cy="430" r="54" fill="${warm}" opacity=".55"/>
+    <circle cx="196" cy="430" r="22" fill="${ink}" opacity=".35"/>
+    <circle cx="132" cy="560" r="28" fill="${teal}" opacity=".28"/>
+    <circle cx="262" cy="548" r="20" fill="${ink}" opacity=".2"/>
+    <rect x="118" y="620" width="154" height="90" fill="#0a0610" opacity=".55"/>
+    <ellipse cx="196" cy="710" rx="24" ry="64" fill="#07040c"/>
+    <circle cx="196" cy="628" r="18" fill="#07040c"/>`,
   ];
   const inner = scenes[((slot % scenes.length) + scenes.length) % scenes.length]!;
-  return `<svg class="clip-poster" data-imagery="domain" data-fenix-clip-art="${slot}" viewBox="0 0 390 844" width="390" height="844" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><defs><filter id="${gid}" x="-8%" y="-8%" width="116%" height="116%"><feTurbulence type="fractalNoise" baseFrequency="0.7" numOctaves="3" seed="${13 + slot * 7}" result="n"/><feColorMatrix in="n" type="saturate" values="0"/><feComponentTransfer><feFuncA type="table" tableValues="0 0.22"/></feComponentTransfer><feBlend in="SourceGraphic" mode="multiply"/></filter></defs><g filter="url(#${gid})">${inner}</g></svg>`;
+  return `<svg class="clip-poster" data-imagery="domain" data-fenix-clip-art="${slot}" viewBox="0 0 390 844" width="390" height="844" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">${inner}</svg>`;
+}
+
+function clipKeepGlyph(filled: boolean): string {
+  return filled
+    ? `<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true"><path d="M7.4 4.8h9.2v14.4L12 15.2 7.4 19.2z"/></svg>`
+    : `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M7.4 4.8h9.2v14.4L12 15.2 7.4 19.2z"/></svg>`;
+}
+
+function clipNextGlyph(): string {
+  return `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M6 10l6 6 6-6"/></svg>`;
 }
 
 function clipFeedBootHtml(spec: PipelineSpec, tokens: DesignTokens): string {
@@ -1849,10 +1923,10 @@ function clipFeedBootHtml(spec: PipelineSpec, tokens: DesignTokens): string {
     kicker: spec.kicker,
     meta: "8s",
   };
+  const nxt = spec.rows[1]?.title || "";
   const handle = String(row.note || "in onda").split("·")[0]!.trim() || "in onda";
-  const keep = `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M7.4 4.8h9.2v14.4L12 15.2 7.4 19.2z"/></svg>`;
-  const next = `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M6 10l6 6 6-6"/></svg>`;
-  return `<section class="clip-stage" data-fenix-clip="1" data-clip-id="${row.id}" data-fenix-slot="home-boot">${clipPosterSvg(0, tokens)}<div class="clip-vignette"></div><p class="clip-live">In onda</p><div class="clip-caption"><p class="clip-handle">${handle}</p><h1>${row.title}</h1><p class="notes">${row.meta || ""} · ${row.kicker || spec.kicker}</p></div><div class="clip-rail"><button type="button" class="clip-rail-btn" data-act="clip-keep" aria-label="Salva">${keep}</button><button type="button" class="clip-rail-btn" data-act="clip-next" aria-label="Avanti">${next}</button></div></section>`;
+  const poster = clipPosterSvg(0, tokens);
+  return `<section class="clip-stage" data-fenix-clip="1" data-clip-id="${row.id}" data-fenix-slot="home-boot"><div class="clip-ambient" aria-hidden="true">${poster}</div><div class="clip-frame">${poster}<div class="clip-vignette"></div><div class="clip-progress" aria-hidden="true"><i></i></div><p class="clip-live">In onda</p></div><div class="clip-copy"><p class="clip-brand">${spec.name}</p><p class="clip-handle">${handle}</p><h1>${row.title}</h1><p class="notes">${row.meta || ""} · ${row.kicker || spec.kicker}</p><div class="clip-rail"><button type="button" class="clip-rail-btn" data-act="clip-keep" aria-label="Salva">${clipKeepGlyph(false)}<span>Salva</span></button><button type="button" class="clip-rail-btn" data-act="clip-next" aria-label="Avanti">${clipNextGlyph()}<span>Avanti</span></button></div>${nxt ? `<p class="clip-after">Dopo · ${nxt}</p>` : ""}</div></section>`;
 }
 
 function clipFeedRuntimeJs(): string {
@@ -1875,14 +1949,18 @@ function clipPosterOf(e){
 }
 function clipKeepMark(on){
   return on
-    ? '<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true"><path d="M7.4 4.8h9.2v14.4L12 15.2 7.4 19.2z"/></svg>'
-    : '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M7.4 4.8h9.2v14.4L12 15.2 7.4 19.2z"/></svg>';
+    ? '<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true"><path d="M7.4 4.8h9.2v14.4L12 15.2 7.4 19.2z"/></svg>'
+    : '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M7.4 4.8h9.2v14.4L12 15.2 7.4 19.2z"/></svg>';
 }
 function renderClipFeed(){
   var e=clipAt();
   var handle=String(e.note||"in onda").split("·")[0].trim()||"in onda";
   var saved=!!e.saved;
-  return '<section class="clip-stage" data-fenix-clip="1" data-clip-id="'+e.id+'">'+clipPosterOf(e)+'<div class="clip-vignette"></div><p class="clip-live">In onda</p><div class="clip-caption"><p class="clip-handle">'+handle+'</p><h1>'+e.title+'</h1><p class="notes">'+(e.meta||"")+(e.kicker?" · "+e.kicker:"")+'</p></div><div class="clip-rail"><button type="button" class="clip-rail-btn" data-act="clip-keep" aria-label="'+(saved?"Togli dai salvati":"Salva")+'">'+clipKeepMark(saved)+'</button><button type="button" class="clip-rail-btn" data-act="clip-next" aria-label="Avanti"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M6 10l6 6 6-6"/></svg></button></div></section>';
+  var poster=clipPosterOf(e);
+  var rows=clipRows();
+  var nxt=rows[(clipIndex+1)%rows.length];
+  var after=nxt&&nxt.title!==e.title?nxt.title:"";
+  return '<section class="clip-stage" data-fenix-clip="1" data-clip-id="'+e.id+'"><div class="clip-ambient" aria-hidden="true">'+poster+'</div><div class="clip-frame">'+poster+'<div class="clip-vignette"></div><div class="clip-progress" aria-hidden="true"><i></i></div><p class="clip-live">In onda</p></div><div class="clip-copy"><p class="clip-brand">'+specName()+'</p><p class="clip-handle">'+handle+'</p><h1>'+e.title+'</h1><p class="notes">'+(e.meta||"")+(e.kicker?" · "+e.kicker:"")+'</p><div class="clip-rail"><button type="button" class="clip-rail-btn" data-act="clip-keep" aria-label="'+(saved?"Togli dai salvati":"Salva")+'">'+clipKeepMark(saved)+'<span>'+(saved?"In tasca":"Salva")+'</span></button><button type="button" class="clip-rail-btn" data-act="clip-next" aria-label="Avanti"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M6 10l6 6 6-6"/></svg><span>Avanti</span></button></div>'+(after?'<p class="clip-after">Dopo · '+after+"</p>":"")+"</div></section>";
 }
 function renderClipCreate(){
   return '<section class="clip-create" data-fenix-crud>'+renderForm()+"</section>";
@@ -3425,7 +3503,7 @@ function polishFor(
       : grammar.id === "agenda"
         ? "Chrome da agenda: binario orario, tab Oggi/Nuovo/Settimana/Archivio, tipo 17/headline, target 44px. Vietato hero KPI, tab Home/Elenco, riquadri vuoti."
         : grammar.id === "clip-feed"
-        ? "Chrome da feed verticale: PRIMO PAINT = clip-stage a tutto schermo, overlay caption, rail Salva/Avanti, dock Feed/Crea/Salvati/Profilo. Su desktop/tablet: colonna telefono 390px centrata su palco scuro, dock in basso nel telaio, mai nav da sito a tutta larghezza. Vietato splash pronto, Niente in lista, Aggiungi la prima voce, collection voci, agenda, 5 tab CRUD, card KPI, clone TikTok/Instagram/For You."
+        ? "Chrome da feed verticale: PRIMO PAINT = clip-stage a tutto schermo, clip-frame, copy, rail Salva/Avanti, dock Feed/Crea/Salvati/Profilo. Su desktop/tablet: sala cinematografica (wallpaper sfocato, lastre 9:16, copy a destra, dock a pillola), mai iPhone boxed e mai poster spalmato a tutta larghezza. Vietato splash pronto, Niente in lista, Aggiungi la prima voce, collection voci, agenda, 5 tab CRUD, card KPI, clone TikTok/Instagram/For You."
         : grammar.chrome === "desk"
         ? DASHBOARD_POLISH_INSTRUCTION
         : grammar.chrome === "masthead"

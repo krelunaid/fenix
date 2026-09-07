@@ -187,11 +187,12 @@ a,button{color:#1f6f68}
     assert.ok(codes.includes("missing-clip-stage"), codes.join(","));
     const feed = `<!DOCTYPE html><html><body>
 <nav><button data-view="feed"><span>Feed</span></button><button data-view="crea"><span>Crea</span></button></nav>
-<main><section class="clip-stage" data-fenix-clip="1"><h1>Luce di Brera</h1></section></main></body></html>`;
+<main><section class="clip-stage" data-fenix-clip="1"><div class="clip-frame"></div><h1>Luce di Brera</h1></section></main></body></html>`;
     const good = auditGraphicQuality(feed, { brief, kind: "app" });
     const goodCodes = good.findings.filter((f) => f.severity === "fail").map((f) => f.code);
     assert.equal(goodCodes.includes("ledger-on-feed"), false, goodCodes.join(","));
     assert.equal(goodCodes.includes("missing-clip-stage"), false, goodCodes.join(","));
+    assert.equal(goodCodes.includes("missing-clip-frame"), false, goodCodes.join(","));
   });
 
   it("does not promote the phone shell as a finished perfume product", () => {

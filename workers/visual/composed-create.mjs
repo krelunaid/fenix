@@ -25,7 +25,8 @@ Identità, layout, tipografia, icone SVG e copy nascono dal brief. Ogni mestiere
 JS in <script> classico. Mai \${espressione} nel markup. Dati: window.Fenix.load e window.Fenix.save (coppia obbligatoria). CRUD: window.Fenix.data.query/insert/update/remove con collection [A-Za-z0-9._-]{1,80}. Mai localStorage. Mai login o server inventati.
 
 DEFAULT: app telefono 390×844, colonna 100dvh, 4–5 tab in basso con data-view, SVG 24 originali diverse, form che salvano, liste oneste, empty solo se length===0.
-Se il brief chiede feed / reel / video verticali / «simile TikTok»: PRIMO PAINT = CLIP a tutto schermo 390×844 (clip-stage, poster CSS+SVG originale, caption overlay, rail laterale Salva/Avanti). Dock: Feed, Crea, Salvati, Profilo. Tap/swipe cambia clip da Fenix.data. Crea salva titolo+città+nota. Nome originale dal mestiere.
+Se il brief chiede feed / reel / video verticali / «simile TikTok»: PRIMO PAINT = CLIP a tutto schermo (clip-stage + clip-frame, poster SVG di scena originale, copy, rail Salva/Avanti). Dock: Feed, Crea, Salvati, Profilo. Tap/swipe cambia clip da Fenix.data. Crea salva titolo+città+nota. Nome originale dal mestiere.
+Su viewport ≥768: SALA CINEMATOGRAFICA, non un iPhone boxed e non un poster spalmato a 1280. Wallpaper sfocato dal poster, lastre 9:16 ~480px, colonna copy a destra, dock a pillola. Scene dipinte (città, luce, figura), vietati triangoli vuoti.
 VIETATO su quel brief: splash «pronto», «Niente in lista», «Aggiungi la prima voce», tab Home/Aggiungi/Elenco, collection voci, 5 tab CRUD, agenda, 4 KPI.
 Vietato clonare marchio TikTok/Instagram, logo nota musicale, «For You».
 Italiano. Testi veri (città, prezzi, orari, nomi dal brief). Niente lorem, "Welcome to your app", Ciao/Operatore, Grok, Fenix, Inter, Manrope, emoji.

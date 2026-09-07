@@ -1912,7 +1912,7 @@ describe("clip-feed t0 is a full-bleed nastro, not a voci ledger", () => {
           const stage = document.querySelector(".clip-stage");
           const r = stage?.getBoundingClientRect();
           return {
-            title: document.querySelector(".clip-caption h1")?.textContent || "",
+            title: document.querySelector(".clip-copy h1")?.textContent || "",
             ledger: /Niente in lista|Aggiungi la prima voce/.test(document.body.innerText),
             tabs: [...document.querySelectorAll("nav.tabs button span")].map((el) => el.textContent || ""),
             stageH: r?.height ?? 0,
@@ -1925,7 +1925,7 @@ describe("clip-feed t0 is a full-bleed nastro, not a voci ledger", () => {
         assert.ok(first.stageH >= 700, `clip-stage height ${first.stageH}`);
         assert.equal(first.splash, false);
         await page.click('[data-act="clip-next"]');
-        const second = await page.evaluate(() => document.querySelector(".clip-caption h1")?.textContent || "");
+        const second = await page.evaluate(() => document.querySelector(".clip-copy h1")?.textContent || "");
         assert.notEqual(second, first.title);
         mkdirSync(join(here, "fixtures/graphic/pipeline"), { recursive: true });
         await page.screenshot({
@@ -1940,7 +1940,7 @@ describe("clip-feed t0 is a full-bleed nastro, not a voci ledger", () => {
     }
   });
 
-  it("keeps a centered 390px phone on a 1280×800 PC, not a stretched site", async () => {
+  it("paints a cinema hall on 1280×800, not a boxed phone or a stretched poster", async () => {
     const { composeProduct } = await import("./compose-product.ts");
     const { formatPrefix } = await import("../projects/infer.ts");
     const brief = formatPrefix("app") + "mi crei un app simile tik tok";
@@ -1954,33 +1954,40 @@ describe("clip-feed t0 is a full-bleed nastro, not a voci ledger", () => {
         await waitForFenixReady(page, 8000);
         const layout = await page.evaluate(() => {
           const app = document.querySelector(".app");
-          const stage = document.querySelector(".clip-stage");
+          const frame = document.querySelector(".clip-frame");
+          const copy = document.querySelector(".clip-copy");
+          const ambient = document.querySelector(".clip-ambient");
           const tabs = document.querySelector("nav.tabs");
-          const title = document.querySelector(".clip-caption h1");
+          const title = document.querySelector(".clip-copy h1");
           const ar = app?.getBoundingClientRect();
-          const sr = stage?.getBoundingClientRect();
+          const fr = frame?.getBoundingClientRect();
+          const cr = copy?.getBoundingClientRect();
           const tr = tabs?.getBoundingClientRect();
-          const hr = title?.getBoundingClientRect();
           const cs = app ? getComputedStyle(app) : null;
+          const as = ambient ? getComputedStyle(ambient) : null;
           return {
             appW: ar?.width ?? 0,
-            appH: ar?.height ?? 0,
-            appX: ar?.x ?? 0,
-            stageW: sr?.width ?? 0,
+            frameW: fr?.width ?? 0,
+            frameH: fr?.height ?? 0,
+            copyW: cr?.width ?? 0,
+            copyX: cr?.x ?? 0,
+            tabsW: tr?.width ?? 0,
             tabsY: tr?.y ?? 0,
-            tabsH: tr?.height ?? 0,
-            titleW: hr?.width ?? 0,
             titleFs: title ? Number.parseFloat(getComputedStyle(title).fontSize) : 0,
             areas: cs?.gridTemplateAreas ?? "",
-            radius: cs?.borderRadius ?? "",
+            ambientOn: as?.display !== "none",
+            brand: document.querySelector(".clip-brand")?.textContent || "",
           };
         });
-        assert.ok(layout.appW <= 391 && layout.appW >= 300, `app width ${layout.appW}`);
-        assert.ok(layout.appH <= 800 && layout.appH >= 500, `app height ${layout.appH}`);
-        assert.ok(layout.appX > 300 && layout.appX < 600, `app x ${layout.appX}`);
+        assert.ok(layout.appW >= 1200, `app width ${layout.appW}`);
+        assert.ok(layout.frameW >= 360 && layout.frameW <= 540, `frame width ${layout.frameW}`);
+        assert.ok(layout.frameH >= 500, `frame height ${layout.frameH}`);
+        assert.ok(layout.copyW >= 200, `copy width ${layout.copyW}`);
+        assert.ok(layout.copyX > layout.frameW, `copy x ${layout.copyX}`);
+        assert.ok(layout.tabsW <= 560, `dock width ${layout.tabsW}`);
         assert.equal(layout.areas.includes("head"), false, layout.areas);
-        assert.ok(layout.tabsY > 400, `dock y ${layout.tabsY}`);
-        assert.ok(layout.titleFs <= 40, `title font ${layout.titleFs}`);
+        assert.equal(layout.ambientOn, true);
+        assert.match(layout.brand, /Nastro/i);
         mkdirSync(join(here, "fixtures/graphic/pipeline"), { recursive: true });
         await page.screenshot({
           path: join(here, "fixtures/graphic/pipeline/clip-feed-1280.png"),

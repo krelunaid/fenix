@@ -374,6 +374,16 @@ export function auditGraphicQuality(
           "manca clip-stage",
         ),
       );
+    } else if (!/clip-frame/i.test(text)) {
+      findings.push(
+        finding(
+          "imagery",
+          "fail",
+          "missing-clip-frame",
+          "Feed senza lastre clip-frame: poster spalmato o iPhone boxed.",
+          "manca clip-frame",
+        ),
+      );
     }
   }
 
