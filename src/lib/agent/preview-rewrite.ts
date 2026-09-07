@@ -11,6 +11,11 @@ export function previewPrefix(jobId: string): string {
   return `/api/agent/jobs/${encodeURIComponent(jobId)}/preview`;
 }
 
+/** Prefix for the token-addressed relay used by the sandboxed iframe (no identity header needed). */
+export function previewTokenPrefix(token: string): string {
+  return `/api/agent/preview/${token}`;
+}
+
 const ATTR_RE = /\b(href|src|action|poster|formaction)=(["'])(\/[^"']*)/gi;
 const SRCSET_RE = /\bsrcset=(["'])([^"']+)\1/gi;
 const CSS_URL_RE = /url\((\s*["']?)(\/[^)"']*)/gi;
@@ -56,5 +61,10 @@ export function previewResponseHeaders(contentType: string): Record<string, stri
     "content-security-policy": "frame-ancestors 'self'",
     "x-content-type-options": "nosniff",
     "referrer-policy": "no-referrer",
+    // The preview iframe runs with an opaque origin (sandbox without allow-same-origin),
+    // so its requests are cross-origin: the URL token is the credential, CORS can be open.
+    "access-control-allow-origin": "*",
+    "access-control-allow-methods": "GET, HEAD, POST, PUT, PATCH, DELETE, OPTIONS",
+    "access-control-allow-headers": "content-type, accept",
   };
 }

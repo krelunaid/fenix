@@ -14,10 +14,14 @@
  *   GET    /api/agent/jobs/:id[?full=1]   job view (+ refund on terminal failure)
  *   DELETE /api/agent/jobs/:id        cancel (+ refund)
  *   POST/GET/DELETE /api/agent/jobs/:id/preview        start / inspect / stop the live preview
- *   ANY    /api/agent/jobs/:id/preview/*               relayed into the running project (paths rewritten)
+ *                                                      (POST returns { url } with a signed 30-min token)
+ *   ANY    /api/agent/preview/:token/*                 relayed into the running project (paths rewritten);
+ *                                                      no identity header: the token is the credential,
+ *                                                      so the sandboxed (opaque-origin) iframe can use it
  */
 import { ownerFromRequest } from "../projects/publish-owner.ts";
-import { previewPrefix, previewResponseHeaders, rewritePreviewCss, rewritePreviewHtml } from "./preview-rewrite.ts";
+import { previewResponseHeaders, previewTokenPrefix, rewritePreviewCss, rewritePreviewHtml } from "./preview-rewrite.ts";
+import { mintPreviewToken, verifyPreviewToken } from "./preview-token.ts";
 import {
   AGENT_CREATE_COST,
   AGENT_EDIT_COST,
@@ -108,6 +112,15 @@ export async function handleAgentRequest(request: Request, rest: string): Promis
     return json({ configured: Boolean(cfg), credits: ledger ? ledgerView(ledger) : null, hint: cfg ? undefined : AGENT_NOT_CONFIGURED });
   }
 
+  const tk = rest.match(/^\/preview\/([A-Za-z0-9_.-]{60,600})(\/.*)?$/);
+  if (tk) {
+    if (!cfg) return json({ error: AGENT_NOT_CONFIGURED }, 503);
+    if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: previewResponseHeaders("text/plain") });
+    const claims = verifyPreviewToken(tk[1], cfg.token);
+    if (!claims) return json({ error: "Anteprima scaduta o non valida. Riaprila dallo Studio." }, 401);
+    return relayPreview(cfg, claims.owner, claims.jobId, tk[2] || "/", request, previewTokenPrefix(tk[1]));
+  }
+
   const owner = resolveOwner(request);
   if (!owner) return json({ error: "Identità assente." }, 401);
 
@@ -164,6 +177,8 @@ export async function handleAgentRequest(request: Request, rest: string): Promis
     }
 
     // Use the raw path here: a trailing slash means "relay the project root".
+    // Preview control (owner-authenticated). The relay itself is token-addressed above,
+    // but the owner-authenticated relay is kept for tools and tests.
     const pv = rest.match(/^\/jobs\/([A-Za-z0-9-]{8,64})\/preview(\/.*)?$/);
     if (pv) {
       const id = pv[1];
@@ -172,27 +187,15 @@ export async function handleAgentRequest(request: Request, rest: string): Promis
         if (!["GET", "POST", "DELETE"].includes(request.method)) return json({ error: "Metodo non consentito." }, 405);
         const res = await upstream(cfg, owner, `/agent/jobs/${id}/preview`, { method: request.method });
         const text = await res.text();
+        if (request.method === "POST" && res.ok) {
+          let view: Record<string, unknown> = {};
+          try { view = JSON.parse(text) as Record<string, unknown>; } catch { /* keep empty */ }
+          const token = mintPreviewToken(id, owner, cfg.token);
+          return json({ ...view, url: `${previewTokenPrefix(token)}/`, token });
+        }
         return new Response(text, { status: res.status, headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" } });
       }
-      const search = new URL(request.url).search;
-      const body = request.method === "GET" || request.method === "HEAD" ? undefined : await request.text();
-      const res = await fetch(`${cfg.url}/agent/jobs/${id}/preview${relayPath}${search}`, {
-        method: request.method,
-        headers: {
-          authorization: `Bearer ${cfg.token}`,
-          "x-fenix-owner": owner,
-          "content-type": request.headers.get("content-type") || "application/octet-stream",
-          accept: request.headers.get("accept") || "*/*",
-        },
-        body,
-        signal: AbortSignal.timeout(25_000),
-      });
-      const contentType = res.headers.get("content-type") || "";
-      const prefix = previewPrefix(id);
-      let payload = await res.text();
-      if (/text\/html/i.test(contentType)) payload = rewritePreviewHtml(payload, prefix);
-      else if (/text\/css/i.test(contentType)) payload = rewritePreviewCss(payload, prefix);
-      return new Response(payload, { status: res.status, headers: previewResponseHeaders(contentType) });
+      return relayPreview(cfg, owner, id, relayPath, request, `/api/agent/jobs/${encodeURIComponent(id)}/preview`);
     }
 
     const m = path.match(/^\/jobs\/([A-Za-z0-9-]{8,64})$/);
@@ -229,4 +232,30 @@ export async function handleAgentRequest(request: Request, rest: string): Promis
     if (status === 500) console.error("[fenix-agent-proxy]", err);
     return json({ error: status === 500 ? "Errore interno." : (err as Error).message }, status);
   }
+}
+
+async function relayPreview(cfg: AgentConfig, owner: string, jobId: string, relayPath: string, request: Request, prefix: string): Promise<Response> {
+  const search = new URL(request.url).search;
+  const body = request.method === "GET" || request.method === "HEAD" ? undefined : await request.text();
+  let res: Response;
+  try {
+    res = await fetch(`${cfg.url}/agent/jobs/${jobId}/preview${relayPath}${search}`, {
+      method: request.method,
+      headers: {
+        authorization: `Bearer ${cfg.token}`,
+        "x-fenix-owner": owner,
+        "content-type": request.headers.get("content-type") || "application/octet-stream",
+        accept: request.headers.get("accept") || "*/*",
+      },
+      body,
+      signal: AbortSignal.timeout(25_000),
+    });
+  } catch (err) {
+    return json({ error: `Anteprima non raggiungibile (${err instanceof Error ? err.message : "rete"}).` }, 502);
+  }
+  const contentType = res.headers.get("content-type") || "";
+  let payload = await res.text();
+  if (/text\/html/i.test(contentType)) payload = rewritePreviewHtml(payload, prefix);
+  else if (/text\/css/i.test(contentType)) payload = rewritePreviewCss(payload, prefix);
+  return new Response(payload, { status: res.status, headers: previewResponseHeaders(contentType) });
 }

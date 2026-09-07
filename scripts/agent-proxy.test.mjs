@@ -141,7 +141,19 @@ test("preview through the proxy: start, rewritten HTML, relayed API, stop", { ti
   const done = await waitJob(created.id);
   assert.equal(done.status, "ok");
   const started = await req(`/jobs/${created.id}/preview`, { method: "POST" });
-  assert.equal(started.status, 200, await started.text());
+  const startedBody = await started.json();
+  assert.equal(started.status, 200, JSON.stringify(startedBody));
+  assert.match(startedBody.url, /^\/api\/agent\/preview\/[A-Za-z0-9_.-]+\/$/);
+  // Token-addressed relay: no identity header, works from the sandboxed iframe.
+  const viaToken = await handleAgentRequest(new Request(`https://fenix.test/api/agent${startedBody.url}`), startedBody.url.replace(/^\/api\/agent/, ""));
+  assert.equal(viaToken.status, 200);
+  assert.equal(viaToken.headers.get("access-control-allow-origin"), "*");
+  const tokenHtml = await viaToken.text();
+  assert.match(tokenHtml, new RegExp(`href="${startedBody.url.replace(/[/.]/g, "\\$&")}styles.css"`));
+  const preflight = await handleAgentRequest(new Request(`https://fenix.test/api/agent${startedBody.url}api/x`, { method: "OPTIONS" }), `${startedBody.url.replace(/^\/api\/agent/, "")}api/x`);
+  assert.equal(preflight.status, 204);
+  const badToken = await handleAgentRequest(new Request("https://fenix.test/api/agent/preview/" + "x".repeat(70) + ".sig/"), "/preview/" + "x".repeat(70) + ".sig/");
+  assert.equal(badToken.status, 401);
   const home = await req(`/jobs/${created.id}/preview/`);
   assert.equal(home.status, 200);
   assert.equal(home.headers.get("content-security-policy"), "frame-ancestors 'self'");
