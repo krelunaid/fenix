@@ -35,7 +35,10 @@ import {
 import {
   hydratePortableBackendFiles,
   PORTABLE_BACKEND_MANIFEST,
+  type PortableBackendField,
+  type PortableBackendSpec,
 } from "../projects/portable-backend.ts";
+import { isFieldProductBrief } from "../projects/app-identity.ts";
 
 export const BUILD_CONTRACT_VERSION = 1 as const;
 export const CONTRACT_REPAIR_MAX = 2;
@@ -151,6 +154,12 @@ function routesFor(kind: ProjectKind, screens: string[]): string[] {
 
 function entitiesFor(kind: ProjectKind, brief: string): ContractEntity[] {
   const p = brief.toLowerCase();
+  if (isFieldProductBrief(brief) && briefWantsPortableBackend(brief)) {
+    return [
+      { name: "registrazioni", fields: ["litri", "data", "turno", "nota", "luogo"], crud: true },
+      { name: "luoghi", fields: ["nome"], crud: true },
+    ];
+  }
   if (kind === "dashboard") {
     const name = /\bordini\b/.test(p)
       ? "ordini"
@@ -178,6 +187,12 @@ function journeysFor(kind: ProjectKind, brief = ""): ContractJourney[] {
   if (isClipFeedBrief(brief)) {
     return [{ id: "feed", steps: ["guarda clip", "avanti", "salva", "crea clip"] }];
   }
+  if (isFieldProductBrief(brief) && briefWantsPortableBackend(brief)) {
+    return [
+      { id: "accedi", steps: ["login o primo account", "sessione HttpOnly"] },
+      { id: "registra", steps: ["compila litri data turno luogo", "salva", "vedi in storico"] },
+    ];
+  }
   return [{ id: "salva", steps: ["apri nuovo", "compila", "salva", "vedi in lista"] }];
 }
 
@@ -192,6 +207,63 @@ export function briefWantsPortableBackend(brief: string): boolean {
     /\bapi\s+(?:rest|server|pubblic[ae]|privat[ae])\b/.test(p) ||
     /\bautenticazione\b|\blogin\b/.test(p)
   );
+}
+
+/** Admin/member isolation language — reusable for any gestionale, not only water. */
+export function briefWantsOrgRoles(brief: string): boolean {
+  const p = brief.toLowerCase();
+  return /\bruol|\bamministrator|\bpermess|\bisolament/.test(p);
+}
+
+function fieldFromName(name: string): PortableBackendField {
+  const n = name.toLowerCase();
+  if (/litri|quantit|importo|prezzo/.test(n)) return { name, type: "number", required: /litri/.test(n) };
+  if (/pezzi|numero|count/.test(n)) return { name, type: "integer" };
+  if (/^(ok|fatto|pronto|done)$/.test(n)) return { name, type: "boolean" };
+  return { name, type: "text", required: /^(nome|data|turno|titolo)$/.test(n) };
+}
+
+/** Deterministic schema for briefs that ask a same-origin API. Never invented server code. */
+export function portableSpecFromBrief(brief: string): PortableBackendSpec | null {
+  if (!briefWantsPortableBackend(brief)) return null;
+  const org = briefWantsOrgRoles(brief);
+  if (isFieldProductBrief(brief)) {
+    return {
+      collections: [
+        {
+          name: "luoghi",
+          scope: "catalog",
+          fields: [
+            { name: "nome", type: "text", required: true },
+            { name: "note", type: "text" },
+          ],
+        },
+        {
+          name: "registrazioni",
+          scope: org ? "org" : "owner",
+          fields: [
+            { name: "litri", type: "number", required: true },
+            { name: "data", type: "text", required: true },
+            { name: "turno", type: "text", required: true },
+            { name: "nota", type: "text" },
+            { name: "luogo_id", type: "text" },
+            { name: "luogo", type: "text" },
+          ],
+        },
+      ],
+    };
+  }
+  const entities = entitiesFor(kindFromPrompt(brief) ?? inferKind(brief), brief).filter((entity) => entity.crud);
+  const collections = (entities.length ? entities : [{ name: collectionForBrief(brief, "voci"), fields: ["nome"], crud: true }]).map(
+    (entity) => ({
+      name: entity.name.replace(/[^A-Za-z0-9_]/g, "").slice(0, 48) || "voci",
+      scope: org ? ("org" as const) : ("owner" as const),
+      fields: entity.fields
+        .filter((field) => !["id", "created_at", "updated_at", "version"].includes(field.toLowerCase()))
+        .map(fieldFromName),
+    }),
+  );
+  return { collections: collections.filter((collection) => collection.fields.length) };
 }
 
 /** Only files the product actually needs. Server runtime is deterministic and only materialized from its schema manifest. */
@@ -233,6 +305,9 @@ export function planContract(brief: string): BuildContract {
     "window.Fenix.load/save, niente localStorage",
     crud ? "CRUD o persistenza su entità" : "form che conferma",
     "kind lock rispettato",
+    ...(briefWantsPortableBackend(brief)
+      ? ["login same-origin /auth, niente password in chiaro, persistenza API dopo logout/reload"]
+      : []),
     "contrasto fg/bg ≥ 4.5",
     "qualità grafica oltre la compilazione (niente dead zone, empty contraddittorio, palette ripetuta)",
     "niente secret, eval, sandbox allow-same-origin",
@@ -341,7 +416,7 @@ export function contractInstruction(contract: BuildContract): string {
     fileBlocks
       ? `Emetti ogni extra come ${fileBlocks} … contenuto … poi <<<HTML>>> e <<<END>>>. Collega CSS/JS locali da index.html e usa fetch per i dati locali: Fenix li assembla nello stesso artifact. ${
           portableBackend
-            ? `Per ${PORTABLE_BACKEND_MANIFEST} emetti JSON {"collections":[{"name":"${contract.entities[0]?.name || "voci"}","fields":[{"name":"nome","type":"text","required":true}]}]}. Tipi: text, integer, number, boolean, json. Fenix materializza server Node+SQLite, migrazioni versionate e deploy sulla stessa origine: non emettere server, token o segreti.`
+            ? `Per ${PORTABLE_BACKEND_MANIFEST} emetti JSON con collections, campi e opzionale "scope":"owner"|"org"|"catalog". Esempio: {"collections":[{"name":"${contract.entities[0]?.name || "voci"}","scope":"${briefWantsOrgRoles(contract.intent) ? "org" : "owner"}","fields":[{"name":"nome","type":"text","required":true}]}]}. Tipi: text, integer, number, boolean, json. Fenix materializza server Node+SQLite, migrazioni versionate e deploy sulla stessa origine: non emettere server, token o segreti. HTML: fetch same-origin /auth/login|/signup|/logout|/me e /api/{collezione} con credentials include. Non inventare login, utenti di prova o password in chiaro.`
             : "Niente server inventato."
         }`
       : 'Documento META + <<<HTML>>> + <<<END>>>. Extra file solo con <<<FILE path="...">>> se servono, e solo se il contratto li elenca.',
@@ -511,7 +586,8 @@ export function evaluateContract(input: {
           paths.has("backend/migrations/0001_init.sql") &&
           paths.has("backend/migrations/0002_meta.sql") &&
           paths.has("backend/migrations/0003_password_reset.sql") &&
-          paths.has("backend/migrations/0004_passwordless.sql")),
+          paths.has("backend/migrations/0004_passwordless.sql") &&
+          paths.has("backend/migrations/0005_roles.sql")),
       expected.includes(PORTABLE_BACKEND_MANIFEST)
         ? backend.errors[0] || (backend.present ? "runtime Node+SQLite same-origin" : "manifest backend mancante")
         : "non richiesto",

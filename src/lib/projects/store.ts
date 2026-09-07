@@ -33,6 +33,7 @@ import {
 } from "./craft-icons";
 import { repairLeakedCss } from "./color-scheme";
 import { rewriteFenixCollections } from "./fenix-collection";
+import { retainPortableBackendFiles } from "./portable-backend";
 import {
   DEFAULT_PALETTE,
   type BuildStatus,
@@ -926,7 +927,7 @@ export function applyBuildResult(
   useProjectStore.getState().updateProject(id, {
     ...result,
     html,
-    files: projectFiles({ html, files: result.files }),
+    files: projectFiles({ html, files: retainPortableBackendFiles(existing?.files, result.files) }),
     kind,
     requestedKind,
     status: nextStatus,

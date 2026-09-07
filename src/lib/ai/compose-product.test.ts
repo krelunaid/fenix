@@ -25,6 +25,7 @@ import { domainIllustration, GEOMETRIC_REGRESSIONS, materialSignature } from "./
 import { craftNavIcon, isLetterAIcon, looksLikeIosWidgetHome } from "../projects/craft-icons.ts";
 import { appIdentityIcon, appIdentityLabel } from "../projects/app-identity.ts";
 import { prepareSrcDoc } from "../projects/color-scheme.ts";
+import { validateProductHtml } from "../projects/validate-html.ts";
 import { createBuildRequest, isComposedCreation } from "./build-request.ts";
 import { contrastRatio } from "../projects/visual-quality.ts";
 import { productIconSvg } from "../projects/product-icon.ts";
@@ -1463,6 +1464,7 @@ describe("graphic pipeline prompt→plan→generate→visual→QA", () => {
       `${formatPrefix("app")}App barbiere: agenda tagli e clienti, stile iPhone.`,
       `${formatPrefix("app")}App libreria: catalogo libri, prestiti e scaffali, stile iPhone.`,
       `${formatPrefix("app")}mi crei un app simile tik tok`,
+      `${formatPrefix("app")}Crea un'app per registrare l'acqua utilizzata dai dipendenti. Servono login, ruoli amministratore e dipendente, luoghi di lavoro, registrazioni con litri, data, turno e nota, storico filtrabile e statistiche.`,
     ];
     for (const brief of briefs) {
       const html = composeProduct(brief).html;
@@ -1471,6 +1473,39 @@ describe("graphic pipeline prompt→plan→generate→visual→QA", () => {
         `${brief.slice(0, 48)}… ${html.length} > ${MAX_ARTIFACT_CHARS}`,
       );
     }
+  });
+});
+
+describe("composed shared-ops water product", () => {
+  it("composes a shared-ops water app with real /auth and no trial employees", () => {
+    const brief =
+      formatPrefix("app") +
+      "Crea un'app per registrare l'acqua utilizzata dai dipendenti. Servono login, ruoli amministratore e dipendente, luoghi di lavoro, registrazioni con litri, data, turno e nota, storico filtrabile e statistiche. L'amministratore vede tutto; ogni dipendente vede e gestisce solo le proprie registrazioni. I dati devono essere condivisi tra dispositivi e restare disponibili dopo logout e ricaricamento.";
+    const product = composeProduct(brief);
+    assert.match(product.html, /data-fenix-campo/);
+    assert.match(product.html, /data-fenix-ops/);
+    assert.match(product.html, /\/auth\/login/);
+    assert.match(product.html, /\/auth\/signup/);
+    assert.match(product.html, /\/api\/registrazioni/);
+    assert.match(product.html, />Litri</);
+    assert.match(product.html, /id="fx-auth"/);
+    assert.doesNotMatch(product.html, /Marta Neri|Leo Bianchi|Noa Greco/);
+    assert.doesNotMatch(product.html, /\blocalStorage\b/);
+    assert.doesNotMatch(product.html, /password_hash|correct horse/);
+    const manifest = product.files.find((file) => file.path === "backend/fenix.backend.json");
+    assert.ok(manifest);
+    const spec = JSON.parse(manifest!.content) as {
+      collections: Array<{ name: string; scope?: string }>;
+    };
+    assert.ok(spec.collections.some((collection) => collection.name === "registrazioni" && collection.scope === "org"));
+    assert.ok(spec.collections.some((collection) => collection.name === "luoghi" && collection.scope === "catalog"));
+    const report = validateProductHtml(product.html, { kind: "app" });
+    assert.equal(report.ok, true, report.errors.join("; "));
+    const visual = composeProduct(
+      `${formatPrefix("app")}NordAcqua: consegne acqua in campo, gestione dipendenti, storico e statistiche, stile Apple.`,
+    );
+    assert.doesNotMatch(visual.html, /data-fenix-ops/);
+    assert.doesNotMatch(visual.html, /\/auth\/login/);
   });
 });
 
@@ -1569,5 +1604,36 @@ describe("composed create find/replace anchors", () => {
       naiveOk / naiveFinds.length <= 0.6,
       `naive water finds should stay lossy (${naiveOk}/${naiveFinds.length}) so slots remain the reliable path`,
     );
+  });
+
+  it("composes a shared-ops water app with real /auth and no trial employees", () => {
+    const brief =
+      formatPrefix("app") +
+      "Crea un'app per registrare l'acqua utilizzata dai dipendenti. Servono login, ruoli amministratore e dipendente, luoghi di lavoro, registrazioni con litri, data, turno e nota, storico filtrabile e statistiche. L'amministratore vede tutto; ogni dipendente vede e gestisce solo le proprie registrazioni. I dati devono essere condivisi tra dispositivi e restare disponibili dopo logout e ricaricamento.";
+    const product = composeProduct(brief);
+    assert.match(product.html, /data-fenix-campo/);
+    assert.match(product.html, /data-fenix-ops/);
+    assert.match(product.html, /\/auth\/login/);
+    assert.match(product.html, /\/auth\/signup/);
+    assert.match(product.html, /\/api\/registrazioni/);
+    assert.match(product.html, />Litri</);
+    assert.match(product.html, /id="fx-auth"/);
+    assert.doesNotMatch(product.html, /Marta Neri|Leo Bianchi|Noa Greco/);
+    assert.doesNotMatch(product.html, /\blocalStorage\b/);
+    assert.doesNotMatch(product.html, /password_hash|correct horse/);
+    const manifest = product.files.find((file) => file.path === "backend/fenix.backend.json");
+    assert.ok(manifest);
+    const spec = JSON.parse(manifest!.content) as {
+      collections: Array<{ name: string; scope?: string }>;
+    };
+    assert.ok(spec.collections.some((collection) => collection.name === "registrazioni" && collection.scope === "org"));
+    assert.ok(spec.collections.some((collection) => collection.name === "luoghi" && collection.scope === "catalog"));
+    const report = validateProductHtml(product.html, { kind: "app" });
+    assert.equal(report.ok, true, report.errors.join("; "));
+    const visual = composeProduct(
+      `${formatPrefix("app")}NordAcqua: consegne acqua in campo, gestione dipendenti, storico e statistiche, stile Apple.`,
+    );
+    assert.doesNotMatch(visual.html, /data-fenix-ops/);
+    assert.doesNotMatch(visual.html, /\/auth\/login/);
   });
 });

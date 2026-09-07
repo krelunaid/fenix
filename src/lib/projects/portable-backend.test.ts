@@ -198,6 +198,7 @@ describe("portable generated backend", () => {
     assert.ok(backend.some((file) => file.path === "backend/migrations/0002_meta.sql"));
     assert.ok(backend.some((file) => file.path === "backend/migrations/0003_password_reset.sql"));
     assert.ok(backend.some((file) => file.path === "backend/migrations/0004_passwordless.sql"));
+    assert.ok(backend.some((file) => file.path === "backend/migrations/0005_roles.sql"));
     const again = materializePortableBackend(SPEC);
     assert.equal(
       createHash("sha256").update(backend.find((file) => file.path === "backend/server.mjs")!.content).digest("hex"),
@@ -265,6 +266,13 @@ describe("portable generated backend", () => {
     });
     assert.equal(invalid.checks.find((check) => check.id === "backend")?.ok, false);
     assert.equal(invalid.ok, false);
+    const water = planContract(
+      "Crea un'app per registrare l'acqua utilizzata dai dipendenti. Servono login, ruoli amministratore e dipendente, luoghi di lavoro, registrazioni con litri, data, turno e nota.",
+    );
+    assert.equal(water.files.includes(PORTABLE_BACKEND_MANIFEST), true);
+    assert.ok(water.entities.some((entity) => entity.name === "registrazioni"));
+    assert.ok(water.entities.some((entity) => entity.name === "luoghi"));
+    assert.match(contractInstruction(water), /\/auth\/login/);
   });
 
   it("runs a real Node+SQLite CRUD API with auth, validation, CAS and concurrent writes", async () => {
@@ -852,6 +860,7 @@ describe("portable generated backend", () => {
         id: signupOneBody.id,
         email: "one@example.test",
         service: false,
+        role: "admin",
       });
 
       const invalidLogin = await fetch(`${runtime.base}/auth/login`, {
@@ -1016,12 +1025,12 @@ describe("portable generated backend", () => {
     const applied = upgraded.prepare("SELECT id FROM _fenix_migrations ORDER BY id").all() as Array<{ id: string }>;
     assert.deepEqual(
       applied.map((row) => row.id),
-      ["0001_init", "0002_meta", "0003_password_reset", "0004_passwordless"],
+      ["0001_init", "0002_meta", "0003_password_reset", "0004_passwordless", "0005_roles"],
     );
     upgraded.close();
 
-    writeFileSync(join(root, "backend/migrations/0005_bad.sql"), "ALTER TABLE _fenix_missing ADD COLUMN x TEXT;\n");
-    const failed = await startTree(files.concat([{ path: "backend/migrations/0005_bad.sql", content: "ALTER TABLE _fenix_missing ADD COLUMN x TEXT;\n" }]), { FENIX_DB_PATH: dbPath }, { expectFail: true });
+    writeFileSync(join(root, "backend/migrations/0006_bad.sql"), "ALTER TABLE _fenix_missing ADD COLUMN x TEXT;\n");
+    const failed = await startTree(files.concat([{ path: "backend/migrations/0006_bad.sql", content: "ALTER TABLE _fenix_missing ADD COLUMN x TEXT;\n" }]), { FENIX_DB_PATH: dbPath }, { expectFail: true });
     try {
       assert.notEqual(failed.code, 0);
       assert.match(failed.logs(), /Migrazione fallita/);
@@ -1033,7 +1042,7 @@ describe("portable generated backend", () => {
       const ids = after.prepare("SELECT id FROM _fenix_migrations ORDER BY id").all() as Array<{ id: string }>;
       assert.deepEqual(
         ids.map((row) => row.id),
-        ["0001_init", "0002_meta", "0003_password_reset", "0004_passwordless"],
+        ["0001_init", "0002_meta", "0003_password_reset", "0004_passwordless", "0005_roles"],
       );
       after.close();
     } finally {
@@ -1065,6 +1074,147 @@ describe("portable generated backend", () => {
     } finally {
       await first.close();
       await second.close();
+    }
+  });
+
+  it("assigns admin to the first human account and enforces org/catalog scopes", async () => {
+    const spec: PortableBackendSpec = {
+      collections: [
+        {
+          name: "luoghi",
+          scope: "catalog",
+          fields: [
+            { name: "nome", type: "text", required: true },
+            { name: "note", type: "text" },
+          ],
+        },
+        {
+          name: "registrazioni",
+          scope: "org",
+          fields: [
+            { name: "litri", type: "number", required: true },
+            { name: "data", type: "text", required: true },
+            { name: "turno", type: "text", required: true },
+            { name: "nota", type: "text" },
+            { name: "luogo", type: "text" },
+          ],
+        },
+      ],
+    };
+    const runtime = await startTree(materializePortableBackend(spec));
+    try {
+      const origin = { origin: "https://app.example", "content-type": "application/json" };
+      const adminRes = await fetch(`${runtime.base}/auth/signup`, {
+        method: "POST",
+        headers: origin,
+        body: JSON.stringify({ email: "admin@ops.test", password: "correct horse battery staple" }),
+      });
+      assert.equal(adminRes.status, 201);
+      const adminBody = (await adminRes.json()) as { role: string; id: string };
+      assert.equal(adminBody.role, "admin");
+      const adminCookie = cookieFrom(adminRes);
+
+      const memberRes = await fetch(`${runtime.base}/auth/signup`, {
+        method: "POST",
+        headers: origin,
+        body: JSON.stringify({ email: "member@ops.test", password: "another secure password" }),
+      });
+      assert.equal(memberRes.status, 201);
+      const memberBody = (await memberRes.json()) as { role: string };
+      assert.equal(memberBody.role, "member");
+      const memberCookie = cookieFrom(memberRes);
+
+      const otherRes = await fetch(`${runtime.base}/auth/signup`, {
+        method: "POST",
+        headers: origin,
+        body: JSON.stringify({ email: "other@ops.test", password: "third secure password" }),
+      });
+      assert.equal(otherRes.status, 201);
+      const otherCookie = cookieFrom(otherRes);
+
+      assert.equal(
+        (
+          await fetch(`${runtime.base}/api/luoghi`, {
+            method: "POST",
+            headers: sessionHeaders(memberCookie),
+            body: JSON.stringify({ nome: "Cantiere", note: "" }),
+          })
+        ).status,
+        403,
+      );
+      const luogoRes = await fetch(`${runtime.base}/api/luoghi`, {
+        method: "POST",
+        headers: sessionHeaders(adminCookie),
+        body: JSON.stringify({ nome: "Deposito nord", note: "Serbatoio" }),
+      });
+      assert.equal(luogoRes.status, 201);
+      const memberLuoghi = (await (
+        await fetch(`${runtime.base}/api/luoghi`, { headers: sessionHeaders(memberCookie) })
+      ).json()) as { items: Array<{ nome: string }> };
+      assert.equal(memberLuoghi.items.length, 1);
+      assert.equal(memberLuoghi.items[0]?.nome, "Deposito nord");
+
+      const a = await fetch(`${runtime.base}/api/registrazioni`, {
+        method: "POST",
+        headers: sessionHeaders(memberCookie),
+        body: JSON.stringify({ litri: 120, data: "2026-09-07", turno: "Mattina", nota: "A", luogo: "Deposito nord" }),
+      });
+      assert.equal(a.status, 201);
+      const aRow = (await a.json()) as { id: string; version: number };
+      const b = await fetch(`${runtime.base}/api/registrazioni`, {
+        method: "POST",
+        headers: sessionHeaders(otherCookie),
+        body: JSON.stringify({ litri: 80, data: "2026-09-07", turno: "Notte", nota: "B", luogo: "Deposito nord" }),
+      });
+      assert.equal(b.status, 201);
+
+      const memberList = (await (
+        await fetch(`${runtime.base}/api/registrazioni`, { headers: sessionHeaders(memberCookie) })
+      ).json()) as { items: Array<{ nota: string }> };
+      assert.deepEqual(memberList.items.map((item) => item.nota), ["A"]);
+      const adminList = (await (
+        await fetch(`${runtime.base}/api/registrazioni`, { headers: sessionHeaders(adminCookie) })
+      ).json()) as { items: Array<{ nota: string }> };
+      assert.equal(adminList.items.length, 2);
+
+      assert.equal(
+        (
+          await fetch(`${runtime.base}/api/registrazioni/${aRow.id}`, {
+            method: "PUT",
+            headers: sessionHeaders(otherCookie, { "if-match": "1" }),
+            body: JSON.stringify({ litri: 999, data: "2026-09-07", turno: "Notte", nota: "hack", luogo: "Deposito nord" }),
+          })
+        ).status,
+        403,
+      );
+      assert.equal(
+        (
+          await fetch(`${runtime.base}/api/registrazioni/${aRow.id}`, {
+            method: "DELETE",
+            headers: sessionHeaders(otherCookie, { "if-match": "1" }),
+          })
+        ).status,
+        403,
+      );
+      const still = await fetch(`${runtime.base}/api/registrazioni/${aRow.id}`, {
+        headers: sessionHeaders(memberCookie),
+      });
+      assert.equal(still.status, 200);
+      const db = new DatabaseSync(join(runtime.root, "data.sqlite"));
+      try {
+        const hashes = db.prepare("SELECT password_hash FROM _fenix_users WHERE email LIKE '%ops.test'").all() as Array<{
+          password_hash: string;
+        }>;
+        assert.equal(hashes.length, 3);
+        for (const row of hashes) {
+          assert.match(row.password_hash, /^[a-f0-9]+:[a-f0-9]+$/);
+          assert.doesNotMatch(row.password_hash, /correct horse|another secure|third secure/);
+        }
+      } finally {
+        db.close();
+      }
+    } finally {
+      await runtime.close();
     }
   });
 });

@@ -34,6 +34,7 @@ import {
   restoreStablePatch,
 } from "@/lib/projects/studio-lock";
 import { rememberLiveStudio } from "@/lib/projects/persist-projects";
+import { hydratePortableBackendFiles } from "@/lib/projects/portable-backend";
 import { uid } from "@/lib/utils";
 import {
   applyIconRevision,
@@ -72,7 +73,12 @@ function isTransientNetwork(msg: string) {
 
 function persistComposedSeed(
   projectId: string,
-  payload: { html?: string; kind?: string; palette?: { bg?: string; surface?: string; fg?: string; muted?: string; accent?: string; line?: string } },
+  payload: {
+    html?: string;
+    kind?: string;
+    palette?: { bg?: string; surface?: string; fg?: string; muted?: string; accent?: string; line?: string };
+    files?: { path: string; content: string }[];
+  },
   fallbackKind: ReturnType<typeof resolveProjectKind>,
 ) {
   const html = payload.html || "";
@@ -98,6 +104,8 @@ function persistComposedSeed(
     accent: payload.palette?.accent || current?.palette.accent || "#b85c38",
     line: payload.palette?.line || current?.palette.line,
   };
+  const rawFiles = payload.files?.length ? payload.files : [{ path: "index.html", content: html }];
+  const hydrated = hydratePortableBackendFiles(rawFiles);
   const report = applyBuildResult(
     projectId,
     {
@@ -107,13 +115,13 @@ function persistComposedSeed(
       summary: current?.summary || "",
       palette,
       html,
-      files: [{ path: "index.html", content: html }],
+      files: hydrated.files,
     },
     "building",
   );
   if (report.syntaxOk) {
     const live = useProjectStore.getState().getProject(projectId);
-    const snap = captureStableSnapshot(live ?? { html, files: [{ path: "index.html", content: html }] });
+    const snap = captureStableSnapshot(live ?? { html, files: hydrated.files });
     if (snap.lastStableHtml) useProjectStore.getState().updateProject(projectId, snap);
     const next = useProjectStore.getState().getProject(projectId);
     if (next) rememberLiveStudio(next);

@@ -169,7 +169,7 @@ export const QUALITY_LEDGER: LedgerRow[] = [
   {
     id: "portable-fullstack-deploy",
     claim:
-      "Il progetto full-stack esportato avvia frontend e API sulla stessa origine, con health, node --check e fenix.deploy.json. Tre fixture distinte (Argilla, forno, bottega) fanno signup/CRUD dopo l'upgrade v1→v4; una migrazione rotta resta atomica. D/T/M sulla UI accoppiata, cookie HttpOnly, niente secret nei log.",
+      "Il progetto full-stack esportato avvia frontend e API sulla stessa origine, con health, node --check e fenix.deploy.json. Tre fixture distinte (Argilla, forno, bottega) fanno signup/CRUD dopo l'upgrade v1→v5; una migrazione rotta resta atomica. D/T/M sulla UI accoppiata, cookie HttpOnly, niente secret nei log.",
     evidence:
       "portable-backend.test.ts 3 fixture/same-origin/upgrade/fail-closed/porte isolate + portable-backend-browser.test.ts D/T/M console overflow focus",
     ok: true,

@@ -22,7 +22,7 @@ export const COMPOSED_CREATE_SYSTEM = `Studio visivo Fenix. Scrivi tu il prodott
 Il seed TypeScript è solo fallback di crash. NON copiarlo. Vietato data-fenix-craft, data-grammar, data-fenix-slot, /*fenix-slot, #root da composizione, lookbook-*, fk-stat da scheletro, splash Fenix.
 Identità, layout, tipografia, icone SVG e copy nascono dal brief. Ogni mestiere un look diverso.
 
-JS in <script> classico. Mai \${espressione} nel markup. Dati: window.Fenix.load e window.Fenix.save (coppia obbligatoria). CRUD: window.Fenix.data.query/insert/update/remove con collection [A-Za-z0-9._-]{1,80}. Mai localStorage. Mai login o server inventati.
+JS in <script> classico. Mai \${espressione} nel markup. Dati: window.Fenix.load e window.Fenix.save (coppia obbligatoria). CRUD: window.Fenix.data.query/insert/update/remove con collection [A-Za-z0-9._-]{1,80}. Mai localStorage. Mai login o server inventati. Se il brief chiede login/ruoli: fetch same-origin /auth/login|/signup|/logout|/me e /api/{collezione} con credentials:'include'. Non simulare account. Il primo account è amministratore lato server.
 
 DEFAULT: app telefono 390×844, colonna 100dvh, 4–5 tab in basso con data-view, SVG 24 originali diverse, form che salvano, liste oneste, empty solo se length===0.
 Se il brief chiede feed / reel / video verticali / «simile TikTok»: PRIMO PAINT = CLIP a tutto schermo (clip-stage + clip-frame, poster SVG di scena originale, copy, rail Salva/Avanti). Dock: Feed, Crea, Salvati, Profilo. Tap/swipe cambia clip da Fenix.data. Crea salva titolo+città+nota. Nome originale dal mestiere.
@@ -245,6 +245,12 @@ export function isUserIterateInstruction(instruction) {
  * Vertical short-clip feed. Original craft, not a TikTok clone.
  * @param {string} text
  */
+export function looksLikeAuthBrief(text) {
+  const p = String(text || "").toLowerCase();
+  if (/\bnessun server\b|\bsenza backend\b|\bno backend\b/.test(p)) return false;
+  return /\bautenticazione\b|\blogin\b/.test(p);
+}
+
 export function looksLikeClipFeedBrief(text) {
   const p = String(text || "").toLowerCase();
   return (
@@ -312,6 +318,8 @@ export function composedCreateUserContent(input) {
     input.feedback || "",
     feed
       ? "Contratto runtime: window.Fenix.load/save, <script> classico, PRIMO PAINT clip a tutto schermo (clip-stage), dock Feed/Crea/Salvati/Profilo (data-view), italiano, niente lorem. NON agenda, NON 5 tab CRUD, NON «Niente in lista», NON collection voci."
+      : looksLikeAuthBrief(`${input.prompt || ""} ${input.instruction || ""}`)
+        ? "Contratto runtime: window.Fenix.load/save, fetch same-origin /auth/login|/signup|/logout|/me e /api con credentials include, tab data-view, empty onesto, italiano. Non inventare server, password in chiaro o dipendenti di prova."
       : "Contratto runtime: window.Fenix.load/save, <script> classico, tab data-view, italiano, niente lorem.",
     "NON copiare CSS/copy/SVG del seed Fenix. NON usare data-fenix-craft, data-grammar, fenix-slot.",
     feed

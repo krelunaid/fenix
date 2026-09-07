@@ -192,7 +192,7 @@ export const FASE3_SCORECARD: ScoreDimension[] = [
       },
     ],
     remaining:
-      "Restano fuori OAuth/OIDC social, ruoli granulari per record e connettori applicativi a pagamento; recupero password, magic-link e OTP email sono coperti senza credenziali esterne.",
+      "Restano fuori OAuth/OIDC social, ACL per-record arbitrari e connettori applicativi a pagamento; ruoli admin/member con scope owner/org/catalog, recupero password, magic-link e OTP email sono coperti senza credenziali esterne.",
   },
   {
     id: "collaboration-operations",

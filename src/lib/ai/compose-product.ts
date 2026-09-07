@@ -26,7 +26,8 @@ import {
   type LayoutGrammar,
   type GrammarId,
 } from "../projects/layout-grammar.ts";
-import { planContract, type BuildContract } from "./build-contract.ts";
+import { planContract, portableSpecFromBrief, briefWantsPortableBackend, type BuildContract } from "./build-contract.ts";
+import { PORTABLE_BACKEND_MANIFEST } from "../projects/portable-backend.ts";
 import { auditGraphicQuality, type GraphicReport } from "../projects/graphic-quality.ts";
 import { domainIllustration, altForBrief } from "./domain-imagery.ts";
 import { DASHBOARD_POLISH_INSTRUCTION, SITE_POLISH_INSTRUCTION } from "./app-shell.ts";
@@ -471,7 +472,7 @@ function synthesizeSpec(brief: string): PipelineSpec {
       name,
       kicker: "Quadro di controllo",
       place: "In campo",
-      collection: "missioni",
+      collection: briefWantsPortableBackend(brief) ? "registrazioni" : "missioni",
       brief,
       tabs: [
         { id: "home", label: "Home" },
@@ -480,14 +481,16 @@ function synthesizeSpec(brief: string): PipelineSpec {
         { id: "stats", label: "Statistiche" },
         { id: "list", label: "Gestione" },
       ],
-      rows: [
+      rows: briefWantsPortableBackend(brief)
+        ? []
+        : [
         { id: "d1", title: "Marta Neri", kicker: "Attiva", note: "Operatrice · turno A", meta: "1.200 L", status: "ok" },
         { id: "d2", title: "Leo Bianchi", kicker: "Attiva", note: "Operatore · turno B", meta: "980 L", status: "ok" },
         { id: "d3", title: "Noa Greco", kicker: "Pausa", note: "Operatrice · turno A", meta: "640 L", status: "wait" },
         { id: "d4", title: "Pietro Sala", kicker: "Attiva", note: "Responsabile", meta: "1.480 L", status: "ok" },
         { id: "d5", title: "Eva Conti", kicker: "Attiva", note: "Operatrice · turno C", meta: "720 L", status: "ok" },
       ],
-      formTitle: "Nuova missione",
+      formTitle: briefWantsPortableBackend(brief) ? "Nuova registrazione" : "Nuova missione",
       cta: "Registra in campo",
     };
   }
@@ -1571,6 +1574,18 @@ html[data-fenix-campo] .fx-splash .fx-mark svg{width:96px;height:96px}
 `;
 }
 
+function opsAuthCss(): string {
+  return `html[data-fenix-ops] .fx-auth{position:fixed;inset:0;z-index:40;display:grid;place-items:end center;padding:18px 16px calc(18px + env(safe-area-inset-bottom,0px));background:color-mix(in srgb,#082338 42%,#F0F9FF)}
+html[data-fenix-ops] .fx-auth[hidden]{display:none!important}
+html[data-fenix-ops] .fx-auth form{width:min(100%,420px);background:#fff;border-radius:24px;padding:22px 18px 20px;box-shadow:0 18px 40px rgba(8,35,56,.28)}
+html[data-fenix-ops] .fx-auth h2{margin:0 0 8px;font:750 28px/1.1 var(--display),system-ui,sans-serif}
+html[data-fenix-ops] .fx-auth .btn{width:100%;margin-top:10px}
+html[data-fenix-ops].fx-need-auth .app{visibility:hidden;pointer-events:none}
+html[data-fenix-ops] .fx-role-pill{display:inline-flex;align-items:center;min-height:28px;padding:0 10px;border-radius:999px;background:color-mix(in srgb,#0EA5E9 16%,#fff);color:#075985;font:650 12px/1 var(--body),system-ui,sans-serif}
+html[data-fenix-ops] select.field,html[data-fenix-ops] input.field{width:100%;min-height:44px;border-radius:14px;border:1.5px solid var(--border,var(--line));padding:8px 12px;background:#fff}
+`;
+}
+
 function marketChromeCss(): string {
   return `html[data-fenix-market],html[data-fenix-market] body{background:var(--surface-2);color:var(--on-surface)}
 html[data-fenix-market] header{position:sticky;top:0;z-index:6;background:color-mix(in srgb,var(--surface) 82%,transparent);-webkit-backdrop-filter:saturate(1.5) blur(16px);backdrop-filter:saturate(1.5) blur(16px)}
@@ -2028,6 +2043,221 @@ function renderClipProfile(){
 `;
 }
 
+function opsAuthRuntimeJs(): string {
+  return `var sessionUser=null;
+var luoghi=[];
+var histRange="all";
+var histLuogo="";
+var histTurno="";
+var listFocus="records";
+function isAdminUser(){ return sessionUser&&sessionUser.role==="admin"; }
+function api(path,opts){
+  opts=opts||{};
+  var headers={"content-type":"application/json"};
+  if(opts.headers){ for(var k in opts.headers) headers[k]=opts.headers[k]; }
+  return fetch(path,{method:opts.method||"GET",credentials:"include",headers:headers,body:opts.body!=null?JSON.stringify(opts.body):undefined}).then(function(res){
+    return res.text().then(function(raw){
+      var j={};
+      try{ j=raw?JSON.parse(raw):{}; }catch(err){ j={error:raw||("HTTP "+res.status)}; }
+      if(!res.ok){ var e=new Error(j.error||("Errore "+res.status)); e.status=res.status; throw e; }
+      return j;
+    });
+  });
+}
+function showAuth(msg){
+  sessionUser=null;
+  document.documentElement.classList.add("fx-need-auth");
+  var box=document.getElementById("fx-auth");
+  if(box) box.hidden=false;
+  var err=document.getElementById("fx-auth-err");
+  if(err){ err.hidden=!msg; err.textContent=msg||""; }
+}
+function hideAuth(){
+  document.documentElement.classList.remove("fx-need-auth");
+  var box=document.getElementById("fx-auth");
+  if(box) box.hidden=true;
+}
+function recOf(row){
+  var litri=Number(row.litri)||0;
+  return {id:row.id,title:row.luogo||"In campo",kicker:row.turno||"",note:row.nota||"",meta:litri?fmtLiters(litri):"",day:row.data||"",liters:litri,luogo:row.luogo||"",luogo_id:row.luogo_id||"",version:row.version,owner_id:row.owner_id};
+}
+function histItems(){
+  var rows=data.items||[];
+  var today=todayIso();
+  return rows.filter(function(e){
+    if(histTurno&&e.kicker!==histTurno) return false;
+    if(histLuogo&&e.luogo!==histLuogo&&e.title!==histLuogo) return false;
+    if(histRange==="oggi"&&e.day!==today) return false;
+    if(histRange==="7"&&e.day&&e.day<shiftIso(today,-6)) return false;
+    if(histRange==="mese"&&e.day&&e.day.slice(0,7)!==today.slice(0,7)) return false;
+    if(histRange==="anno"&&e.day&&e.day.slice(0,4)!==today.slice(0,4)) return false;
+    return true;
+  });
+}
+function opsReload(){
+  return api("/api/luoghi?limit=100").catch(function(){ return {items:[]}; }).then(function(luogoRes){
+    luoghi=(luogoRes.items||[]).map(function(row){ return {id:row.id,nome:row.nome||"",note:row.note||"",version:row.version}; });
+    return api("/api/registrazioni?limit=100");
+  }).then(function(regRes){
+    data={items:(regRes.items||[]).map(recOf)};
+    confirmed=cloneData();
+    pendingOps=[];
+    markQueue();
+    if(window.Fenix&&window.Fenix.save) window.Fenix.save(COL,{items:[]});
+  });
+}
+function opsBoot(){
+  var load=document.getElementById("load");
+  if(load) load.hidden=false;
+  return api("/auth/me").then(function(me){
+    sessionUser=me;
+    hideAuth();
+    return opsReload();
+  }).catch(function(err){
+    sessionUser=null;
+    data={items:[]};
+    confirmed=cloneData();
+    showAuth(err&&err.status===401?"":(err&&err.message)||"Backend non disponibile. Avvia il server sulla stessa origine.");
+  }).then(function(){
+    if(load) load.hidden=true;
+    bootDone=true;
+    render();
+    markReady();
+  });
+}
+function commitOpsForm(f){
+  var litri=Number(f.n&&f.n.value);
+  var giorno=(f.data&&f.data.value||"").trim();
+  var turno=(f.k&&f.k.value||"").trim();
+  var luogoId=(f.luogo&&f.luogo.value||"").trim();
+  var nota=(f.note&&f.note.value||"").trim();
+  if(!isFinite(litri)||litri<=0||!isIsoDay(giorno)||!turno){
+    var ferr=f.querySelector("[data-fenix-form-error]");
+    if(ferr){ ferr.hidden=false; ferr.textContent="Controlla litri, data e turno."; }
+    ping(false); return false;
+  }
+  var luogoNome="";
+  luoghi.forEach(function(l){ if(l.id===luogoId) luogoNome=l.nome; });
+  var payload={litri:litri,data:giorno,turno:turno,nota:nota,luogo_id:luogoId,luogo:luogoNome};
+  var editing=editId?data.items.find(function(x){return x.id===editId;}):null;
+  var req=editing
+    ? api("/api/registrazioni/"+editing.id,{method:"PUT",headers:{"if-match":String(editing.version||1)},body:payload})
+    : api("/api/registrazioni",{method:"POST",body:payload});
+  req.then(function(){
+    editId=null;
+    try{ f.reset(); }catch(err){}
+    return opsReload();
+  }).then(function(){
+    view=tabDefs[2]?tabDefs[2].id:tabDefs[0].id;
+    render();
+    ping(true);
+  }).catch(function(err){
+    flashErr(err&&err.message||"Salvataggio non riuscito.");
+    ping(false);
+  });
+  return true;
+}
+function opsDelete(id){
+  var row=data.items.find(function(x){return x.id===id;});
+  if(!row) return;
+  api("/api/registrazioni/"+id,{method:"DELETE",headers:{"if-match":String(row.version||1)}}).then(function(){
+    return opsReload();
+  }).then(function(){ render(); ping(true); }).catch(function(err){
+    flashErr(err&&err.message||"Eliminazione non riuscita.");
+  });
+}
+function opsSaveLuogo(f){
+  var nome=(f.ln&&f.ln.value||"").trim();
+  if(!nome) return;
+  var note=(f.lnote&&f.lnote.value||"").trim();
+  api("/api/luoghi",{method:"POST",body:{nome:nome,note:note}}).then(function(){
+    try{ f.reset(); }catch(err){}
+    return opsReload();
+  }).then(function(){ render(); }).catch(function(err){
+    flashErr(err&&err.message||"Luogo non salvato.");
+  });
+}
+function opsDeleteLuogo(id){
+  var row=luoghi.find(function(x){return x.id===id;});
+  if(!row) return;
+  api("/api/luoghi/"+id,{method:"DELETE",headers:{"if-match":String(row.version||1)}}).then(function(){
+    return opsReload();
+  }).then(function(){ render(); }).catch(function(err){
+    flashErr(err&&err.message||"Luogo non eliminato.");
+  });
+}
+function authSubmit(signup){
+  var emailEl=document.getElementById("fx-email");
+  var passEl=document.getElementById("fx-password");
+  var email=emailEl&&emailEl.value||"";
+  var password=passEl&&passEl.value||"";
+  api(signup?"/auth/signup":"/auth/login",{method:"POST",body:{email:email,password:password}}).then(function(me){
+    sessionUser=me;
+    hideAuth();
+    return opsReload();
+  }).then(function(){ render(); ping(true); }).catch(function(err){
+    showAuth(err&&err.message||"Accesso non riuscito.");
+  });
+}
+/*fenix-slot:list*/function renderPocketList(){
+  var n=data.items.length;
+  var html='<section class="list-pane" data-fenix-pane="elenco" data-fenix-slot="list">';
+  html+='<p class="fx-large">Gestione</p><div class="fx-pills"><button type="button" class="fx-pill'+(listFocus==="records"?" on":"")+'" data-act="list-focus" data-focus="records">Registrazioni</button><button type="button" class="fx-pill'+(listFocus==="luoghi"?" on":"")+'" data-act="list-focus" data-focus="luoghi">Luoghi</button></div>';
+  html+='<p class="notes">'+(sessionUser&&sessionUser.email||"")+" · "+(isAdminUser()?"Amministratore":"Dipendente")+' · <button class="btn sm ghost" type="button" data-act="logout">Esci</button></p>';
+  if(listFocus==="luoghi"){
+    html+='<p class="fx-sub">'+(isAdminUser()?"Catalogo condiviso.":"Luoghi visibili a tutta la squadra.")+"</p>";
+    if(isAdminUser()) html+='<form id="fluogo" class="card"><label for="ln">Nuovo luogo</label><input class="field" id="ln" name="ln" required placeholder="Cantiere, deposito..."><label for="lnote">Nota</label><input class="field" id="lnote" name="lnote" placeholder="Opzionale"><button class="btn" type="button" data-act="save-luogo" style="margin-top:12px;width:100%">Aggiungi luogo</button></form>';
+    if(!luoghi.length){ html+='<div class="state-empty" data-state="empty"><p>Nessun luogo.</p></div>'; return html+"</section>"; }
+    luoghi.forEach(function(l){
+      html+='<article class="fx-record" data-id="'+l.id+'"><div><h2>'+l.nome+'</h2><p class="notes">'+(l.note||"Luogo di lavoro")+"</p></div>";
+      if(isAdminUser()) html+='<button class="btn sm ghost" data-act="del-luogo" data-id="'+l.id+'">Elimina</button>';
+      html+="</article>";
+    });
+    return html+"</section>";
+  }
+  html+='<div class="fx-toolbar"><div class="list-head"><h2>Registrazioni ('+n+')</h2></div><button class="fx-nuovo" type="button" data-act="fx-new">+ Nuovo</button></div>';
+  if(!n){ html+='<div class="state-empty" data-state="empty"><p>Nessuna voce in elenco. Compila e salva; non inventiamo righe.</p></div>'; return html+"</section>"; }
+  data.items.forEach(function(e){
+    html+='<article class="fx-record" data-id="'+e.id+'"><div><h2>'+(e.meta||e.title)+'</h2><p class="notes">'+(e.day||"")+(e.kicker?" · "+e.kicker:"")+(e.note?" · "+e.note:"")+'</p><p class="fx-who">'+e.title+'</p></div><div><button class="fx-iconbtn" data-act="edit" data-id="'+e.id+'" aria-label="Modifica">'+FX_EDIT_MARK+'</button> <button class="fx-iconbtn" data-act="del" data-id="'+e.id+'" aria-label="Elimina">'+FX_PAUSE_MARK+"</button></div></article>";
+  });
+  return html+"</section>";
+}
+/*fenix-slot:history*/function renderPocketHistory(){
+  var rows=histItems();
+  var n=rows.length;
+  var total=rows.reduce(function(a,e){return a+(Number(e.liters)||litersOf(e.meta));},0);
+  var html='<section class="list-pane" data-fenix-pane="storico" data-fenix-slot="history"><div class="fx-toolbar"><div><p class="fx-large">Storico</p><p class="fx-sub">'+n+' registrazioni</p></div><span class="fx-total">'+(total?fmtLiters(total):"0 L")+'</span></div>';
+  html+='<div class="fx-pills"><button type="button" class="fx-pill'+(histRange==="oggi"?" on":"")+'" data-act="hist-range" data-range="oggi">Oggi</button><button type="button" class="fx-pill'+(histRange==="7"?" on":"")+'" data-act="hist-range" data-range="7">7 giorni</button><button type="button" class="fx-pill'+(histRange==="mese"?" on":"")+'" data-act="hist-range" data-range="mese">Mese</button><button type="button" class="fx-pill'+(histRange==="all"?" on":"")+'" data-act="hist-range" data-range="all">Tutto</button></div>';
+  html+='<div class="fx-filters"><button type="button" class="fx-filter'+(histTurno===""?" on":"")+'" data-act="hist-turno" data-turno="">Turno</button><button type="button" class="fx-filter'+(histTurno==="Mattina"?" on":"")+'" data-act="hist-turno" data-turno="Mattina">Mattina</button><button type="button" class="fx-filter'+(histTurno==="Pomeriggio"?" on":"")+'" data-act="hist-turno" data-turno="Pomeriggio">Pomeriggio</button><button type="button" class="fx-filter'+(histTurno==="Notte"?" on":"")+'" data-act="hist-turno" data-turno="Notte">Notte</button></div>';
+  html+='<div class="fx-filters"><button type="button" class="fx-filter'+(histLuogo===""?" on":"")+'" data-act="hist-luogo" data-luogo="">Luogo</button>';
+  luoghi.forEach(function(l){ html+='<button type="button" class="fx-filter'+(histLuogo===l.nome?" on":"")+'" data-act="hist-luogo" data-luogo="'+l.nome+'">'+l.nome+"</button>"; });
+  html+="</div>";
+  if(!n){ html+='<div class="state-empty" data-state="empty"><p>Nessuna voce in elenco. Compila e salva; non inventiamo righe.</p></div>'; return html+"</section>"; }
+  rows.forEach(function(e){
+    html+='<article class="fx-record" data-id="'+e.id+'"><span class="fx-ico" aria-hidden="true">'+FX_DROP_MARK+'</span><div><h2>'+(e.meta||e.title)+'</h2><p class="notes">'+(e.day||"")+(e.note?" · "+e.note:"")+(e.kicker?" · "+e.kicker:"")+'</p><p class="fx-who">'+e.title+'</p><span class="fx-badge ok">Salvata</span></div><div><button class="fx-iconbtn" data-act="edit" data-id="'+e.id+'" aria-label="Modifica">'+FX_EDIT_MARK+'</button> <button class="fx-iconbtn" data-act="del" data-id="'+e.id+'" aria-label="Elimina">'+FX_PAUSE_MARK+"</button></div></article>";
+  });
+  return html+"</section>";
+}
+/*fenix-slot:stats*/function renderPocketStats(){
+  var rows=histItems();
+  var n=rows.length;
+  var total=rows.reduce(function(a,e){return a+(Number(e.liters)||litersOf(e.meta));},0);
+  var today=todayIso();
+  var week=data.items.reduce(function(a,e){ return (e.day&&e.day>=shiftIso(today,-6))?a+(Number(e.liters)||litersOf(e.meta)):a; },0);
+  var avg=n?Math.round(total/n):0;
+  var html='<section class="persona-pane" data-fenix-pane="statistiche" data-fenix-slot="stats"><p class="fx-large">Statistiche</p><p class="fx-sub">'+(isAdminUser()?"Tutta la squadra":"Le tue registrazioni")+"</p>";
+  html+='<div class="fx-card"><div class="fx-grid">';
+  html+='<div class="fx-metric"><b>'+(total?fmtLiters(total):"0 L")+'</b><span>Filtrate</span></div>';
+  html+='<div class="fx-metric"><b>'+(week?fmtLiters(week):"0 L")+'</b><span>7 giorni</span></div>';
+  html+='<div class="fx-metric"><b>'+(avg?fmtLiters(avg):"0 L")+'</b><span>Media</span></div>';
+  html+='<div class="fx-metric"><b>'+n+'</b><span>Registrazioni</span></div></div></div>';
+  if(!n) html+='<p class="notes">Quando salvi una voce, i numeri si aggiornano da qui.</p>';
+  return html+"</section>";
+}
+function renderPocketPersona(){ return renderPocketList(); }
+`;
+}
+
 function jsRows(rows: PipelineRow[]): string {
   return rows
     .map((r, i) => {
@@ -2058,6 +2288,7 @@ function productHtml(spec: PipelineSpec, tokens: DesignTokens, grammar: LayoutGr
   const accentInk = safeAccentInk(tokens);
   const identityGlyph = appIdentityIcon(spec.brief, tokens.family);
   const campo = isFieldProductBrief(spec.brief) && grammar.id === "phone-seed";
+  const opsAuth = briefWantsPortableBackend(spec.brief) && grammar.id === "phone-seed";
   const market = isMarketplaceBrief(spec.brief) && grammar.id === "phone-seed";
   const luxe = isLuxeBrief(spec.brief) && grammar.id === "phone-seed";
   const library = isLibraryBrief(spec.brief) && grammar.id === "phone-seed";
@@ -2151,7 +2382,7 @@ function productHtml(spec: PipelineSpec, tokens: DesignTokens, grammar: LayoutGr
             : "clamp(1.18rem, 2.2vw, 1.55rem)";
   const large = isOperationalApp(tokens) ? "2.125rem" : "1.75rem";
   return `<!DOCTYPE html>
-<html lang="it" data-family="${tokens.family}" data-grammar="${grammar.id}" data-chroma="${tokens.chroma}" data-intent-type="${graphicIntentFromBrief(spec.brief).type}" data-intent-chrome="${graphicIntentFromBrief(spec.brief).chrome}" data-craft-mode="${craftMode}" data-craft-rhythm="${craftRhythm}" data-craft-domain="${craftDomain}"${desk ? " data-fenix-craft-desk" : ""}${campo ? " data-fenix-campo" : ""}${market ? " data-fenix-market" : ""}${luxe ? " data-fenix-luxe" : ""}${library ? " data-fenix-libreria" : ""}${barber ? " data-fenix-barber" : ""}${pocket ? " data-fenix-pocket" : ""}${premiumDefault ? " data-fenix-premium" : ""}>
+<html lang="it" data-family="${tokens.family}" data-grammar="${grammar.id}" data-chroma="${tokens.chroma}" data-intent-type="${graphicIntentFromBrief(spec.brief).type}" data-intent-chrome="${graphicIntentFromBrief(spec.brief).chrome}" data-craft-mode="${craftMode}" data-craft-rhythm="${craftRhythm}" data-craft-domain="${craftDomain}"${desk ? " data-fenix-craft-desk" : ""}${campo ? " data-fenix-campo" : ""}${opsAuth ? " data-fenix-ops" : ""}${market ? " data-fenix-market" : ""}${luxe ? " data-fenix-luxe" : ""}${library ? " data-fenix-libreria" : ""}${barber ? " data-fenix-barber" : ""}${pocket ? " data-fenix-pocket" : ""}${premiumDefault ? " data-fenix-premium" : ""}>
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
@@ -2190,6 +2421,7 @@ ${visualKitCss(tokens, grammar)}
 ${productDesignCss(grammar.kind)}
 ${campo ? "html[data-fenix-campo] nav.tabs{grid-template-columns:repeat(5,minmax(0,1fr))}" : ""}
 ${campo ? campoChromeCss() : ""}
+${opsAuth ? opsAuthCss() : ""}
 ${market ? marketChromeCss() : ""}
 ${luxe ? luxeChromeCss() : ""}
 ${barber ? barberChromeCss() : ""}
@@ -2200,6 +2432,7 @@ ${desk ? deskChromeCss() : ""}
 </style>
 </head>
 <body>
+${opsAuth ? `<section id="fx-auth" class="fx-auth" hidden><form id="fx-auth-form" aria-label="Accesso"><p class="kicker">Accesso</p><h2>Entra in squadra</h2><p class="notes">Il primo account è amministratore. Le password restano solo sul server, in hash. Nessun dato di prova.</p><label for="fx-email">Email</label><input class="field" id="fx-email" name="email" type="email" autocomplete="username" required><label for="fx-password">Password</label><input class="field" id="fx-password" name="password" type="password" autocomplete="current-password" required minlength="12"><p class="notes" id="fx-auth-err" role="alert" hidden></p><button class="btn" type="submit">Entra</button><button class="btn ghost" type="button" data-act="signup">Crea account</button></form></section>` : ""}
 ${splash}
 <div class="app"${deskAttr}>
 <header class="${headerExtra.trim()}">
@@ -2535,6 +2768,7 @@ function enqueueOp(op, afterOk, afterFail){
   return persistThen(afterOk, afterFail);
 }
 /*fenix-slot:commit*/function commitForm(f){
+${opsAuth ? "  if(true) return commitOpsForm(f);\n" : ""}
   if(!f || f.id!=="fnew") return false;
   if(typeof f.checkValidity==="function" && !f.checkValidity()){
     if(typeof f.reportValidity==="function") f.reportValidity();
@@ -2742,7 +2976,7 @@ function fxSceneCard(e){
   var listId=paneTab("list");
   var html='<section class="home-overview" data-fenix-pane="home" data-fenix-slot="home"><div class="home-hero">';
   if(campoProduct){
-    html+='<div class="fx-hello-row"><div><p class="fx-hello">Missioni</p><p class="fx-role">Quadro di controllo</p></div><span class="fx-app-mark" data-fenix-id="icon:app" aria-hidden="true">'+FX_WATER_MARK+"</span></div>";
+    html+='<div class="fx-hello-row"><div><p class="fx-hello">${opsAuth ? "Registrazioni" : "Missioni"}</p><p class="fx-role">${opsAuth ? "'+(isAdminUser()?\"Amministratore\":\"Dipendente\")+'" : "Quadro di controllo"}</p></div><span class="fx-app-mark" data-fenix-id="icon:app" aria-hidden="true">'+FX_WATER_MARK+"</span></div>";
     html+='<p class="fx-date">'+italianLongDateJs()+'</p><div class="fx-inverse"><p class="fx-shell-kicker">Panoramica — oggi</p>'+fxBoardMarkup(n)+'</div><div class="fx-inverse fx-hero"><p class="fx-shell-kicker">Volume in campo</p>'+fxTankMarkup(n)+"</div>";
   } else if(libraryProduct){
     var loans=data.items.filter(function(e){return /prestito/i.test(e.kicker||"");});
@@ -2783,7 +3017,7 @@ function fxSceneCard(e){
     html+='<p class="fx-date">'+italianLongDateJs()+"</p>";
   }
   if(campoProduct){
-    html+='<p class="home-count" data-count="'+n+'"><b>'+n+'</b><span>'+(n===1?"dipendente in campo":"dipendenti in campo")+"</span></p>";
+    html+='<p class="home-count" data-count="'+n+'"><b>'+n+'</b><span>'+(n===1?"${opsAuth ? "registrazione" : "dipendente in campo"}":"${opsAuth ? "registrazioni" : "dipendenti in campo"}")+"</span></p>";
   } else if(libraryProduct){
     html+='<p class="home-count" data-count="'+n+'"><b>'+n+'</b><span>'+(n===1?"libro in catalogo":"libri in catalogo")+"</span></p>";
   } else if(marketProduct){
@@ -2812,7 +3046,7 @@ function fxSceneCard(e){
   }
   return html+"</section>";
 }
-/*fenix-slot:list*/function renderPocketList(){
+${opsAuth ? "" : `/*fenix-slot:list*/function renderPocketList(){
   var n=data.items.length;
   var formId=paneTab("form");
   var html='<section class="list-pane" data-fenix-pane="elenco" data-fenix-slot="list">';
@@ -2970,7 +3204,7 @@ function fxSceneCard(e){
     html+='<p class="notes" data-fenix-wipe-empty>Quando salvi una voce, il conteggio sale da qui. Non riempiamo la scheda.</p>';
   }
   return html+"</section>";
-}` : `function renderPocketHome(){ return ""; }`}
+}`}` : `function renderPocketHome(){ return ""; }`}
 ${grammar.id === "phone-seed" ? "" : `function chip(k){ return '<span class="chip '+k+'">'+k+"</span>"; }
 function renderPerfume(){
   var featured=data.items[0];
@@ -3110,6 +3344,19 @@ ${
   var det=editing?editing.kicker:"";
   var nota=editing?editing.note:"";
   return '<section class="card span" data-fenix-crud data-fenix-slot="form"><p class="kicker">'+(editing?"Modifica":"Nuovo nastro")+'</p><h2>'+(editing?"Aggiorna clip":formTitle)+'</h2><form id="fnew"><label for="n">Titolo</label><input class="field" id="n" name="n" required placeholder="Titolo del clip" value="'+title+'"><label for="k">Città</label><input class="field" id="k" name="k" placeholder="Milano" value="'+det+'"><label for="note">Nota</label><input class="field" id="note" name="note" placeholder="Chi è in scena" value="'+nota+'"><p class="notes" data-fenix-form-error role="alert" hidden>Controlla i campi obbligatori.</p><button class="btn" type="button" data-act="save" style="margin-top:14px;width:100%">'+(editing?"Salva modifiche":cta)+'</button></form></section>';`
+    : opsAuth && campo
+    ? `  var editing=editId?data.items.find(function(x){return x.id===editId;}):null;
+  var litri=editing&&editing.liters?String(editing.liters):"";
+  var giorno=editing&&editing.day?editing.day:todayIso();
+  var turno=editing?editing.kicker:"Mattina";
+  var nota=editing?editing.note:"";
+  var luogoId=editing&&editing.luogo_id?editing.luogo_id:"";
+  var opts='<option value="">Senza luogo</option>';
+  luoghi.forEach(function(l){ opts+='<option value="'+l.id+'"'+(l.id===luogoId?" selected":"")+">"+l.nome+"</option>"; });
+  var turns=["Mattina","Pomeriggio","Notte"];
+  var turnOpts="";
+  turns.forEach(function(t){ turnOpts+='<option value="'+t+'"'+(t===turno?" selected":"")+">"+t+"</option>"; });
+  return '<section class="card span" data-fenix-crud data-fenix-slot="form"><p class="kicker">'+(editing?"Modifica":"Nuova")+'</p><h2>'+(editing?"Aggiorna registrazione":formTitle)+'</h2><p class="notes">Litri, data, turno e nota. I dati restano sul server dopo logout e ricaricamento.</p><form id="fnew"><label for="n">Litri</label><input class="field" id="n" name="n" type="number" min="1" step="1" required placeholder="Es. 120" value="'+litri+'"><label for="data">Data</label><input class="field" id="data" name="data" type="date" required value="'+giorno+'"><label for="k">Turno</label><select class="field" id="k" name="k" required>'+turnOpts+'</select><label for="luogo">Luogo di lavoro</label><select class="field" id="luogo" name="luogo">'+opts+'</select><label for="note">Nota</label><input class="field" id="note" name="note" placeholder="Opzionale" value="'+nota+'"><p class="notes" data-fenix-form-error role="alert" hidden>Controlla i campi obbligatori.</p><button class="btn" type="button" data-act="save" style="margin-top:14px;width:100%">'+(editing?"Salva modifiche":cta)+'</button></form></section>';`
     : `  var editing=editId?data.items.find(function(x){return x.id===editId;}):null;
   var title=editing?editing.title:"";
   var det=editing?editing.kicker:"";
@@ -3118,6 +3365,7 @@ ${
 }
 }
 ${grammar.id === "clip-feed" ? clipFeedRuntimeJs() : ""}
+${opsAuth ? opsAuthRuntimeJs() : ""}
 ${grammar.id === "phone-seed" ? `function renderHome(){ return renderPocketHome(); }` : `function renderList(){
   var html='<div class="card span"><p class="kicker">Archivio</p><h2>'+data.items.length+" voci</h2></div>";
   if(!data.items.length) html+=emptyBox();
@@ -3371,7 +3619,20 @@ document.getElementById("tabs").addEventListener("click",function(e){
     if(rootNew) rootNew.innerHTML='<div data-fenix-pane="nuovo">'+renderForm()+"</div>";
     return;
   }
-  if(act==="save"){ commitForm(b.closest("form") || document.getElementById("fnew")); return; }
+${opsAuth ? `  if(act==="signup"){ authSubmit(true); return; }
+  if(act==="logout"){
+    api("/auth/logout",{method:"POST"}).catch(function(){}).then(function(){
+      sessionUser=null; data={items:[]}; luoghi=[]; showAuth(""); render();
+    });
+    return;
+  }
+  if(act==="save-luogo"){ opsSaveLuogo(b.closest("form") || document.getElementById("fluogo")); return; }
+  if(act==="del-luogo"){ opsDeleteLuogo(id); return; }
+  if(act==="list-focus"){ listFocus=b.getAttribute("data-focus")||"records"; render(); return; }
+  if(act==="hist-range"){ histRange=b.getAttribute("data-range")||"all"; render(); return; }
+  if(act==="hist-turno"){ histTurno=b.getAttribute("data-turno")||""; render(); return; }
+  if(act==="hist-luogo"){ histLuogo=b.getAttribute("data-luogo")||""; render(); return; }
+` : ""}  if(act==="save"){ commitForm(b.closest("form") || document.getElementById("fnew")); return; }
 ${grammar.id === "clip-feed" ? `  if(act==="clip-next"){
     clipIndex+=1;
     render();
@@ -3410,7 +3671,7 @@ ${grammar.id === "clip-feed" ? `  if(act==="clip-next"){
     return;
   }
   if(act==="del"){
-    enqueueOp({kind:"del",id:id}, null, null);
+${opsAuth ? "    opsDelete(id); return;\n" : ""}    enqueueOp({kind:"del",id:id}, null, null);
     return;
   }
   if(act==="edit"){
@@ -3505,6 +3766,7 @@ function finishBoot(fromLoad){
   markReady();
 }
 async function boot(){
+${opsAuth ? "  return opsBoot();\n" : ""}
   var load=document.getElementById("load");
   if(load) load.hidden=false;
   var fromLoad=false;
@@ -3521,7 +3783,9 @@ async function boot(){
   finishBoot(fromLoad);
 }
 boot();
-setTimeout(function(){ if(bootDone) return; finishBoot(false); }, 500);
+${opsAuth ? `var authForm=document.getElementById("fx-auth-form");
+if(authForm) authForm.addEventListener("submit",function(e){ e.preventDefault(); authSubmit(false); });
+` : ""}setTimeout(function(){ if(bootDone) return; ${opsAuth ? "return;" : "finishBoot(false);"} }, 500);
 </script>
 </body>
 </html>`;
@@ -3546,7 +3810,9 @@ function polishFor(
       : isPremiumDefaultBrief(brief, tokens.family)
         ? "Chrome premium di sistema: filled mark, gerarchia editoriale, layout calmo. Vietato Tavolo/Registra/Studio, 0-KPI, icone outline vuote, hero fotografico, desk utility come default."
       : grammar.id === "phone-seed"
-        ? "Chrome da tasca premium: filled mark, gerarchia, card piene, tipo ritmato. Vietato Tavolo/Registra/Studio, 0-KPI Oggi/Media/Voci/Aperti come hero, icone outline doppie."
+        ? briefWantsPortableBackend(brief)
+          ? "Chrome da registro operativo: login reale /auth e /api same-origin, empty onesto, litri/data/turno/luogo/nota, admin vede tutto, dipendente solo le proprie righe. Vietato dipendenti inventati, password in chiaro, localStorage."
+        : "Chrome da tasca premium: filled mark, gerarchia, card piene, tipo ritmato. Vietato Tavolo/Registra/Studio, 0-KPI Oggi/Media/Voci/Aperti come hero, icone outline doppie."
       : grammar.id === "agenda"
         ? "Chrome da agenda: binario orario, tab Oggi/Nuovo/Settimana/Archivio, tipo 17/headline, target 44px. Vietato hero KPI, tab Home/Elenco, riquadri vuoti."
         : grammar.id === "clip-feed"
@@ -3581,6 +3847,11 @@ export function composeProduct(brief: string, opts?: TokenOptions): ComposedProd
   const product = productIntent(brief, requestedKind);
   const html = enforceGraphicIntent(product?.domain === "arcade" ? arcadeProductHtml(tokens) : website ? websiteProductHtml(brief, tokens) : productHtml(used, tokens, grammar), brief);
   const review = fenixReviewer({ html, brief, kind: grammar.kind, knowledge });
+  const backendSpec = portableSpecFromBrief(brief);
+  const files = [{ path: "index.html", content: html }];
+  if (backendSpec) {
+    files.push({ path: PORTABLE_BACKEND_MANIFEST, content: `${JSON.stringify(backendSpec, null, 2)}\n` });
+  }
   return {
     brief,
     tokens,
@@ -3588,7 +3859,7 @@ export function composeProduct(brief: string, opts?: TokenOptions): ComposedProd
     spec,
     html,
     polish: product ? ["PIANO PRODOTTO:", JSON.stringify(product), "Preserva i giochi funzionanti, personalizza secondo il brief. Non sostituire con un CRUD Note.", tokensInstruction(tokens)].join("\n") : polishFor(tokens, grammar, brief, knowledge),
-    files: [{ path: "index.html", content: html }],
+    files,
     knowledge,
     review,
   };
