@@ -7,9 +7,15 @@ import { prepareSrcDoc } from "../projects/color-scheme.ts";
 import { launchChromium, isolatedPage } from "../projects/playwright-harness.ts";
 import { mkdirSync } from "node:fs";
 import { contrastRatioRgb, parseCssColor } from "../projects/visual-quality.ts";
+import { isClipFeedBrief } from "../projects/infer.ts";
+import { looksLikeClipFeedBrief } from "../../../workers/visual/composed-create.mjs";
 
 const brief="FORMATO: app telefono 390×844. kind=app. Tab in basso, 5 schermate. NON un sito.\nmi crei un app di videogiochi";
 test("product plan distinguishes a playable arcade from a shop or website",()=>{
+  for (const classify of [isClipFeedBrief, looksLikeClipFeedBrief]) {
+    assert.equal(classify(brief),false,"videogiochi are not a short-video feed");
+    assert.equal(classify("app di video verticali"),true);
+  }
   const plan=productIntent(brief,"app")!;
   assert.equal(plan.domain,"arcade");
   assert.equal(plan.screens.length,5);

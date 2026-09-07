@@ -258,7 +258,7 @@ export function looksLikeClipFeedBrief(text) {
     /tik\s*tok|tiktok|douyin/.test(p) ||
     /\breels?\b|\bshorts?\b|\bfyp\b|for\s*you/.test(p) ||
     /video\s*(vertical[ei]?|cort[io]|social|a tutto schermo)/.test(p) ||
-    /clip\s*vertical|scroll(?:are)?\s+(?:i\s+)?video|app\s+(?:di\s+)?video/.test(p) ||
+    /clip\s*vertical|scroll(?:are)?\s+(?:i\s+)?video\b|app\s+(?:di\s+)?video\b/.test(p) ||
     /simile\s+(?:a\s+)?(?:tik|instagram)|tipo\s+(?:tiktok|instagram\s*reel)/.test(p)
   );
 }
