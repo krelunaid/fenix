@@ -1939,4 +1939,58 @@ describe("clip-feed t0 is a full-bleed nastro, not a voci ledger", () => {
       await browser.close();
     }
   });
+
+  it("keeps a centered 390px phone on a 1280×800 PC, not a stretched site", async () => {
+    const { composeProduct } = await import("./compose-product.ts");
+    const { formatPrefix } = await import("../projects/infer.ts");
+    const brief = formatPrefix("app") + "mi crei un app simile tik tok";
+    const product = composeProduct(brief);
+    const src = prepareSrcDoc(product.html, product.tokens.palette, "clip-feed", product.grammar.kind);
+    const browser = await launchChromium();
+    try {
+      const page = await isolatedPage(browser, { viewport: { width: 1280, height: 800 } });
+      try {
+        await page.setContent(src, { waitUntil: "domcontentloaded", timeout: 15000 });
+        await waitForFenixReady(page, 8000);
+        const layout = await page.evaluate(() => {
+          const app = document.querySelector(".app");
+          const stage = document.querySelector(".clip-stage");
+          const tabs = document.querySelector("nav.tabs");
+          const title = document.querySelector(".clip-caption h1");
+          const ar = app?.getBoundingClientRect();
+          const sr = stage?.getBoundingClientRect();
+          const tr = tabs?.getBoundingClientRect();
+          const hr = title?.getBoundingClientRect();
+          const cs = app ? getComputedStyle(app) : null;
+          return {
+            appW: ar?.width ?? 0,
+            appH: ar?.height ?? 0,
+            appX: ar?.x ?? 0,
+            stageW: sr?.width ?? 0,
+            tabsY: tr?.y ?? 0,
+            tabsH: tr?.height ?? 0,
+            titleW: hr?.width ?? 0,
+            titleFs: title ? Number.parseFloat(getComputedStyle(title).fontSize) : 0,
+            areas: cs?.gridTemplateAreas ?? "",
+            radius: cs?.borderRadius ?? "",
+          };
+        });
+        assert.ok(layout.appW <= 391 && layout.appW >= 300, `app width ${layout.appW}`);
+        assert.ok(layout.appH <= 800 && layout.appH >= 500, `app height ${layout.appH}`);
+        assert.ok(layout.appX > 300 && layout.appX < 600, `app x ${layout.appX}`);
+        assert.equal(layout.areas.includes("head"), false, layout.areas);
+        assert.ok(layout.tabsY > 400, `dock y ${layout.tabsY}`);
+        assert.ok(layout.titleFs <= 40, `title font ${layout.titleFs}`);
+        mkdirSync(join(here, "fixtures/graphic/pipeline"), { recursive: true });
+        await page.screenshot({
+          path: join(here, "fixtures/graphic/pipeline/clip-feed-1280.png"),
+          type: "png",
+        });
+      } finally {
+        await page.close();
+      }
+    } finally {
+      await browser.close();
+    }
+  });
 });

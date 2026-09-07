@@ -91,7 +91,7 @@ export function grammarFromBrief(brief: string): LayoutGrammar {
       kind,
       chrome: "tabs",
       stage: "feed",
-      desktop: "colonna telefono centrata: clip a tutta altezza, niente dashboard KPI e niente 5 tab CRUD",
+      desktop: "sala nera centrata, telaio telefono 390×844, dock in basso nel frame, niente nav da sito a tutta larghezza",
       tablet: "clip a tutta altezza, dock in basso",
       mobile: "clip 100dvh, overlay caption, azioni laterali, dock Feed/Crea/Salvati/Profilo, niente agenda",
       voice: {
@@ -408,7 +408,7 @@ export function grammarInstruction(grammar: LayoutGrammar): string {
     grammar.id === "source-timeline"
       ? "Repository: attività, rami, sync, diff. Vietato home universale hero grigio + due KPI + CTA + empty card. Non copiare GitHub, Apple o Emergent."
       : grammar.id === "clip-feed"
-        ? "Feed verticale originale: PRIMO PAINT clip-stage a tutto schermo, overlay, rail, dock Feed/Crea/Salvati/Profilo. Vietato Niente in lista, voci, agenda, 5 tab Home/Nuovo/Elenco/Stats, card KPI. Non clonare TikTok, Instagram, marchio o «For You»."
+        ? "Feed verticale originale: PRIMO PAINT clip-stage a tutto schermo, overlay, rail, dock Feed/Crea/Salvati/Profilo. Desktop: colonna 390px centrata, niente tabbar allargata a sito. Vietato Niente in lista, voci, agenda, 5 tab Home/Nuovo/Elenco/Stats, card KPI. Non clonare TikTok, Instagram, marchio o «For You»."
         : "Stati empty/loading/success/error visibili. Motion solo se prefers-reduced-motion: no-preference. Target ≥24px, focus visibile, AA.",
   ].join("\n");
 }

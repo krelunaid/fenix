@@ -1099,13 +1099,13 @@ function phoneCss(id: GrammarId): string {
   html[data-grammar="clip-feed"] nav.tabs{background:color-mix(in srgb,#08060c 72%,transparent);border-color:transparent;-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px)}
   html[data-grammar="clip-feed"] nav.tabs button.on{color:#fff}
   html[data-grammar="clip-feed"] .collection,.fragrance,.hero{display:none}
-  .clip-stage{position:relative;min-height:100%;height:100%;overflow:hidden;color:#f4e8ff;background:#08060c}
+  .clip-stage{position:relative;min-height:100%;height:100%;overflow:hidden;color:#f4e8ff;background:#08060c;container-type:size}
   .clip-poster{position:absolute;inset:0;width:100%;height:100%;display:block;object-fit:cover}
   .clip-vignette{position:absolute;inset:0;pointer-events:none;background:linear-gradient(180deg,rgba(8,6,12,.42),transparent 22%,transparent 48%,rgba(8,6,12,.92))}
   .clip-live{position:absolute;top:14px;left:16px;z-index:3;margin:0;font:650 11px/1 var(--body),sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#f4e8ff}
   .clip-caption{position:absolute;left:16px;right:88px;bottom:22px;z-index:3}
   .clip-handle{margin:0;font:650 13px/1.2 var(--body),sans-serif;opacity:.88}
-  .clip-caption h1{margin:8px 0 8px;font:750 clamp(1.55rem,7vw,2.15rem)/1.05 var(--display),sans-serif;letter-spacing:-.04em}
+  .clip-caption h1{margin:8px 0 8px;font:750 1.75rem/1.05 var(--display),sans-serif;letter-spacing:-.04em;font-size:clamp(1.5rem,11cqi,2.1rem)}
   .clip-rail{position:absolute;right:10px;bottom:92px;z-index:4;display:flex;flex-direction:column;gap:12px}
   .clip-rail-btn{width:52px;height:52px;border-radius:50%;border:1px solid color-mix(in srgb,#fff 22%,transparent);background:color-mix(in srgb,#14081c 58%,transparent);color:#fff;display:grid;place-items:center;padding:0}
   .clip-create h2,.clip-saved h2,.clip-profile h2{font-family:var(--display);letter-spacing:-.03em}
@@ -1120,7 +1120,20 @@ nav.tabs button.on{color:var(--accent)}
 nav.tabs svg{width:24px;height:24px;flex:0 0 24px;overflow:visible;display:block;margin-inline:auto}
 main{grid-area:main;min-height:0;overflow:auto;padding:8px 16px 20px}
 @media(min-width:768px){
-  .app{grid-template-rows:auto 1fr;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"head nav" "main main"}
+  ${
+    id === "clip-feed"
+      ? `html[data-grammar="clip-feed"],html[data-grammar="clip-feed"] body{background:#08060c;min-height:100dvh;height:100%;overflow:hidden}
+  html[data-grammar="clip-feed"] body{display:grid;place-items:center;padding:24px;box-sizing:border-box}
+  html[data-grammar="clip-feed"] body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;background:radial-gradient(ellipse 48% 58% at 50% 44%,#1c102c 0%,#08060c 70%)}
+  html[data-grammar="clip-feed"] .app{position:relative;z-index:1;width:min(390px,calc(100vw - 48px));max-width:390px;height:min(844px,calc(100dvh - 48px));max-height:calc(100dvh - 48px);min-height:0;margin:0 auto;grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr) auto;grid-template-areas:"main" "nav";border-radius:24px;overflow:hidden;box-shadow:0 28px 80px rgba(0,0,0,.55),0 0 0 1px color-mix(in srgb,#fff 12%,transparent)}
+  html[data-grammar="clip-feed"] header{display:none}
+  html[data-grammar="clip-feed"] main{padding:0;overflow:hidden;min-height:0}
+  html[data-grammar="clip-feed"] main:has(.clip-create),html[data-grammar="clip-feed"] main:has(.clip-saved),html[data-grammar="clip-feed"] main:has(.clip-profile){overflow:auto;padding:18px 16px 22px}
+  html[data-grammar="clip-feed"] nav.tabs{position:relative;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));flex-direction:unset;flex-wrap:nowrap;height:calc(64px + env(safe-area-inset-bottom));min-height:64px;border:0;border-top:1px solid color-mix(in srgb,#fff 12%,transparent);border-bottom:0;padding:6px 6px calc(6px + env(safe-area-inset-bottom));justify-content:stretch;align-items:stretch;background:color-mix(in srgb,#08060c 78%,transparent)}
+  html[data-grammar="clip-feed"] nav.tabs button{flex-direction:column;font:600 10px/1.1 var(--body),sans-serif;min-height:44px;padding:4px 2px;gap:2px}
+  html[data-grammar="clip-feed"] nav.tabs svg{display:block;margin-inline:auto}
+`
+      : `.app{grid-template-rows:auto 1fr;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"head nav" "main main"}
   header{padding:14px 22px;border-bottom:1px solid var(--line);align-items:center}
   nav.tabs{position:static;display:flex;flex-direction:row;flex-wrap:wrap;height:auto;min-height:56px;border:0;border-bottom:1px solid var(--line);padding:8px 18px;justify-content:flex-end;align-items:center;background:transparent}
   nav.tabs button{flex-direction:row;font:650 13px/1 var(--body),sans-serif;min-height:44px;padding:8px 12px;gap:8px}
@@ -1172,13 +1185,23 @@ main{grid-area:main;min-height:0;overflow:auto;padding:8px 16px 20px}
   html[data-grammar="phone-seed"] .app{height:auto;max-height:none;min-height:100dvh;grid-template-rows:auto 1fr;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"head nav" "main main"}
   html[data-grammar="phone-seed"] nav.tabs{position:static;height:auto}`
         : ""
+  }`
   }
 }
 @media(min-width:1024px){
-  header,nav.tabs{padding-left:40px;padding-right:40px}
-  main{padding:28px 40px}
   ${
-    id === "split-stage"
+    id === "clip-feed"
+      ? `html[data-grammar="clip-feed"] header,html[data-grammar="clip-feed"] nav.tabs{padding-left:6px;padding-right:6px}
+  html[data-grammar="clip-feed"] main{padding:0}
+  html[data-grammar="clip-feed"] main:has(.clip-create),html[data-grammar="clip-feed"] main:has(.clip-saved),html[data-grammar="clip-feed"] main:has(.clip-profile){padding:18px 16px 22px}
+  html[data-grammar="clip-feed"] .app{width:min(390px,calc(100vw - 48px));max-width:390px;height:min(844px,calc(100dvh - 48px));min-height:0}`
+      : `header,nav.tabs{padding-left:40px;padding-right:40px}
+  main{padding:28px 40px}`
+  }
+  ${
+    id === "clip-feed"
+      ? ""
+      : id === "split-stage"
       ? `main{display:grid;grid-template-columns:minmax(280px,.85fr) minmax(360px,1.15fr);gap:24px;align-content:start;align-items:start}
   .hero{grid-column:1;grid-row:1;align-self:start;min-height:0;height:auto;overflow:visible;margin:0;position:sticky;top:16px;background:transparent}
   .hero svg{height:auto;min-height:0;aspect-ratio:640/420;width:100%;display:block}
@@ -3402,7 +3425,7 @@ function polishFor(
       : grammar.id === "agenda"
         ? "Chrome da agenda: binario orario, tab Oggi/Nuovo/Settimana/Archivio, tipo 17/headline, target 44px. Vietato hero KPI, tab Home/Elenco, riquadri vuoti."
         : grammar.id === "clip-feed"
-        ? "Chrome da feed verticale: PRIMO PAINT = clip-stage a tutto schermo, overlay caption, rail Salva/Avanti, dock Feed/Crea/Salvati/Profilo. Vietato splash pronto, Niente in lista, Aggiungi la prima voce, collection voci, agenda, 5 tab CRUD, card KPI, clone TikTok/Instagram/For You."
+        ? "Chrome da feed verticale: PRIMO PAINT = clip-stage a tutto schermo, overlay caption, rail Salva/Avanti, dock Feed/Crea/Salvati/Profilo. Su desktop/tablet: colonna telefono 390px centrata su palco scuro, dock in basso nel telaio, mai nav da sito a tutta larghezza. Vietato splash pronto, Niente in lista, Aggiungi la prima voce, collection voci, agenda, 5 tab CRUD, card KPI, clone TikTok/Instagram/For You."
         : grammar.chrome === "desk"
         ? DASHBOARD_POLISH_INSTRUCTION
         : grammar.chrome === "masthead"
