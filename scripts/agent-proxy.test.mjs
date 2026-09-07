@@ -34,7 +34,7 @@ before(async () => {
   await once(server, "listening");
   setAgentConfigForTests({ url: `http://127.0.0.1:${server.address().port}`, token: TOKEN });
 });
-after(() => { store.close(); server.close(); setAgentConfigForTests(undefined); });
+after(async () => { await server.previews.close(); store.close(); server.close(); setAgentConfigForTests(undefined); });
 
 const req = (path, { method = "GET", body, owner = OWNER_A } = {}) =>
   handleAgentRequest(
@@ -132,4 +132,33 @@ test("cancel refunds; edits cost EDIT_COST; insufficient credits -> 402 without 
   assert.equal(refused.status, 402);
   assert.equal(store.jobs.size, jobsBefore, "no job dispatched when broke");
   for (const id of ids) await req(`/jobs/${id}`, { method: "DELETE" });
+});
+
+test("preview through the proxy: start, rewritten HTML, relayed API, stop", { timeout: 180_000 }, async () => {
+  resetMemoryLedger();
+  mode = "ok";
+  const created = await (await req("/build", { method: "POST", body: { brief: "agenda per barbiere" } })).json();
+  const done = await waitJob(created.id);
+  assert.equal(done.status, "ok");
+  const started = await req(`/jobs/${created.id}/preview`, { method: "POST" });
+  assert.equal(started.status, 200, await started.text());
+  const home = await req(`/jobs/${created.id}/preview/`);
+  assert.equal(home.status, 200);
+  assert.equal(home.headers.get("content-security-policy"), "frame-ancestors 'self'");
+  const html = await home.text();
+  assert.match(html, new RegExp(`href="/api/agent/jobs/${created.id}/preview/styles.css"`));
+  assert.match(html, /data-fenix-preview/);
+  const api = await handleAgentRequest(
+    new Request(`https://fenix.test/api/agent/jobs/${created.id}/preview/api/appuntamenti`, {
+      method: "POST",
+      headers: { "x-fenix-owner": OWNER_A, "content-type": "application/json" },
+      body: JSON.stringify({ cliente: "Anna Verdi", servizio: "Barba", quando: "2026-09-11T09:00" }),
+    }),
+    `/jobs/${created.id}/preview/api/appuntamenti`,
+  );
+  assert.equal(api.status, 201);
+  const list = await (await req(`/jobs/${created.id}/preview/api/appuntamenti`)).json();
+  assert.equal(list.length, 1);
+  assert.equal((await req(`/jobs/${created.id}/preview`, { method: "DELETE" })).status, 200);
+  assert.equal((await req(`/jobs/${created.id}/preview/`)).status, 409);
 });

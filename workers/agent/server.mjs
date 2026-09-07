@@ -12,6 +12,7 @@ import { createServer } from "node:http";
 import { timingSafeEqual } from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { JobStore } from "./jobs.mjs";
+import { PreviewPool } from "./preview.mjs";
 import { runAgent } from "./agent.mjs";
 import { createSandbox } from "./sandbox/index.mjs";
 import { AnthropicModel } from "./model/anthropic.mjs";
@@ -25,11 +26,13 @@ export function createAgentServer({
   modelFactory = () => new AnthropicModel(),
   sandboxFactory = (opts) => createSandbox(opts),
   store = new JobStore({ concurrency: Number(process.env.AGENT_CONCURRENCY || 2) }),
+  previews = null,
   browserChecks = process.env.AGENT_BROWSER_CHECKS !== "0",
   limits = {},
 } = {}) {
   if (!token || token.length < 16) throw new Error("AGENT_TOKEN mancante o troppo corto (min 16 caratteri).");
   const tokenBuf = Buffer.from(token);
+  const pool = previews || new PreviewPool({ sandboxFactory });
 
   const cors = (res) => {
     if (origin) {
@@ -107,12 +110,53 @@ export function createAgentServer({
         return;
       }
 
+      // Live preview of a finished job: /agent/jobs/:id/preview[/relayed/path]
+      const pv = url.pathname.match(/^\/agent\/jobs\/([A-Za-z0-9-]{8,64})\/preview(\/.*)?$/);
+      if (pv) {
+        const job = store.get(pv[1], owner);
+        if (!job) { json(res, 404, { error: "Job non trovato." }); return; }
+        const relayPath = pv[2];
+        if (relayPath == null) {
+          if (req.method === "GET") { json(res, 200, pool.view(job.id, owner)); return; }
+          if (req.method === "DELETE") { json(res, 200, { live: false, stopped: await pool.stop(job.id) }); return; }
+          if (req.method === "POST") {
+            const files = job.result?.files?.filter((f) => typeof f.content === "string") || [];
+            if (job.status !== "ok" || files.length === 0) { json(res, 409, { error: "Anteprima disponibile solo per un lavoro concluso con successo." }); return; }
+            try {
+              await pool.start({ jobId: job.id, owner, files });
+            } catch (err) {
+              json(res, err?.status || 502, { error: err?.message || "Anteprima non avviata.", logs: err?.logs });
+              return;
+            }
+            json(res, 200, pool.view(job.id, owner));
+            return;
+          }
+          json(res, 405, { error: "Metodo non consentito." }); return;
+        }
+        const body = req.method === "GET" || req.method === "HEAD" ? undefined : await readText(req);
+        const relayed = await pool.relay(job.id, owner, {
+          method: req.method,
+          path: `${relayPath}${url.search}`,
+          headers: { "content-type": req.headers["content-type"], accept: req.headers.accept },
+          body,
+        });
+        if (!relayed) { json(res, 409, { error: "Anteprima non attiva: avviala con POST …/preview." }); return; }
+        cors(res);
+        res.writeHead(relayed.status, {
+          "content-type": relayed.headers["content-type"] || "application/octet-stream",
+          "cache-control": "no-store",
+          "x-fenix-preview": job.id,
+        });
+        res.end(relayed.text);
+        return;
+      }
+
       const m = url.pathname.match(/^\/agent\/jobs\/([A-Za-z0-9-]{8,64})$/);
       if (m) {
         const job = store.get(m[1], owner);
         if (!job) { json(res, 404, { error: "Job non trovato." }); return; }
         if (req.method === "GET") { json(res, 200, store.publicView(job, { full: url.searchParams.get("full") === "1" })); return; }
-        if (req.method === "DELETE") { store.cancel(job.id, owner); json(res, 200, { id: job.id, status: job.status }); return; }
+        if (req.method === "DELETE") { store.cancel(job.id, owner); await pool.stop(job.id); json(res, 200, { id: job.id, status: job.status }); return; }
       }
       json(res, 404, { error: "Rotta sconosciuta." });
     } catch (err) {
@@ -122,7 +166,19 @@ export function createAgentServer({
     }
   });
   server.store = store;
+  server.previews = pool;
   return server;
+}
+
+async function readText(req) {
+  const chunks = [];
+  let bytes = 0;
+  for await (const chunk of req) {
+    bytes += chunk.length;
+    if (bytes > MAX_BODY) throw Object.assign(new Error("Richiesta troppo grande."), { status: 413 });
+    chunks.push(chunk);
+  }
+  return Buffer.concat(chunks).toString("utf8");
 }
 
 async function readJson(req) {
