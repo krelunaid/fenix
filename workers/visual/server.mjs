@@ -505,7 +505,7 @@ async function generate(prompt, html, instruction, kind, operation, inputPalette
     body: JSON.stringify({
       model: MODEL,
       temperature: 0.7,
-      max_tokens: 8000,
+      max_tokens: 20000,
       stream: false,
       messages: [
         { role: "system", content: dashboard ? DASHBOARD_SYSTEM : site ? SITE_SYSTEM : GENERATE_SYSTEM },
