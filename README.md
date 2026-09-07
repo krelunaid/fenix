@@ -16,6 +16,8 @@ La chiave è esclusivamente server-side. Mai `VITE_XAI_API_KEY`, mai nel fronten
 | ------------------- | ------ | -------------------------------------------------------------------------------- |
 | `XAI_API_KEY`       | server | Tua, creata su [console.x.ai](https://console.x.ai)                              |
 | `VISUAL_WORKER_URL` | server | Opzionale. Worker Playwright. Es. `https://fenix-production-d9f5.up.railway.app` |
+| `VISUAL_WORKER_TOKEN` | server + Railway | Segreto condiviso: Fenix lo aggiunge lato server, il worker rifiuta i job senza. Mai nel client. |
+| `FENIX_ORIGIN` | server + Railway | Origine pubblica (es. `https://fenix.kreluna.it`): guardia origin su `/api/build`, CORS del worker. |
 | `VITE_AUTH_ENABLED` | build  | `false` di default in locale. Per Gmail/email metti `true` e `DATABASE_URL`      |
 
 ## Configurazione Netlify
@@ -73,7 +75,7 @@ npx playwright install chromium
 XAI_API_KEY=… npm start
 ```
 
-Su Railway/Fly: stesso comando, porta `PORT`. Health: `GET /health` risponde `{ ok, model: "grok-build-0.1" }`. Poi su Netlify aggiungi `VISUAL_WORKER_URL` = URL del worker, solo server.
+Su Railway/Fly: stesso comando, porta `PORT`, più `VISUAL_WORKER_TOKEN` (obbligatorio in produzione: senza, il worker risponde 503) e `FENIX_ORIGIN`. Health: `GET /health` risponde `{ ok, model: "grok-build-0.1", auth }`. Poi su Netlify aggiungi `VISUAL_WORKER_URL` e lo stesso `VISUAL_WORKER_TOKEN`, solo server: il browser passa da `/__worker/*` (Netlify Function `worker-proxy`) che aggiunge il token. L'URL diretto del worker non è più usato dal client.
 
 Senza questa variabile Fenix resta sui due sguardi nell’anteprima (html2canvas).
 

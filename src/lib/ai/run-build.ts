@@ -160,10 +160,11 @@ function abandonVisualJob(projectId: string, raw: string) {
   store.addMessage(projectId, { id: uid(), role: "assistant", content: human });
 }
 
-const WORKER_POLISH =
-  (typeof import.meta !== "undefined" &&
-    (import.meta as { env?: { VITE_VISUAL_WORKER_URL?: string } }).env?.VITE_VISUAL_WORKER_URL?.replace(/\/$/, "")) ||
-  "https://fenix-production-d9f5.up.railway.app";
+// The browser never calls the Railway worker directly: every request goes through
+// Fenix's own server routes, which add the worker token (see worker-proxy.server.ts).
+// `/__worker/build` is a Netlify Function (production); `/api/worker/build` is the
+// Nitro route used by `vite dev` / node preview. Both add the token server-side.
+const WORKER_BUILD_URLS = ["/__worker/build", "/api/worker/build"];
 
 async function delay(ms: number) {
   await new Promise((r) => {
@@ -183,13 +184,11 @@ type WorkerJob = {
 };
 
 function polishUrls() {
-  const base = WORKER_POLISH.replace(/\/$/, "");
-  return [`/__worker/polish`, `${base}/polish`, `/api/polish`];
+  return [`/__worker/polish`, `/api/polish`];
 }
 
 function jobUrls(id: string) {
-  const base = WORKER_POLISH.replace(/\/$/, "");
-  return [`/__worker/jobs/${id}`, `${base}/jobs/${id}`, `/api/jobs/${id}`];
+  return [`/__worker/jobs/${encodeURIComponent(id)}`, `/api/jobs/${encodeURIComponent(id)}`];
 }
 
 type JobFetch =
@@ -373,13 +372,13 @@ async function consumeViaWorker(
   epoch = 0,
 ): Promise<boolean> {
   const store = useProjectStore.getState();
-  const bases = ["/__worker", WORKER_POLISH.replace(/\/$/, "")];
+  const bases = WORKER_BUILD_URLS;
   let lastErr = "Load failed";
   let proxyAnswered = false;
   for (const base of bases) {
-    if (base !== "/__worker" && proxyAnswered) continue;
+    if (proxyAnswered) break;
     try {
-      const started = await fetch(`${base}/build`, {
+      const started = await fetch(base, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -388,7 +387,13 @@ async function consumeViaWorker(
         body: JSON.stringify({ ...body, projectId }),
         signal: AbortSignal.timeout(WORKER_START_MS),
       });
-      if (base === "/__worker") proxyAnswered = true;
+      // Not a JSON answer (SPA fallback in dev) or 404: this proxy path is not
+      // served here (dev vs Netlify) — try the next one.
+      if (started.status === 404 || !(started.headers.get("content-type") || "").includes("json")) {
+        lastErr = `Build HTTP ${started.status}`;
+        continue;
+      }
+      proxyAnswered = true;
       if (started.status !== 202) {
         lastErr = `Build HTTP ${started.status}`;
         if (isComposedCreation(body)) throw new Error(lastErr);

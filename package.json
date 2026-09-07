@@ -7,6 +7,7 @@
     "nf3": "0.3.17"
   },
   "scripts": {
+    "test:worker-auth": "node --test scripts/visual-worker-auth.test.mjs && node --experimental-strip-types --test scripts/request-guard.test.mjs",
     "test:agent": "node --test --test-concurrency=1 scripts/agent-checks.test.mjs scripts/agent-loop.test.mjs scripts/agent-server.test.mjs scripts/agent-model-docker.test.mjs scripts/agent-hardening.test.mjs",
     "agent:cli": "node workers/agent/cli.mjs",
     "test:product-design": "node --experimental-strip-types --test --test-concurrency=1 src/lib/projects/product-design-system.test.ts src/lib/projects/product-design-browser.test.ts",

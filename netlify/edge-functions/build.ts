@@ -1,6 +1,7 @@
 declare const Netlify: { env: { get(name: string): string | undefined } };
 
 import { QA_PROMPT, REPAIR_PROMPT, SITE_PROMPT, SYSTEM_PROMPT, VISUAL_PROMPT } from "../../src/lib/ai/prompts.shared.ts";
+import { rejectCrossOrigin, sanitizeShot } from "../../src/lib/ai/request-guard.ts";
 import { formatPrefix, isPhoneKind, kindFromPrompt } from "../../src/lib/projects/infer.ts";
 import { ingestProjectFiles, parseProjectFiles } from "../../src/lib/projects/files.ts";
 import {
@@ -376,6 +377,8 @@ async function gateResult(
 
 export default async function build(request: Request) {
   if (request.method !== "POST") return new Response("Method Not Allowed", { status: 405 });
+  const crossOrigin = rejectCrossOrigin(request.url, request.headers, [Netlify.env.get("FENIX_ORIGIN") || ""]);
+  if (crossOrigin) return Response.json({ t: "err", error: crossOrigin }, { status: 403 });
   const apiKey = Netlify.env.get("XAI_API_KEY")?.trim();
   if (!apiKey) {
     return Response.json({ t: "err", error: "Manca XAI_API_KEY sul server" }, { status: 503 });
@@ -399,10 +402,7 @@ export default async function build(request: Request) {
   if (currentHtml.length > MAX_ARTIFACT_CHARS) {
     return Response.json({ t: "err", error: "Documento troppo grande per una modifica sicura. La versione precedente resta invariata." }, { status: 413 });
   }
-  const shot =
-    typeof body.shot === "string" && body.shot.startsWith("data:image")
-      ? body.shot.slice(0, 380000)
-      : "";
+  const shot = sanitizeShot(body.shot, body.operation, currentHtml);
   const lockKind = kindFromPrompt(prompt);
   const contract = planContract(prompt);
   // The atomic HTML protocol cannot provide backend/auth or other source files.
