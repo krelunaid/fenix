@@ -1152,7 +1152,7 @@ main{grid-area:main;min-height:0;overflow:auto;padding:8px 16px 20px}
   html[data-grammar="clip-feed"] nav.tabs svg{display:block;margin-inline:auto}
   .clip-stage{display:grid;place-items:center}
   .clip-ambient{display:block;position:absolute;inset:-20%;z-index:0;pointer-events:none;filter:blur(64px) saturate(1.4) brightness(1.05);opacity:.62;transform:scale(1.08)}
-  .clip-stack{position:relative;z-index:2;width:calc(min(92dvh,820px) * .5625);height:min(92dvh,820px);max-width:min(540px,48vw)}
+  .clip-stack{position:relative;z-index:2;width:min(540px,48vw,calc(min(100%, calc(100dvh - 104px), 820px) * .5625));height:min(100%,calc(100dvh - 104px),820px,calc(min(540px,48vw) * 16 / 9))}
   .clip-frame{position:absolute;inset:0;border-radius:28px;overflow:hidden;box-shadow:0 40px 120px rgba(0,0,0,.62),0 0 0 1px color-mix(in srgb,#fff 12%,transparent)}
   .clip-brand{display:block;position:absolute;top:18px;left:50%;transform:translateX(-50%);z-index:7;margin:0;font:700 11px/1 var(--display),sans-serif;letter-spacing:.22em;text-transform:uppercase;opacity:.72}
   .clip-copy{left:22px;right:86px;bottom:28px}
@@ -1223,7 +1223,7 @@ main{grid-area:main;min-height:0;overflow:auto;padding:8px 16px 20px}
   html[data-grammar="clip-feed"] main{padding:0}
   html[data-grammar="clip-feed"] main:has(.clip-create),html[data-grammar="clip-feed"] main:has(.clip-saved),html[data-grammar="clip-feed"] main:has(.clip-profile){padding:32px 40px 40px}
   html[data-grammar="clip-feed"] .app{width:100%;max-width:none;height:100dvh;min-height:0}
-  .clip-stack{width:calc(min(94dvh,860px) * .5625);height:min(94dvh,860px);max-width:min(560px,46vw)}
+  .clip-stack{width:min(560px,46vw,calc(min(100%, calc(100dvh - 104px), 860px) * .5625));height:min(100%,calc(100dvh - 104px),860px,calc(min(560px,46vw) * 16 / 9))}
   .clip-frame{border-radius:32px}`
       : `header,nav.tabs{padding-left:40px;padding-right:40px}
   main{padding:28px 40px}`
