@@ -18,6 +18,8 @@
  *   ANY    /api/agent/preview/:token/*                 relayed into the running project (paths rewritten);
  *                                                      no identity header: the token is the credential,
  *                                                      so the sandboxed (opaque-origin) iframe can use it
+ *   GET/POST /api/agent/sites, GET/DELETE /api/agent/sites/:slug   published apps of the caller
+ *   ANY    /app/:slug/*  (handlePublicAppRequest)      public traffic of a published app, no identity
  */
 import { ownerFromRequest } from "../projects/publish-owner.ts";
 import { previewResponseHeaders, previewTokenPrefix, rewritePreviewCss, rewritePreviewHtml } from "./preview-rewrite.ts";
@@ -226,6 +228,18 @@ export async function handleAgentRequest(request: Request, rest: string): Promis
         return json({ id, cancelled: res.ok, refunded: r.refundedNow, credits: ledgerView(r.ledger) });
       }
     }
+    if (path === "/sites" && (request.method === "GET" || request.method === "POST")) {
+      const body = request.method === "POST" ? await readJson(request) : undefined;
+      const res = await upstream(cfg, owner, "/agent/sites", { method: request.method, body: body ? JSON.stringify({ jobId: body.jobId, slug: body.slug, name: body.name }) : undefined });
+      const text = await res.text();
+      return new Response(text, { status: res.status, headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" } });
+    }
+    const site = path.match(/^\/sites\/([a-z0-9-]{3,40})$/);
+    if (site && (request.method === "GET" || request.method === "DELETE")) {
+      const res = await upstream(cfg, owner, `/agent/sites/${site[1]}`, { method: request.method });
+      const text = await res.text();
+      return new Response(text, { status: res.status, headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" } });
+    }
     return json({ error: "Rotta sconosciuta." }, 404);
   } catch (err) {
     const status = (err as { status?: number })?.status || 500;
@@ -259,3 +273,45 @@ async function relayPreview(cfg: AgentConfig, owner: string, jobId: string, rela
   else if (/text\/css/i.test(contentType)) payload = rewritePreviewCss(payload, prefix);
   return new Response(payload, { status: res.status, headers: previewResponseHeaders(contentType) });
 }
+
+/**
+ * Public entry for published apps: /app/:slug/* — anyone, no identity. The proxy
+ * speaks to the agent host with its own token; paths are rewritten to the /app/:slug
+ * prefix so the app works at that address.
+ */
+export async function handlePublicAppRequest(request: Request, slug: string, relayPath: string): Promise<Response> {
+  const cfg = agentConfig();
+  if (!cfg) return json({ error: AGENT_NOT_CONFIGURED }, 503);
+  if (!/^[a-z0-9-]{3,40}$/.test(slug)) return json({ error: "Indirizzo non valido." }, 404);
+  if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: previewResponseHeaders("text/plain") });
+  const search = new URL(request.url).search;
+  const body = request.method === "GET" || request.method === "HEAD" ? undefined : await request.text();
+  let res: Response;
+  try {
+    res = await fetch(`${cfg.url}/agent/sites/${slug}${relayPath || "/"}${search}`, {
+      method: request.method,
+      headers: {
+        authorization: `Bearer ${cfg.token}`,
+        "x-fenix-owner": PROXY_IDENTITY,
+        "content-type": request.headers.get("content-type") || "application/octet-stream",
+        accept: request.headers.get("accept") || "*/*",
+      },
+      body,
+      signal: AbortSignal.timeout(30_000),
+    });
+  } catch (err) {
+    return json({ error: `App non raggiungibile (${err instanceof Error ? err.message : "rete"}).` }, 502);
+  }
+  const contentType = res.headers.get("content-type") || "";
+  let payload = await res.text();
+  const prefix = `/app/${slug}`;
+  if (/text\/html/i.test(contentType)) payload = rewritePreviewHtml(payload, prefix);
+  else if (/text\/css/i.test(contentType)) payload = rewritePreviewCss(payload, prefix);
+  const headers = previewResponseHeaders(contentType);
+  // Published apps are top-level pages, not framed previews.
+  headers["content-security-policy"] = "frame-ancestors 'none'";
+  return new Response(payload, { status: res.status, headers });
+}
+
+/** Stable pseudo-identity the proxy presents to the agent host for public traffic. */
+const PROXY_IDENTITY = "f".repeat(32);

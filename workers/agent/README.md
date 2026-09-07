@@ -34,10 +34,14 @@ The owner header is a trusted-proxy assertion, NOT authentication by itself. The
 
 `/api/agent/*` — `netlify/functions/agent-proxy.ts` in production, `src/routes/api/agent.$.ts` in dev — is the trusted proxy this worker expects. It holds `AGENT_URL`/`AGENT_TOKEN` server-side, sets `x-fenix-owner` itself from the caller's identity (today the owner capability; `resolveOwner` in `src/lib/agent/http.ts` is the one place to swap in a verified session) and enforces credits on the server (`src/lib/agent/credits-store.ts`: Netlify Blobs, 100 grant, 4 per create, 2 per edit, refund once on failure/cancel). `npm run test:agent-proxy` runs it against this server with a scripted model.
 
+## Durable jobs and published apps (added 2026-09-07)
+
+With `AGENT_DATA_DIR` set on the agent host, finished jobs are written to `<dir>/jobs/<id>.json` (7-day TTL) and survive restarts. `POST /agent/sites { jobId, slug? }` publishes a finished job under a public slug; the record and the app's SQLite data live in `<dir>/sites/` — the data directory is the only bind mount the sandbox ever receives (`/work/.fenix/data`, uid 1000). Published apps start on first request and stop after 10 idle minutes; data persists on the host. Fenix serves them at `/app/<slug>/…` (`netlify/functions/app-public.ts`, `src/routes/app.$slug.$.tsx`) with paths rewritten to that prefix. Owners list/delete their sites via `/api/agent/sites`.
+
 ## Remaining work before enabling customer traffic
 
 - Real model generation with a server-only Anthropic key (not provided in this environment).
-- Studio UI wiring to /api/agent/* (proxy + server credits exist), recovery UX and generated full-stack app hosting.
+- Real accounts behind `resolveOwner` (today: owner capability), recovery UX, custom domains for published apps, backups of `AGENT_DATA_DIR`.
 - Independent brief-based acceptance: real login, employee isolation, CRUD persistence and design review.
 - Durable job persistence, operational monitoring and independent validation outside the generated project.
 - Provision an explicitly authorized host with Docker; no infrastructure purchases are automatic.

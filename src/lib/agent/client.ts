@@ -116,3 +116,21 @@ export function stageLabel(events: AgentEvent[]): string {
   }
   return (last.text || "").split("\n")[0].slice(0, 120);
 }
+
+export type PublishedApp = { slug: string; name: string; kind: "app" | "site"; version: number; publishedAt: number; updatedAt: number; files: number; jobId: string | null; hosting?: { live: boolean } };
+
+export function publicAppUrl(slug: string): string {
+  return `${typeof location !== "undefined" ? location.origin : ""}/app/${slug}/`;
+}
+
+export function listPublishedApps(): Promise<{ sites: PublishedApp[] }> {
+  return fetch("/api/agent/sites", { headers: headers(), cache: "no-store" }).then((r) => parse<{ sites: PublishedApp[] }>(r));
+}
+
+export function publishApp(input: { jobId: string; slug?: string; name?: string }): Promise<PublishedApp> {
+  return fetch("/api/agent/sites", { method: "POST", headers: headers(), body: JSON.stringify(input) }).then((r) => parse<PublishedApp>(r));
+}
+
+export function unpublishApp(slug: string) {
+  return fetch(`/api/agent/sites/${encodeURIComponent(slug)}`, { method: "DELETE", headers: headers() }).then((r) => parse<{ slug: string; removed: boolean }>(r));
+}

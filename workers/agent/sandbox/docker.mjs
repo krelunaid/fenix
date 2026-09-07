@@ -50,15 +50,25 @@ export class DockerSandbox extends ContainerFiles {
     this.hostPort = hostPort;
   }
 
-  static async create({ jobId = `job-${Date.now().toString(36)}`, baseDir, image = DEFAULT_IMAGE, docker = "docker", network = "none", memory = "1g", cpus = "1", pids = "256" } = {}) {
+  static async create({ jobId = `job-${Date.now().toString(36)}`, baseDir, image = DEFAULT_IMAGE, docker = "docker", network = "none", memory = "1g", cpus = "1", pids = "256", dataDir = null } = {}) {
     if(network !== 'none') throw new Error('Sandbox requires network=none');
     const name = `fenix-agent-${randomUUID()}`;
     const hostPort = INTERNAL_PORT;
+    // Published apps keep their SQLite data on the host: the ONLY bind mount, data dir
+    // only (never code), owned by the sandbox uid so the read-only container can write it.
+    const dataMount = [];
+    if (dataDir) {
+      const { mkdir, chown, chmod } = await import("node:fs/promises");
+      await mkdir(dataDir, { recursive: true });
+      try { await chown(dataDir, 1000, 1000); } catch { await chmod(dataDir, 0o777).catch(() => {}); }
+      dataMount.push("-v", `${dataDir}:/work/.fenix/data:rw`);
+    }
     const args = [
       "run", "-d", "--rm", "--name", name,
       "--read-only", "--user", "1000:1000", "--init",
       "--tmpfs", "/work:rw,nosuid,nodev,size=128m,uid=1000,gid=1000",
       "--tmpfs", "/tmp:rw,nosuid,nodev,size=128m,uid=1000,gid=1000", "-w", "/work",
+      ...dataMount,
       "--memory", memory, "--cpus", cpus, "--pids-limit", pids,
       "--network", "none",
       "--cap-drop", "ALL", "--security-opt", "no-new-privileges",

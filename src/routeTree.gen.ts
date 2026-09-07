@@ -31,6 +31,7 @@ import { Route as ApiJobsIdRouteImport } from './routes/api/jobs.$id'
 import { Route as AgenteRouteImport } from './routes/agente'
 import { Route as ApiAgentSplatRouteImport } from './routes/api/agent.$'
 import { Route as ApiWorkerBuildRouteImport } from './routes/api/worker.build'
+import { Route as AppSlugSplatRouteImport } from './routes/app.$slug.$'
 import { Route as ApiReleaseIdRouteImport } from './routes/api/release.$id'
 import { Route as ApiReleaseCallbackRouteImport } from './routes/api/release.callback'
 import { Route as ApiSitesIdRouteImport } from './routes/api/sites.$id'
@@ -146,6 +147,11 @@ const ApiWorkerBuildRoute = ApiWorkerBuildRouteImport.update({
   path: '/api/worker/build',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AppSlugSplatRoute = AppSlugSplatRouteImport.update({
+  id: '/app/$slug/$',
+  path: '/app/$slug/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiReleaseIdRoute = ApiReleaseIdRouteImport.update({
   id: '/$id',
   path: '/$id',
@@ -190,6 +196,7 @@ export interface FileRoutesByFullPath {
   '/agente': typeof AgenteRoute
   '/api/agent/$': typeof ApiAgentSplatRoute
   '/api/worker/build': typeof ApiWorkerBuildRoute
+  '/app/$slug/$': typeof AppSlugSplatRoute
   '/api/release/$id': typeof ApiReleaseIdRoute
   '/api/release/callback': typeof ApiReleaseCallbackRoute
   '/api/sites/$id': typeof ApiSitesIdRoute
@@ -218,6 +225,7 @@ export interface FileRoutesByTo {
   '/agente': typeof AgenteRoute
   '/api/agent/$': typeof ApiAgentSplatRoute
   '/api/worker/build': typeof ApiWorkerBuildRoute
+  '/app/$slug/$': typeof AppSlugSplatRoute
   '/api/release/$id': typeof ApiReleaseIdRoute
   '/api/release/callback': typeof ApiReleaseCallbackRoute
   '/api/sites/$id': typeof ApiSitesIdRoute
@@ -247,6 +255,7 @@ export interface FileRoutesById {
   '/agente': typeof AgenteRoute
   '/api/agent/$': typeof ApiAgentSplatRoute
   '/api/worker/build': typeof ApiWorkerBuildRoute
+  '/app/$slug/$': typeof AppSlugSplatRoute
   '/api/release/$id': typeof ApiReleaseIdRoute
   '/api/release/callback': typeof ApiReleaseCallbackRoute
   '/api/sites/$id': typeof ApiSitesIdRoute
@@ -277,6 +286,7 @@ export interface FileRouteTypes {
     | '/agente'
     | '/api/agent/$'
     | '/api/worker/build'
+    | '/app/$slug/$'
     | '/api/release/$id'
     | '/api/release/callback'
     | '/api/sites/$id'
@@ -305,6 +315,7 @@ export interface FileRouteTypes {
     | '/agente'
     | '/api/agent/$'
     | '/api/worker/build'
+    | '/app/$slug/$'
     | '/api/release/$id'
     | '/api/release/callback'
     | '/api/sites/$id'
@@ -333,6 +344,7 @@ export interface FileRouteTypes {
     | '/agente'
     | '/api/agent/$'
     | '/api/worker/build'
+    | '/app/$slug/$'
     | '/api/release/$id'
     | '/api/release/callback'
     | '/api/sites/$id'
@@ -358,6 +370,7 @@ export interface RootRouteChildren {
   AgenteRoute: typeof AgenteRoute
   ApiAgentSplatRoute: typeof ApiAgentSplatRoute
   ApiWorkerBuildRoute: typeof ApiWorkerBuildRoute
+  AppSlugSplatRoute: typeof AppSlugSplatRoute
   ApiSitesIdRoute: typeof ApiSitesIdRoute
 }
 
@@ -517,6 +530,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiWorkerBuildRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/app/$slug/$': {
+      id: '/app/$slug/$'
+      path: '/app/$slug/$'
+      fullPath: '/app/$slug/$'
+      preLoaderRoute: typeof AppSlugSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/release/$id': {
       id: '/api/release/$id'
       path: '/$id'
@@ -611,6 +631,7 @@ const rootRouteChildren: RootRouteChildren = {
   AgenteRoute: AgenteRoute,
   ApiAgentSplatRoute: ApiAgentSplatRoute,
   ApiWorkerBuildRoute: ApiWorkerBuildRoute,
+  AppSlugSplatRoute: AppSlugSplatRoute,
   ApiSitesIdRoute: ApiSitesIdRoute,
 }
 export const routeTree = rootRouteImport

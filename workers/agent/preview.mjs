@@ -30,7 +30,7 @@ export class PreviewPool {
   }
 
   /** Start (or restart) a preview for a finished job. Evicts the oldest when the pool is full. */
-  async start({ jobId, owner, files }) {
+  async start({ jobId, owner, files, sandboxOptions = {} }) {
     if (this.starting.has(jobId)) return this.starting.get(jobId);
     const run = (async () => {
       await this.stop(jobId);
@@ -39,7 +39,7 @@ export class PreviewPool {
         if (!oldest) break;
         await this.stop(oldest.jobId);
       }
-      const sandbox = await this.sandboxFactory({ jobId: `preview-${jobId}` });
+      const sandbox = await this.sandboxFactory({ jobId: `preview-${jobId}`, ...sandboxOptions });
       try {
         for (const f of files) {
           if (typeof f?.content === "string") await sandbox.writeFile(f.path, f.content);

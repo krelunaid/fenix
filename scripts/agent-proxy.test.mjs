@@ -7,7 +7,11 @@ import { JobStore } from "../workers/agent/jobs.mjs";
 import { FakeModel } from "../workers/agent/model/fake.mjs";
 import { LocalSandbox } from "../workers/agent/sandbox/local.mjs";
 import { GOLDEN_FILES } from "./fixtures/agent-golden-project.mjs";
-import { handleAgentRequest, setAgentConfigForTests } from "../src/lib/agent/http.ts";
+import { handleAgentRequest, handlePublicAppRequest, setAgentConfigForTests } from "../src/lib/agent/http.ts";
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { SiteStore, SitePool } from "../workers/agent/sites.mjs";
 import { AGENT_CREATE_COST, AGENT_EDIT_COST, AGENT_GRANT, resetMemoryLedger } from "../src/lib/agent/credits-store.ts";
 
 const TOKEN = "agent-token-0123456789abcdef";
@@ -16,10 +20,15 @@ const OWNER_B = "b".repeat(32);
 const writeAll = GOLDEN_FILES.map((f) => ({ tool: "write_file", input: { path: f.path, content: f.content } }));
 
 let mode = "ok";
-const store = new JobStore({ concurrency: 1, maxQueued: 40 });
+const dataDir = await mkdtemp(join(tmpdir(), "fenix-proxy-data-"));
+const store = new JobStore({ concurrency: 1, maxQueued: 40, dataDir });
+const sandboxFactory = (opts) => LocalSandbox.create({ ...opts, jobId: `proxy-${opts.jobId}` });
+const sitePool = new SitePool({ store: new SiteStore({ dir: join(dataDir, "sites") }), sandboxFactory, idleMs: 60_000, max: 2 });
 const server = createAgentServer({
   token: TOKEN,
   store,
+  dataDir,
+  sites: sitePool,
   browserChecks: false,
   modelFactory: () =>
     mode === "ok"
@@ -27,14 +36,14 @@ const server = createAgentServer({
       : mode === "fail"
         ? new FakeModel([{ text: "non so" }, { text: "boh" }, { text: "mah" }, { text: "no" }])
         : { model: "fake", complete: () => new Promise(() => {}) },
-  sandboxFactory: ({ jobId }) => LocalSandbox.create({ jobId: `proxy-${jobId}` }),
+  sandboxFactory,
 });
 before(async () => {
   server.listen(0, "127.0.0.1");
   await once(server, "listening");
   setAgentConfigForTests({ url: `http://127.0.0.1:${server.address().port}`, token: TOKEN });
 });
-after(async () => { await server.previews.close(); store.close(); server.close(); setAgentConfigForTests(undefined); });
+after(async () => { await sitePool.close(); await server.previews.close(); store.close(); server.close(); setAgentConfigForTests(undefined); await rm(dataDir, { recursive: true, force: true }); });
 
 const req = (path, { method = "GET", body, owner = OWNER_A } = {}) =>
   handleAgentRequest(
@@ -173,4 +182,29 @@ test("preview through the proxy: start, rewritten HTML, relayed API, stop", { ti
   assert.equal(list.length, 1);
   assert.equal((await req(`/jobs/${created.id}/preview`, { method: "DELETE" })).status, 200);
   assert.equal((await req(`/jobs/${created.id}/preview/`)).status, 409);
+});
+
+test("publish through the proxy and serve publicly at /app/:slug/ with rewritten paths", { timeout: 240_000 }, async () => {
+  resetMemoryLedger();
+  mode = "ok";
+  const created = await (await req("/build", { method: "POST", body: { brief: "agenda per barbiere", name: "Barbiere Verdi" } })).json();
+  const done = await waitJob(created.id);
+  assert.equal(done.status, "ok");
+  const pub = await req("/sites", { method: "POST", body: { jobId: created.id } });
+  const rec = await pub.json();
+  assert.equal(pub.status, 200, JSON.stringify(rec));
+  assert.equal(rec.slug, "barbiere-verdi");
+  const publicHome = await handlePublicAppRequest(new Request("https://fenix.test/app/barbiere-verdi/"), "barbiere-verdi", "/");
+  assert.equal(publicHome.status, 200);
+  assert.equal(publicHome.headers.get("content-security-policy"), "frame-ancestors 'none'");
+  const html = await publicHome.text();
+  assert.match(html, /href="\/app\/barbiere-verdi\/styles.css"/);
+  const api = await handlePublicAppRequest(new Request("https://fenix.test/app/barbiere-verdi/api/appuntamenti", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ cliente: "Pia Rossi", servizio: "Taglio", quando: "2026-09-13T15:00" }) }), "barbiere-verdi", "/api/appuntamenti");
+  assert.equal(api.status, 201);
+  const mine = await (await req("/sites")).json();
+  assert.equal(mine.sites.length, 1);
+  assert.equal((await req("/sites", { owner: OWNER_B })).status, 200);
+  assert.equal((await (await req("/sites", { owner: OWNER_B })).json()).sites.length, 0);
+  assert.equal((await req(`/sites/${rec.slug}`, { method: "DELETE" })).status, 200);
+  assert.equal((await handlePublicAppRequest(new Request("https://fenix.test/app/barbiere-verdi/"), "barbiere-verdi", "/")).status, 404);
 });

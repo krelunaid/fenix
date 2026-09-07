@@ -6,7 +6,12 @@ import { Button } from "@/components/ui/button";
 import {
   agentStatus,
   cancelAgentJob,
+  listPublishedApps,
+  publicAppUrl,
+  publishApp,
   readAgentJob,
+  unpublishApp,
+  type PublishedApp,
   readRememberedJobs,
   rememberJob,
   stageLabel,
@@ -40,14 +45,21 @@ function AgentePage() {
   const [pane, setPane] = useState<Pane>("anteprima");
   const [openFile, setOpenFile] = useState<string | null>(null);
   const [history, setHistory] = useState<RememberedJob[]>([]);
+  const [published, setPublished] = useState<PublishedApp[]>([]);
+  const [slug, setSlug] = useState("");
+  const [publishing, setPublishing] = useState(false);
   const logRef = useRef<HTMLOListElement>(null);
+
+  const refreshPublished = useCallback(() => {
+    listPublishedApps().then((r) => setPublished(r.sites)).catch(() => { /* not configured or offline */ });
+  }, []);
 
   useEffect(() => {
     setHistory(readRememberedJobs());
     agentStatus()
-      .then((s) => { setConfigured(s.configured); setHint(s.hint); setCredits(s.credits); })
+      .then((s) => { setConfigured(s.configured); setHint(s.hint); setCredits(s.credits); if (s.configured) refreshPublished(); })
       .catch(() => { setConfigured(false); setHint("Il server di Fenix non risponde."); });
-  }, []);
+  }, [refreshPublished]);
 
   // Poll the current job until it ends; then load files and start the preview.
   useEffect(() => {
@@ -162,6 +174,32 @@ function AgentePage() {
     a.download = `${(history.find((h) => h.id === jobId)?.brief || "fenix-progetto").replace(/[^a-z0-9]+/gi, "-").slice(0, 40)}.zip`;
     a.click();
     URL.revokeObjectURL(url);
+  }
+
+  async function handlePublish(e: FormEvent) {
+    e.preventDefault();
+    if (!jobId || publishing) return;
+    setPublishing(true);
+    try {
+      const rec = await publishApp({ jobId, slug: slug.trim() || undefined, name: history.find((h) => h.id === jobId)?.brief.slice(0, 60) });
+      toast(`Online: ${publicAppUrl(rec.slug)}`);
+      setSlug(rec.slug);
+      refreshPublished();
+    } catch (err) {
+      toast(err instanceof Error ? err.message : "Pubblicazione non riuscita.");
+    } finally {
+      setPublishing(false);
+    }
+  }
+
+  async function handleUnpublish(s: string) {
+    try {
+      await unpublishApp(s);
+      toast("Ritirato. I dati dell'app sono stati eliminati.");
+      refreshPublished();
+    } catch (err) {
+      toast(err instanceof Error ? err.message : "Non riesco a ritirare l'app.");
+    }
   }
 
   const checks = job?.result?.checks?.checks ?? [];
@@ -292,6 +330,20 @@ function AgentePage() {
                     <Button type="submit" className="h-12 rounded-full px-5" disabled={busy || instruction.trim().length < 3}>Modifica (2 crediti)</Button>
                   </form>
                 ) : null}
+                {done ? (
+                  <form onSubmit={handlePublish} className="mt-3 flex flex-col gap-2 rounded-2xl border border-border bg-card p-3 sm:flex-row sm:items-center">
+                    <label htmlFor="agent-slug" className="text-sm text-muted-foreground sm:w-40">Pubblica su <span className="font-mono">/app/</span></label>
+                    <input
+                      id="agent-slug"
+                      value={slug}
+                      onChange={(e) => setSlug(e.target.value.toLowerCase())}
+                      placeholder="indirizzo (es. barbiere-rossi)"
+                      pattern="[a-z0-9][a-z0-9-]{1,38}[a-z0-9]"
+                      className="h-12 flex-1 rounded-full border border-border bg-background px-4 font-mono text-base outline-none focus-visible:ring-2 focus-visible:ring-ring/70"
+                    />
+                    <Button type="submit" variant="secondary" className="h-12 rounded-full px-5" disabled={publishing}>{publishing ? "Pubblico…" : "Pubblica online"}</Button>
+                  </form>
+                ) : null}
                 {job.result?.summary && done ? <p className="mt-4 whitespace-pre-wrap text-sm text-muted-foreground">{job.result.summary}</p> : null}
               </div>
             ) : null}
@@ -337,6 +389,22 @@ function AgentePage() {
                 </pre>
               </div>
             ) : null}
+          </section>
+        ) : null}
+
+        {published.length ? (
+          <section className="mt-12">
+            <p className="text-[11px] font-medium tracking-[0.22em] text-muted-foreground uppercase">App online</p>
+            <ul className="mt-3 divide-y divide-border rounded-2xl border border-border">
+              {published.map((p) => (
+                <li key={p.slug} className="flex flex-wrap items-center gap-3 px-4 py-3 text-sm">
+                  <a href={publicAppUrl(p.slug)} target="_blank" rel="noreferrer" className="font-medium underline underline-offset-4">{p.name}</a>
+                  <span className="font-mono text-xs text-muted-foreground">/app/{p.slug}/ · v{p.version}</span>
+                  <button type="button" onClick={() => handleUnpublish(p.slug)} className="ml-auto h-9 rounded-full border border-border px-3 text-xs text-muted-foreground hover:text-foreground">Ritira</button>
+                </li>
+              ))}
+            </ul>
+            <p className="mt-2 text-xs text-muted-foreground">Le app online conservano i loro dati sul server; «Ritira» li elimina.</p>
           </section>
         ) : null}
 
