@@ -42,6 +42,10 @@ Un brief **full-stack** esplicito esporta un'app avviabile con `npm start`: fron
 
 
 
+## Agente (beta) — nuovo motore
+
+La pagina **/agente** usa `workers/agent` (Claude + sandbox Docker) attraverso il proxy `/api/agent/*` (`netlify/functions/agent-proxy.ts`, `src/lib/agent/http.ts`): il brief diventa un **progetto multi-file** (server Node + SQLite, pagine, test) costruito e verificato nel sandbox; lo Studio mostra il lavoro passo per passo, poi un'**anteprima viva** del progetto in un iframe sandboxed (relay firmato, 30 minuti), le modifiche in chat (2 crediti, patch mirate sui file) e lo ZIP. I crediti sono conteggiati **sul server** (Netlify Blobs: 100, 4 per creare, 2 per modificare, rimborso in caso di errore). Variabili server: `AGENT_URL`, `AGENT_TOKEN`; senza, la pagina spiega che il motore non è attivo. Dettagli e limiti in [`workers/agent/README.md`](workers/agent/README.md).
+
 ## Locale
 
 `npm install` poi `npm run dev`. `npm test` e `npm run typecheck`.

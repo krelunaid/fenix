@@ -143,6 +143,12 @@ function Home() {
         Descrivi la tua idea. Fenix crea un prototipo funzionante, con codice esportabile e opzioni
         di pubblicazione.
       </p>
+      <p className="mt-3 text-[14px] text-[#9b93c2]">
+        Vuoi un progetto vero con server, database e test?{" "}
+        <Link to="/agente" className="text-white underline underline-offset-4">
+          Prova l'agente (beta)
+        </Link>
+      </p>
 
       <form
         id="nuovo"
