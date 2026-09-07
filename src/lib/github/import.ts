@@ -9,6 +9,7 @@ import {
   isGhError,
   listInstallationRepos,
   mintInstallationToken,
+  SCOPE_IMPORT,
   type GhError,
   type GitHubTreeEntry,
 } from "./api.ts";
@@ -60,7 +61,7 @@ export async function importFromGitHub(input: {
   if (!parsedRepo) return { error: "Repository non valido.", status: 400 };
   if (!branch) return { error: "Branch non valido.", status: 400 };
 
-  const token = await mintInstallationToken(input.installationId);
+  const token = await mintInstallationToken(input.installationId, SCOPE_IMPORT);
   if (isGhError(token)) return token;
   try {
     const repos = await listInstallationRepos(token);

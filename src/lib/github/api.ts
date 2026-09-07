@@ -102,23 +102,80 @@ async function readJsonBounded(
   }
 }
 
-export async function mintInstallationToken(installationId: string): Promise<string | GhError> {
+export type TokenScope = {
+  /** Subset of the App's permissions to request, e.g. { contents: "write", metadata: "read" }. */
+  permissions?: Record<string, "read" | "write">;
+  /** Restrict the token to these repository names (without owner). */
+  repositories?: string[];
+};
+
+export const SCOPE_READ_REPOS: TokenScope = { permissions: { metadata: "read" } };
+export const SCOPE_IMPORT: TokenScope = { permissions: { contents: "read", metadata: "read" } };
+export const SCOPE_EXPORT: TokenScope = { permissions: { contents: "write", metadata: "read" } };
+
+export async function mintInstallationToken(
+  installationId: string,
+  scope: TokenScope = SCOPE_EXPORT,
+): Promise<string | GhError> {
   let jwt: string;
   try {
     jwt = await githubAppJwt();
   } catch {
     return { error: "GitHub non configurato.", status: 503 };
   }
+  const body: Record<string, unknown> = {};
+  if (scope.permissions && Object.keys(scope.permissions).length) body.permissions = scope.permissions;
+  if (scope.repositories?.length) body.repositories = scope.repositories;
   const res = await ghFetch(`${GITHUB_API}/app/installations/${installationId}/access_tokens`, {
     method: "POST",
     headers: { ...authHeaders(jwt), "Content-Type": "application/json" },
-    body: "{}",
+    body: JSON.stringify(body),
   });
   const body = (await readJson(res)) as { token?: string } | null;
   if (!res.ok || !body?.token || typeof body.token !== "string") {
     return fail(res.status, "Installazione GitHub non raggiungibile.", JSON.stringify(body));
   }
   return body.token;
+}
+
+/**
+ * Exchange the `code` GitHub appends to the setup URL when the App has
+ * "Request user authorization (OAuth) during installation" enabled.
+ * Returns a short-lived user token that lives only in this call stack.
+ */
+export async function exchangeUserCode(
+  code: string,
+  cfg: { clientId: string; clientSecret: string },
+): Promise<string | GhError> {
+  const res = await ghFetch("https://github.com/login/oauth/access_token", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify({ client_id: cfg.clientId, client_secret: cfg.clientSecret, code }),
+  });
+  const body = (await readJson(res)) as { access_token?: string; error?: string } | null;
+  if (!res.ok || !body?.access_token || typeof body.access_token !== "string") {
+    return fail(res.status, "Autorizzazione GitHub non valida o scaduta.", JSON.stringify(body));
+  }
+  return body.access_token;
+}
+
+/** True when `installationId` is among the installations the user can access. */
+export async function userHasInstallation(
+  userToken: string,
+  installationId: string,
+): Promise<boolean | GhError> {
+  for (let page = 1; page <= 3; page += 1) {
+    const res = await ghFetch(`${GITHUB_API}/user/installations?per_page=100&page=${page}`, {
+      headers: authHeaders(userToken),
+    });
+    const body = (await readJson(res)) as { installations?: { id?: number }[] } | null;
+    if (!res.ok || !Array.isArray(body?.installations)) {
+      return fail(res.status, "Impossibile verificare le installazioni dell'utente.", JSON.stringify(body));
+    }
+    if (body.installations.some((i) => String(i?.id) === installationId)) return true;
+    if (body.installations.length < 100) break;
+  }
+  return false;
 }
 
 export async function getInstallation(

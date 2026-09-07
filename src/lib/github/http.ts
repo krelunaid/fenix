@@ -1,15 +1,18 @@
 import { ownerFromRequest } from "../projects/publish-owner.ts";
 import { redactSecrets } from "../release/redact.ts";
 import {
+  exchangeUserCode,
   getInstallation,
   isGhError,
   listInstallationRepos,
   mintInstallationToken,
   dropToken,
+  userHasInstallation,
+  SCOPE_READ_REPOS,
 } from "./api.ts";
 import { exportToGitHub, previewExport } from "./export.ts";
 import { importFromGitHub } from "./import.ts";
-import { githubAppConfig } from "./secrets.server.ts";
+import { githubAppConfig, githubUserAuthConfigured } from "./secrets.server.ts";
 import {
   clearConnectCookieHeader,
   cookieMatchesState,
@@ -40,12 +43,14 @@ function json(data: unknown, status = 200, extra?: HeadersInit) {
 }
 
 const HINT_MISSING =
-  "GitHub non configurato. Serve una GitHub App sul server (Contents read/write + Metadata read) e un database durevole (DATABASE_URL con la migrazione nonce). Nessuna connessione finta.";
+  "GitHub non configurato. Serve una GitHub App sul server (Contents read/write + Metadata read, autorizzazione utente durante l'installazione con GITHUB_APP_CLIENT_ID/SECRET) e un database durevole (DATABASE_URL con la migrazione nonce). Nessuna connessione finta.";
 const HINT_CONNECT = "Collega un'installazione. Il token vive solo sul server, pochi minuti.";
 const HINT_OK = "Installazione collegata. L'export parte solo se lo chiedi tu.";
+const HINT_USER_AUTH =
+  "Nella GitHub App abilita «Request user authorization (OAuth) during installation» e imposta GITHUB_APP_CLIENT_ID e GITHUB_APP_CLIENT_SECRET sul server.";
 
 async function githubReady(): Promise<boolean> {
-  return Boolean(githubAppConfig()) && (await githubNonceStoreReady());
+  return Boolean(githubAppConfig()) && githubUserAuthConfigured() && (await githubNonceStoreReady());
 }
 
 export async function handleGitHubStatus(request: Request): Promise<Response> {
@@ -124,9 +129,29 @@ export async function handleGitHubCallback(request: Request): Promise<Response> 
   }
   const first = await consumeNonce(state.nonce, state.ownerHash, state.exp);
   if (!first) return htmlErr("Collegamento GitHub già usato. Stato non valido.");
+  const cfg = githubAppConfig();
+  // The installation id in the query is attacker-controlled. Prove the browser's
+  // user actually belongs to it: GitHub sends `code` when the App requests user
+  // authorization during installation; without that proof we refuse.
+  const code = String(url.searchParams.get("code") || "").trim();
+  if (!cfg?.clientId || !cfg.clientSecret || !githubUserAuthConfigured()) {
+    return htmlErr(HINT_USER_AUTH);
+  }
+  if (!code || !/^[A-Za-z0-9_-]{6,128}$/.test(code)) {
+    return htmlErr("Collegamento GitHub rifiutato: manca l'autorizzazione utente. " + HINT_USER_AUTH);
+  }
+  const userToken = await exchangeUserCode(code, { clientId: cfg.clientId, clientSecret: cfg.clientSecret });
+  if (isGhError(userToken)) return htmlErr(userToken.error);
+  let owns: boolean | { error: string; status: number };
+  try {
+    owns = await userHasInstallation(userToken, installationId);
+  } finally {
+    dropToken(userToken);
+  }
+  if (isGhError(owns)) return htmlErr(owns.error);
+  if (!owns) return htmlErr("Collegamento GitHub rifiutato: questa installazione non appartiene al tuo account.");
   const inst = await getInstallation(installationId);
   if (isGhError(inst)) return htmlErr("Installazione GitHub non valida.");
-  const cfg = githubAppConfig();
   if (cfg && /^\d+$/.test(cfg.appId) && inst.appId && inst.appId !== cfg.appId) {
     return htmlErr("Installazione di un'altra app. Rifiutata.");
   }
@@ -175,7 +200,7 @@ export async function handleGitHubRepos(request: Request): Promise<Response> {
   if (!owner) return json({ error: "Identità assente." }, 401);
   const row = await readInstallation(githubOwnerHash(owner));
   if (!row) return json({ error: "GitHub non collegato." }, 401);
-  const token = await mintInstallationToken(row.installationId);
+  const token = await mintInstallationToken(row.installationId, SCOPE_READ_REPOS);
   if (isGhError(token)) return json({ error: token.error }, token.status);
   try {
     const repos = await listInstallationRepos(token);

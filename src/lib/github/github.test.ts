@@ -70,8 +70,9 @@ function cookieValue(res: Response): string {
   return raw.slice(prefix.length).split(";")[0] || "";
 }
 
-function callbackReq(state: string, installationId: string, cookie?: string) {
-  const url = `https://fenix.test/api/github/callback?installation_id=${installationId}&setup_action=install&state=${encodeURIComponent(state)}`;
+function callbackReq(state: string, installationId: string, cookie?: string, code: string | null = "code-krelunaid") {
+  const codeParam = code ? `&code=${encodeURIComponent(code)}` : "";
+  const url = `https://fenix.test/api/github/callback?installation_id=${installationId}&setup_action=install&state=${encodeURIComponent(state)}${codeParam}`;
   const headers = new Headers();
   if (cookie) headers.set("cookie", `${CONNECT_COOKIE_NAME}=${cookie}`);
   return new Request(url, { headers });
@@ -127,6 +128,18 @@ function installMock(opts?: {
       }
     }
     calls.push({ method, path, body, auth, version });
+    if (method === "POST" && url === "https://github.com/login/oauth/access_token") {
+      const b = body as { code?: string; client_id?: string; client_secret?: string };
+      if (b.client_secret !== "gh-secret-fixture-not-real-0123") return Response.json({ error: "bad_client" }, { status: 401 });
+      if (b.code === "code-krelunaid") return Response.json({ access_token: "ghu_krelunaid", token_type: "bearer" });
+      if (b.code === "code-attacker") return Response.json({ access_token: "ghu_attacker", token_type: "bearer" });
+      return Response.json({ error: "bad_verification_code" }, { status: 200 });
+    }
+    if (method === "GET" && path === "/user/installations") {
+      if (auth === "Bearer ghu_krelunaid") return Response.json({ installations: [{ id: 99 }, { id: 77 }] });
+      if (auth === "Bearer ghu_attacker") return Response.json({ installations: [{ id: 4242 }] });
+      return new Response("bad user token", { status: 401 });
+    }
     if (method === "POST" && /\/app\/installations\/\d+\/access_tokens$/.test(path)) {
       if (!auth.startsWith("Bearer eyJ")) return new Response("jwt", { status: 401 });
       const token = `ghs_${"y".repeat(48)}`;
@@ -345,7 +358,7 @@ describe("github app http", () => {
     const prevDb = process.env.DATABASE_URL;
     delete process.env.DATABASE_URL;
     try {
-      setGitHubAppForTest({ appId: "12345", privateKey: pem, slug: "fenix-export" });
+      setGitHubAppForTest({ appId: "12345", privateKey: pem, slug: "fenix-export", clientId: "Iv1.fenix", clientSecret: "gh-secret-fixture-not-real-0123" });
       assert.equal(await githubNonceStoreReady(), false);
       const status = await handleGitHubCollection(
         ownerReq("GET", "https://fenix.test/api/github", OWNER_A),
@@ -387,7 +400,7 @@ describe("github app http", () => {
     const pg = await createGitHubSqlForTest();
     setGitHubSqlForTest(pg.sql);
     try {
-      setGitHubAppForTest({ appId: "12345", privateKey: pem, slug: "fenix-export" });
+      setGitHubAppForTest({ appId: "12345", privateKey: pem, slug: "fenix-export", clientId: "Iv1.fenix", clientSecret: "gh-secret-fixture-not-real-0123" });
       installMock();
       assert.equal(await githubNonceStoreReady(), true);
       const connect = await connectOwner(OWNER_A, "/studio/argilla");
@@ -409,13 +422,42 @@ describe("github app http", () => {
     }
   });
 
+  it("callback refuses an installation the connecting user does not own, and refuses without user code", async () => {
+    setGitHubAppForTest({ appId: "12345", privateKey: pem, slug: "fenix-export", clientId: "Iv1.fenix", clientSecret: "gh-secret-fixture-not-real-0123" });
+    installMock();
+    // Attacker holds a valid state+cookie of their own, but names the victim's installation (99).
+    const attacker = await connectOwner(OWNER_B, "/");
+    const hijack = await handleGitHubCallback(callbackReq(attacker.state, "99", attacker.cookie, "code-attacker"));
+    assert.equal(hijack.status, 400);
+    assert.match(await hijack.text(), /non appartiene al tuo account/);
+    assert.equal(await readInstallation(githubOwnerHash(OWNER_B)), null);
+    // No `code` at all (App without "request user authorization during installation"): refused.
+    const again = await connectOwner(OWNER_B, "/");
+    const noCode = await handleGitHubCallback(callbackReq(again.state, "99", again.cookie, null));
+    assert.equal(noCode.status, 400);
+    assert.match(await noCode.text(), /autorizzazione utente/);
+    assert.equal(await readInstallation(githubOwnerHash(OWNER_B)), null);
+    // The legitimate owner (whose user token lists 99) still connects.
+    const legit = await connectOwner(OWNER_A, "/");
+    const ok = await handleGitHubCallback(callbackReq(legit.state, "99", legit.cookie));
+    assert.equal(ok.status, 302);
+  });
+
+  it("without OAuth client credentials the App is reported as not configured", async () => {
+    setGitHubAppForTest({ appId: "12345", privateKey: pem, slug: "fenix-export" });
+    const status = await handleGitHubCollection(ownerReq("GET", "https://fenix.test/api/github", OWNER_A));
+    const body = (await status.json()) as { configured: boolean; hint: string };
+    assert.equal(body.configured, false);
+    assert.match(body.hint, /GITHUB_APP_CLIENT_ID/);
+  });
+
   it("missing slug is not a fake connection", () => {
     setGitHubAppForTest({ appId: "12345", privateKey: pem, slug: "" });
     assert.equal(githubAppConfig(), null);
   });
 
   it("connect sets HttpOnly cookie; callback rejects bad state, other app, replay", async () => {
-    setGitHubAppForTest({ appId: "12345", privateKey: pem, slug: "fenix-export" });
+    setGitHubAppForTest({ appId: "12345", privateKey: pem, slug: "fenix-export", clientId: "Iv1.fenix", clientSecret: "gh-secret-fixture-not-real-0123" });
     installMock();
     const noOwner = await handleGitHubCollection(
       ownerReq("POST", "https://fenix.test/api/github", undefined, { returnTo: "/studio/x" }),
@@ -460,7 +502,7 @@ describe("github app http", () => {
   });
 
   it("attacker state on a victim browser is rejected before save", async () => {
-    setGitHubAppForTest({ appId: "12345", privateKey: pem, slug: "fenix-export" });
+    setGitHubAppForTest({ appId: "12345", privateKey: pem, slug: "fenix-export", clientId: "Iv1.fenix", clientSecret: "gh-secret-fixture-not-real-0123" });
     installMock();
     const attacker = await connectOwner(OWNER_A, "/stolen");
     const victim = await connectOwner(OWNER_B, "/own");
@@ -494,7 +536,7 @@ describe("github app http", () => {
   });
 
   it("callback without cookie does not consume the nonce", async () => {
-    setGitHubAppForTest({ appId: "12345", privateKey: pem, slug: "fenix-export" });
+    setGitHubAppForTest({ appId: "12345", privateKey: pem, slug: "fenix-export", clientId: "Iv1.fenix", clientSecret: "gh-secret-fixture-not-real-0123" });
     installMock();
     const connect = await connectOwner(OWNER_A);
     const missing = await handleGitHubCallback(callbackReq(connect.state, "99"));
@@ -504,7 +546,7 @@ describe("github app http", () => {
   });
 
   it("parallel callbacks: one 302, one 400, one installation", async () => {
-    setGitHubAppForTest({ appId: "12345", privateKey: pem, slug: "fenix-export" });
+    setGitHubAppForTest({ appId: "12345", privateKey: pem, slug: "fenix-export", clientId: "Iv1.fenix", clientSecret: "gh-secret-fixture-not-real-0123" });
     installMock();
     const connect = await connectOwner(OWNER_A);
     const [a, b] = await Promise.all([
@@ -567,7 +609,7 @@ describe("github app http", () => {
   });
 
   it("lists only installation repos; other owner is disconnected", async () => {
-    setGitHubAppForTest({ appId: "12345", privateKey: pem, slug: "fenix-export" });
+    setGitHubAppForTest({ appId: "12345", privateKey: pem, slug: "fenix-export", clientId: "Iv1.fenix", clientSecret: "gh-secret-fixture-not-real-0123" });
     installMock({ extraRepo: true });
     const connect = await connectOwner(OWNER_A);
     await handleGitHubCallback(callbackReq(connect.state, "99", connect.cookie));
@@ -584,7 +626,7 @@ describe("github app http", () => {
   });
 
   it("export is blob→tree→commit→ref force=false, idempotent, redacted", async () => {
-    setGitHubAppForTest({ appId: "12345", privateKey: pem, slug: "fenix-export" });
+    setGitHubAppForTest({ appId: "12345", privateKey: pem, slug: "fenix-export", clientId: "Iv1.fenix", clientSecret: "gh-secret-fixture-not-real-0123" });
     const mock = installMock();
     const connect = await connectOwner(OWNER_A);
     await handleGitHubCallback(callbackReq(connect.state, "99", connect.cookie));
@@ -636,7 +678,7 @@ describe("github app http", () => {
   });
 
   it("imports a verified Fenix tree as public files without exposing the installation token", async () => {
-    setGitHubAppForTest({ appId: "12345", privateKey: pem, slug: "fenix-export" });
+    setGitHubAppForTest({ appId: "12345", privateKey: pem, slug: "fenix-export", clientId: "Iv1.fenix", clientSecret: "gh-secret-fixture-not-real-0123" });
     const mock = installMock();
     const connect = await connectOwner(OWNER_A);
     await handleGitHubCallback(callbackReq(connect.state, "99", connect.cookie));
@@ -700,7 +742,7 @@ describe("github app http", () => {
   });
 
   it("GitHub import fails closed for a truncated tree, foreign repo and missing owner", async () => {
-    setGitHubAppForTest({ appId: "12345", privateKey: pem, slug: "fenix-export" });
+    setGitHubAppForTest({ appId: "12345", privateKey: pem, slug: "fenix-export", clientId: "Iv1.fenix", clientSecret: "gh-secret-fixture-not-real-0123" });
     installMock({ truncated: true });
     const connect = await connectOwner(OWNER_A);
     await handleGitHubCallback(callbackReq(connect.state, "99", connect.cookie));
@@ -740,7 +782,7 @@ describe("github app http", () => {
   });
 
   it("invalid branch and foreign repo are rejected; conflict does not force", async () => {
-    setGitHubAppForTest({ appId: "12345", privateKey: pem, slug: "fenix-export" });
+    setGitHubAppForTest({ appId: "12345", privateKey: pem, slug: "fenix-export", clientId: "Iv1.fenix", clientSecret: "gh-secret-fixture-not-real-0123" });
     const mock = installMock({ conflict: true });
     const connect = await connectOwner(OWNER_A);
     await handleGitHubCallback(callbackReq(connect.state, "99", connect.cookie));
@@ -777,7 +819,7 @@ describe("github app http", () => {
   });
 
   it("empty repo seeds README then exports without inventing force", async () => {
-    setGitHubAppForTest({ appId: "12345", privateKey: pem, slug: "fenix-export" });
+    setGitHubAppForTest({ appId: "12345", privateKey: pem, slug: "fenix-export", clientId: "Iv1.fenix", clientSecret: "gh-secret-fixture-not-real-0123" });
     const mock = installMock({ empty: true });
     const connect = await connectOwner(OWNER_A);
     await handleGitHubCallback(callbackReq(connect.state, "99", connect.cookie));
@@ -799,7 +841,7 @@ describe("github app http", () => {
   });
 
   it("JWT is RS256 under 10 minutes, PKCS1 works, tokens are not in status JSON", async () => {
-    setGitHubAppForTest({ appId: "12345", privateKey: pem, slug: "fenix-export" });
+    setGitHubAppForTest({ appId: "12345", privateKey: pem, slug: "fenix-export", clientId: "Iv1.fenix", clientSecret: "gh-secret-fixture-not-real-0123" });
     const jwt = await githubAppJwt();
     const header = JSON.parse(Buffer.from(jwt.split(".")[0]!, "base64url").toString("utf8")) as {
       alg: string;
@@ -816,7 +858,7 @@ describe("github app http", () => {
     setGitHubAppForTest({ appId: "12345", privateKey: pkcs1, slug: "fenix-export" });
     const jwtPkcs1 = await githubAppJwt();
     assert.equal(jwtPkcs1.split(".").length, 3);
-    setGitHubAppForTest({ appId: "12345", privateKey: pem, slug: "fenix-export" });
+    setGitHubAppForTest({ appId: "12345", privateKey: pem, slug: "fenix-export", clientId: "Iv1.fenix", clientSecret: "gh-secret-fixture-not-real-0123" });
     installMock();
     const connect = await connectOwner(OWNER_A);
     await handleGitHubCallback(callbackReq(connect.state, "99", connect.cookie));

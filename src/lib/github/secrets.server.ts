@@ -10,6 +10,9 @@ export type GitHubAppConfig = {
   appId: string;
   privateKey: string;
   slug: string;
+  /** OAuth client of the same App: needed to prove the connecting user owns the installation. */
+  clientId?: string;
+  clientSecret?: string;
 };
 
 let testConfig: GitHubAppConfig | null = null;
@@ -43,7 +46,19 @@ function readEnvConfig(): GitHubAppConfig | null {
   const privateKey = pemFrom(process.env.GITHUB_APP_PRIVATE_KEY || "");
   const slug = (process.env.GITHUB_APP_SLUG || "").trim();
   if (!appId || !slug || privateKey.length < 32) return null;
-  return { appId, privateKey, slug };
+  const clientId = (process.env.GITHUB_APP_CLIENT_ID || "").trim() || undefined;
+  const clientSecret = (process.env.GITHUB_APP_CLIENT_SECRET || "").trim() || undefined;
+  return { appId, privateKey, slug, clientId, clientSecret };
+}
+
+/**
+ * True when the callback can verify the user↔installation link (OAuth code
+ * exchange). Without it the connect flow is refused: accepting any
+ * `installation_id` would let a visitor attach someone else's installation.
+ */
+export function githubUserAuthConfigured(): boolean {
+  const cfg = githubAppConfig();
+  return Boolean(cfg?.clientId && cfg?.clientSecret && cfg.clientSecret.length >= 16);
 }
 
 export function githubConfigured(): boolean {

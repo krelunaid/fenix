@@ -88,3 +88,8 @@ Installazione e job idempotenti stanno nello store Netlify Blobs `fenix-github` 
 «You are unable to create new references for empty repositories, even if the commit SHA-1 hash used exists. Empty repositories are repositories without branches.»
 
 Fenix prova un seed `PUT /contents/README.md` e poi l'albero atomico; se GitHub rifiuta, errore chiaro. Questo può fare due commit. Non è un merge e non c'è sync VS Code.
+
+
+## Verifica utente ↔ installazione (2026-09-07)
+
+Il callback `/api/github/callback` non accetta più un `installation_id` qualsiasi: richiede il `code` che GitHub aggiunge al Setup URL quando nella App è attivo **«Request user authorization (OAuth) during installation»**. Il server scambia il `code` con un token utente (`GITHUB_APP_CLIENT_ID` + `GITHUB_APP_CLIENT_SECRET`) e controlla che l'installazione compaia in `GET /user/installations`. Senza queste variabili lo Studio mostra «GitHub non configurato». I token installazione sono limitati per operazione: `metadata:read` per l'elenco repo, `contents:read` per l'import, `contents:write` per l'export.
