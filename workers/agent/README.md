@@ -30,10 +30,14 @@ The CLI defaults to Docker and refuses local generation. Direct HTTP startup req
 
 The owner header is a trusted-proxy assertion, NOT authentication by itself. The pending Studio proxy must derive it from a verified user session, overwrite untrusted inbound headers and charge/refund credits on the server. No such integration is activated by this branch.
 
+## Studio proxy (added 2026-09-07)
+
+`/api/agent/*` — `netlify/functions/agent-proxy.ts` in production, `src/routes/api/agent.$.ts` in dev — is the trusted proxy this worker expects. It holds `AGENT_URL`/`AGENT_TOKEN` server-side, sets `x-fenix-owner` itself from the caller's identity (today the owner capability; `resolveOwner` in `src/lib/agent/http.ts` is the one place to swap in a verified session) and enforces credits on the server (`src/lib/agent/credits-store.ts`: Netlify Blobs, 100 grant, 4 per create, 2 per edit, refund once on failure/cancel). `npm run test:agent-proxy` runs it against this server with a scripted model.
+
 ## Remaining work before enabling customer traffic
 
 - Real model generation with a server-only Anthropic key (not provided in this environment).
-- Trusted Studio proxy, credits/recovery and generated full-stack app hosting.
+- Studio UI wiring to /api/agent/* (proxy + server credits exist), recovery UX and generated full-stack app hosting.
 - Independent brief-based acceptance: real login, employee isolation, CRUD persistence and design review.
 - Durable job persistence, operational monitoring and independent validation outside the generated project.
 - Provision an explicitly authorized host with Docker; no infrastructure purchases are automatic.

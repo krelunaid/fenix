@@ -1,0 +1,135 @@
+// Studio proxy (/api/agent/*) against a real agent server with a scripted model.
+import { test, before, after } from "node:test";
+import assert from "node:assert/strict";
+import { once } from "node:events";
+import { createAgentServer } from "../workers/agent/server.mjs";
+import { JobStore } from "../workers/agent/jobs.mjs";
+import { FakeModel } from "../workers/agent/model/fake.mjs";
+import { LocalSandbox } from "../workers/agent/sandbox/local.mjs";
+import { GOLDEN_FILES } from "./fixtures/agent-golden-project.mjs";
+import { handleAgentRequest, setAgentConfigForTests } from "../src/lib/agent/http.ts";
+import { AGENT_CREATE_COST, AGENT_EDIT_COST, AGENT_GRANT, resetMemoryLedger } from "../src/lib/agent/credits-store.ts";
+
+const TOKEN = "agent-token-0123456789abcdef";
+const OWNER_A = "a".repeat(32);
+const OWNER_B = "b".repeat(32);
+const writeAll = GOLDEN_FILES.map((f) => ({ tool: "write_file", input: { path: f.path, content: f.content } }));
+
+let mode = "ok";
+const store = new JobStore({ concurrency: 1, maxQueued: 40 });
+const server = createAgentServer({
+  token: TOKEN,
+  store,
+  browserChecks: false,
+  modelFactory: () =>
+    mode === "ok"
+      ? new FakeModel([writeAll, [{ tool: "run_checks" }], [{ tool: "finish", input: { summary: "ok" } }]])
+      : mode === "fail"
+        ? new FakeModel([{ text: "non so" }, { text: "boh" }, { text: "mah" }, { text: "no" }])
+        : { model: "fake", complete: () => new Promise(() => {}) },
+  sandboxFactory: ({ jobId }) => LocalSandbox.create({ jobId: `proxy-${jobId}` }),
+});
+before(async () => {
+  server.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  setAgentConfigForTests({ url: `http://127.0.0.1:${server.address().port}`, token: TOKEN });
+});
+after(() => { store.close(); server.close(); setAgentConfigForTests(undefined); });
+
+const req = (path, { method = "GET", body, owner = OWNER_A } = {}) =>
+  handleAgentRequest(
+    new Request(`https://fenix.test/api/agent${path}`, {
+      method,
+      headers: { ...(owner ? { "x-fenix-owner": owner } : {}), "content-type": "application/json" },
+      body: body ? JSON.stringify(body) : undefined,
+    }),
+    path.split("?")[0],
+  );
+
+async function waitJob(id, owner = OWNER_A) {
+  let view;
+  for (let i = 0; i < 600; i++) {
+    view = await (await req(`/jobs/${id}`, { owner })).json();
+    if (view.status !== "queued" && view.status !== "running") return view;
+    await new Promise((r) => setTimeout(r, 150));
+  }
+  return view;
+}
+
+test("status is public-ish, everything else needs an owner; unconfigured proxy says so", async () => {
+  resetMemoryLedger();
+  const status = await (await req("/status", { owner: null })).json();
+  assert.equal(status.configured, true);
+  assert.equal(status.credits, null);
+  assert.equal((await req("/credits", { owner: null })).status, 401);
+  assert.equal((await req("/build", { method: "POST", body: { brief: "x" }, owner: null })).status, 401);
+  setAgentConfigForTests(null);
+  const off = await req("/build", { method: "POST", body: { brief: "app barbiere" } });
+  assert.equal(off.status, 503);
+  assert.match((await off.json()).error, /AGENT_URL/);
+  setAgentConfigForTests({ url: `http://127.0.0.1:${server.address().port}`, token: TOKEN });
+});
+
+test("a successful build charges CREATE_COST once and is owner-bound", { timeout: 180_000 }, async () => {
+  resetMemoryLedger();
+  mode = "ok";
+  const created = await req("/build", { method: "POST", body: { brief: "agenda per barbiere", kind: "app" } });
+  assert.equal(created.status, 202);
+  const body = await created.json();
+  assert.match(body.id, /^[0-9a-f-]{36}$/);
+  assert.equal(body.credits.remaining, AGENT_GRANT - AGENT_CREATE_COST);
+  assert.equal((await req(`/jobs/${body.id}`, { owner: OWNER_B })).status, 404);
+  const done = await waitJob(body.id);
+  assert.equal(done.status, "ok", JSON.stringify(done.error || done.result?.checks?.failed));
+  assert.equal(done.refunded, false);
+  assert.equal(done.credits.remaining, AGENT_GRANT - AGENT_CREATE_COST);
+  const full = await (await req(`/jobs/${body.id}?full=1`)).json();
+  assert.ok(full.result.files.some((f) => f.path === "server.mjs" && f.content));
+});
+
+test("a failed build is refunded exactly once, even when polled repeatedly", { timeout: 180_000 }, async () => {
+  resetMemoryLedger();
+  mode = "fail";
+  const created = await (await req("/build", { method: "POST", body: { brief: "qualcosa che fallisce" } })).json();
+  assert.equal(created.credits.remaining, AGENT_GRANT - AGENT_CREATE_COST);
+  const done = await waitJob(created.id);
+  assert.equal(done.status, "failed");
+  assert.equal(done.refunded, true);
+  assert.equal(done.credits.remaining, AGENT_GRANT);
+  const again = await (await req(`/jobs/${created.id}`)).json();
+  assert.equal(again.refunded, false);
+  assert.equal(again.credits.remaining, AGENT_GRANT, "no double refund");
+});
+
+test("cancel refunds; edits cost EDIT_COST; insufficient credits -> 402 without dispatch", { timeout: 60_000 }, async () => {
+  resetMemoryLedger();
+  mode = "hang";
+  const created = await (await req("/build", { method: "POST", body: { brief: "lento" } })).json();
+  const cancelled = await (await req(`/jobs/${created.id}`, { method: "DELETE" })).json();
+  assert.equal(cancelled.refunded, true);
+  assert.equal(cancelled.credits.remaining, AGENT_GRANT);
+
+  const edit = await (await req("/build", { method: "POST", body: { instruction: "cambia colore", files: [{ path: "public/index.html", content: "<!doctype html>" }] } })).json();
+  assert.equal(edit.credits.remaining, AGENT_GRANT - AGENT_EDIT_COST);
+  await req(`/jobs/${edit.id}`, { method: "DELETE" });
+
+  assert.equal((await req("/build", { method: "POST", body: { instruction: "senza file" } })).status, 400);
+
+  // Spend the whole grant with hanging creates (not cancelled), then the next one must be
+  // refused before reaching the agent.
+  resetMemoryLedger();
+  let jobsBefore = store.jobs.size;
+  const spentCreates = Math.floor(AGENT_GRANT / AGENT_CREATE_COST);
+  const ids = [];
+  for (let i = 0; i < spentCreates; i++) {
+    const r = await req("/build", { method: "POST", body: { brief: `create ${i}` } });
+    const j = await r.json();
+    assert.equal(r.status, 202, JSON.stringify(j));
+    ids.push(j.id);
+  }
+  jobsBefore = store.jobs.size;
+  const refused = await req("/build", { method: "POST", body: { brief: "uno di troppo" } });
+  assert.equal(refused.status, 402);
+  assert.equal(store.jobs.size, jobsBefore, "no job dispatched when broke");
+  for (const id of ids) await req(`/jobs/${id}`, { method: "DELETE" });
+});
