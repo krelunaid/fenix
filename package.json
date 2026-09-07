@@ -7,6 +7,8 @@
     "nf3": "0.3.17"
   },
   "scripts": {
+    "test:agent": "node --test --test-concurrency=1 scripts/agent-checks.test.mjs scripts/agent-loop.test.mjs scripts/agent-server.test.mjs scripts/agent-model-docker.test.mjs",
+    "agent:cli": "node workers/agent/cli.mjs",
     "test:product-design": "node --experimental-strip-types --test --test-concurrency=1 src/lib/projects/product-design-system.test.ts src/lib/projects/product-design-browser.test.ts",
     "dev": "node scripts/with-app-env.mjs vite dev --host 0.0.0.0 --port 8080",
     "build": "node scripts/with-app-env.mjs vite build && node scripts/copy-pglite-assets.mjs && node scripts/sync-static-publish.mjs && node scripts/migrate.mjs",

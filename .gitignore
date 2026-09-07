@@ -18,3 +18,4 @@ artifacts
 # Local Netlify folder
 .netlify
 node_modules.latest/
+out/

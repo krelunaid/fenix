@@ -1,0 +1,10 @@
+{
+  "name": "fenix-agent-worker",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=22.13" },
+  "scripts": {
+    "start": "node server.mjs",
+    "cli": "node cli.mjs"
+  }
+}
