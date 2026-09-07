@@ -27,6 +27,8 @@ export async function runAgent({ model, sandbox, brief, kind = "app", name, extr
   const cfg = { ...DEFAULTS, ...limits };
   const startedAt = Date.now();
   const deadline = startedAt + cfg.maxMinutes * 60_000;
+  const deadlineSignal = AbortSignal.timeout(Math.max(1, Math.floor(cfg.maxMinutes * 60_000)));
+  const runSignal = signal ? AbortSignal.any([signal, deadlineSignal]) : deadlineSignal;
   const usage = {};
   const emit = (type, data = {}) => onEvent({ type, at: Date.now() - startedAt, ...data });
   const log = (s) => emit("log", { text: s });
@@ -54,10 +56,10 @@ export async function runAgent({ model, sandbox, brief, kind = "app", name, extr
     let reply;
     try {
       modelCalls += 1;
-      reply = await model.complete({ system, messages: compactMessages(messages, cfg.keepRecentToolResults), tools: TOOLS, signal });
+      reply = await abortable(model.complete({ system, messages: compactMessages(messages, cfg.keepRecentToolResults), tools: TOOLS, signal: runSignal }), runSignal);
     } catch (err) {
       emit("error", { text: `Modello: ${err instanceof Error ? err.message : String(err)}` });
-      outcome = "model_error";
+      outcome = signal?.aborted ? "aborted" : deadlineSignal.aborted ? "timeout" : "model_error";
       break;
     }
     mergeUsage(usage, reply.usage);
@@ -83,6 +85,7 @@ export async function runAgent({ model, sandbox, brief, kind = "app", name, extr
 
     const results = [];
     for (const use of toolUses) {
+      if (runSignal.aborted) { outcome = signal?.aborted ? "aborted" : "timeout"; break; }
       steps += 1;
       if (steps > cfg.maxSteps) {
         results.push({ type: "tool_result", tool_use_id: use.id, content: "Budget di passi esaurito.", is_error: true });
@@ -90,7 +93,13 @@ export async function runAgent({ model, sandbox, brief, kind = "app", name, extr
         break;
       }
       emit("tool", { name: use.name, input: previewInput(use.name, use.input) });
-      const res = await executor.execute(use.name, use.input);
+      let res;
+      try {
+        res = await abortable(executor.execute(use.name, use.input), runSignal);
+      } catch {
+        outcome = signal?.aborted ? "aborted" : "timeout";
+        break;
+      }
       if (res.done) {
         outcome = "done";
         summary = res.output;
@@ -103,10 +112,11 @@ export async function runAgent({ model, sandbox, brief, kind = "app", name, extr
     messages.push({ role: "user", content: results });
   }
 
+  if (runSignal.aborted) await sandbox.cancel?.();
   await sandbox.stopServer();
   // Final checks receipt: if the model claimed done, trust the last run_checks (finish is gated on it).
   const checks = executor.state.lastChecks;
-  const files = await collectFiles(sandbox);
+  const files = runSignal.aborted ? [] : await collectFiles(sandbox);
   const result = {
     outcome,
     ok: outcome === "done" && Boolean(checks?.ok),
@@ -125,6 +135,15 @@ export async function runAgent({ model, sandbox, brief, kind = "app", name, extr
   };
   emit("end", { outcome, ok: result.ok, stats: result.stats });
   return result;
+}
+
+function abortable(promise, signal) {
+  if (signal.aborted) return Promise.reject(signal.reason);
+  return new Promise((resolve, reject) => {
+    const stop = () => reject(signal.reason);
+    signal.addEventListener("abort", stop, { once: true });
+    Promise.resolve(promise).then(resolve, reject).finally(() => signal.removeEventListener("abort", stop));
+  });
 }
 
 /** Keep the last N tool results verbatim; collapse older ones to a short stub. */

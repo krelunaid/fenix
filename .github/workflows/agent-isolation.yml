@@ -1,0 +1,22 @@
+name: agent-isolation
+on:
+  push:
+    branches: [codex/agent-core-review, main]
+    paths: ['workers/agent/**', 'scripts/agent-*.test.mjs', '.github/workflows/agent-isolation.yml']
+permissions:
+  contents: read
+jobs:
+  docker-real:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Build isolated browser runtime
+        run: docker build -t fenix-agent-sandbox:local workers/agent/sandbox
+      - name: Agent regression and real isolated browser/runtime
+        env:
+          FENIX_TEST_DOCKER: '1'
+        run: npm run test:agent

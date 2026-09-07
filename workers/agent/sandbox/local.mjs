@@ -11,7 +11,7 @@
 //   sandbox.readFile / writeFile / deleteFile / listFiles
 //   sandbox.destroy()
 import { spawn } from "node:child_process";
-import { mkdir, readFile, writeFile, rm, readdir, stat, unlink } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, writeFile, rm, readdir, stat, unlink, lstat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { canonicalizePath, LIMITS } from "../contract.mjs";
@@ -35,7 +35,7 @@ function killGroup(child, signal = "SIGTERM") {
 }
 
 /** Run a shell command with a hard timeout; captures capped stdout/stderr. */
-export function runCommand({ cmd, cwd, env = {}, timeoutMs = LIMITS.maxCommandSeconds * 1000 }) {
+export function runCommand({ cmd, cwd, env = {}, timeoutMs = LIMITS.maxCommandSeconds * 1000, signal }) {
   return new Promise((resolve) => {
     const started = Date.now();
     const child = spawn("/bin/sh", ["-c", cmd], {
@@ -51,16 +51,21 @@ export function runCommand({ cmd, cwd, env = {}, timeoutMs = LIMITS.maxCommandSe
       timedOut = true;
       killGroup(child, "SIGKILL");
     }, timeoutMs);
+    const abort = () => killGroup(child, "SIGKILL");
+    signal?.addEventListener("abort", abort, { once: true });
+    if (signal?.aborted) abort();
     child.stdout.on("data", (d) => { if (stdout.length < OUTPUT_CAP * 2) stdout += d; });
     child.stderr.on("data", (d) => { if (stderr.length < OUTPUT_CAP * 2) stderr += d; });
     child.on("error", (err) => {
       clearTimeout(timer);
+      signal?.removeEventListener("abort", abort);
       resolve({ code: 127, stdout, stderr: `${stderr}${err.message}`, timedOut, ms: Date.now() - started });
     });
-    child.on("close", (code, signal) => {
+    child.on("close", (code, exitSignal) => {
       clearTimeout(timer);
+      signal?.removeEventListener("abort", abort);
       resolve({
-        code: code ?? (signal ? 137 : 1),
+        code: code ?? (exitSignal ? 137 : 1),
         stdout: capOutput(stdout),
         stderr: capOutput(stderr),
         timedOut,
@@ -104,24 +109,38 @@ export class LocalSandbox {
     this.root = root;
     this.kind = "local";
     this.server = null;
+    this.abort = new AbortController();
   }
 
   static async create({ jobId = `job-${Date.now().toString(36)}`, baseDir = join(tmpdir(), "fenix-agent") } = {}) {
-    const root = join(baseDir, jobId.replace(/[^A-Za-z0-9_-]/g, "_"));
-    await rm(root, { recursive: true, force: true });
+    await mkdir(baseDir, { recursive: true });
+    const root = await mkdtemp(join(baseDir, `${jobId.replace(/[^A-Za-z0-9_-]/g, "_").slice(0, 60)}-`));
     await mkdir(join(root, ".fenix"), { recursive: true });
     return new LocalSandbox({ root });
   }
 
   resolve(path) {
+    this.abort.signal.throwIfAborted();
     return join(this.root, canonicalizePath(path));
   }
 
+  async assertNoLinks(path) {
+    let current = this.root;
+    for (const part of ["", ...canonicalizePath(path).split("/")]) {
+      if (part) current = join(current, part);
+      try {
+        if ((await lstat(current)).isSymbolicLink()) throw new Error("Symlink non consentito.");
+      } catch (err) { if (err.code !== "ENOENT") throw err; }
+    }
+  }
+
   async readFile(path) {
+    await this.assertNoLinks(path);
     return readFile(this.resolve(path), "utf8");
   }
 
   async writeFile(path, content) {
+    await this.assertNoLinks(path);
     const bytes = Buffer.byteLength(content, "utf8");
     if (bytes > LIMITS.maxFileBytes) throw new Error(`File troppo grande (${bytes} byte).`);
     const full = this.resolve(path);
@@ -139,6 +158,7 @@ export class LocalSandbox {
   }
 
   async deleteFile(path) {
+    await this.assertNoLinks(path);
     await unlink(this.resolve(path));
   }
 
@@ -163,11 +183,13 @@ export class LocalSandbox {
   }
 
   async exec({ cmd, timeoutMs, env, cwd }) {
-    return runCommand({ cmd, cwd: cwd ? this.resolve(cwd) : this.root, env, timeoutMs });
+    this.abort.signal.throwIfAborted();
+    return runCommand({ cmd, cwd: cwd ? this.resolve(cwd) : this.root, env, timeoutMs, signal: this.abort.signal });
   }
 
   /** Start the project's server and wait for /health. Only one server at a time. */
   async spawnServer({ cmd = "node server.mjs", env = {}, healthPath = "/health", timeoutMs = LIMITS.serverStartSeconds * 1000 } = {}) {
+    this.abort.signal.throwIfAborted();
     await this.stopServer();
     const port = await freePort();
     const dataDir = join(this.root, ".fenix", "data");
@@ -216,6 +238,7 @@ export class LocalSandbox {
     if (!this.server) throw new Error("Nessun server avviato: usa start_server prima.");
     const res = await fetch(`${this.server.url}${path.startsWith("/") ? path : `/${path}`}`, {
       ...init,
+      redirect: "error",
       signal: AbortSignal.timeout(init.timeoutMs ?? 10_000),
     });
     const text = await res.text();
@@ -232,7 +255,13 @@ export class LocalSandbox {
   }
 
   async destroy() {
+    await this.cancel();
     await this.stopServer();
     await rm(this.root, { recursive: true, force: true });
+  }
+
+  async cancel() {
+    this.abort.abort();
+    await this.stopServer();
   }
 }

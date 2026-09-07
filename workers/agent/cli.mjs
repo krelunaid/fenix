@@ -20,7 +20,8 @@ if (!brief) {
 
 const kind = opt("kind", "app");
 const out = opt("out", `./out/${Date.now().toString(36)}`);
-const backend = opt("sandbox", process.env.AGENT_SANDBOX || "local");
+const backend = opt("sandbox", process.env.AGENT_SANDBOX || "docker");
+if (backend === 'local') throw new Error('Local execution is reserved for reviewed fixtures; use Docker for generated code.');
 const maxSteps = Number(opt("max-steps", 60));
 const browserChecks = !args.includes("--no-browser");
 

@@ -251,6 +251,7 @@ export function looksLikeAuthBrief(text) {
   return /\bautenticazione\b|\blogin\b/.test(p);
 }
 
+/** @param {string} text */
 export function looksLikeClipFeedBrief(text) {
   const p = String(text || "").toLowerCase();
   return (
@@ -308,6 +309,7 @@ export function composedDeskCreateUserContent(input) {
     .filter(Boolean)
     .join("\n\n");
 }
+/** @param {{prompt:string,instruction?:string,feedback?:string}} input */
 export function composedCreateUserContent(input) {
   const feed = looksLikeClipFeedBrief(`${input.prompt || ""} ${input.instruction || ""}`);
   return [

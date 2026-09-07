@@ -6,29 +6,31 @@
 // Requirements on the host: docker CLI + daemon. Image default is the Playwright
 // image (Node 22 + Chromium) so browser checks work; override with AGENT_DOCKER_IMAGE.
 import { spawn } from "node:child_process";
-import { mkdir } from "node:fs/promises";
-import { join } from "node:path";
-import { LocalSandbox, capOutput, freePort, OUTPUT_CAP } from "./local.mjs";
-import { LIMITS } from "../contract.mjs";
+import { randomUUID } from "node:crypto";
+import { capOutput, OUTPUT_CAP } from "./local.mjs";
+import { LIMITS, canonicalizePath } from "../contract.mjs";
+import { ContainerFiles } from "./container-files.mjs";
 
-export const DEFAULT_IMAGE = process.env.AGENT_DOCKER_IMAGE || "mcr.microsoft.com/playwright:v1.55.0-noble";
+export const DEFAULT_IMAGE = process.env.AGENT_DOCKER_IMAGE || "fenix-agent-sandbox:local";
 const INTERNAL_PORT = 3000;
 
 /** spawn without a shell on the host; captures capped output; hard timeout. */
-export function runArgs(bin, args, { timeoutMs = 60_000, env } = {}) {
+export function runArgs(bin, args, { timeoutMs = 60_000, env, input = '', outputCap = OUTPUT_CAP } = {}) {
   return new Promise((resolve) => {
     const started = Date.now();
-    const child = spawn(bin, args, { env: env ? { ...process.env, ...env } : process.env, stdio: ["ignore", "pipe", "pipe"] });
+    const child = spawn(bin, args, { env: env ? { ...process.env, ...env } : process.env, stdio: ["pipe", "pipe", "pipe"] });
+    child.stdin.on('error',()=>{});
+    child.stdin.end(input);
     let stdout = "";
     let stderr = "";
     let timedOut = false;
     const timer = setTimeout(() => { timedOut = true; child.kill("SIGKILL"); }, timeoutMs);
-    child.stdout.on("data", (d) => { if (stdout.length < OUTPUT_CAP * 2) stdout += d; });
+    child.stdout.on("data", (d) => { if (stdout.length < outputCap * 2) stdout += d; });
     child.stderr.on("data", (d) => { if (stderr.length < OUTPUT_CAP * 2) stderr += d; });
     child.on("error", (err) => { clearTimeout(timer); resolve({ code: 127, stdout, stderr: `${stderr}${err.message}`, timedOut, ms: Date.now() - started }); });
     child.on("close", (code, signal) => {
       clearTimeout(timer);
-      resolve({ code: code ?? (signal ? 137 : 1), stdout: capOutput(stdout), stderr: capOutput(stderr), timedOut, ms: Date.now() - started });
+      resolve({ code: code ?? (signal ? 137 : 1), stdout: capOutput(stdout, outputCap), stderr: capOutput(stderr), timedOut, ms: Date.now() - started });
     });
   });
 }
@@ -37,9 +39,11 @@ function envArgs(env = {}) {
   return Object.entries(env).flatMap(([k, v]) => ["-e", `${k}=${v}`]);
 }
 
-export class DockerSandbox extends LocalSandbox {
+export class DockerSandbox extends ContainerFiles {
   constructor({ root, name, image, docker = "docker", network = "none", hostPort }) {
-    super({ root });
+    super();
+    this.server = null;
+    this.closed = false;
     this.kind = "docker";
     this.name = name;
     this.image = image;
@@ -49,44 +53,43 @@ export class DockerSandbox extends LocalSandbox {
   }
 
   static async create({ jobId = `job-${Date.now().toString(36)}`, baseDir, image = DEFAULT_IMAGE, docker = "docker", network = "none", memory = "1g", cpus = "1", pids = "256" } = {}) {
-    const local = await LocalSandbox.create({ jobId, baseDir });
-    const name = `fenix-agent-${jobId.replace(/[^A-Za-z0-9_-]/g, "_")}`.slice(0, 60);
-    const hostPort = await freePort();
-    await mkdir(join(local.root, ".fenix", "data"), { recursive: true });
+    if(network !== 'none') throw new Error('Sandbox requires network=none');
+    const name = `fenix-agent-${randomUUID()}`;
+    const hostPort = INTERNAL_PORT;
     const args = [
       "run", "-d", "--rm", "--name", name,
-      "-v", `${local.root}:/work`, "-w", "/work",
+      "--read-only", "--user", "1000:1000", "--init",
+      "--tmpfs", "/work:rw,nosuid,nodev,size=128m,uid=1000,gid=1000",
+      "--tmpfs", "/tmp:rw,nosuid,nodev,size=128m,uid=1000,gid=1000", "-w", "/work",
       "--memory", memory, "--cpus", cpus, "--pids-limit", pids,
-      "--network", network === "none" ? "bridge" : network, // port publishing needs a network; egress is blocked below
-      "-p", `127.0.0.1:${hostPort}:${INTERNAL_PORT}`,
+      "--network", "none",
       "--cap-drop", "ALL", "--security-opt", "no-new-privileges",
       "-e", "HOME=/work", "-e", "NO_COLOR=1", "-e", "CI=1",
       image, "sleep", "infinity",
     ];
     const started = await runArgs(docker, args, { timeoutMs: 120_000 });
     if (started.code !== 0) {
-      await local.destroy();
       throw new Error(`docker run fallito: ${started.stderr || started.stdout}`);
     }
-    const sandbox = new DockerSandbox({ root: local.root, name, image, docker, network, hostPort });
-    if (network === "none") {
-      // Bridge network is required to publish the port; block outbound traffic from inside instead.
-      await sandbox.exec({ cmd: "command -v iptables >/dev/null 2>&1 && iptables -P OUTPUT DROP && iptables -A OUTPUT -o lo -j ACCEPT || true", timeoutMs: 10_000 });
-    }
+    const sandbox = new DockerSandbox({ name, image, docker, network, hostPort });
+    try { await sandbox.writeRuntimeFile('ready','ready'); }
+    catch(e) { await sandbox.destroy(); throw e; }
     return sandbox;
   }
 
   async exec({ cmd, timeoutMs = LIMITS.maxCommandSeconds * 1000, env = {}, cwd }) {
+    if(this.closed)throw Error('Sandbox closed');
     const inner = `timeout -s KILL ${Math.ceil(timeoutMs / 1000)} sh -c ${shellQuote(cmd)}`;
-    const args = ["exec", "-w", cwd ? `/work/${cwd}` : "/work", ...envArgs(env), this.name, "sh", "-c", inner];
+    const args = ["exec", "-w", cwd ? `/work/${canonicalizePath(cwd)}` : "/work", ...envArgs(env), this.name, "sh", "-c", inner];
     const result = await runArgs(this.docker, args, { timeoutMs: timeoutMs + 5000 });
+    if(result.timedOut || result.code === 137 || result.code === 124) await this.cancel();
     return { ...result, timedOut: result.timedOut || result.code === 137 };
   }
 
   async spawnServer({ cmd = "node server.mjs", env = {}, healthPath = "/health", timeoutMs = LIMITS.serverStartSeconds * 1000 } = {}) {
     await this.stopServer();
     const logPath = ".fenix/server.log";
-    const launch = `cd /work && (${cmd}) > ${logPath} 2>&1 & echo $!`;
+    const launch = `mkdir -p /work/.fenix/data; cd /work; setsid sh -c ${shellQuote(cmd)} > ${logPath} 2>&1 < /dev/null & echo $!`;
     const started = await this.exec({
       cmd: launch,
       env: { PORT: String(INTERNAL_PORT), HOST: "0.0.0.0", DATA_DIR: "/work/.fenix/data", NODE_ENV: "development", ...env },
@@ -99,8 +102,8 @@ export class DockerSandbox extends LocalSandbox {
     let ok = false;
     while (Date.now() < deadline) {
       try {
-        const res = await fetch(`${url}${healthPath}`, { signal: AbortSignal.timeout(2000) });
-        if (res.ok) { ok = true; break; }
+        const res = await this.fetch(healthPath);
+        if (res.status === 200) { ok = true; break; }
         lastError = `HTTP ${res.status}`;
       } catch (err) {
         lastError = err instanceof Error ? err.message : String(err);
@@ -115,7 +118,7 @@ export class DockerSandbox extends LocalSandbox {
       alive: () => true,
       stop: async () => {
         this._lastLogs = await readLogs();
-        if (Number.isFinite(pid)) await this.exec({ cmd: `kill -TERM -${pid} 2>/dev/null || kill -TERM ${pid} 2>/dev/null; sleep 0.2; kill -KILL ${pid} 2>/dev/null; true`, timeoutMs: 5000 });
+        if (Number.isSafeInteger(pid) && pid > 1) await this.exec({ cmd: `kill -KILL -${pid} 2>/dev/null; true`, timeoutMs: 5000 });
         if (this.server === handle) this.server = null;
       },
     };
@@ -137,9 +140,25 @@ export class DockerSandbox extends LocalSandbox {
   }
 
   async destroy() {
-    await this.stopServer();
-    await runArgs(this.docker, ["rm", "-f", this.name], { timeoutMs: 30_000 });
-    await super.destroy();
+    await this.cancel();
+  }
+
+  async stopServer() { if(this.server && !this.closed) await this.server.stop(); this.server=null; }
+  async cancel() {
+    if(this.closed)return;
+    this.closed=true;this.server=null;
+    const r=await runArgs(this.docker,['rm','-f',this.name],{timeoutMs:30000});
+    if(r.code!==0){this.closed=false;throw Error('Container cleanup failed: '+r.stderr);}
+  }
+  async containerNode(code, input) {
+    if(this.closed)throw Error('Sandbox closed');
+    const r=await runArgs(this.docker,['exec','-i',this.name,'node','-e',code],{input:JSON.stringify(input),timeoutMs:10000,outputCap:LIMITS.maxProjectBytes*2});
+    if(r.code!==0 || r.timedOut)throw Error('Container operation failed: '+r.stderr);
+    return JSON.parse(r.stdout);
+  }
+  async fetch(path, init={}) {
+    if(typeof path!=='string'||!path.startsWith('/')||path.startsWith('//')||path.includes('\\'))throw Error('Invalid local path');
+    return this.containerNode(`const fs=require('node:fs');const q=JSON.parse(fs.readFileSync(0,'utf8'));(async()=>{const r=await fetch('http://127.0.0.1:3000'+q.path,{...q.init,redirect:'error',signal:AbortSignal.timeout(3000)});const text=await r.text();if(text.length>64000)throw Error('response too large');console.log(JSON.stringify({status:r.status,headers:Object.fromEntries(r.headers),text}));})().catch(e=>{console.error(e.message);process.exitCode=1})`,{path,init});
   }
 }
 

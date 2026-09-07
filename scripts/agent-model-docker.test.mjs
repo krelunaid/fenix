@@ -44,69 +44,46 @@ test("shellQuote survives single quotes", () => {
   assert.equal(shellQuote(`echo 'ciao'`), `'echo '\\''ciao'\\'''`);
 });
 
-// A fake `docker` CLI: `run` prints an id, `exec` runs the command on the host
-// inside the mounted directory (so the DockerSandbox code path is exercised end
-// to end without a daemon), `rm` succeeds. Real isolation is validated on a host
-// with Docker; this protects the argument plumbing and the server lifecycle.
-test("DockerSandbox drives docker run/exec/rm, env and the server lifecycle through the exec path", { timeout: 180_000 }, async () => {
-  const bin = await mkdtemp(join(tmpdir(), "fakedocker-"));
-  const log = join(bin, "calls.log");
-  const script = `#!/bin/sh
-echo "$@" >> "${log}"
-cmd="$1"; shift
-case "$cmd" in
-  run)
-    # find the -v host:/work mount and remember it
-    while [ $# -gt 0 ]; do
-      if [ "$1" = "-v" ]; then echo "$2" | cut -d: -f1 > "${bin}/mount"; fi
-      shift
-    done
-    echo fakecontainerid; exit 0 ;;
-  exec)
-    envs=""
-    while [ $# -gt 0 ]; do
-      case "$1" in
-        -w) shift; workdir="$1" ;;
-        -e) shift; envs="$envs $1" ;;
-        sh) shift; shift; script="$1"; break ;;
-        *) ;;
-      esac
-      shift
-    done
-    root=$(cat "${bin}/mount")
-    rel=$(echo "$workdir" | sed 's#^/work##')
-    cd "$root$rel" || exit 1
-    # translate /work paths into the host mount for commands that embed them
-    script=$(printf '%s' "$script" | sed "s#/work#$root#g")
-    exec env $envs sh -c "$script" ;;
-  rm) exit 0 ;;
-  *) exit 1 ;;
-esac
-`;
-  await writeFile(join(bin, "docker"), script);
-  await chmod(join(bin, "docker"), 0o755);
-
-  const sandbox = await DockerSandbox.create({ jobId: `fakedocker-${process.pid}`, docker: join(bin, "docker"), image: "fake:image", network: "bridge" });
+// This fixture checks CLI arguments only. It does not execute project code on the host.
+test("Docker uses no network, no host mount, no published ports, non-root and cleanup", async () => {
+  await assert.rejects(DockerSandbox.create({ network: "bridge" }), /network=none/);
+  const bin = await mkdtemp(join(tmpdir(), "docker-args-"));
+  const log = join(bin, "calls.jsonl");
+  const cli = join(bin, "docker");
+  const source = "#!" + process.execPath + "\n" +
+    "const fs=require('node:fs'); const a=process.argv.slice(2); fs.appendFileSync(" + JSON.stringify(log) + ",JSON.stringify(a)+'\\n'); process.stdin.resume(); process.stdin.on('end',()=>console.log(a[0]==='run'?'fixture-container':'1'));";
+  await writeFile(cli, source); await chmod(cli, 0o755);
   try {
-    assert.equal(sandbox.kind, "docker");
-    for (const f of GOLDEN_FILES) await sandbox.writeFile(f.path, f.content);
-    const echo = await sandbox.exec({ cmd: "echo $FOO && pwd", env: { FOO: "bar" } });
-    assert.equal(echo.code, 0);
-    assert.match(echo.stdout, /bar/);
-    // The fake maps the published host port to nothing: the real server listens on 3000 inside; here on the host.
-    // Point the sandbox's host port at the internal port so the health probe works in the fake.
-    sandbox.hostPort = 3000 + (process.pid % 2000);
-    const started = await sandbox.spawnServer({ env: { PORT: String(sandbox.hostPort), HOST: "127.0.0.1" } });
-    assert.ok(started.ok, started.error);
-    const health = await sandbox.fetch("/health");
-    assert.equal(health.status, 200);
-    await sandbox.stopServer();
-    const calls = (await import("node:fs")).readFileSync(log, "utf8");
-    assert.match(calls, /^run -d --rm --name fenix-agent-fakedocker/m);
-    assert.match(calls, /--memory 1g --cpus 1 --pids-limit 256/);
-    assert.match(calls, /--cap-drop ALL/);
-  } finally {
-    await sandbox.destroy();
-    await rm(bin, { recursive: true, force: true });
-  }
+    const sb = await DockerSandbox.create({ docker: cli, image: "fixture:image" });
+    await sb.writeFile("public/test.txt", "content");
+    await sb.destroy();
+    const calls = (await import("node:fs")).readFileSync(log,"utf8").trim().split("\n").map(JSON.parse);
+    const args = calls[0];
+    assert.equal(args[args.indexOf("--network")+1], "none");
+    assert.equal(args[args.indexOf("--user")+1], "1000:1000");
+    assert.ok(args.includes("--read-only"));
+    assert.ok(!args.includes("-v") && !args.includes("--mount") && !args.includes("-p"));
+    assert.ok(!calls.flat().some(x=>x.includes("iptables")));
+    assert.equal(calls.at(-1)[0], "rm");
+    assert.ok(calls.some(a=>a.includes("-i") && a.includes("node")));
+  } finally { await rm(bin,{recursive:true,force:true}); }
+});
+
+test("real Docker isolation and project runtime", { skip: process.env.FENIX_TEST_DOCKER !== "1", timeout: 180000 }, async () => {
+  const sb = await DockerSandbox.create();
+  try {
+    for(const f of GOLDEN_FILES)await sb.writeFile(f.path,f.content);
+    assert.match(await sb.readFile("server.mjs"),/node:sqlite/);
+    const result=await sb.exec({cmd:"node -e \"fetch('https://example.com',{signal:AbortSignal.timeout(1500)}).then(()=>process.exit(1)).catch(()=>process.exit(0))\"",timeoutMs:4000});
+    assert.equal(result.code,0);
+    assert.ok((await sb.spawnServer()).ok);
+    assert.equal((await sb.fetch("/health")).status,200);
+    await sb.stopServer();
+    const {runChecks}=await import('../workers/agent/checks.mjs');
+    const checked=await runChecks(sb,{browser:true});
+    assert.equal(checked.ok,true,JSON.stringify(checked));
+    assert.equal(checked.browser.skipped,false);
+    await sb.exec({cmd:'ln -s /etc/passwd /work/public/escape.txt'});
+    await assert.rejects(sb.readFile('public/escape.txt'),/symlink/);
+  } finally { await sb.destroy(); }
 });

@@ -44,6 +44,7 @@ test("health is public, everything else needs the token", async () => {
 });
 
 test("input validation", async () => {
+  assert.equal((await call("/agent/build", { method:"POST", body:{brief:"valid brief"},owner:"" })).status,400);
   assert.equal((await call("/agent/build", { method: "POST", body: { brief: "ab" } })).status, 400);
   assert.equal((await call("/agent/build", { method: "POST", body: { instruction: "cambia colore" } })).status, 400);
   assert.equal((await call("/agent/build", { method: "POST", body: { brief: "ok brief", files: [{ path: "../x", content: "" }] } })).status, 400);
@@ -81,7 +82,7 @@ test("queue cap and cancellation", { timeout: 60_000 }, async () => {
   slow.listen(0, "127.0.0.1");
   await once(slow, "listening");
   const b = `http://127.0.0.1:${slow.address().port}`;
-  const post = () => fetch(`${b}/agent/build`, { method: "POST", headers: { authorization: `Bearer ${TOKEN}`, "content-type": "application/json" }, body: JSON.stringify({ brief: "lento lento" }) });
+  const post = () => fetch(`${b}/agent/build`, { method: "POST", headers: { "x-fenix-owner": OWNER_A, authorization: `Bearer ${TOKEN}`, "content-type": "application/json" }, body: JSON.stringify({ brief: "lento lento" }) });
   try {
     const first = await (await post()).json();
     await new Promise((r) => setTimeout(r, 100));
@@ -89,10 +90,11 @@ test("queue cap and cancellation", { timeout: 60_000 }, async () => {
     assert.equal(second.status, 202);
     const third = await post();
     assert.equal(third.status, 429);
-    const cancelled = await fetch(`${b}/agent/jobs/${first.id}`, { method: "DELETE", headers: { authorization: `Bearer ${TOKEN}` } });
+    const cancelled = await fetch(`${b}/agent/jobs/${first.id}`, { method: "DELETE", headers: { "x-fenix-owner": OWNER_A, authorization: `Bearer ${TOKEN}` } });
     assert.equal(cancelled.status, 200);
-    const view = await (await fetch(`${b}/agent/jobs/${first.id}`, { headers: { authorization: `Bearer ${TOKEN}` } })).json();
-    assert.ok(["running", "cancelled"].includes(view.status));
+    const view = await (await fetch(`${b}/agent/jobs/${first.id}`, { headers: { "x-fenix-owner": OWNER_A, authorization: `Bearer ${TOKEN}` } })).json();
+    for (let i=0;i<30 && view.status==="running";i++) { await new Promise(r=>setTimeout(r,20)); Object.assign(view,await (await fetch(`${b}/agent/jobs/${first.id}`, {headers:{"x-fenix-owner":OWNER_A,authorization:`Bearer ${TOKEN}`}})).json()); }
+    assert.equal(view.status,"cancelled");
   } finally {
     slowStore.close();
     slow.close();

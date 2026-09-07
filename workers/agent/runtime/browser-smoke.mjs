@@ -12,7 +12,8 @@ const shotsDir = process.env.SHOTS_DIR || ".fenix/shots";
 
 let chromium;
 try {
-  ({ chromium } = await import("playwright"));
+  try { ({ chromium } = await import("/opt/fenix/node_modules/playwright/index.mjs")); }
+  catch { ({ chromium } = await import("playwright")); }
 } catch {
   console.log(JSON.stringify({ skipped: true, reason: "playwright non disponibile nel sandbox" }));
   process.exit(0);

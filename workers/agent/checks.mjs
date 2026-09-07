@@ -139,12 +139,12 @@ export async function runChecks(sandbox, { browser = true, log = () => {} } = {}
           env: { BASE_URL: sandbox.internalServerUrl(), PAGES: JSON.stringify(manifest.pages.map((p) => p.path)), SHOTS_DIR: ".fenix/shots" },
         });
         try { browserReport = JSON.parse(r.stdout.trim().split("\n").pop()); } catch { browserReport = null; }
-        if (!browserReport) {
+        if (r.code !== 0 || r.timedOut || !browserReport) {
           push("browser", false, `Smoke browser non ha prodotto un report: ${tail(r.stderr || r.stdout, 800)}`);
         } else if (browserReport.skipped) {
           push("browser", false, `non verificato: ${browserReport.reason}`);
         } else {
-          const problems = [];
+          const problems = browserCoverageProblems(browserReport, manifest.pages.map(p=>p.path));
           for (const p of browserReport.pages) {
             const label = `${p.path}@${p.viewport}`;
             if (p.pageErrors.length) problems.push(`${label} errori JS: ${p.pageErrors.slice(0, 2).join("; ")}`);
@@ -163,6 +163,21 @@ export async function runChecks(sandbox, { browser = true, log = () => {} } = {}
     }
   }
   return finish(checks, browserReport);
+}
+
+export function browserCoverageProblems(report, paths) {
+  if (!Array.isArray(report?.pages) || report.pages.length !== paths.length * 2) return ['Incomplete browser coverage'];
+  const problems=[];
+  const expected=new Set(paths.flatMap(path=>['phone','desktop'].map(view=>path+'@'+view)));
+  for(const p of report.pages) {
+    const key=p.path+'@'+p.viewport;
+    if(!expected.delete(key))problems.push('Unexpected or duplicate view '+key);
+    if(p.status!==200)problems.push('Non-200 view '+key);
+    if(!p.interactive?.hasMain || !(p.interactive.textLength>=20))problems.push('Empty view '+key);
+    if(!p.shot)problems.push('Missing screenshot '+key);
+  }
+  if(expected.size)problems.push('Missing views');
+  return problems;
 }
 
 function finish(checks, browserReport) {
