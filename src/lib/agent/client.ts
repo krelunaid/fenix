@@ -29,7 +29,7 @@ export type AgentJob = {
   credits?: AgentCredits;
   refunded?: boolean;
 };
-export type AgentStatus = { configured: boolean; credits: AgentCredits | null; hint?: string };
+export type AgentStatus = { configured: boolean; identity?: "session" | "capability" | null; email?: string; credits: AgentCredits | null; hint?: string };
 export type PreviewInfo = { live: boolean; url?: string; expiresAt?: number; error?: string };
 
 export const AGENT_JOBS_KEY = "fenix.agent.jobs";

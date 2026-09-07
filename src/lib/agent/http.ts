@@ -4,9 +4,9 @@
  * expects: it holds AGENT_TOKEN (server only), sets `x-fenix-owner` itself from
  * the caller's identity, and charges/refunds credits on the server.
  *
- * Identity today = the owner capability header used by the rest of Fenix
- * (`x-fenix-owner`, see publish-owner.ts). `resolveOwner` is the single seam to
- * swap in a verified session later.
+ * Identity = a verified Better Auth session when the server has persistent accounts
+ * (DATABASE_URL + BETTER_AUTH_SECRET), otherwise the device capability header used by
+ * the rest of Fenix (see identity.server.ts). Never a client-supplied user id.
  *
  *   GET    /api/agent/status          configured? remaining credits
  *   GET    /api/agent/credits         ledger
@@ -21,7 +21,7 @@
  *   GET/POST /api/agent/sites, GET/DELETE /api/agent/sites/:slug   published apps of the caller
  *   ANY    /app/:slug/*  (handlePublicAppRequest)      public traffic of a published app, no identity
  */
-import { ownerFromRequest } from "../projects/publish-owner.ts";
+import { resolveIdentity } from "./identity.server.ts";
 import { previewResponseHeaders, previewTokenPrefix, rewritePreviewCss, rewritePreviewHtml } from "./preview-rewrite.ts";
 import { mintPreviewToken, verifyPreviewToken } from "./preview-token.ts";
 import {
@@ -30,7 +30,6 @@ import {
   chargedFor,
   debit,
   moveCharge,
-  ownerHash,
   readLedger,
   refundOnce,
   type Ledger,
@@ -60,10 +59,10 @@ function json(data: unknown, status = 200): Response {
   return Response.json(data, { status, headers: { "Cache-Control": "no-store" } });
 }
 
-/** Single seam for identity. Returns the stable hash used for credits and job binding. */
-export function resolveOwner(request: Request): string | null {
-  const owner = ownerFromRequest(request);
-  return owner ? ownerHash(owner) : null;
+/** Stable hash used for credits and job binding (session-derived when available). */
+export async function resolveOwner(request: Request): Promise<string | null> {
+  const id = await resolveIdentity(request);
+  return id ? id.hash : null;
 }
 
 async function readJson(request: Request): Promise<Record<string, unknown>> {
@@ -109,9 +108,9 @@ export async function handleAgentRequest(request: Request, rest: string): Promis
   const path = rest.replace(/\/+$/, "") || "/";
 
   if (request.method === "GET" && path === "/status") {
-    const owner = resolveOwner(request);
-    const ledger = owner ? await readLedger(owner) : null;
-    return json({ configured: Boolean(cfg), credits: ledger ? ledgerView(ledger) : null, hint: cfg ? undefined : AGENT_NOT_CONFIGURED });
+    const id = await resolveIdentity(request);
+    const ledger = id ? await readLedger(id.hash) : null;
+    return json({ configured: Boolean(cfg), identity: id?.kind ?? null, email: id?.email ?? undefined, credits: ledger ? ledgerView(ledger) : null, hint: cfg ? undefined : AGENT_NOT_CONFIGURED });
   }
 
   const tk = rest.match(/^\/preview\/([A-Za-z0-9_.-]{60,600})(\/.*)?$/);
@@ -123,7 +122,7 @@ export async function handleAgentRequest(request: Request, rest: string): Promis
     return relayPreview(cfg, claims.owner, claims.jobId, tk[2] || "/", request, previewTokenPrefix(tk[1]));
   }
 
-  const owner = resolveOwner(request);
+  const owner = await resolveOwner(request);
   if (!owner) return json({ error: "Identità assente." }, 401);
 
   if (request.method === "GET" && path === "/credits") {

@@ -32,6 +32,7 @@ const POLL_MS = 2000;
 function AgentePage() {
   const [configured, setConfigured] = useState<boolean | null>(null);
   const [hint, setHint] = useState<string | undefined>();
+  const [identity, setIdentity] = useState<{ kind: "session" | "capability" | null; email?: string }>({ kind: null });
   const [credits, setCredits] = useState<AgentCredits | null>(null);
   const [brief, setBrief] = useState("");
   const [kind, setKind] = useState<"app" | "site">("app");
@@ -57,7 +58,7 @@ function AgentePage() {
   useEffect(() => {
     setHistory(readRememberedJobs());
     agentStatus()
-      .then((s) => { setConfigured(s.configured); setHint(s.hint); setCredits(s.credits); if (s.configured) refreshPublished(); })
+      .then((s) => { setConfigured(s.configured); setHint(s.hint); setCredits(s.credits); setIdentity({ kind: s.identity ?? null, email: s.email }); if (s.configured) refreshPublished(); })
       .catch(() => { setConfigured(false); setHint("Il server di Fenix non risponde."); });
   }, [refreshPublished]);
 
@@ -217,6 +218,8 @@ function AgentePage() {
           </p>
           <p className="mt-3 text-sm text-muted-foreground">
             {credits ? <>Crediti: <strong className="text-foreground">{credits.remaining}</strong> · 4 per creare, 2 per modificare. Se fallisce, rimborsati.</> : null}
+            {identity.kind === "session" ? <> · Account: <strong className="text-foreground">{identity.email || "collegato"}</strong></> : null}
+            {identity.kind === "capability" ? <> · Lavori e app legati a <strong className="text-foreground">questo browser</strong>. <Link to="/login" className="underline underline-offset-4">Accedi</Link> per ritrovarli ovunque.</> : null}
           </p>
         </section>
 
