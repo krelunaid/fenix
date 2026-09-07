@@ -91,7 +91,7 @@ export function grammarFromBrief(brief: string): LayoutGrammar {
       kind,
       chrome: "tabs",
       stage: "feed",
-      desktop: "sala cinematografica a tutta pagina: wallpaper sfocato, lastre 9:16 ~480px, copy a destra, dock a pillola, niente iPhone boxed e niente poster spalmato",
+      desktop: "sala cinematografica a tutta pagina: wallpaper sfocato, lastra 9:16 a tutta altezza, caption e rail in overlay, dock a pillola, niente iPhone boxed e niente poster spalmato",
       tablet: "clip a tutta altezza, dock in basso",
       mobile: "clip 100dvh, overlay caption, azioni laterali, dock Feed/Crea/Salvati/Profilo, niente agenda",
       voice: {
@@ -408,7 +408,7 @@ export function grammarInstruction(grammar: LayoutGrammar): string {
     grammar.id === "source-timeline"
       ? "Repository: attività, rami, sync, diff. Vietato home universale hero grigio + due KPI + CTA + empty card. Non copiare GitHub, Apple o Emergent."
       : grammar.id === "clip-feed"
-        ? "Feed verticale originale: PRIMO PAINT clip-stage a tutto schermo. Desktop: wallpaper sfocato dal poster, lastre 9:16 ~480px, colonna copy, dock a pillola. Vietato iPhone boxed, poster a 1280, Niente in lista, voci, agenda, 5 tab Home/Nuovo/Elenco/Stats, card KPI. Non clonare TikTok, Instagram, marchio o «For You»."
+        ? "Feed verticale originale: PRIMO PAINT clip-stage a tutto schermo. Desktop: wallpaper sfocato dal poster, lastra 9:16 a tutta altezza, caption e rail in overlay, dock a pillola. Vietato iPhone boxed, colonna copy vuota, poster a 1280, Niente in lista, voci, agenda, 5 tab Home/Nuovo/Elenco/Stats, card KPI. Non clonare TikTok, Instagram, marchio o «For You»."
         : "Stati empty/loading/success/error visibili. Motion solo se prefers-reduced-motion: no-preference. Target ≥24px, focus visibile, AA.",
   ].join("\n");
 }

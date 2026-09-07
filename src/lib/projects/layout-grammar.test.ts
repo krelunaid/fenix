@@ -94,8 +94,9 @@ describe("layout grammar from brief", () => {
     assert.equal(g.stage, "feed");
     assert.match(g.mobile, /clip 100dvh/);
     assert.match(g.mobile, /niente agenda/);
-    assert.match(g.desktop, /cinematografica|480/i);
+    assert.match(g.desktop, /cinematografica|overlay/i);
     assert.doesNotMatch(g.desktop, /390×844/);
+    assert.doesNotMatch(g.desktop, /copy a destra/);
     assert.equal(isClipFeedBrief("video verticali a tutto schermo"), true);
     assert.equal(isClipFeedBrief("agenda studio prenotazioni"), false);
   });

@@ -1245,13 +1245,15 @@ describe("graphic pipeline prompt→plan→generate→visual→QA", () => {
     assert.match(product.html, /clip-stage/);
     assert.match(product.html, /clip-frame/);
     assert.match(product.html, /clip-ambient/);
+    assert.match(product.html, /clip-stack/);
     assert.match(product.html, /clip-copy/);
     assert.match(product.html, /data-fenix-clip/);
     assert.match(product.html, /function renderClipFeed/);
-    assert.match(product.html, /min\(480px,42vw\)/);
+    assert.match(product.html, /min\(540px,48vw\)/);
     assert.match(product.html, /clip-brand/);
     assert.doesNotMatch(product.html, /html\[data-grammar="clip-feed"\] \.app\{[^}]*max-width:390px/);
     assert.doesNotMatch(product.html, /grid-template-areas:"head nav"/);
+    assert.doesNotMatch(product.html, /width="78" height="130"/);
     assert.match(boot, /Luce di Brera/);
     assert.doesNotMatch(visible, /<span>Aggiungi<\/span>/);
     assert.doesNotMatch(visible, /Niente in lista/);

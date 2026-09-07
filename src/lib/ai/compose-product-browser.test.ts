@@ -1954,12 +1954,14 @@ describe("clip-feed t0 is a full-bleed nastro, not a voci ledger", () => {
         await waitForFenixReady(page, 8000);
         const layout = await page.evaluate(() => {
           const app = document.querySelector(".app");
+          const stack = document.querySelector(".clip-stack");
           const frame = document.querySelector(".clip-frame");
           const copy = document.querySelector(".clip-copy");
           const ambient = document.querySelector(".clip-ambient");
           const tabs = document.querySelector("nav.tabs");
           const title = document.querySelector(".clip-copy h1");
           const ar = app?.getBoundingClientRect();
+          const sr = stack?.getBoundingClientRect();
           const fr = frame?.getBoundingClientRect();
           const cr = copy?.getBoundingClientRect();
           const tr = tabs?.getBoundingClientRect();
@@ -1967,8 +1969,11 @@ describe("clip-feed t0 is a full-bleed nastro, not a voci ledger", () => {
           const as = ambient ? getComputedStyle(ambient) : null;
           return {
             appW: ar?.width ?? 0,
+            stackW: sr?.width ?? 0,
+            stackH: sr?.height ?? 0,
             frameW: fr?.width ?? 0,
             frameH: fr?.height ?? 0,
+            frameX: fr?.x ?? 0,
             copyW: cr?.width ?? 0,
             copyX: cr?.x ?? 0,
             tabsW: tr?.width ?? 0,
@@ -1980,10 +1985,15 @@ describe("clip-feed t0 is a full-bleed nastro, not a voci ledger", () => {
           };
         });
         assert.ok(layout.appW >= 1200, `app width ${layout.appW}`);
-        assert.ok(layout.frameW >= 360 && layout.frameW <= 540, `frame width ${layout.frameW}`);
-        assert.ok(layout.frameH >= 500, `frame height ${layout.frameH}`);
-        assert.ok(layout.copyW >= 200, `copy width ${layout.copyW}`);
-        assert.ok(layout.copyX > layout.frameW, `copy x ${layout.copyX}`);
+        assert.ok(layout.frameW >= 360 && layout.frameW <= 560, `frame width ${layout.frameW}`);
+        assert.ok(layout.frameH >= 620, `frame height ${layout.frameH}`);
+        assert.ok(layout.stackH >= layout.frameH - 2, `stack height ${layout.stackH}`);
+        assert.ok(layout.copyW >= 180, `copy width ${layout.copyW}`);
+        assert.ok(
+          layout.copyX >= layout.frameX && layout.copyX < layout.frameX + 80,
+          `copy overlay x ${layout.copyX} frame ${layout.frameX}`,
+        );
+        assert.ok(layout.copyX + layout.copyW < layout.frameX + layout.frameW, "copy stays on the plate");
         assert.ok(layout.tabsW <= 560, `dock width ${layout.tabsW}`);
         assert.equal(layout.areas.includes("head"), false, layout.areas);
         assert.equal(layout.ambientOn, true);
