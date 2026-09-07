@@ -1231,15 +1231,34 @@ describe("graphic pipeline prompt→plan→generate→visual→QA", () => {
   });
 
   it("composes a TikTok-like brief as clip-feed, not Home/Aggiungi/Elenco", () => {
-    const product = composeProduct(formatPrefix("app") + "mi crei un app simile tik tok");
+    const brief = formatPrefix("app") + "mi crei un app simile tik tok";
+    const product = composeProduct(brief);
+    const visible = product.html.replace(/<script[\s\S]*?<\/script>/gi, "").replace(/<style[\s\S]*?<\/style>/gi, "");
+    const boot = product.html.match(/<main id="root"[^>]*>([\s\S]*?)<\/main>/)?.[1] || "";
     assert.equal(product.grammar.id, "clip-feed");
+    assert.equal(product.tokens.family, "night");
+    assert.equal(product.tokens.chroma, "chroma-pulse");
     assert.match(product.html, /data-grammar="clip-feed"/);
     assert.match(product.html, /<span>Feed<\/span>/);
     assert.match(product.html, /<span>Crea<\/span>/);
     assert.match(product.html, /<span>Profilo<\/span>/);
-    assert.doesNotMatch(product.html.replace(/<script[\s\S]*?<\/script>/gi, ""), /<span>Aggiungi<\/span>/);
-    assert.match(product.polish, /clip a tutto schermo/);
+    assert.match(product.html, /clip-stage/);
+    assert.match(product.html, /data-fenix-clip/);
+    assert.match(product.html, /function renderClipFeed/);
+    assert.match(boot, /Luce di Brera/);
+    assert.doesNotMatch(visible, /<span>Aggiungi<\/span>/);
+    assert.doesNotMatch(visible, /Niente in lista/);
+    assert.doesNotMatch(visible, /Aggiungi la prima voce/);
+    assert.doesNotMatch(visible, /voci sul dispositivo/);
+    assert.doesNotMatch(product.html, /<html[^>]*data-fenix-premium[\s>]/);
+    assert.match(product.polish, /clip-stage a tutto schermo|clip a tutto schermo/);
     assert.doesNotMatch(product.html, /For You/);
+    const qa = auditGraphicQuality(product.html, { brief, kind: "app" });
+    assert.equal(
+      qa.findings.some((f) => f.severity === "fail" && (f.code === "ledger-on-feed" || f.code === "missing-clip-stage")),
+      false,
+      qa.findings.filter((f) => f.severity === "fail").map((f) => f.code).join(","),
+    );
   });
 
   it("raises default compose for a plain brief above the old utility floor", () => {

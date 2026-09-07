@@ -6,6 +6,7 @@
  */
 import { contrastRatio } from "./visual-quality.ts";
 import type { Palette } from "./types.ts";
+import { isClipFeedBrief } from "./infer.ts";
 
 export type PaletteFamily =
   | "ink-terminal"
@@ -501,6 +502,7 @@ export function earthMotivated(brief: string): boolean {
 
 export function selectPaletteFamily(brief: string, seed = hashBrief(brief)): PaletteFamily {
   const p = String(brief || "").toLowerCase();
+  if (isClipFeedBrief(brief)) return "chroma-pulse";
   if (earthMotivated(p)) return "earth-kiln";
   if (/ristor|osteria|trattoria|brasserie|chef|cucina di|menu degust|crudo/.test(p)) return "wine-ink";
   if (/repovoci|voci del repo|\brepository\b|\brepo\b|commit|branch|\bgit\b|diff|pull request/.test(p)) {

@@ -25,7 +25,9 @@ Identità, layout, tipografia, icone SVG e copy nascono dal brief. Ogni mestiere
 JS in <script> classico. Mai \${espressione} nel markup. Dati: window.Fenix.load e window.Fenix.save (coppia obbligatoria). CRUD: window.Fenix.data.query/insert/update/remove con collection [A-Za-z0-9._-]{1,80}. Mai localStorage. Mai login o server inventati.
 
 DEFAULT: app telefono 390×844, colonna 100dvh, 4–5 tab in basso con data-view, SVG 24 originali diverse, form che salvano, liste oneste, empty solo se length===0.
-Se il brief chiede feed / reel / video verticali / «simile TikTok»: NON è un'agenda e NON sono 5 tab CRUD. Home = CLIP a tutto schermo 390×844 (poster CSS+SVG, caption overlay, azioni laterali originali). Dock: Feed, Crea, Salvati, Profilo. Tap/swipe cambia clip da Fenix.data. Crea salva titolo+città+nota. Nome originale dal mestiere. Vietato clonare marchio TikTok/Instagram, logo nota musicale, «For You».
+Se il brief chiede feed / reel / video verticali / «simile TikTok»: PRIMO PAINT = CLIP a tutto schermo 390×844 (clip-stage, poster CSS+SVG originale, caption overlay, rail laterale Salva/Avanti). Dock: Feed, Crea, Salvati, Profilo. Tap/swipe cambia clip da Fenix.data. Crea salva titolo+città+nota. Nome originale dal mestiere.
+VIETATO su quel brief: splash «pronto», «Niente in lista», «Aggiungi la prima voce», tab Home/Aggiungi/Elenco, collection voci, 5 tab CRUD, agenda, 4 KPI.
+Vietato clonare marchio TikTok/Instagram, logo nota musicale, «For You».
 Italiano. Testi veri (città, prezzi, orari, nomi dal brief). Niente lorem, "Welcome to your app", Ciao/Operatore, Grok, Fenix, Inter, Manrope, emoji.
 Palette DAL MESTIERE in :root --bg --surface --fg --muted --accent --line. Mai la coppia clone #f5f5f7+#0071e3. Contrasto AA 4.5:1.
 Qualità nativa da tasca: tipo, ritmo 8px, materiali, motion ridotto. Vietato clonare Corto, Emergent, Apple, SF Symbols, Unsplash hotlink.
@@ -308,7 +310,7 @@ export function composedCreateUserContent(input) {
       : "",
     input.feedback || "",
     feed
-      ? "Contratto runtime: window.Fenix.load/save, <script> classico, clip a tutto schermo, dock Feed/Crea/Salvati/Profilo (data-view), italiano, niente lorem. NON agenda e NON 5 tab CRUD."
+      ? "Contratto runtime: window.Fenix.load/save, <script> classico, PRIMO PAINT clip-stage a tutto schermo, dock Feed/Crea/Salvati/Profilo (data-view), italiano, niente lorem. NON agenda, NON 5 tab CRUD, NON «Niente in lista», NON collection voci."
       : "Contratto runtime: window.Fenix.load/save, <script> classico, tab data-view, italiano, niente lorem.",
     "NON copiare CSS/copy/SVG del seed Fenix. NON usare data-fenix-craft, data-grammar, fenix-slot.",
     feed

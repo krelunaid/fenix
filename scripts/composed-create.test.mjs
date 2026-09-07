@@ -60,9 +60,11 @@ test("create system asks for a full original document and never for an atomic JS
   assert.doesNotMatch(user, /HTML ORIGINALE:/);
   assert.doesNotMatch(user, /BASE_SHA256/);
   assert.match(COMPOSED_CREATE_SYSTEM, /CLIP a tutto schermo/);
+  assert.match(COMPOSED_CREATE_SYSTEM, /Niente in lista/);
   const feed = composedCreateUserContent({ prompt: "mi crei un app simile tik tok" });
   assert.match(feed, /clip a tutto schermo/);
   assert.match(feed, /NON agenda/);
+  assert.match(feed, /Niente in lista/);
   assert.doesNotMatch(feed, /For You/);
 });
 

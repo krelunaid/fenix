@@ -2,7 +2,7 @@
  * Deterministic graphic pipeline: prompt → plan → generate → visual → QA.
  * 0 LLM credits. Seed HTML is the product the worker then polishes.
  */
-import { formatPrefix, kindFromPrompt, inferKind } from "../projects/infer.ts";
+import { formatPrefix, inferKind, kindFromPrompt } from "../projects/infer.ts";
 import { websiteProductHtml } from "./website-product.ts";
 import { arcadeProductHtml } from "./arcade-product.ts";
 import { productIntent } from "./product-intent.ts";
@@ -356,7 +356,7 @@ function seedNameFromBrief(brief: string): string {
         : isShopBrief(brief)
           ? "Negozio"
           : grammarFromBrief(brief).id === "clip-feed"
-            ? "Clip"
+            ? "Nastro"
             : grammarFromBrief(brief).id === "agenda"
             ? "Agenda"
             : "Note";
@@ -378,7 +378,7 @@ function synthesizeSpec(brief: string): PipelineSpec {
   if (grammar.id === "clip-feed") {
     return {
       id: `${tokens.family}-clip`,
-      name: name === "Note" ? "Clip" : name,
+      name: name === "Note" || name === "Clip" ? "Nastro" : name,
       kicker: grammar.voice.census,
       place: "In onda",
       collection: "clip",
@@ -393,6 +393,7 @@ function synthesizeSpec(brief: string): PipelineSpec {
         { id: "c1", title: "Luce di Brera", kicker: "in onda", note: "Marta · Milano", meta: "12s" },
         { id: "c2", title: "Passo in cortile", kicker: "in onda", note: "Leo · Torino", meta: "8s" },
         { id: "c3", title: "Sera al porto", kicker: "in onda", note: "Noa · Genova", meta: "15s" },
+        { id: "c4", title: "Vetraio a Napoli", kicker: "in onda", note: "Ira · Napoli", meta: "11s" },
       ],
       formTitle: "Nuovo clip",
       cta: "Metti in onda",
@@ -1090,14 +1091,25 @@ function phoneCss(id: GrammarId): string {
   html[data-chroma="chroma-pulse"] .home-hero,html[data-chroma="ink-terminal"] .home-hero{background:color-mix(in srgb,var(--accent) 16%,var(--surface))}
   html[data-chroma="pastel-studio"] .home-hero,html[data-chroma="luminous-paper"] .home-hero{background:color-mix(in srgb,var(--accent) 10%,var(--surface))}`
             : id === "clip-feed"
-              ? `html[data-grammar="clip-feed"] header{position:absolute;z-index:4;background:linear-gradient(180deg,color-mix(in srgb,var(--bg) 72%,transparent),transparent);border:0;width:100%}
-  html[data-grammar="clip-feed"] .app{height:100dvh;max-height:100dvh}
-  html[data-grammar="clip-feed"] main{padding:0;overflow:hidden}
-  html[data-grammar="clip-feed"] .hero{min-height:100%;height:100%;margin:0;border:0;border-radius:0;position:relative}
-  html[data-grammar="clip-feed"] .hero svg{width:100%;height:100%;min-height:72vh;display:block}
-  html[data-grammar="clip-feed"] .hero .caption{position:absolute;left:16px;right:72px;bottom:24px;background:none;padding:0}
-  html[data-grammar="clip-feed"] .collection,.fragrance{display:none}
-  html[data-grammar="clip-feed"] nav.tabs{background:color-mix(in srgb,var(--bg) 55%,transparent);border-color:transparent}`
+              ? `html[data-grammar="clip-feed"] #fx-splash{display:none!important}
+  html[data-grammar="clip-feed"] header{display:none}
+  html[data-grammar="clip-feed"] .app{grid-template-rows:minmax(0,1fr) auto;grid-template-areas:"main" "nav";height:100dvh;max-height:100dvh;background:#08060c}
+  html[data-grammar="clip-feed"] main{padding:0;overflow:hidden;background:#08060c}
+  html[data-grammar="clip-feed"] main:has(.clip-create),html[data-grammar="clip-feed"] main:has(.clip-saved),html[data-grammar="clip-feed"] main:has(.clip-profile){overflow:auto;padding:18px 16px 22px}
+  html[data-grammar="clip-feed"] nav.tabs{background:color-mix(in srgb,#08060c 72%,transparent);border-color:transparent;-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px)}
+  html[data-grammar="clip-feed"] nav.tabs button.on{color:#fff}
+  html[data-grammar="clip-feed"] .collection,.fragrance,.hero{display:none}
+  .clip-stage{position:relative;min-height:100%;height:100%;overflow:hidden;color:#f4e8ff;background:#08060c}
+  .clip-poster{position:absolute;inset:0;width:100%;height:100%;display:block;object-fit:cover}
+  .clip-vignette{position:absolute;inset:0;pointer-events:none;background:linear-gradient(180deg,rgba(8,6,12,.42),transparent 22%,transparent 48%,rgba(8,6,12,.92))}
+  .clip-live{position:absolute;top:14px;left:16px;z-index:3;margin:0;font:650 11px/1 var(--body),sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#f4e8ff}
+  .clip-caption{position:absolute;left:16px;right:88px;bottom:22px;z-index:3}
+  .clip-handle{margin:0;font:650 13px/1.2 var(--body),sans-serif;opacity:.88}
+  .clip-caption h1{margin:8px 0 8px;font:750 clamp(1.55rem,7vw,2.15rem)/1.05 var(--display),sans-serif;letter-spacing:-.04em}
+  .clip-rail{position:absolute;right:10px;bottom:92px;z-index:4;display:flex;flex-direction:column;gap:12px}
+  .clip-rail-btn{width:52px;height:52px;border-radius:50%;border:1px solid color-mix(in srgb,#fff 22%,transparent);background:color-mix(in srgb,#14081c 58%,transparent);color:#fff;display:grid;place-items:center;padding:0}
+  .clip-create h2,.clip-saved h2,.clip-profile h2{font-family:var(--display);letter-spacing:-.03em}
+  .clip-create .btn{width:100%;margin-top:14px}`
             : "";
   return `${stage}
 .app{display:grid;grid-template-rows:auto 1fr auto;grid-template-areas:"head" "main" "nav";width:100%;min-height:100dvh}
@@ -1767,6 +1779,107 @@ ${familyChromeCss(t, grammar)}
 /* ${t.family}/${t.variant} device-aware */`;
 }
 
+function clipPosterSvg(slot: number, tokens: DesignTokens): string {
+  const p = tokens.palette;
+  const hues = [
+    { a: p.accent, b: "#2ec8c0", c: p.bg, d: p.fg },
+    { a: "#ffb020", b: p.accent, c: p.surface, d: p.fg },
+    { a: "#3ecf8e", b: "#ff3d7f", c: p.bg, d: p.fg },
+    { a: "#6b8cff", b: p.accent, c: p.elevated, d: p.fg },
+  ];
+  const t = hues[((slot % hues.length) + hues.length) % hues.length]!;
+  const gid = `clipn${slot}`;
+  const scenes = [
+    `<rect width="390" height="844" fill="${t.c}"/>
+    <path d="M-40 620 L120 180 L240 420 L390 90 L430 844 L-40 844z" fill="${t.a}" opacity=".42"/>
+    <path d="M40 844 L190 220 L310 510 L430 140 V844z" fill="${t.b}" opacity=".28"/>
+    <circle cx="268" cy="210" r="92" fill="${t.d}" opacity=".12"/>
+    <rect x="48" y="540" width="86" height="220" fill="${t.d}" opacity=".16"/>
+    <rect x="148" y="480" width="70" height="280" fill="${t.a}" opacity=".22"/>
+    <rect x="232" y="580" width="96" height="180" fill="${t.b}" opacity=".18"/>`,
+    `<rect width="390" height="844" fill="${t.c}"/>
+    <ellipse cx="196" cy="300" rx="170" ry="220" fill="${t.a}" opacity=".35"/>
+    <ellipse cx="80" cy="520" rx="120" ry="160" fill="${t.b}" opacity=".28"/>
+    <path d="M0 640 Q120 520 210 640 T390 560 V844 H0z" fill="${t.d}" opacity=".14"/>
+    <rect x="0" y="0" width="24" height="844" fill="${t.a}" opacity=".45"/>
+    <rect x="366" y="0" width="24" height="844" fill="${t.b}" opacity=".4"/>`,
+    `<rect width="390" height="844" fill="${t.c}"/>
+    <path d="M40 80h310v684H40z" fill="none" stroke="${t.a}" stroke-width="18"/>
+    <circle cx="195" cy="360" r="118" fill="${t.b}" opacity=".32"/>
+    <path d="M70 620 195 240 320 620z" fill="${t.a}" opacity=".24"/>
+    <rect x="70" y="670" width="250" height="18" fill="${t.d}" opacity=".35"/>`,
+    `<rect width="390" height="844" fill="${t.c}"/>
+    <path d="M-20 200 L410 80 L410 280 L-20 400z" fill="${t.a}" opacity=".38"/>
+    <path d="M-20 420 L410 300 L410 500 L-20 620z" fill="${t.b}" opacity=".26"/>
+    <circle cx="300" cy="180" r="70" fill="${t.d}" opacity=".18"/>
+    <rect x="28" y="700" width="160" height="64" fill="${t.a}" opacity=".4"/>`,
+  ];
+  const inner = scenes[((slot % scenes.length) + scenes.length) % scenes.length]!;
+  return `<svg class="clip-poster" data-imagery="domain" data-fenix-clip-art="${slot}" viewBox="0 0 390 844" width="390" height="844" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><defs><filter id="${gid}" x="-8%" y="-8%" width="116%" height="116%"><feTurbulence type="fractalNoise" baseFrequency="0.7" numOctaves="3" seed="${13 + slot * 7}" result="n"/><feColorMatrix in="n" type="saturate" values="0"/><feComponentTransfer><feFuncA type="table" tableValues="0 0.22"/></feComponentTransfer><feBlend in="SourceGraphic" mode="multiply"/></filter></defs><g filter="url(#${gid})">${inner}</g></svg>`;
+}
+
+function clipFeedBootHtml(spec: PipelineSpec, tokens: DesignTokens): string {
+  const row = spec.rows[0] || {
+    id: "c1",
+    title: spec.name,
+    note: "In onda",
+    kicker: spec.kicker,
+    meta: "8s",
+  };
+  const handle = String(row.note || "in onda").split("·")[0]!.trim() || "in onda";
+  const keep = `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M7.4 4.8h9.2v14.4L12 15.2 7.4 19.2z"/></svg>`;
+  const next = `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M6 10l6 6 6-6"/></svg>`;
+  return `<section class="clip-stage" data-fenix-clip="1" data-clip-id="${row.id}" data-fenix-slot="home-boot">${clipPosterSvg(0, tokens)}<div class="clip-vignette"></div><p class="clip-live">In onda</p><div class="clip-caption"><p class="clip-handle">${handle}</p><h1>${row.title}</h1><p class="notes">${row.meta || ""} · ${row.kicker || spec.kicker}</p></div><div class="clip-rail"><button type="button" class="clip-rail-btn" data-act="clip-keep" aria-label="Salva">${keep}</button><button type="button" class="clip-rail-btn" data-act="clip-next" aria-label="Avanti">${next}</button></div></section>`;
+}
+
+function clipFeedRuntimeJs(): string {
+  return `var clipIndex=0;
+function clipRows(){
+  return data.items.length?data.items:[{id:"c0",title:specName(),note:"In onda",kicker:"in onda",meta:"8s",slot:0,saved:false}];
+}
+function clipAt(){
+  var rows=clipRows();
+  if(!rows.length) clipIndex=0;
+  else if(clipIndex<0) clipIndex=rows.length-1;
+  else if(clipIndex>=rows.length) clipIndex=0;
+  return rows[clipIndex]||rows[0];
+}
+function clipPosterOf(e){
+  var slot=Number(e&&e.slot);
+  if(!isFinite(slot)) slot=clipIndex;
+  if(!clipArts.length) return "";
+  return clipArts[((slot%clipArts.length)+clipArts.length)%clipArts.length]||clipArts[0]||"";
+}
+function clipKeepMark(on){
+  return on
+    ? '<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true"><path d="M7.4 4.8h9.2v14.4L12 15.2 7.4 19.2z"/></svg>'
+    : '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M7.4 4.8h9.2v14.4L12 15.2 7.4 19.2z"/></svg>';
+}
+function renderClipFeed(){
+  var e=clipAt();
+  var handle=String(e.note||"in onda").split("·")[0].trim()||"in onda";
+  var saved=!!e.saved;
+  return '<section class="clip-stage" data-fenix-clip="1" data-clip-id="'+e.id+'">'+clipPosterOf(e)+'<div class="clip-vignette"></div><p class="clip-live">In onda</p><div class="clip-caption"><p class="clip-handle">'+handle+'</p><h1>'+e.title+'</h1><p class="notes">'+(e.meta||"")+(e.kicker?" · "+e.kicker:"")+'</p></div><div class="clip-rail"><button type="button" class="clip-rail-btn" data-act="clip-keep" aria-label="'+(saved?"Togli dai salvati":"Salva")+'">'+clipKeepMark(saved)+'</button><button type="button" class="clip-rail-btn" data-act="clip-next" aria-label="Avanti"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M6 10l6 6 6-6"/></svg></button></div></section>';
+}
+function renderClipCreate(){
+  return '<section class="clip-create" data-fenix-crud>'+renderForm()+"</section>";
+}
+function renderClipSaved(){
+  var rows=data.items.filter(function(x){return x.saved;});
+  var html='<section class="clip-saved"><p class="kicker">In tasca</p><h2>'+(rows.length?rows.length+" salvati":"Nessun clip salvato")+"</h2>";
+  if(!rows.length) html+='<p class="notes">Tieni un nastro dal feed. Resta sul dispositivo.</p>';
+  rows.forEach(function(e){
+    html+='<article class="card" data-id="'+e.id+'"><p class="kicker">'+(e.note||"")+"</p><h2>"+e.title+'</h2><p class="notes">'+(e.meta||"")+'</p><button class="btn ghost" type="button" data-act="clip-open" data-id="'+e.id+'">Guarda</button></article>';
+  });
+  return html+"</section>";
+}
+function renderClipProfile(){
+  var saved=data.items.filter(function(x){return x.saved;}).length;
+  return '<section class="clip-profile"><p class="kicker">Profilo</p><h2>'+specName()+'</h2><p class="notes">'+place+' · nastro originale, niente stock.</p><article class="card"><p class="kicker">In onda</p><h2>'+data.items.length+'</h2></article><article class="card"><p class="kicker">Salvati</p><h2>'+saved+'</h2></article><p class="notes">Collezione '+COL+' sul dispositivo. Nessun account inventato.</p></section>';
+}
+`;
+}
+
 function jsRows(rows: PipelineRow[]): string {
   return rows
     .map((r, i) => {
@@ -1843,7 +1956,9 @@ function productHtml(spec: PipelineSpec, tokens: DesignTokens, grammar: LayoutGr
     : campo
       ? `<section class="home-overview" data-fenix-pane="home" data-fenix-slot="home-boot"><div class="home-hero"><div class="fx-hello-row"><div><p class="fx-hello">Missioni</p><p class="fx-role">Quadro di controllo</p></div><span class="fx-app-mark" data-fenix-id="icon:app" aria-hidden="true">${campoHomeHeaderMark()}</span></div><p class="fx-date">${bootDate}</p><div class="home-first" data-state="empty"><h2>Niente in lista</h2><p class="notes">Aggiungi la prima voce. Qui non ci sono dati di prova.</p><button class="btn" type="button" data-view="${spec.tabs[1]!.id}">${spec.cta}</button></div></div></section>`
     : `<section class="home-overview" data-fenix-pane="home" data-fenix-slot="home-boot"><div class="home-hero"><div class="fx-hello-row"><div><p class="fx-hello">${spec.name}</p><p class="fx-role">${spec.place}</p></div><span class="fx-app-mark" data-fenix-id="icon:app" aria-hidden="true">${pocketMark}</span></div><p class="fx-date">${bootDate}</p><div class="home-first" data-state="empty"><div class="mark" aria-hidden="true">${pocketMark}</div><h2>Niente in lista</h2><p class="notes">Aggiungi la prima voce. Qui non ci sono dati di prova.</p><button class="btn" type="button" data-view="${spec.tabs[1]!.id}">${spec.cta}</button></div></div><aside class="home-aside"><article class="card"><p class="kicker">Elenco</p><h2>In tasca</h2><p class="notes">Le voci restano nella lista, con azioni visibili.</p></article><article class="card"><p class="kicker">Privacy</p><h2>Solo qui</h2><p class="notes">Storage locale, senza profilo inventato.</p></article></aside></section>`;
-  const splash = desk
+  const splash = grammar.id === "clip-feed"
+    ? ""
+    : desk
     ? ""
     : barber
       ? `<div class="fx-splash" id="fx-splash" data-fenix-splash data-fenix-slot="splash"><span class="fx-mark">${premiumMark}</span><strong>${spec.name}</strong><button class="btn salon-cta-prenota" type="button" data-view="prenota">Prenota →</button></div>`
@@ -1852,9 +1967,12 @@ function productHtml(spec: PipelineSpec, tokens: DesignTokens, grammar: LayoutGr
     premiumDefault &&
     grammar.id !== "agenda" &&
     grammar.id !== "source-timeline" &&
-    grammar.id !== "phone-seed";
+    grammar.id !== "phone-seed" &&
+    grammar.id !== "clip-feed";
   const bootMain =
-    grammar.id === "source-timeline"
+    grammar.id === "clip-feed"
+      ? clipFeedBootHtml(spec, tokens)
+      : grammar.id === "source-timeline"
       ? `<section class="repo-stage" data-repo-stage="activity"><div class="timeline-art">${hero}</div></section>`
       : grammar.id === "agenda"
         ? agendaRailMarkup(spec, grammar)
@@ -1963,9 +2081,10 @@ let view=${JSON.stringify(homeView)};
 let selectedDay="";
 let editId=null;
 var wipeAsk=false;
-const arts=${JSON.stringify(grammar.id === "phone-seed" || grammar.id === "agenda" || wantsPremiumBoot ? [] : slices)};
-const meets=${JSON.stringify(grammar.id === "phone-seed" || wantsPremiumBoot ? [] : meets)};
-const hero=${JSON.stringify(grammar.id === "phone-seed" || wantsPremiumBoot ? "" : hero)};
+const arts=${JSON.stringify(grammar.id === "phone-seed" || grammar.id === "agenda" || grammar.id === "clip-feed" || wantsPremiumBoot ? [] : slices)};
+const meets=${JSON.stringify(grammar.id === "phone-seed" || grammar.id === "clip-feed" || wantsPremiumBoot ? [] : meets)};
+const hero=${JSON.stringify(grammar.id === "phone-seed" || grammar.id === "clip-feed" || wantsPremiumBoot ? "" : hero)};
+const clipArts=${JSON.stringify(grammar.id === "clip-feed" ? spec.rows.map((_, i) => clipPosterSvg(i, tokens)) : [])};
 const tabDefs=${JSON.stringify(spec.tabs)};
 const glyphs=${JSON.stringify(spec.tabs.map((t, i) => tabSvg(t, i, campo, barber)))};
 const grammarId=${JSON.stringify(grammar.id)};
@@ -2837,6 +2956,12 @@ ${
     cliente=parts.slice(1).join(" · ");
   }
   return '<section class="card span" data-fenix-crud data-fenix-slot="form" data-agenda-form="'+(editing?"edit":"create")+'"><p class="kicker">'+(editing?"Modifica":"Nuovo")+'</p><h2>'+(editing?"Aggiorna slot":formTitle)+'</h2><form id="fnew"><label for="n">Prestazione</label><input class="field" id="n" name="n" required placeholder="Es. Taglio e piega" value="'+title+'"><label for="ora">Ora</label><input class="field" id="ora" name="ora" type="time" required placeholder="09:30" value="'+(ora||"09:00")+'"><label for="data">Data</label><input class="field" id="data" name="data" type="date" required value="'+giorno+'"><label for="luogo">Luogo</label><input class="field" id="luogo" name="luogo" placeholder="Sala 1" value="'+luogo+'"><label for="cliente">Cliente</label><input class="field" id="cliente" name="cliente" placeholder="Nome del cliente" value="'+cliente+'"><p class="notes" data-fenix-form-error role="alert" hidden>Controlla i campi obbligatori.</p><button class="btn" type="button" data-act="save" style="margin-top:14px;width:100%">'+(editing?"Salva modifiche":cta)+'</button></form></section>';`
+    : grammar.id === "clip-feed"
+    ? `  var editing=editId?data.items.find(function(x){return x.id===editId;}):null;
+  var title=editing?editing.title:"";
+  var det=editing?editing.kicker:"";
+  var nota=editing?editing.note:"";
+  return '<section class="card span" data-fenix-crud data-fenix-slot="form"><p class="kicker">'+(editing?"Modifica":"Nuovo nastro")+'</p><h2>'+(editing?"Aggiorna clip":formTitle)+'</h2><form id="fnew"><label for="n">Titolo</label><input class="field" id="n" name="n" required placeholder="Titolo del clip" value="'+title+'"><label for="k">Città</label><input class="field" id="k" name="k" placeholder="Milano" value="'+det+'"><label for="note">Nota</label><input class="field" id="note" name="note" placeholder="Chi è in scena" value="'+nota+'"><p class="notes" data-fenix-form-error role="alert" hidden>Controlla i campi obbligatori.</p><button class="btn" type="button" data-act="save" style="margin-top:14px;width:100%">'+(editing?"Salva modifiche":cta)+'</button></form></section>';`
     : `  var editing=editId?data.items.find(function(x){return x.id===editId;}):null;
   var title=editing?editing.title:"";
   var det=editing?editing.kicker:"";
@@ -2844,6 +2969,7 @@ ${
   return '<section class="card span" data-fenix-crud data-fenix-slot="form"><p class="kicker">'+(editing?"Modifica":"Nuovo")+'</p><h2>'+(editing?"Aggiorna voce":formTitle)+'</h2>'+(grammarId==="phone-seed"?'<p class="notes">Campi sul dispositivo. Conferma visibile dopo Salva.</p>':'')+'<form id="fnew"><label for="n">Nome</label><input class="field" id="n" name="n" required placeholder="Nome" value="'+title+'"><label for="k">Dettaglio</label><input class="field" id="k" name="k" placeholder="stato, taglia, ora" value="'+det+'"><label for="note">Nota</label><input class="field" id="note" name="note" placeholder="materia" value="'+nota+'"><p class="notes" data-fenix-form-error role="alert" hidden>Controlla i campi obbligatori.</p><button class="btn" type="button" data-act="save" style="margin-top:14px;width:100%">'+(editing?"Salva modifiche":cta)+'</button></form></section>';`
 }
 }
+${grammar.id === "clip-feed" ? clipFeedRuntimeJs() : ""}
 ${grammar.id === "phone-seed" ? `function renderHome(){ return renderPocketHome(); }` : `function renderList(){
   var html='<div class="card span"><p class="kicker">Archivio</p><h2>'+data.items.length+" voci</h2></div>";
   if(!data.items.length) html+=emptyBox();
@@ -2989,6 +3115,7 @@ ${
 `
     : ""
 }function renderHome(){
+  if(grammarId==="clip-feed") return renderClipFeed();
   if(grammarId==="lookbook") return renderLookbook();
   if(grammarId==="hospitality") return renderRooms();
   if(premiumDefault && (grammarId==="service-board"||grammarId==="split-stage"||grammarId==="pocket-tool")) return renderPremiumHome();
@@ -3029,7 +3156,12 @@ function renderTool(){
     else if(pane==="stats") root.innerHTML=renderPocketStats();
     else if(pane==="list") root.innerHTML=renderPocketList();
     else root.innerHTML=renderPocketPersona();
-  } ${barber ? `else if(barberProduct){
+  } ${grammar.id === "clip-feed" ? `else if(grammarId==="clip-feed"){
+    if(id===tabDefs[0].id) root.innerHTML=renderClipFeed();
+    else if(id===tabDefs[1].id) root.innerHTML=renderClipCreate();
+    else if(id===tabDefs[2].id) root.innerHTML=renderClipSaved();
+    else root.innerHTML=renderClipProfile();
+  } ` : ""}${barber ? `else if(barberProduct){
     if(id===tabDefs[0].id) root.innerHTML=renderBarberHome();
     else if(id===tabDefs[1].id) root.innerHTML=renderBarberBook();
     else root.innerHTML=renderBarberMine();
@@ -3092,6 +3224,29 @@ document.getElementById("tabs").addEventListener("click",function(e){
     return;
   }
   if(act==="save"){ commitForm(b.closest("form") || document.getElementById("fnew")); return; }
+  if(act==="clip-next"){
+    if(grammarId!=="clip-feed") return;
+    clipIndex+=1;
+    render();
+    return;
+  }
+  if(act==="clip-keep"){
+    if(grammarId!=="clip-feed"||typeof clipAt!=="function") return;
+    var cur=clipAt();
+    if(!cur||!cur.id) return;
+    enqueueOp({kind:"edit",id:cur.id,patch:{saved:!cur.saved}}, function(){ render(); }, null);
+    render();
+    return;
+  }
+  if(act==="clip-open"){
+    if(grammarId!=="clip-feed") return;
+    var rows=data.items||[];
+    var idx=rows.findIndex(function(x){return x.id===id;});
+    if(idx>=0) clipIndex=idx;
+    view=tabDefs[0].id;
+    render();
+    return;
+  }
   if(act==="wipe-local"||act==="wipe-ask"){
     if(!data.items.length) return;
     wipeAsk=true;
@@ -3166,7 +3321,27 @@ document.getElementById("root").addEventListener("submit",function(e){
   e.preventDefault();
   commitForm(f);
 });
-
+${grammar.id === "clip-feed" ? `var clipTouchY=null;
+document.getElementById("root").addEventListener("touchstart",function(e){
+  if(view!==tabDefs[0].id||!e.changedTouches||!e.changedTouches[0]) return;
+  clipTouchY=e.changedTouches[0].clientY;
+},{passive:true});
+document.getElementById("root").addEventListener("touchend",function(e){
+  if(clipTouchY==null||!e.changedTouches||!e.changedTouches[0]) return;
+  var dy=clipTouchY-e.changedTouches[0].clientY;
+  clipTouchY=null;
+  if(Math.abs(dy)<56) return;
+  clipIndex+=dy>0?1:-1;
+  render();
+},{passive:true});
+document.getElementById("root").addEventListener("wheel",function(e){
+  if(view!==tabDefs[0].id) return;
+  if(Math.abs(e.deltaY)<28) return;
+  e.preventDefault();
+  clipIndex+=e.deltaY>0?1:-1;
+  render();
+},{passive:false});
+` : ""}
 function markReady(){ document.documentElement.setAttribute("data-fenix-ready","1"); }
 var bootDone=false;
 function finishBoot(fromLoad){
@@ -3230,7 +3405,7 @@ function polishFor(
       : grammar.id === "agenda"
         ? "Chrome da agenda: binario orario, tab Oggi/Nuovo/Settimana/Archivio, tipo 17/headline, target 44px. Vietato hero KPI, tab Home/Elenco, riquadri vuoti."
         : grammar.id === "clip-feed"
-        ? "Chrome da feed verticale: clip a tutto schermo, overlay caption, dock Feed/Crea/Salvati/Profilo. Vietato agenda, 5 tab CRUD, card KPI, clone TikTok/Instagram."
+        ? "Chrome da feed verticale: PRIMO PAINT = clip-stage a tutto schermo, overlay caption, rail Salva/Avanti, dock Feed/Crea/Salvati/Profilo. Vietato splash pronto, Niente in lista, Aggiungi la prima voce, collection voci, agenda, 5 tab CRUD, card KPI, clone TikTok/Instagram/For You."
         : grammar.chrome === "desk"
         ? DASHBOARD_POLISH_INSTRUCTION
         : grammar.chrome === "masthead"

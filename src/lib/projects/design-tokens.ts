@@ -31,6 +31,7 @@ import { enrichLibraryPalette } from "./library-ops-palette.ts";
 import { enrichMarketPalette } from "./market-ops-palette.ts";
 import { enrichLuxePalette } from "./luxe-ops-palette.ts";
 import { isBarberBrief, isLibraryBrief, isLuxeBrief, isMarketplaceBrief } from "./app-identity.ts";
+import { isClipFeedBrief } from "./infer.ts";
 
 export type TokenFamily =
   | "perfume"
@@ -566,6 +567,7 @@ export function briefSeed(brief: string): number {
 }
 
 export function familyFromBrief(brief: string): TokenFamily {
+  if (isClipFeedBrief(brief)) return "night";
   const p = String(brief || "");
   for (const row of PRODUCT) {
     if (row.re.test(p)) return row.family;
@@ -645,6 +647,7 @@ function mixHexLocal(a: string, b: string, t: number): string {
 /** Adaptive SYSTEM sheet. Not a single petrol, not Apple SET, AA on chrome. */
 function finishSystemSheet(tokens: DesignTokens, brief: string, recent?: PaletteRecord[]): DesignTokens {
   const intent = graphicIntentFromBrief(brief);
+  if (isClipFeedBrief(brief)) return tokens;
   if (intent.type !== "system") return tokens;
   if (isProductFamily(tokens.family) && tokens.family !== "repo") return tokens;
   const user = extractUserColors(brief);
@@ -857,6 +860,8 @@ export function tokensInstruction(tokens: DesignTokens, brief = ""): string {
     productDesignInstruction(),
     tokens.family === "repo"
       ? "Dominio repository: attività commit, rami, stato sync, timeline/diff. Vietato home universale con hero grigio + due KPI + CTA + empty card. Non copiare GitHub."
+      : isClipFeedBrief(brief)
+        ? "Dominio feed verticale: primo paint = clip a tutto schermo (poster SVG originale, caption overlay, rail Salva/Avanti). Dock Feed/Crea/Salvati/Profilo. Vietato Niente in lista, voci, splash pronto, 5 tab CRUD, clone TikTok/Instagram/For You."
       : isBarberBrief(brief)
         ? "Dominio salon cliente: tab Home/Prenota/I miei, tipografia e palette definite sopra (richieste esplicite prioritarie), Prenota evidente, schede servizio con durata/prezzo/professionista, mark forbici definito. Vietato blur molle, dashboard staff Oggi/Nuovo/Settimana/Archivio e KPI in sala. Non clonare Corto."
       : tokens.family === "booking" && intent.type !== "system"

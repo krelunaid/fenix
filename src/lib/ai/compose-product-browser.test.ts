@@ -1893,3 +1893,50 @@ describe("graphic pipeline visual QA D/T/M", () => {
     }
   });
 });
+
+describe("clip-feed t0 is a full-bleed nastro, not a voci ledger", () => {
+  it("paints clip-stage at 390×844 and advances on Avanti", async () => {
+    const { composeProduct } = await import("./compose-product.ts");
+    const { formatPrefix } = await import("../projects/infer.ts");
+    const brief = formatPrefix("app") + "mi crei un app simile tik tok";
+    const product = composeProduct(brief);
+    assert.equal(product.grammar.id, "clip-feed");
+    const src = prepareSrcDoc(product.html, product.tokens.palette, "clip-feed", product.grammar.kind);
+    const browser = await launchChromium();
+    try {
+      const page = await isolatedPage(browser, { viewport: { width: 390, height: 844 } });
+      try {
+        await page.setContent(src, { waitUntil: "domcontentloaded", timeout: 15000 });
+        await waitForFenixReady(page, 8000);
+        const first = await page.evaluate(() => {
+          const stage = document.querySelector(".clip-stage");
+          const r = stage?.getBoundingClientRect();
+          return {
+            title: document.querySelector(".clip-caption h1")?.textContent || "",
+            ledger: /Niente in lista|Aggiungi la prima voce/.test(document.body.innerText),
+            tabs: [...document.querySelectorAll("nav.tabs button span")].map((el) => el.textContent || ""),
+            stageH: r?.height ?? 0,
+            splash: !!document.querySelector("#fx-splash:not([hidden])"),
+          };
+        });
+        assert.equal(first.ledger, false);
+        assert.deepEqual(first.tabs, ["Feed", "Crea", "Salvati", "Profilo"]);
+        assert.match(first.title, /Luce di Brera|Nastro|Passo|Sera|Vetraio/);
+        assert.ok(first.stageH >= 700, `clip-stage height ${first.stageH}`);
+        assert.equal(first.splash, false);
+        await page.click('[data-act="clip-next"]');
+        const second = await page.evaluate(() => document.querySelector(".clip-caption h1")?.textContent || "");
+        assert.notEqual(second, first.title);
+        mkdirSync(join(here, "fixtures/graphic/pipeline"), { recursive: true });
+        await page.screenshot({
+          path: join(here, "fixtures/graphic/pipeline/clip-feed-390.png"),
+          type: "png",
+        });
+      } finally {
+        await page.close();
+      }
+    } finally {
+      await browser.close();
+    }
+  });
+});

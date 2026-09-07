@@ -115,6 +115,7 @@ describe("library and barber craft identity", () => {
     assert.equal(isPremiumDefaultBrief(BARBER_IPHONE_BRIEF, "booking"), false);
     assert.equal(isPremiumDefaultBrief(LIBRARY_IPHONE_BRIEF, "paper"), false);
     assert.equal(isPremiumDefaultBrief("Essenza: gestione profumi da vendere", "perfume"), false);
+    assert.equal(isPremiumDefaultBrief("mi crei un app simile tik tok", "night"), false);
     assert.equal(appIdentityLabel("Note e promemoria per la giornata", "paper"), "Elenco");
     assert.notEqual(appIdentityLabel("Note e promemoria per la giornata", "paper"), "Ufficio");
   });

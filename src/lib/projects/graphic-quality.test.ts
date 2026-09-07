@@ -176,6 +176,24 @@ a,button{color:#1f6f68}
     assert.equal(fallbackCodes.includes("apple-clone"), false, fallbackCodes.join(","));
   });
 
+  it("fails a TikTok-like brief that still boots the voci ledger", () => {
+    const brief = `${formatPrefix("app")}mi crei un app simile tik tok`;
+    const ledger = `<!DOCTYPE html><html><body>
+<nav><button data-view="home"><span>Home</span></button><button data-view="nuovo"><span>Aggiungi</span></button><button data-view="elenco"><span>Elenco</span></button></nav>
+<main><h2>Niente in lista</h2><p>Aggiungi la prima voce.</p></main></body></html>`;
+    const bad = auditGraphicQuality(ledger, { brief, kind: "app" });
+    const codes = bad.findings.filter((f) => f.severity === "fail").map((f) => f.code);
+    assert.ok(codes.includes("ledger-on-feed"), codes.join(","));
+    assert.ok(codes.includes("missing-clip-stage"), codes.join(","));
+    const feed = `<!DOCTYPE html><html><body>
+<nav><button data-view="feed"><span>Feed</span></button><button data-view="crea"><span>Crea</span></button></nav>
+<main><section class="clip-stage" data-fenix-clip="1"><h1>Luce di Brera</h1></section></main></body></html>`;
+    const good = auditGraphicQuality(feed, { brief, kind: "app" });
+    const goodCodes = good.findings.filter((f) => f.severity === "fail").map((f) => f.code);
+    assert.equal(goodCodes.includes("ledger-on-feed"), false, goodCodes.join(","));
+    assert.equal(goodCodes.includes("missing-clip-stage"), false, goodCodes.join(","));
+  });
+
   it("does not promote the phone shell as a finished perfume product", () => {
     const brief = "FORMATO: app telefono. kind=app. Essenza gestione profumi premium.";
     const report = auditGraphicQuality(APP_SHELL_HTML, { brief, kind: "app" });

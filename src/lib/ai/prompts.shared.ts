@@ -48,8 +48,8 @@ CSS: :root con --bg --surface --fg --muted --accent --line. body 100dvh. App a c
 
 App — chrome da prodotto in tasca (non admin, non landing):
 - TELEFONO 390×844. html/body colonna 100dvh. Vietato desktop-only, 3 colonne, min-width 1100, bande.
-- Se il contratto dà una grammatica (split-stage, lookbook, agenda, hospitality, service-board, magazine, ops-desk, source-timeline) esegui QUELLA: non riciclare header.fk-top + nav.fk-tab + 4 stat. Altrimenti (app generica) usa header.fk-top, main.fk-main, nav.fk-tab.
-- Home: oggetto del mestiere + registro a righe o vetrina + CTA. VIETATO home fatta solo di 4 riquadri .fk-stat + «Ultimo» + «Stato». VIETATO imporre un ledger Voci/Limite/Squadra su ogni brief. VIETATO main vuoto, dead zone, pagina bianca, Ciao/Operatore. VIETATO hero grigio + due KPI + CTA + empty card su un brief di repository.
+- Se il contratto dà una grammatica (split-stage, lookbook, agenda, hospitality, service-board, magazine, ops-desk, source-timeline, clip-feed) esegui QUELLA: non riciclare header.fk-top + nav.fk-tab + 4 stat. Altrimenti (app generica) usa header.fk-top, main.fk-main, nav.fk-tab.
+- Home: oggetto del mestiere + registro a righe o vetrina + CTA. VIETATO home fatta solo di 4 riquadri .fk-stat + «Ultimo» + «Stato». VIETATO imporre un ledger Voci/Limite/Squadra su ogni brief. VIETATO main vuoto, dead zone, pagina bianca, Ciao/Operatore. VIETATO hero grigio + due KPI + CTA + empty card su un brief di repository. Se la grammatica è clip-feed: PRIMO PAINT = clip a tutto schermo, mai «Niente in lista».
 - Un'app profumi deve sembrare un prodotto profumi, non un registro generico. Stesso per moda, prenotazioni, ristorazione, ospitalità. Un registro di repository mostra commit, rami, sync, timeline/diff — non copiare GitHub.
 - Tab: 4–5 button in .fk-tab, SVG 24 + span dal mestiere (niente Home/Nuovo/Elenco su un brief di prodotto, salvo richiesta esplicita di tab Home/Aggiungi/Persona), data-view, .on sull'attivo.
 - Tutte le viste conservano la stessa geometria della .fk-tab; nessun contenuto può spingerla verso l'alto o lasciarle vuoto sotto.

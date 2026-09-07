@@ -408,7 +408,7 @@ export function grammarInstruction(grammar: LayoutGrammar): string {
     grammar.id === "source-timeline"
       ? "Repository: attività, rami, sync, diff. Vietato home universale hero grigio + due KPI + CTA + empty card. Non copiare GitHub, Apple o Emergent."
       : grammar.id === "clip-feed"
-        ? "Feed verticale originale: clip a tutto schermo, overlay, dock Feed/Crea/Salvati/Profilo. Vietato agenda, 5 tab Home/Nuovo/Elenco/Stats, card KPI. Non clonare TikTok, Instagram, marchio o «For You»."
+        ? "Feed verticale originale: PRIMO PAINT clip-stage a tutto schermo, overlay, rail, dock Feed/Crea/Salvati/Profilo. Vietato Niente in lista, voci, agenda, 5 tab Home/Nuovo/Elenco/Stats, card KPI. Non clonare TikTok, Instagram, marchio o «For You»."
         : "Stati empty/loading/success/error visibili. Motion solo se prefers-reduced-motion: no-preference. Target ≥24px, focus visibile, AA.",
   ].join("\n");
 }

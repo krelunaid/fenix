@@ -6,6 +6,7 @@ import { familyFromBrief, isProductFamily, tokensFromBrief, type TokenFamily } f
 import { looksLikeIosWidgetHome } from "./craft-icons.ts";
 import { auditCraft, extractCssVars } from "./visual-quality.ts";
 import { genericBriefMismatch } from "./brief-match.ts";
+import { isClipFeedBrief } from "./infer.ts";
 
 export type GraphicAxis =
   | "hierarchy"
@@ -346,6 +347,34 @@ export function auditGraphicQuality(
         "looksLikeIosWidgetHome",
       ),
     );
+  }
+
+  if (isClipFeedBrief(brief)) {
+    const visFeed = markup(text);
+    const ledgerCopy = /Niente in lista|Aggiungi la prima voce|voci sul dispositivo/i.test(visFeed);
+    const crudTabs = /<span>Home<\/span>/.test(visFeed) && /<span>Aggiungi<\/span>/.test(visFeed) && /<span>Elenco<\/span>/.test(visFeed);
+    if (ledgerCopy || crudTabs) {
+      findings.push(
+        finding(
+          "hierarchy",
+          "fail",
+          "ledger-on-feed",
+          "Brief da feed verticale montato come ledger voci / 5 tab CRUD.",
+          ledgerCopy ? "Niente in lista" : "tab Home/Aggiungi/Elenco",
+        ),
+      );
+    }
+    if (!/clip-stage|data-fenix-clip/i.test(text)) {
+      findings.push(
+        finding(
+          "imagery",
+          "fail",
+          "missing-clip-stage",
+          "Feed senza clip a tutto schermo (clip-stage) al primo paint.",
+          "manca clip-stage",
+        ),
+      );
+    }
   }
 
   if (GENERIC_HELLO.test(text) && GENERIC_ROLE.test(text)) {

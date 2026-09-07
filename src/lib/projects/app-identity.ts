@@ -1,4 +1,5 @@
 import { craftNavIcon } from "./craft-icons.ts";
+import { isClipFeedBrief } from "./infer.ts";
 
 /** Activity classifier for naming and the sector pictogram. Not a color or style policy. */
 export function isBarberBrief(brief: string): boolean {
@@ -37,6 +38,7 @@ export function wantsCrispCraftMark(brief: string, family = ""): boolean {
  * dedicated product families keep their own craft. Not a palette.
  */
 export function isPremiumDefaultBrief(brief: string, family = ""): boolean {
+  if (isClipFeedBrief(brief)) return false;
   if (isFieldProductBrief(brief) || isBarberBrief(brief) || isLibraryBrief(brief)) return false;
   if (isMarketplaceBrief(brief) || isLuxeBrief(brief) || isShopBrief(brief) || isAccountantBrief(brief)) {
     return false;

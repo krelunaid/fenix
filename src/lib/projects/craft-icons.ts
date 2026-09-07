@@ -179,6 +179,10 @@ const NAV_ICONS = {
   person: navIcon(
     '<circle cx="12" cy="8.2" r="2.4"/><path d="M7.2 19.2c.6-3.4 9-3.4 9.6 0"/>',
   ),
+  clip: navIcon(
+    '<rect x="6.8" y="4.4" width="10.4" height="15.2" rx="1.7"/><path d="M6.8 8h10.4M6.8 16h10.4"/><path d="M10.2 11.2h3.6"/>',
+  ),
+  keep: navIcon('<path d="M7.4 4.8h9.2v14.4L12 15.2 7.4 19.2z"/>'),
   ledger: navIcon(
     '<path d="M5.8 6.2h5.4v12.2H7.4A1.6 1.6 0 0 1 5.8 16.8z"/><path d="M18.2 6.2h-5.4v12.2h3.8a1.6 1.6 0 0 0 1.6-1.6z"/><path d="M11.2 6.2v12.2"/><path d="M7.4 9.4h2M7.4 12h2M14.6 9.4h2M14.6 12h2"/>',
   ),
@@ -222,6 +226,9 @@ export function craftNavIcon(tab: { id: string; label: string }, index = 0): str
   const label = String(tab.label || "").toLowerCase().trim();
   let svg = NAV_FALLBACKS[index % NAV_FALLBACKS.length];
   if (/^home$/.test(label)) svg = NAV_ICONS.home;
+  else if (/^feed$/.test(label)) svg = NAV_ICONS.clip;
+  else if (/^crea$/.test(label)) svg = NAV_ICONS.pencil;
+  else if (/^salvati$/.test(label)) svg = NAV_ICONS.keep;
   else if (/^i miei$|^miei$/.test(label)) svg = NAV_ICONS.appointments;
   else if (/^aggiungi$/.test(label)) svg = NAV_ICONS.add;
   else if (/^registra$/.test(label)) svg = NAV_ICONS.add;
