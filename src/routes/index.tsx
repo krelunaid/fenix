@@ -54,7 +54,13 @@ function Home() {
       return;
     }
     const kind = choice === "auto" ? inferKind(text) : choice;
-    const project = createFromBrief({ prompt: `${formatPrefix(kind, text)}${text}`, kind });
+    let project;
+    try {
+      project = createFromBrief({ prompt: `${formatPrefix(kind, text)}${text}`, kind });
+    } catch (error: unknown) {
+      toast(error instanceof Error ? error.message : "Non riesco a creare lo studio.");
+      return;
+    }
     void navigate({ to: "/studio/$projectId", params: { projectId: project.id } });
   }
 

@@ -1,6 +1,8 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import {
+  atProjectCap,
+  PROJECT_CAP_ERROR,
   mergeProjectLists,
   projectPersistStorage,
   projectsFromPersistJson,
@@ -9,7 +11,7 @@ import {
   trimProjectList,
 } from "./persist-projects";
 import { captureStableSnapshot } from "./studio-lock";
-export { MAX_PROJECTS, homeVetrinaList, mergeProjectLists, rememberLiveStudio } from "./persist-projects";
+export { MAX_PROJECTS, PROJECT_CAP_ERROR, homeVetrinaList, mergeProjectLists, rememberLiveStudio } from "./persist-projects";
 import { uid } from "@/lib/utils";
 import type { ProjectFile } from "./files";
 import { projectFiles } from "./files";
@@ -459,6 +461,7 @@ export const useProjectStore = create<ProjectStore>()(
         return { ok: proof.ok, v: proof.ok ? chosen : null, durable: proof.durable };
       },
       createFromBrief: ({ prompt, kind }) => {
+        if (atProjectCap(get().projects)) throw new Error(PROJECT_CAP_ERROR);
         const project = blankProject(prompt.trim(), kind ?? "app");
         if (isPhoneKind(project.kind)) {
           const composed = composeProduct(project.prompt, { recent: get().recentPalettes });
@@ -483,6 +486,7 @@ export const useProjectStore = create<ProjectStore>()(
         return project;
       },
       importArchive: ({ bytes, filename }) => {
+        if (atProjectCap(get().projects)) throw new Error(PROJECT_CAP_ERROR);
         const archive = importProjectArchive(bytes);
         if (!archive.ok) throw new Error(archive.error);
         const stored = createImportedProject({
@@ -496,6 +500,7 @@ export const useProjectStore = create<ProjectStore>()(
         return stored;
       },
       importTree: (input) => {
+        if (atProjectCap(get().projects)) throw new Error(PROJECT_CAP_ERROR);
         const stored = createImportedProject(input);
         set((s) => ({ projects: trimList([stored, ...s.projects]) }));
         return stored;

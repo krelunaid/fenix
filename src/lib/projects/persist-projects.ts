@@ -4,6 +4,13 @@ import type { Project } from "./types.ts";
 import { PROJECTS_KEY, readDurableValue, writeDurableValue } from "./durable-db.ts";
 
 export const MAX_PROJECTS = 48;
+export const PROJECT_CAP_ERROR =
+  `Hai raggiunto il limite di ${MAX_PROJECTS} studi su questo dispositivo. Esporta o elimina uno studio prima di crearne un altro: i più vecchi non vengono cancellati da soli.`;
+
+/** True when adding one more project would push the list past the cap. */
+export function atProjectCap(projects: { id: string }[]): boolean {
+  return projects.length >= MAX_PROJECTS;
+}
 export const LIVE_STUDIOS_KEY = "officina-live-studios";
 const PROJECTS_IDB_KEY = PROJECTS_KEY;
 const LIVE_STUDIO_CAP = 8;
@@ -262,10 +269,11 @@ function projectStateStorage(): StateStorage {
       safeSet(webSession(), name, value);
       void writeProjectsIdb(value);
       if (!localOk) {
+        // Web storage is full: keep a compact copy there, but leave the full copy
+        // in IndexedDB (written above) so revisions and files are not lost.
         const compact = compactPersistJson(value);
         safeSet(webLocal(), name, compact);
         safeSet(webSession(), name, compact);
-        void writeProjectsIdb(compact);
       }
     },
     removeItem: (name) => {
