@@ -1,7 +1,5 @@
-// Docker sandbox: one container per job, project directory bind-mounted at /work,
-// commands run through `docker exec`, server port published on 127.0.0.1 only.
-// Same interface as LocalSandbox (it extends it: file I/O happens on the mounted
-// host directory, execution happens inside the container).
+// Docker sandbox: one container per job, no host mounts or published ports.
+// File I/O, server requests and commands remain inside the networkless container.
 //
 // Requirements on the host: docker CLI + daemon. Image default is the Playwright
 // image (Node 22 + Chromium) so browser checks work; override with AGENT_DOCKER_IMAGE.

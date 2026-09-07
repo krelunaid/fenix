@@ -18,7 +18,7 @@ test('valid backend manifest immediately before HTML remains valid JSON', () => 
   const manifest = files.find(f => f.path === 'backend/fenix.backend.json');
   assert.ok(manifest);
   assert.doesNotMatch(manifest.content, /<<<HTML>>>|<!DOCTYPE/);
-  assert.deepEqual(JSON.parse(manifest.content).collections, spec.collections);
+  assert.deepEqual(JSON.parse(manifest.content).collections, spec.collections.map(collection => ({ ...collection, scope: 'owner' })));
   assert.equal(hydratePortableBackendFiles(files).errors.length, 0);
   assert.ok(files.some(f => f.path === 'backend/server.mjs'));
 });
