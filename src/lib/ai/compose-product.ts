@@ -3224,14 +3224,12 @@ document.getElementById("tabs").addEventListener("click",function(e){
     return;
   }
   if(act==="save"){ commitForm(b.closest("form") || document.getElementById("fnew")); return; }
-  if(act==="clip-next"){
-    if(grammarId!=="clip-feed") return;
+${grammar.id === "clip-feed" ? `  if(act==="clip-next"){
     clipIndex+=1;
     render();
     return;
   }
   if(act==="clip-keep"){
-    if(grammarId!=="clip-feed"||typeof clipAt!=="function") return;
     var cur=clipAt();
     if(!cur||!cur.id) return;
     enqueueOp({kind:"edit",id:cur.id,patch:{saved:!cur.saved}}, function(){ render(); }, null);
@@ -3239,7 +3237,6 @@ document.getElementById("tabs").addEventListener("click",function(e){
     return;
   }
   if(act==="clip-open"){
-    if(grammarId!=="clip-feed") return;
     var rows=data.items||[];
     var idx=rows.findIndex(function(x){return x.id===id;});
     if(idx>=0) clipIndex=idx;
@@ -3247,7 +3244,7 @@ document.getElementById("tabs").addEventListener("click",function(e){
     render();
     return;
   }
-  if(act==="wipe-local"||act==="wipe-ask"){
+` : ""}  if(act==="wipe-local"||act==="wipe-ask"){
     if(!data.items.length) return;
     wipeAsk=true;
     render();

@@ -1453,6 +1453,7 @@ describe("graphic pipeline prompt→plan→generate→visual→QA", () => {
       `${formatPrefix("app")}Emporio Luce: negozio di lampade da tavolo, stile Apple.`,
       `${formatPrefix("app")}App barbiere: agenda tagli e clienti, stile iPhone.`,
       `${formatPrefix("app")}App libreria: catalogo libri, prestiti e scaffali, stile iPhone.`,
+      `${formatPrefix("app")}mi crei un app simile tik tok`,
     ];
     for (const brief of briefs) {
       const html = composeProduct(brief).html;

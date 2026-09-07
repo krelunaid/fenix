@@ -310,7 +310,7 @@ export function composedCreateUserContent(input) {
       : "",
     input.feedback || "",
     feed
-      ? "Contratto runtime: window.Fenix.load/save, <script> classico, PRIMO PAINT clip-stage a tutto schermo, dock Feed/Crea/Salvati/Profilo (data-view), italiano, niente lorem. NON agenda, NON 5 tab CRUD, NON «Niente in lista», NON collection voci."
+      ? "Contratto runtime: window.Fenix.load/save, <script> classico, PRIMO PAINT clip a tutto schermo (clip-stage), dock Feed/Crea/Salvati/Profilo (data-view), italiano, niente lorem. NON agenda, NON 5 tab CRUD, NON «Niente in lista», NON collection voci."
       : "Contratto runtime: window.Fenix.load/save, <script> classico, tab data-view, italiano, niente lorem.",
     "NON copiare CSS/copy/SVG del seed Fenix. NON usare data-fenix-craft, data-grammar, fenix-slot.",
     feed
