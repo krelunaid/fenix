@@ -407,6 +407,18 @@ function instrumentBrowser(browser: Browser, record: OwnedLaunch): Browser {
   return browser;
 }
 
+function chromeFallbackPath(): string | undefined {
+  const env = process.env.FENIX_CHROME_PATH;
+  if (env && existsSync(env)) return env;
+  return [
+    "/usr/bin/google-chrome-stable",
+    "/usr/local/bin/google-chrome",
+    "/usr/bin/google-chrome",
+    "/usr/bin/chromium",
+    "/usr/bin/chromium-browser",
+  ].find((path) => existsSync(path));
+}
+
 async function spawnOwned(): Promise<Browser> {
   const root = fenixPlaywrightRoot();
   const token = randomBytes(8).toString("hex");
@@ -417,13 +429,22 @@ async function spawnOwned(): Promise<Browser> {
   registerOwnedLaunch(record);
   const prevTmp = process.env.TMPDIR;
   process.env.TMPDIR = safeDir;
+  const launchOpts = (executablePath?: string) => ({
+    headless: true,
+    args: [...CHROMIUM_ARGS],
+    timeout: LAUNCH_TIMEOUT_MS,
+    downloadsPath: join(safeDir, "downloads"),
+    ...(executablePath ? { executablePath } : {}),
+  });
   try {
-    const browser = await chromium.launch({
-      headless: true,
-      args: [...CHROMIUM_ARGS],
-      timeout: LAUNCH_TIMEOUT_MS,
-      downloadsPath: join(safeDir, "downloads"),
-    });
+    let browser: Browser;
+    try {
+      browser = await chromium.launch(launchOpts());
+    } catch (err) {
+      const fallback = chromeFallbackPath();
+      if (!fallback || !/Executable doesn't exist|chrome-headless-shell/i.test(String(err))) throw err;
+      browser = await chromium.launch(launchOpts(fallback));
+    }
     record.pid = pidOwningDir(safeDir);
     return instrumentBrowser(browser, record);
   } catch (err) {

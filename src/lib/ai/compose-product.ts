@@ -3784,7 +3784,15 @@ ${opsAuth ? "  return opsBoot();\n" : ""}
 }
 boot();
 ${opsAuth ? `var authForm=document.getElementById("fx-auth-form");
-if(authForm) authForm.addEventListener("submit",function(e){ e.preventDefault(); authSubmit(false); });
+if(authForm){
+  authForm.addEventListener("submit",function(e){ e.preventDefault(); authSubmit(false); });
+  authForm.addEventListener("click",function(e){
+    var b=e.target.closest("[data-act=signup]");
+    if(!b) return;
+    e.preventDefault();
+    authSubmit(true);
+  });
+}
 ` : ""}setTimeout(function(){ if(bootDone) return; ${opsAuth ? "return;" : "finishBoot(false);"} }, 500);
 </script>
 </body>

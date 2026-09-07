@@ -59,7 +59,104 @@ async function startGenerated() {
   };
 }
 
+function cookieValue(res: Response, name: string) {
+  const header = res.headers.get("set-cookie") || "";
+  const match = header.match(new RegExp(`${name}=([^;]+)`));
+  return match?.[1] ? decodeURIComponent(match[1]) : "";
+}
+
+async function signup(base: string, email: string, password: string) {
+  const res = await fetch(`${base}/auth/signup`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ email, password }),
+  });
+  return { res, session: cookieValue(res, "fenix_session"), body: await res.json() };
+}
+
 describe("generated water ops app from Fenix compose", () => {
+  it("stores hashed passwords and rejects member writes on another employee's rows", async () => {
+    const runtime = await startGenerated();
+    try {
+      const admin = await signup(runtime.base, "admin@acqua.test", "serbatoio acqua 12");
+      assert.equal(admin.res.status, 201);
+      assert.equal(admin.body.role, "admin");
+      const luogo = await fetch(`${runtime.base}/api/luoghi`, {
+        method: "POST",
+        headers: { "content-type": "application/json", cookie: `fenix_session=${admin.session}` },
+        body: JSON.stringify({ nome: "Deposito nord", note: "" }),
+      });
+      assert.equal(luogo.status, 201);
+      const created = await fetch(`${runtime.base}/api/registrazioni`, {
+        method: "POST",
+        headers: { "content-type": "application/json", cookie: `fenix_session=${admin.session}` },
+        body: JSON.stringify({ litri: 120, data: "2026-09-07", turno: "Mattina", nota: "Prima botte", luogo: "Deposito nord" }),
+      });
+      assert.equal(created.status, 201);
+      const adminRow = (await created.json()) as { id: string; version: number; nota: string };
+
+      const member = await signup(runtime.base, "anna@acqua.test", "chiave dipendente");
+      assert.equal(member.res.status, 201);
+      assert.equal(member.body.role, "member");
+      const memberList = await fetch(`${runtime.base}/api/registrazioni`, {
+        headers: { cookie: `fenix_session=${member.session}` },
+      });
+      const listed = (await memberList.json()) as { items: unknown[] };
+      assert.deepEqual(listed.items, []);
+      assert.equal(
+        (
+          await fetch(`${runtime.base}/api/registrazioni/${adminRow.id}`, {
+            method: "PUT",
+            headers: {
+              "content-type": "application/json",
+              "if-match": String(adminRow.version || 1),
+              cookie: `fenix_session=${member.session}`,
+            },
+            body: JSON.stringify({ litri: 1, data: "2026-09-07", turno: "Notte", nota: "intruso" }),
+          })
+        ).status,
+        403,
+      );
+      assert.equal(
+        (
+          await fetch(`${runtime.base}/api/registrazioni/${adminRow.id}`, {
+            method: "DELETE",
+            headers: { "if-match": String(adminRow.version || 1), cookie: `fenix_session=${member.session}` },
+          })
+        ).status,
+        403,
+      );
+      assert.equal(
+        (
+          await fetch(`${runtime.base}/api/luoghi`, {
+            method: "POST",
+            headers: { "content-type": "application/json", cookie: `fenix_session=${member.session}` },
+            body: JSON.stringify({ nome: "Luogo vietato" }),
+          })
+        ).status,
+        403,
+      );
+      const db = new DatabaseSync(join(runtime.root, "data.sqlite"));
+      try {
+        const hashes = db.prepare("SELECT email,password_hash FROM _fenix_users WHERE email LIKE '%acqua.test'").all() as Array<{
+          email: string;
+          password_hash: string;
+        }>;
+        assert.equal(hashes.length, 2);
+        for (const row of hashes) {
+          assert.match(row.password_hash, /^[a-f0-9]+:[a-f0-9]+$/);
+          assert.doesNotMatch(row.password_hash, /serbatoio|chiave dipendente|acqua 12/);
+        }
+        const rows = db.prepare("SELECT data FROM registrazioni").all() as Array<{ data: string }>;
+        assert.deepEqual(rows.map((row) => JSON.parse(row.data).nota), ["Prima botte"]);
+      } finally {
+        db.close();
+      }
+    } finally {
+      await runtime.close();
+    }
+  });
+
   it("logs in, records liters, persists, edits, deletes, and isolates two employees", async () => {
     const runtime = await startGenerated();
     const browser = await launchChromium();
@@ -71,7 +168,7 @@ describe("generated water ops app from Fenix compose", () => {
       await admin.getByLabel("Password").fill("serbatoio acqua 12");
       await admin.getByRole("button", { name: "Crea account" }).click();
       await admin.locator(".fx-hello").waitFor({ timeout: 10_000 });
-      await admin.getByText("Amministratore").waitFor();
+      await admin.locator(".fx-role").getByText("Amministratore").waitFor();
 
       await admin.getByRole("button", { name: "Gestione" }).click();
       await admin.getByRole("button", { name: "Luoghi" }).click();
@@ -79,23 +176,24 @@ describe("generated water ops app from Fenix compose", () => {
       await admin.getByRole("button", { name: "Aggiungi luogo" }).click();
       await admin.getByRole("heading", { name: "Deposito nord" }).waitFor({ timeout: 8_000 });
 
-      await admin.getByRole("button", { name: "Registra" }).click();
+      await admin.getByRole("button", { name: "Registra", exact: true }).click();
       await admin.getByLabel("Litri").fill("120");
       await admin.getByLabel("Nota").fill("Prima botte");
       await admin.getByRole("button", { name: "Registra in campo" }).click();
-      await admin.getByText("120 L").waitFor({ timeout: 8_000 });
-      await admin.getByText("Prima botte").waitFor();
+      await admin.locator(".fx-record").filter({ hasText: "Prima botte" }).waitFor({ timeout: 8_000 });
+      await admin.locator(".fx-record").filter({ hasText: "120 L" }).waitFor();
 
       await admin.reload({ waitUntil: "domcontentloaded" });
-      await admin.getByText("120 L").waitFor({ timeout: 10_000 });
-
+      await admin.locator(".fx-hello").waitFor({ timeout: 10_000 });
       await admin.getByRole("button", { name: "Storico" }).click();
-      await admin.getByRole("button", { name: "Modifica" }).click();
+      await admin.locator(".fx-record").filter({ hasText: "Prima botte" }).waitFor({ timeout: 10_000 });
+
+      await admin.locator(".fx-record").filter({ hasText: "Prima botte" }).getByRole("button", { name: "Modifica" }).click();
       await admin.getByLabel("Litri").fill("150");
       await admin.getByLabel("Nota").fill("Botte aggiornata");
       await admin.getByRole("button", { name: "Salva modifiche" }).click();
-      await admin.getByText("150 L").waitFor({ timeout: 8_000 });
-      await admin.getByText("Botte aggiornata").waitFor();
+      await admin.locator(".fx-record").filter({ hasText: "Botte aggiornata" }).waitFor({ timeout: 8_000 });
+      await admin.locator(".fx-record").filter({ hasText: "150 L" }).waitFor();
 
       const member = await browser.newPage({ viewport: { width: 390, height: 844 } });
       await member.goto(runtime.base, { waitUntil: "domcontentloaded", timeout: 20_000 });
@@ -104,22 +202,22 @@ describe("generated water ops app from Fenix compose", () => {
       await member.getByLabel("Password").fill("chiave dipendente");
       await member.getByRole("button", { name: "Crea account" }).click();
       await member.locator(".fx-hello").waitFor({ timeout: 10_000 });
-      await member.getByText("Dipendente").waitFor();
+      await member.locator(".fx-role").getByText("Dipendente").waitFor();
       await member.getByRole("button", { name: "Storico" }).click();
       await member.getByText("Nessuna voce in elenco").waitFor({ timeout: 8_000 });
 
-      await member.getByRole("button", { name: "Registra" }).click();
+      await member.getByRole("button", { name: "Registra", exact: true }).click();
       await member.getByLabel("Litri").fill("40");
       await member.getByLabel("Nota").fill("Turno Anna");
       await member.getByRole("button", { name: "Registra in campo" }).click();
-      await member.getByText("40 L").waitFor({ timeout: 8_000 });
-      await member.getByText("Turno Anna").waitFor();
-      assert.equal(await member.getByText("Botte aggiornata").count(), 0);
+      await member.locator(".fx-record").filter({ hasText: "Turno Anna" }).waitFor({ timeout: 8_000 });
+      assert.equal(await member.locator(".fx-record").filter({ hasText: "Botte aggiornata" }).count(), 0);
 
       await admin.reload({ waitUntil: "domcontentloaded" });
+      await admin.locator(".fx-hello").waitFor({ timeout: 10_000 });
       await admin.getByRole("button", { name: "Storico" }).click();
-      await admin.getByText("Botte aggiornata").waitFor({ timeout: 10_000 });
-      await admin.getByText("Turno Anna").waitFor();
+      await admin.locator(".fx-record").filter({ hasText: "Botte aggiornata" }).waitFor({ timeout: 10_000 });
+      await admin.locator(".fx-record").filter({ hasText: "Turno Anna" }).waitFor();
 
       const memberCookies = await member.context().cookies(runtime.base);
       const session = memberCookies.find((cookie) => cookie.name === "fenix_session");
