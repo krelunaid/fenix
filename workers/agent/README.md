@@ -42,6 +42,10 @@ With `AGENT_DATA_DIR` set on the agent host, finished jobs are written to `<dir>
 
 `workers/agent/model/index.mjs` picks the provider: `AGENT_PROVIDER=anthropic|openai|xai` with the matching `*_API_KEY` (server BYOK), or per request from the Studio (`x-fenix-model-provider`, `x-fenix-model-key`, `x-fenix-model` — user BYOK, kept in memory for that job only, never logged or stored; the Studio keeps the key in sessionStorage of the tab). `model/openai.mjs` translates the Anthropic-style tool loop to Chat Completions with function tools (OpenAI, xAI Grok 4, compatible proxies). One note: `grok-build-0.1` is not a tool-calling model and is not supported here.
 
+## Going live (added 2026-09-07)
+
+Fresh Ubuntu VM: `bash workers/agent/deploy/install-vm.sh` (Docker, Node 22, sandbox image, systemd unit `fenix-agent`, `/etc/fenix-agent.env` with a generated `AGENT_TOKEN`, data in `/var/lib/fenix-agent`), fill `ANTHROPIC_API_KEY`, `systemctl restart fenix-agent`, put Caddy in front (`deploy/Caddyfile.example`, DNS `agent.kreluna.it`). On Netlify set `AGENT_URL=https://agent.kreluna.it` and the same `AGENT_TOKEN`. `workers/agent/Dockerfile` builds the host itself as a container (needs the host Docker socket).
+
 ## Remaining work before enabling customer traffic
 
 - Real model generation with a server-only Anthropic key (not provided in this environment).

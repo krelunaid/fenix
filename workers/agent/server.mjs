@@ -262,6 +262,9 @@ async function readJson(req) {
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   if (process.env.AGENT_SANDBOX !== "docker") throw new Error("HTTP agent requires Docker isolation; local is for fixture tests only.");
   const port = Number(process.env.PORT || 8790);
+  // Loopback by default (a TLS reverse proxy publishes it). HOST=0.0.0.0 only inside a
+  // container whose network is already private (see workers/agent/Dockerfile).
+  const host = process.env.HOST === "0.0.0.0" ? "0.0.0.0" : "127.0.0.1";
   const server = createAgentServer();
-  server.listen(port, "127.0.0.1", () => console.log(`[fenix-agent] in ascolto locale su :${port} (sandbox=docker)`));
+  server.listen(port, host, () => console.log(`[fenix-agent] in ascolto su ${host}:${port} (sandbox=docker, data=${process.env.AGENT_DATA_DIR || "solo memoria"})`));
 }

@@ -1,0 +1,25 @@
+[Unit]
+Description=Fenix agent host (Claude + Docker sandbox)
+After=network-online.target docker.service
+Wants=network-online.target
+Requires=docker.service
+
+[Service]
+Type=simple
+User=fenix
+Group=fenix
+WorkingDirectory=/opt/fenix
+EnvironmentFile=/etc/fenix-agent.env
+# Bind to loopback: a TLS reverse proxy (Caddy) publishes it.
+Environment=HOST=127.0.0.1
+ExecStart=/usr/bin/node workers/agent/server.mjs
+Restart=always
+RestartSec=3
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ReadWritePaths=/var/lib/fenix-agent
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target

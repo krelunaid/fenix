@@ -1,0 +1,13 @@
+# /etc/caddy/Caddyfile — TLS automatico davanti all'agente.
+# apt-get install -y caddy ; poi punta il DNS agent.kreluna.it alla VM e riavvia caddy.
+agent.kreluna.it {
+	encode zstd gzip
+	reverse_proxy 127.0.0.1:8790 {
+		transport http {
+			read_timeout 120s
+		}
+	}
+	request_body {
+		max_size 8MB
+	}
+}
