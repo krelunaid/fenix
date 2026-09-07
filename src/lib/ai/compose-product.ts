@@ -1107,7 +1107,7 @@ function phoneCss(id: GrammarId): string {
   .clip-frame::before{content:"";position:absolute;inset:0;z-index:2;pointer-events:none;background:radial-gradient(ellipse 90% 46% at 82% -8%,rgba(255,176,96,.28),transparent 58%)}
   .clip-frame .clip-poster,.clip-ambient .clip-poster{position:absolute;inset:0;width:100%;height:100%;display:block;object-fit:cover;transform-origin:center}
   .clip-frame::after{content:"";position:absolute;inset:0;z-index:3;pointer-events:none;opacity:.2;mix-blend-mode:overlay;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='80' height='80'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .55 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>")}
-  .clip-vignette{position:absolute;inset:0;z-index:4;pointer-events:none;background:linear-gradient(180deg,rgba(10,7,8,.42),transparent 26%,transparent 48%,rgba(10,7,8,.92))}
+  .clip-vignette{position:absolute;inset:0;z-index:4;pointer-events:none;background:linear-gradient(180deg,rgba(10,7,8,.28),transparent 22%,transparent 62%,rgba(10,7,8,.58) 86%,rgba(10,7,8,.82))}
   .clip-progress{position:absolute;top:0;left:0;right:0;height:2px;z-index:6;background:color-mix(in srgb,#fff 14%,transparent)}
   .clip-progress>i{display:block;height:100%;width:0;background:#fff;transform-origin:left}
   .clip-live{position:absolute;top:16px;left:16px;z-index:7;margin:0;padding:6px 10px;border-radius:999px;border:1px solid color-mix(in srgb,#fff 20%,transparent);background:color-mix(in srgb,#0a0708 42%,transparent);font:650 10px/1 var(--body),sans-serif;letter-spacing:.16em;text-transform:uppercase;color:#f4ece4;-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)}
@@ -1841,11 +1841,14 @@ function clipPosterSvg(slot: number, _tokens?: DesignTokens): string {
       <filter id="${g}b" x="-35%" y="-35%" width="170%" height="170%"><feGaussianBlur stdDeviation="32"/></filter>
     </defs>
     <rect width="390" height="844" fill="url(#${g}s)"/>
-    <ellipse cx="292" cy="150" rx="210" ry="190" fill="url(#${g}l)" filter="url(#${g}b)"/>
-    <ellipse cx="250" cy="220" rx="90" ry="70" fill="#ffefc8" opacity=".35" filter="url(#${g}b)"/>
-    <path d="M-20 210 C80 160 140 250 210 180 C280 110 360 200 430 150 V844 H-20z" fill="#1a0e0c" opacity=".55"/>
-    <path d="M40 844 V390 C90 320 150 300 196 248 C250 300 310 330 360 410 V844z" fill="#0c0708" opacity=".8"/>
-    <path fill="#050308" d="M168 528c-20 4-36 20-38 40-2 16 8 32 22 40l-10 52c-22 14-34 44-30 84 4 28 10 86 8 140h40c4-62 8-112 6-152 20 8 32 26 38 50 6 22 20 96 22 134h36c-6-54-22-146-32-176-10-24-26-40-48-46 16-12 22-32 16-50-8-24-26-40-46-36z"/>
+    <ellipse cx="196" cy="210" rx="180" ry="220" fill="url(#${g}l)" filter="url(#${g}b)"/>
+    <ellipse cx="196" cy="250" rx="70" ry="110" fill="#ffe7c4" opacity=".55" filter="url(#${g}b)"/>
+    <path d="M-10 844 V280 C40 220 90 250 118 200 V844z" fill="#12080a" opacity=".88"/>
+    <path d="M400 844 V270 C340 210 300 250 272 196 V844z" fill="#12080a" opacity=".88"/>
+    <path d="M118 844 V210 C118 150 148 118 196 96 C244 118 274 150 274 210 V844z" fill="#2a120e" opacity=".55"/>
+    <path d="M148 844 V240 C148 170 168 138 196 122 C224 138 244 170 244 240 V844z" fill="#f0b06a" opacity=".42"/>
+    <ellipse cx="196" cy="760" rx="90" ry="70" fill="#e08a4a" opacity=".28" filter="url(#${g}b)"/>
+    <path fill="#0a0608" d="M168 528c-20 4-36 20-38 40-2 16 8 32 22 40l-10 52c-22 14-34 44-30 84 4 28 10 86 8 140h40c4-62 8-112 6-152 20 8 32 26 38 50 6 22 20 96 22 134h36c-6-54-22-146-32-176-10-24-26-40-48-46 16-12 22-32 16-50-8-24-26-40-46-36z"/>
     <ellipse cx="196" cy="820" rx="120" ry="18" fill="#000" opacity=".35"/>`,
     `<defs>
       <linearGradient id="${g}s" x1="0" y1="0" x2=".3" y2="1"><stop offset="0" stop-color="#4a2418"/><stop offset="1" stop-color="#14090a"/></linearGradient>
