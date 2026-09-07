@@ -44,7 +44,7 @@ window.addEventListener("message", function(e){
   if(!m || m.t!=="fenix-db" || !m.id) return;
   if(m.op==="save") window.__db[m.col]=m.data;
   var value=m.op==="load" ? (window.__db[m.col] || null) : {ok:true,v:m.data,durable:Array.isArray(m.data&&m.data.items)?m.data.items.length:0};
-  e.source.postMessage({t:"fenix-db",id:m.id,v:value},"*");
+  if(e.source) e.source.postMessage({t:"fenix-db",id:m.id,v:value},"*");
 });
 </script></body></html>`;
 
@@ -385,63 +385,66 @@ async function crudRoundtrip(
 }
 
 describe("intent preservation D/T/M after compose+repair path+prepareSrcDoc", () => {
-  it("composed worker creation changes save behavior while preserving native chrome and CRUD/reload", async () => {
+  it("original worker creation preserves requested typography and CRUD across reload", {timeout:60000}, async () => {
+    const browser = await launchChromium();
     const output = process.env.FENIX_COMPOSED_SHOTS || "/tmp/fenix-composed-build-shots";
     mkdirSync(output, {recursive:true});
-    const browser = await launchChromium();
     try {
       await withComposedWorker(async ({build,calls}) => {
-        for (const [id,brief] of [
-          ["note","Lista in tasca: cose da fare operative, tab Home Aggiungi Persona, elenco e CRUD"],
-          ["agenda","Agenda appuntamenti e prenotazioni"],
-        ]) {
-          const prompt = formatPrefix("app")+brief+", stile Apple. Normalizza gli spazi ripetuti nei nomi al salvataggio.";
-          const payload = createBuildRequest({prompt,kind:"app"});
-          const composed = composeProduct(prompt);
-          const job = await build(payload);
-          assert.equal(job.status,"ok",job.error || id);
-          assert.ok(job.html);
-          const html = job.html;
-          assert.equal(html.slice(0,html.indexOf("</head>")),payload.html.slice(0,payload.html.indexOf("</head>")),"head is byte-identical");
-          assert.ok(html.includes('var nome=(f.n && f.n.value || "").replace(/\\s+/g," ").trim()'));
-          const parsed = parseBuildOutput(`<<<META>>>\n${JSON.stringify(job.meta)}\n<<<HTML>>>\n${html}\n<<<END>>>`,"app",prompt);
-          assert.ok(parsed,"same parser used by consumeViaWorker");
-          for (const [vp,viewport] of [...VIEWPORTS,["S",NARROW] as const]) {
-            const page = await isolatedPage(browser,{viewport});
-            const errors: string[]=[];
-            page.on("pageerror",error=>{if(!isBlockedPublicNetworkError(String(error))) errors.push(String(error));});
-            page.on("console",message=>{if(message.type()==="error"&&!isBlockedPublicNetworkError(message.text())) errors.push(message.text());});
-            try {
-              await page.setContent(PERSIST_HOST);
-              const frame=page.frameLocator("#f");
-              const mount=async (source:string,palette:Palette=composed.tokens.palette)=>{
-                const src=prepareSrcDoc(source,palette,`composed-${id}-${vp}`,"app");
-                await page.locator("#f").evaluate((el,doc)=>{(el as HTMLIFrameElement).srcdoc=doc;},src);
-                await frame.locator("[data-fenix-ready]").waitFor({timeout:8000});
-                await restFrame(page);
-                return src;
-              };
-              await mount(payload.html);
-              const beforeNav=await paintedNav(frame);
-              await page.screenshot({path:join(output,`${id}-${vp}-before.png`)});
-              const src=await mount(parsed.html,parsed.palette);
-              await page.screenshot({path:join(output,`${id}-${vp}-after.png`)});
-              assert.deepEqual(await paintedNav(frame),beforeNav,"native navigation unchanged");
-              const views=await frame.locator("#tabs button[data-view]").evaluateAll(nodes=>nodes.map(node=>node.getAttribute("data-view")||""));
-              for(const view of views) {
-                await frame.locator(`#tabs button[data-view="${view}"]`).click();
-                assert.equal(await frame.locator("#root").getAttribute("data-fenix-view"),view);
-                assert.ok(await frame.locator("html").evaluate(()=>document.documentElement.scrollWidth-innerWidth)<=2,`${id}/${vp}/${view} overflow`);
-              }
-              const label=`Nuova ${id} ${vp}`;
-              // A real behavior delta, not a CSS/text-only mock: repeated spaces
-              // are collapsed by the worker's added function when Save runs.
-              await crudRoundtrip(page,frame,src,views[1]!,views[2]!,label,`Nuova   ${id}   ${vp}`);
-              assert.deepEqual(errors,[],`${id}/${vp} console`);
-            } finally {await page.close();}
-          }
+        const prompt = formatPrefix("app")+"Agenda appuntamenti, stile Apple. Normalizza gli spazi ripetuti nei nomi al salvataggio.";
+        const payload = createBuildRequest({prompt,kind:"app"});
+        const job = await build(payload);
+        assert.equal(job.status,"ok",job.error || 'worker failed');
+        assert.ok(job.html);
+        assert.notEqual(job.html, payload.html, "create replaces the seed with an original document");
+        assert.match(job.html, /data-fenix-model-create/);
+        const parsed = parseBuildOutput(`<<<META>>>\n${JSON.stringify(job.meta)}\n<<<HTML>>>\n${job.html}\n<<<END>>>`,"app",prompt);
+        assert.ok(parsed);
+        assert.doesNotMatch(parsed.html,/data-fenix-screens/,'no synthetic router that detaches live handlers');
+        for (const [vp,viewport] of [...VIEWPORTS,["S",NARROW] as const]) {
+          const page = await isolatedPage(browser,{viewport});
+          page.setDefaultTimeout(5000);
+          const errors:string[]=[];
+          page.on("pageerror",error=>{if(!isBlockedPublicNetworkError(String(error))) errors.push(String(error));});
+          page.on("console",message=>{if(message.type()==="error"&&!isBlockedPublicNetworkError(message.text())) errors.push(message.text());});
+          try {
+            await page.setContent(PERSIST_HOST);
+            const src=prepareSrcDoc(parsed.html,parsed.palette,`original-${vp}`,"app");
+            const frame=page.frameLocator("#f");
+            const mount=async()=>{
+              await page.locator("#f").evaluate((el,doc)=>{(el as HTMLIFrameElement).srcdoc=doc;},src);
+              await frame.locator("#f").waitFor({state:"attached"});
+              await frame.locator('#list').filter({hasText:/Nessuna prenotazione|Ada/}).waitFor({state:'attached'});
+            };
+            await mount();
+            assert.equal(await frame.locator('.app').evaluate(el=>getComputedStyle(el).display),'flex','authored CSS survives inline SVG favicon sanitization');
+            const font=await frame.locator("h1").evaluate(el=>getComputedStyle(el).fontFamily);
+            assert.doesNotMatch(font,/Georgia|Times/i,"requested system typography survives parser");
+            for (const view of ["sala","prenota","agenda","incassi","team"]) {
+              await frame.locator(`nav button[data-view="${view}"]`).click();
+              assert.ok(await frame.locator("html").evaluate(el=>el.scrollWidth-innerWidth)<=2,`${vp}/${view} overflow`);
+            }
+            await frame.locator('nav button[data-view="prenota"]').click();
+            await frame.locator('[name="nome"]').fill("Ada   Rossi");
+            await frame.locator('button[type="submit"]').click();
+            await frame.locator('nav button[data-view="agenda"]').click();
+            assert.deepEqual(errors,[],await frame.locator('#list').textContent() || 'empty list');
+            assert.match(await frame.locator('#list').textContent() || '',/Ada Rossi/);
+            await frame.locator("#list li").filter({hasText:"Ada Rossi"}).waitFor();
+            await page.screenshot({path:join(output,`original-${vp}-saved.png`)});
+            await mount();
+            await frame.locator('nav button[data-view="agenda"]').click();
+            assert.match(await frame.locator("#list").innerText(),/Ada Rossi/);
+            await frame.getByRole("button",{name:"Elimina",exact:true}).click();
+            assert.doesNotMatch(await frame.locator("#list").innerText(),/Ada Rossi/);
+            await mount();
+            await frame.locator('nav button[data-view="agenda"]').click();
+            assert.doesNotMatch(await frame.locator("#list").innerText(),/Ada Rossi/);
+            assert.deepEqual(errors,[]);
+            assert.equal(await frame.locator('html').getAttribute('data-fenix-boot-error'),null);
+          } finally {await page.close();}
         }
-        assert.equal(calls(),2,"one fake provider call for each real composed app");
+        assert.equal(calls(),1,"declared fake provider, real browser persistence bridge");
       });
     } finally {await browser.close();}
   });

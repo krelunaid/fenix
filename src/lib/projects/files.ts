@@ -275,6 +275,10 @@ function stubScreen(id: string, name: string) {
 export function seedFiveScreens(files: ProjectFile[], html: string, name = "App"): ProjectFile[] {
   const map = new Map(files.map((f) => [f.path, f]));
   if (html && !map.has("index.html")) map.set("index.html", { path: "index.html", content: html });
+  // Original model documents own their live DOM and route handlers. Synthesized
+  // screen templates would replace main.innerHTML and detach form listeners.
+  // Missing views must fail validation, never be fabricated here.
+  if (/<html\b[^>]*\bdata-fenix-model-create=["']1["']/i.test(html)) return [...map.values()];
   const main = html.match(/<main[^>]*>([\s\S]*?)<\/main>/i)?.[1]?.trim();
   if (
     main &&

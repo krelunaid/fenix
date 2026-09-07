@@ -4,6 +4,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, it } from "node:test";
 import { restoreHome } from "../../../workers/visual/artifact-restore.mjs";
+import { composeProduct } from "../ai/compose-product.ts";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "../../..");
 
@@ -560,7 +561,8 @@ describe("focus-visible and worker model", () => {
     assert.match(compose, /prenotato: "Conferma", confermato: "Inizia", "in-corso": "Concludi", concluso: "Riapri"/);
     assert.match(compose, /const label = AGENDA_ACTION_LABELS\[status\]/);
     assert.match(compose, /var advanceLabel=AGENDA_ACTION_LABELS\[st\]/);
-    assert.doesNotMatch(compose, />Avanti</);
+    // Agenda actions must be specific; a clip feed may legitimately say Avanti.
+    assert.doesNotMatch(composeProduct('kind=app. Agenda appuntamenti e prenotazioni').html, />Avanti</);
     assert.doesNotMatch(compose, /Avanza slot/);
     assert.match(compose, /flex-wrap:nowrap/);
     assert.match(compose, /data-family=/);

@@ -227,6 +227,8 @@ describe("validatePublishable final srcdoc", () => {
   it("keeps SVG self-closing attributes instead of stripping leaked quotes", () => {
     const svg = `<circle cx="16" cy="16" r="9" stroke-width="2.2"/><path d="M1 1"/>`;
     const kept = sanitizePreviewHtml(`<body>${svg}</body>`);
+    const favicon = `<head><link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg'><path d='M1 1'/></svg>"/><style>.app{display:flex}</style></head>`;
+    assert.equal(sanitizePreviewHtml(favicon), favicon, "quoted SVG data URL must not consume the stylesheet");
     assert.match(kept, /stroke-width="2.2"\/>/);
     assert.match(kept, /d="M1 1"\/>/);
     const leaked = sanitizePreviewHtml(`<body>\n" />\n<main>ok</main></body>`);

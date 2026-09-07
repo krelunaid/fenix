@@ -810,7 +810,9 @@ export function sanitizePreviewHtml(html: string) {
   return html
     .replace(/(<body[^>]*>)\s*"\s*\/>/i, "$1")
     .replace(/^\s*"\s*\/>/gm, "")
-    .replace(/>\s*"\s*\/>/g, ">");
+    // Consume complete quoted attributes before stripping a leaked closer.
+    // Otherwise an inline SVG favicon's </svg>"/> swallows the following CSS.
+    .replace(/(<(?:[^"'<>]|"[^"]*"|'[^']*')*>)(?:\s*"\s*\/>)?/g, "$1");
 }
 
 function markupWithoutStyleOrScript(html: string) {

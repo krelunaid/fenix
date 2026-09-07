@@ -67,12 +67,20 @@ li{display:flex;gap:8px;padding:10px 0;border-bottom:1px solid var(--line)}
   function persist(){ window.Fenix.save(KEY, data); }
   function draw(){
     var list=document.getElementById("list");
-    list.innerHTML=data.rows.map(function(r){return "<li>"+r.nome+" · "+r.servizio+"</li>";}).join("") || "<li>Nessuna prenotazione</li>";
+    list.replaceChildren();
+    data.rows.forEach(function(r,i){
+      var row=document.createElement("li");
+      var label=document.createElement("span"); label.textContent=r.nome+" · "+r.servizio;
+      var remove=document.createElement("button"); remove.textContent="Elimina";
+      remove.onclick=function(){data.rows.splice(i,1);persist();draw();};
+      row.append(label,remove);list.append(row);
+    });
+    if(!data.rows.length) list.textContent="Nessuna prenotazione";
     document.getElementById("kpi").textContent=data.rows.length+" in agenda";
   }
   document.getElementById("f").addEventListener("submit", function(e){
     e.preventDefault();
-    var nome=(e.target.nome.value||"").trim();
+    var nome=(e.target.nome.value||"").replace(/\\s+/g," ").trim();
     if(!nome) return;
     data.rows.push({nome:nome, servizio:(e.target.servizio.value||"").trim()});
     persist(); draw();
