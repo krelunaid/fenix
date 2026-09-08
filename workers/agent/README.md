@@ -46,6 +46,10 @@ With `AGENT_DATA_DIR` set on the agent host, finished jobs are written to `<dir>
 
 `icon-set.mjs` embeds the full Lucide set (1800+ icons, ISC licence in the file header; regenerate with `node scripts/build-icon-set.mjs <lucide-clone>`), and `icons.mjs` resolves Italian/English words to icon names ("prenotazioni" → `calendar-check`, "chiave inglese" → `wrench`). The agent has an `icons` tool that returns inline `<svg>` markup or writes `public/icons.svg` as a sprite, and the system prompt forbids emoji as UI icons. The same two files live in `workers/visual/` (the visual worker deploys from its own folder) where the atomic icon patch falls back to Lucide when the 22 house pictograms do not match. `scripts/icon-set.test.mjs` asserts the copies are identical. Apple's SF Symbols are not used: their licence restricts them to Apple platforms.
 
+## Independent acceptance (added 2026-09-08)
+
+`workers/agent/acceptance.mjs` adds gate checks the model cannot satisfy by writing its own tests: `ui:static` (one `<h1>`, labelled fields, no emoji icons, no mute buttons, no `href="#"`, no external scripts beyond Google Fonts), `server:static` (node:sqlite present, no SQL built from variables, no eval/child_process), `security:probe` (path traversal, project files not served, malformed JSON → 400, 600 KB body and wrong methods do not crash, `/health` still answers) and `persistence` (two boots on the same DATA_DIR, a `.db` file on disk, identical GET responses after restart). These run in `runChecks` before the project's own tests and are reported in the same receipt. They are structural probes, not proof of business correctness.
+
 ## Backup and restore (added 2026-09-08)
 
 `workers/agent/backup.mjs` snapshots `AGENT_DATA_DIR` into `AGENT_BACKUP_DIR/<stamp>/`: site records, finished jobs, uploads, and every app database copied with SQLite `VACUUM INTO` (consistent while the app is running; WAL side files folded in). Each snapshot carries a `manifest.json` with SHA-256 per file; `verify` re-checks hashes and `PRAGMA integrity_check`. `restore <dir> [--only slug]` runs with the agent stopped, replaces only the slugs in the snapshot and moves the previous data to `<data>/.restore-trash/<stamp>/` instead of deleting it. `install-vm.sh` enables `fenix-agent-backup.timer` (hourly, `AGENT_BACKUP_KEEP=48`). `POST /agent/admin/backups` (token only) triggers a snapshot; `GET` lists them. Off-site copy is up to the operator (e.g. `rclone sync /var/backups/fenix-agent remote:fenix`).
@@ -58,7 +62,7 @@ Fresh Ubuntu VM: `bash workers/agent/deploy/install-vm.sh` (Docker, Node 22, san
 
 - Real model generation with a server-only Anthropic key (not provided in this environment).
 - Recovery UX, custom domains for published apps, off-site copy of backups.
-- Independent brief-based acceptance: real login, employee isolation, CRUD persistence and design review.
+- Brief-based acceptance beyond structure: real login flows, per-user isolation, design review.
 - Durable job persistence, operational monitoring and independent validation outside the generated project.
 - Provision an explicitly authorized host with Docker; no infrastructure purchases are automatic.
 

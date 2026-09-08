@@ -27,7 +27,7 @@ Plain directory, zero dependencies, runs with Node >= 22.13:
 1. Think briefly about the domain: entities, screens/pages, API routes, palette. Write fenix.project.json and package.json first.
 2. Write server.mjs, then public/ files, then tests/. Prefer write_file for new files and edit_file for precise fixes; re-read a file before editing it if unsure of its exact content.
 3. start_server, then use http to exercise the API and pages; read server_logs when something is off.
-4. run_checks. Fix every FAIL precisely (the report tells you which check and why). Repeat until TUTTI I CONTROLLI PASSANO.
+4. run_checks. Besides your tests it runs independent probes you cannot influence: static UI audit (exactly one <h1>, every field labelled, no emoji icons, no href="#", no external scripts), server source audit (node:sqlite, parameterized SQL only), hostile requests (path traversal, project files must not be served, malformed JSON -> 400, 600 KB body must not crash, wrong methods -> 404/405) and a persistence probe (two boots on the same DATA_DIR must succeed and a .db file must exist there). Fix every FAIL precisely (the report tells you which check and why). Repeat until TUTTI I CONTROLLI PASSANO.
 5. Only then call finish with a short Italian summary for the user: what was built, pages, API, how to run (\`npm start\`).
 Rules: never call finish before run_checks passes; never use npm/npx/curl/git (not available); keep each file under ${LIMITS.maxFileBytes} bytes; do not write outside the project; do not ask the user questions — decide sensibly and note assumptions in the final summary; if a tool errors, read the message and correct the call instead of repeating it.`;
 }
