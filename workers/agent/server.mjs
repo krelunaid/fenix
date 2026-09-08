@@ -10,6 +10,7 @@
 //   DELETE /agent/jobs/:id                                                       -> cancel
 import { createServer } from "node:http";
 import { timingSafeEqual } from "node:crypto";
+import { snapshot as snapshotBackup, list as listBackups } from "./backup.mjs";
 import { fileURLToPath } from "node:url";
 import { JobStore } from "./jobs.mjs";
 import { PreviewPool } from "./preview.mjs";
@@ -32,6 +33,7 @@ export function createAgentServer({
   previews = null,
   sites = null,
   browserChecks = process.env.AGENT_BROWSER_CHECKS !== "0",
+  backupDir = process.env.AGENT_BACKUP_DIR || null,
   limits = {},
 } = {}) {
   if (!token || token.length < 16) throw new Error("AGENT_TOKEN mancante o troppo corto (min 16 caratteri).");
@@ -69,6 +71,22 @@ export function createAgentServer({
     if (req.method === "OPTIONS") { cors(res); res.writeHead(204); res.end(); return; }
     if (req.method === "GET" && url.pathname === "/health") { json(res, 200, { ok: true, service: "fenix-agent" }); return; }
     if (!authorized(req)) { json(res, 401, { error: "Token mancante o non valido." }); return; }
+    // Operator routes: token only, no owner (run by cron/systemd, never by the Studio).
+    if (url.pathname === "/agent/admin/backups") {
+      if (!dataDir || !backupDir) { json(res, 503, { error: "Backup non configurato: servono AGENT_DATA_DIR e AGENT_BACKUP_DIR." }); return; }
+      try {
+        if (req.method === "GET") { json(res, 200, { backups: await listBackups({ outDir: backupDir }) }); return; }
+        if (req.method === "POST") {
+          const m = await snapshotBackup({ dataDir, outDir: backupDir, keep: Number(process.env.AGENT_BACKUP_KEEP || 14) });
+          json(res, 200, { stamp: m.stamp, dir: m.dir, sites: m.sites, jobs: m.jobs, files: m.files, bytes: m.bytes, pruned: m.pruned });
+          return;
+        }
+      } catch (err) {
+        json(res, 500, { error: err?.message || "Backup fallito." });
+        return;
+      }
+      json(res, 405, { error: "Metodo non consentito." }); return;
+    }
     const owner = ownerOf(req);
     if (!owner) { json(res, 400, { error: "Identità verificata del chiamante obbligatoria." }); return; }
 

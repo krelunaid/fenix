@@ -46,6 +46,10 @@ With `AGENT_DATA_DIR` set on the agent host, finished jobs are written to `<dir>
 
 `icon-set.mjs` embeds the full Lucide set (1800+ icons, ISC licence in the file header; regenerate with `node scripts/build-icon-set.mjs <lucide-clone>`), and `icons.mjs` resolves Italian/English words to icon names ("prenotazioni" → `calendar-check`, "chiave inglese" → `wrench`). The agent has an `icons` tool that returns inline `<svg>` markup or writes `public/icons.svg` as a sprite, and the system prompt forbids emoji as UI icons. The same two files live in `workers/visual/` (the visual worker deploys from its own folder) where the atomic icon patch falls back to Lucide when the 22 house pictograms do not match. `scripts/icon-set.test.mjs` asserts the copies are identical. Apple's SF Symbols are not used: their licence restricts them to Apple platforms.
 
+## Backup and restore (added 2026-09-08)
+
+`workers/agent/backup.mjs` snapshots `AGENT_DATA_DIR` into `AGENT_BACKUP_DIR/<stamp>/`: site records, finished jobs, uploads, and every app database copied with SQLite `VACUUM INTO` (consistent while the app is running; WAL side files folded in). Each snapshot carries a `manifest.json` with SHA-256 per file; `verify` re-checks hashes and `PRAGMA integrity_check`. `restore <dir> [--only slug]` runs with the agent stopped, replaces only the slugs in the snapshot and moves the previous data to `<data>/.restore-trash/<stamp>/` instead of deleting it. `install-vm.sh` enables `fenix-agent-backup.timer` (hourly, `AGENT_BACKUP_KEEP=48`). `POST /agent/admin/backups` (token only) triggers a snapshot; `GET` lists them. Off-site copy is up to the operator (e.g. `rclone sync /var/backups/fenix-agent remote:fenix`).
+
 ## Going live (added 2026-09-07)
 
 Fresh Ubuntu VM: `bash workers/agent/deploy/install-vm.sh` (Docker, Node 22, sandbox image, systemd unit `fenix-agent`, `/etc/fenix-agent.env` with a generated `AGENT_TOKEN`, data in `/var/lib/fenix-agent`), fill `ANTHROPIC_API_KEY`, `systemctl restart fenix-agent`, put Caddy in front (`deploy/Caddyfile.example`, DNS `agent.kreluna.it`). On Netlify set `AGENT_URL=https://agent.kreluna.it` and the same `AGENT_TOKEN`. `workers/agent/Dockerfile` builds the host itself as a container (needs the host Docker socket).
@@ -53,7 +57,7 @@ Fresh Ubuntu VM: `bash workers/agent/deploy/install-vm.sh` (Docker, Node 22, san
 ## Remaining work before enabling customer traffic
 
 - Real model generation with a server-only Anthropic key (not provided in this environment).
-- Real accounts behind `resolveOwner` (today: owner capability), recovery UX, custom domains for published apps, backups of `AGENT_DATA_DIR`.
+- Recovery UX, custom domains for published apps, off-site copy of backups.
 - Independent brief-based acceptance: real login, employee isolation, CRUD persistence and design review.
 - Durable job persistence, operational monitoring and independent validation outside the generated project.
 - Provision an explicitly authorized host with Docker; no infrastructure purchases are automatic.
