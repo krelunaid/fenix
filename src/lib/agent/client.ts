@@ -138,6 +138,7 @@ export function stageLabel(events: AgentEvent[]): string {
       start_server: "Avvio il server",
       http: "Provo l'API",
       server_logs: "Leggo i log",
+      icons: "Scelgo le icone",
       run_checks: "Controllo tutto",
       finish: "Chiudo",
     };

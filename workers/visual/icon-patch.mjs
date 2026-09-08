@@ -9,6 +9,8 @@
 export const ICON_ID_ATTR = "data-fenix-id";
 export const ICON_DELTA_BUDGET = 8192;
 export const ICON_HTML_BOUND = 120000;
+import { ICON_COUNT, iconForQuery, iconSvg } from "./icons.mjs";
+
 export const ICON_SVG_BOUND = 2048;
 
 export const AGENDA_ICON_INSTRUCTION =
@@ -341,13 +343,21 @@ export function iconSvgForInstruction(instruction) {
   const parts = p.split(/\b(?:usa|con|metti|diventa|sostituisci con|scegli|imposta)\b/);
   const named = parts.length > 1 ? parts.slice(1).join(" ") : "";
   if (named.trim()) {
-    // An icon was named explicitly: it must be one we know, otherwise refuse.
+    // An icon was named explicitly: the 22 house pictograms first (tuned for Fenix
+    // tab bars), then the embedded Lucide set (1800+ icons, Italian/English names),
+    // otherwise refuse without spending.
     for (const entry of ICON_LIBRARY) if (entry.re.test(named)) return entry.svg;
-    return null;
+    return lucideSvg(named);
   }
   // No icon named: let the tab name suggest one (Oggi → calendar, Clienti → user, …).
   for (const entry of ICON_LIBRARY) if (entry.re.test(p)) return entry.svg;
-  return null;
+  const tab = p.match(/tab\s+([a-z0-9àèéìòù]+)/);
+  return tab ? lucideSvg(tab[1]) : null;
+}
+
+function lucideSvg(query) {
+  const name = iconForQuery(query);
+  return name ? iconSvg(name, { strokeWidth: 1.8 }) : null;
 }
 
 function filesUnchanged(before = [], after = []) {
@@ -492,7 +502,7 @@ export function applyIconRevision(input) {
 
   const svg = iconSvgForInstruction(instruction);
   if (!svg) {
-    const reason = "Icona non riconosciuta: dimmi quale (calendario, lista, cliente, ingranaggio, cerca, cuore, carrello, grafico, casa, forbici, orologio, campanella, mappa, foto, mail, telefono, stella, etichetta, documento, menu). Nessun credito speso.";
+    const reason = `Icona non riconosciuta: dimmi quale (es. calendario, lista, cliente, ingranaggio, cerca, cuore, carrello, grafico, casa, forbici, orologio, campanella, mappa, foto, mail, telefono, stella, etichetta, documento, menu, oppure uno dei ${ICON_COUNT} nomi Lucide come "rocket" o "wrench"). Nessun credito speso.`;
     return { status: "rejected", spent: false, refund: false, html, files, reason, log: [reason] };
   }
   const patched = applyIconPatch(html, target.id, svg);

@@ -42,6 +42,10 @@ With `AGENT_DATA_DIR` set on the agent host, finished jobs are written to `<dir>
 
 `workers/agent/model/index.mjs` picks the provider: `AGENT_PROVIDER=anthropic|openai|xai` with the matching `*_API_KEY` (server BYOK), or per request from the Studio (`x-fenix-model-provider`, `x-fenix-model-key`, `x-fenix-model` — user BYOK, kept in memory for that job only, never logged or stored; the Studio keeps the key in sessionStorage of the tab). `model/openai.mjs` translates the Anthropic-style tool loop to Chat Completions with function tools (OpenAI, xAI Grok 4, compatible proxies). One note: `grok-build-0.1` is not a tool-calling model and is not supported here.
 
+## Icons (added 2026-09-08)
+
+`icon-set.mjs` embeds the full Lucide set (1800+ icons, ISC licence in the file header; regenerate with `node scripts/build-icon-set.mjs <lucide-clone>`), and `icons.mjs` resolves Italian/English words to icon names ("prenotazioni" → `calendar-check`, "chiave inglese" → `wrench`). The agent has an `icons` tool that returns inline `<svg>` markup or writes `public/icons.svg` as a sprite, and the system prompt forbids emoji as UI icons. The same two files live in `workers/visual/` (the visual worker deploys from its own folder) where the atomic icon patch falls back to Lucide when the 22 house pictograms do not match. `scripts/icon-set.test.mjs` asserts the copies are identical. Apple's SF Symbols are not used: their licence restricts them to Apple platforms.
+
 ## Going live (added 2026-09-07)
 
 Fresh Ubuntu VM: `bash workers/agent/deploy/install-vm.sh` (Docker, Node 22, sandbox image, systemd unit `fenix-agent`, `/etc/fenix-agent.env` with a generated `AGENT_TOKEN`, data in `/var/lib/fenix-agent`), fill `ANTHROPIC_API_KEY`, `systemctl restart fenix-agent`, put Caddy in front (`deploy/Caddyfile.example`, DNS `agent.kreluna.it`). On Netlify set `AGENT_URL=https://agent.kreluna.it` and the same `AGENT_TOKEN`. `workers/agent/Dockerfile` builds the host itself as a container (needs the host Docker socket).

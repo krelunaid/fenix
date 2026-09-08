@@ -3,6 +3,7 @@
 // timeouts, "no finish before checks pass").
 import { canonicalizePath, LIMITS } from "./contract.mjs";
 import { runChecks, formatChecks } from "./checks.mjs";
+import { findIcons, iconSvg, iconSprite, hasIcon, ICON_COUNT } from "./icons.mjs";
 
 export const TOOLS = [
   {
@@ -54,6 +55,21 @@ export const TOOLS = [
     name: "server_logs",
     description: "Ultimi log del server avviato con start_server.",
     input_schema: { type: "object", properties: {}, additionalProperties: false },
+  },
+  {
+    name: "icons",
+    description: `Cerca icone nel set Lucide incorporato (${ICON_COUNT} icone, stile lineare da sistema operativo; niente emoji nella UI). Accetta nomi Lucide ("calendar", "shopping-cart") o parole italiane/inglesi ("prenotazioni", "clienti", "impostazioni") e restituisce per ognuna il nome scelto, le alternative e il markup <svg> inline pronto da incollare (stroke currentColor, 24px). Con write_sprite scrive anche public/icons.svg con <symbol id="i-NOME"> da usare con <svg><use href="icons.svg#i-NOME"/></svg>.`,
+    input_schema: {
+      type: "object",
+      properties: {
+        queries: { type: "array", items: { type: "string" }, minItems: 1, maxItems: 40, description: "Una voce per icona: nome Lucide o descrizione." },
+        size: { type: "integer", minimum: 12, maximum: 96, description: "Dimensione in px del markup inline (default 24)." },
+        stroke_width: { type: "number", minimum: 1, maximum: 3, description: "Spessore tratto (default 1.8)." },
+        write_sprite: { type: "boolean", description: "Se true scrive/aggiorna public/icons.svg con le icone trovate." },
+      },
+      required: ["queries"],
+      additionalProperties: false,
+    },
   },
   {
     name: "run_checks",
@@ -131,6 +147,38 @@ export function createToolExecutor(sandbox, { log = () => {}, browserChecks = tr
     },
     async server_logs() {
       return clip(sandbox.serverLogs() || "(nessun log)");
+    },
+    async icons({ queries, size = 24, stroke_width = 1.8, write_sprite = false }) {
+      if (!Array.isArray(queries) || !queries.length) throw new Error("queries deve essere una lista non vuota.");
+      const lines = [];
+      const found = [];
+      for (const raw of queries.slice(0, 40)) {
+        const q = String(raw || "").trim();
+        if (!q) continue;
+        const direct = hasIcon(q.toLowerCase()) ? q.toLowerCase() : null;
+        const ranked = direct ? [{ name: direct }, ...findIcons(q, { limit: 4 }).filter((r) => r.name !== direct)] : findIcons(q, { limit: 4 });
+        if (!ranked.length) {
+          lines.push(`"${q}": nessuna icona trovata — prova un nome Lucide in inglese (es. rocket, wrench, sparkles).`);
+          continue;
+        }
+        const [best, ...alts] = ranked;
+        found.push(best.name);
+        lines.push(`"${q}" → ${best.name}${alts.length ? ` (alternative: ${alts.map((a) => a.name).join(", ")})` : ""}\n${iconSvg(best.name, { size, strokeWidth: stroke_width })}`);
+      }
+      if (write_sprite && found.length) {
+        const p = canonicalizePath("public/icons.svg");
+        let existing = [];
+        try {
+          const cur = await sandbox.readFile(p);
+          existing = [...cur.matchAll(/<symbol id="i-([a-z0-9-]+)"/g)].map((m) => m[1]);
+        } catch { /* new sprite */ }
+        const names = [...new Set([...existing, ...found])];
+        await sandbox.writeFile(p, `${iconSprite(names).replace(' style="display:none"', "")}\n`);
+        state.writes += 1;
+        markDirty();
+        lines.push(`Sprite public/icons.svg aggiornato (${names.length} simboli). Uso: <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="${stroke_width}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="icons.svg#i-${found[0]}"/></svg>`);
+      }
+      return lines.join("\n\n");
     },
     async run_checks() {
       const result = await runChecks(sandbox, { browser: browserChecks, log });

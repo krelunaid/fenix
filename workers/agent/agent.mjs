@@ -167,6 +167,7 @@ function previewInput(name, input) {
   if (name === "run") return String(input.command).slice(0, 120);
   if (name === "http") return `${input.method || "GET"} ${input.path}`;
   if (name === "read_file" || name === "delete_file") return String(input.path);
+  if (name === "icons") return (input.queries || []).slice(0, 6).join(", ") + ((input.queries || []).length > 6 ? "…" : "");
   return "";
 }
 

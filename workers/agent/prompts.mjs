@@ -21,6 +21,7 @@ Plain directory, zero dependencies, runs with Node >= 22.13:
 - Visual identity from the brief: a palette derived from the activity (never a random accent), consistent spacing scale, readable type (16-18px body), tasteful hierarchy. ${kind === "site" ? "A site has a top navigation, a strong hero with a concrete offer, sections (services, prices, about, contact/booking form that saves to the API), footer with contacts and legal links." : "An app has a clear primary flow on the home screen, a bottom navigation on phone / sidebar on desktop, lists with search or filters, detail/edit forms, and a settings or info screen."}
 - Robust server: validation with clear Italian error messages, 404/405 handled, no crashes on bad JSON, no path traversal in static serving (resolve inside public/ only), correct Content-Type and charset.
 - Italian UI copy (informal "tu" unless the domain is formal), Italian dates/currency formatting (Intl with it-IT).
+- Icons: never emoji or Unicode symbols as UI icons. Call the \`icons\` tool once with all the icons you need (navigation, actions, empty states, feature cards) and inline the returned <svg> markup (or use write_sprite and <use href="icons.svg#i-name">). Icons inherit currentColor, sit on a 24px grid, stroke 1.8, and get aria-hidden unless they are the only label (then add aria-label to the button).
 
 # How to work (budget: ${maxSteps} tool calls, use them well)
 1. Think briefly about the domain: entities, screens/pages, API routes, palette. Write fenix.project.json and package.json first.

@@ -7,7 +7,7 @@
     "nf3": "0.3.17"
   },
   "scripts": {
-    "test:worker-auth": "node --test scripts/visual-worker-auth.test.mjs scripts/icon-library.test.mjs && node --experimental-strip-types --test scripts/request-guard.test.mjs",
+    "test:worker-auth": "node --test scripts/visual-worker-auth.test.mjs scripts/icon-library.test.mjs scripts/icon-set.test.mjs && node --experimental-strip-types --test scripts/request-guard.test.mjs",
     "test:agent-proxy": "node --experimental-strip-types --test scripts/agent-proxy.test.mjs scripts/agent-preview-rewrite.test.mjs scripts/agent-preview-token.test.mjs scripts/agent-identity.test.mjs",
     "test:agent": "node --test --test-concurrency=1 scripts/agent-checks.test.mjs scripts/agent-loop.test.mjs scripts/agent-server.test.mjs scripts/agent-preview.test.mjs scripts/agent-sites.test.mjs scripts/agent-openai.test.mjs scripts/agent-model-docker.test.mjs scripts/agent-hardening.test.mjs",
     "agent:cli": "node workers/agent/cli.mjs",
