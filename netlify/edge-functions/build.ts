@@ -36,6 +36,24 @@ import {
 const MODEL = "grok-build-0.1";
 const XAI_URL = "https://api.x.ai/v1/chat/completions";
 
+/**
+ * Wall-clock budget for the non-streamed model steps that run INSIDE the SSE
+ * stream (retry of an invalid document, QA review, repair). They ask for full
+ * documents (8–20k tokens): 45 s could never be enough, so those steps failed
+ * silently and the Studio showed "QA · saltato" / unrepaired drafts. The stream
+ * has already started by then, so Netlify's 40 s first-byte limit does not
+ * apply. Override with FENIX_EDGE_STEP_MS (>= 20000) without redeploying.
+ */
+function stepBudgetMs(fallback = 120_000): number {
+  try {
+    const raw = Number(Netlify.env.get("FENIX_EDGE_STEP_MS") || "");
+    if (Number.isFinite(raw) && raw >= 20_000) return raw;
+  } catch {
+    /* env not available */
+  }
+  return fallback;
+}
+
 type StreamEvent =
   | { t: "s"; s: string }
   | { t: "p"; n: number }
@@ -63,7 +81,7 @@ function composedProduct(html: string, palette: PaletteHex, kind: ProjectKind): 
 
 async function retryCreatedDocument(apiKey: string, prompt: string, instruction: string, feedback: string) {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 45_000);
+  const timer = setTimeout(() => controller.abort(), stepBudgetMs());
   try {
     const response = await fetch(XAI_URL, {
       method: "POST",
@@ -252,7 +270,7 @@ async function designDirection(apiKey: string, prompt: string, recent?: PaletteR
 
 export async function reviewPass(apiKey: string, prompt: string, html: string, spec: string) {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 45_000);
+  const timer = setTimeout(() => controller.abort(), stepBudgetMs());
   try {
     const response = await fetch(XAI_URL, {
       method: "POST",
@@ -293,7 +311,7 @@ if (REPAIR_MAX !== CONTRACT_REPAIR_MAX) {
 
 export async function repairPass(apiKey: string, prompt: string, html: string, error: string, files?: { path: string; content: string }[], composed = false) {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 45_000);
+  const timer = setTimeout(() => controller.abort(), stepBudgetMs());
   try {
     const filesContext = repairFilesContext(files);
     const content = composed
