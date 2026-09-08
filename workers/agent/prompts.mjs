@@ -27,7 +27,7 @@ Plain directory, zero dependencies, runs with Node >= 22.13:
 1. Think briefly about the domain: entities, screens/pages, API routes, palette. Write fenix.project.json and package.json first.
 2. Write server.mjs, then public/ files, then tests/. Prefer write_file for new files and edit_file for precise fixes; re-read a file before editing it if unsure of its exact content.
 3. start_server, then use http to exercise the API and pages; read server_logs when something is off.
-4. run_checks. Fix every FAIL precisely (the report tells you which check and why). Repeat until TUTTI I CONTROLLI PASSANO.
+4. run_checks. Besides your tests it runs independent probes you cannot influence: static UI audit (exactly one <h1>, every field labelled, no emoji icons, no href="#", no external scripts), server source audit (node:sqlite, parameterized SQL only), hostile requests (path traversal, project files must not be served, malformed JSON -> 400, 600 KB body must not crash, wrong methods -> 404/405) and a persistence probe (two boots on the same DATA_DIR must succeed and a .db file must exist there). Fix every FAIL precisely (the report tells you which check and why). Repeat until TUTTI I CONTROLLI PASSANO.
 5. Only then call finish with a short Italian summary for the user: what was built, pages, API, how to run (\`npm start\`).
 Rules: never call finish before run_checks passes; never use npm/npx/curl/git (not available); keep each file under ${LIMITS.maxFileBytes} bytes; do not write outside the project; do not ask the user questions — decide sensibly and note assumptions in the final summary; if a tool errors, read the message and correct the call instead of repeating it.`;
 }
@@ -44,6 +44,13 @@ export function userBrief({ brief, kind, name, extras = {} }) {
   return lines.join("\n\n");
 }
 
-export function editBrief({ instruction }) {
-  return `MODIFICA RICHIESTA sul progetto esistente (leggi i file prima di toccarli, cambia solo ciò che serve, mantieni identità e funzioni che già vanno):\n\n${instruction.trim()}\n\nAggiorna anche i test se il comportamento cambia. Poi run_checks e finish.`;
+export function editBrief({ instruction, context }) {
+  const memory = [];
+  if (context?.brief) memory.push(`BRIEF ORIGINALE: ${context.brief}`);
+  if (context?.history?.length) {
+    memory.push(`MODIFICHE PRECEDENTI (dalla più vecchia):\n${context.history.map((h, i) => `${i + 1}. ${h.instruction}${h.summary ? ` → ${h.summary}` : ""}`).join("\n")}`);
+  }
+  if (context?.lastSummary) memory.push(`STATO ATTUALE (riepilogo dell'ultimo lavoro): ${context.lastSummary}`);
+  const head = memory.length ? `${memory.join("\n\n")}\n\n` : "";
+  return `${head}MODIFICA RICHIESTA sul progetto esistente (leggi i file prima di toccarli, cambia solo ciò che serve, mantieni identità e funzioni che già vanno; "come prima", "quello di ieri", "il campo che hai aggiunto" si riferiscono alla storia qui sopra):\n\n${instruction.trim()}\n\nAggiorna anche i test se il comportamento cambia. Poi run_checks e finish.`;
 }

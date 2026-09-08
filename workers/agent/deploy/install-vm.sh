@@ -6,6 +6,7 @@ REPO="${1:-https://github.com/krelunaid/fenix.git}"
 BRANCH="${2:-main}"
 APP_DIR=/opt/fenix
 DATA_DIR=/var/lib/fenix-agent
+BACKUP_DIR=/var/backups/fenix-agent
 ENV_FILE=/etc/fenix-agent.env
 
 echo "== pacchetti"
@@ -20,8 +21,8 @@ fi
 echo "== utente e cartelle"
 id -u fenix >/dev/null 2>&1 || useradd --system --home "$APP_DIR" --shell /usr/sbin/nologin fenix
 usermod -aG docker fenix
-mkdir -p "$APP_DIR" "$DATA_DIR"
-chown -R fenix:fenix "$DATA_DIR"
+mkdir -p "$APP_DIR" "$DATA_DIR" "$BACKUP_DIR"
+chown -R fenix:fenix "$DATA_DIR" "$BACKUP_DIR"
 
 echo "== codice"
 if [ -d "$APP_DIR/.git" ]; then git -C "$APP_DIR" fetch -q && git -C "$APP_DIR" checkout -q "$BRANCH" && git -C "$APP_DIR" pull -q; else git clone -q -b "$BRANCH" "$REPO" "$APP_DIR"; fi
@@ -37,6 +38,8 @@ if [ ! -f "$ENV_FILE" ]; then
 AGENT_TOKEN=$(openssl rand -hex 24)
 AGENT_SANDBOX=docker
 AGENT_DATA_DIR=$DATA_DIR
+AGENT_BACKUP_DIR=$BACKUP_DIR
+AGENT_BACKUP_KEEP=48
 AGENT_CONCURRENCY=2
 AGENT_PROVIDER=anthropic
 ANTHROPIC_API_KEY=
@@ -51,8 +54,11 @@ fi
 
 echo "== servizio"
 install -m 644 "$APP_DIR/workers/agent/deploy/fenix-agent.service" /etc/systemd/system/fenix-agent.service
+install -m 644 "$APP_DIR/workers/agent/deploy/fenix-agent-backup.service" /etc/systemd/system/fenix-agent-backup.service
+install -m 644 "$APP_DIR/workers/agent/deploy/fenix-agent-backup.timer" /etc/systemd/system/fenix-agent-backup.timer
 systemctl daemon-reload
 systemctl enable --now fenix-agent
+systemctl enable --now fenix-agent-backup.timer
 
 echo "== firewall (solo SSH; l'agente resta su loopback, davanti va un reverse proxy TLS)"
 ufw allow OpenSSH >/dev/null || true

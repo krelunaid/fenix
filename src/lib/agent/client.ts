@@ -82,7 +82,9 @@ export function agentStatus(): Promise<AgentStatus> {
   return fetch("/api/agent/status", { headers: headers(), cache: "no-store" }).then((r) => parse<AgentStatus>(r));
 }
 
-export function startAgentBuild(input: { brief?: string; kind?: "app" | "site"; name?: string; files?: { path: string; content: string }[]; instruction?: string }) {
+export type ProjectContext = { brief?: string; history?: { instruction: string; summary?: string }[]; summary?: string };
+
+export function startAgentBuild(input: { brief?: string; kind?: "app" | "site"; name?: string; files?: { path: string; content: string }[]; instruction?: string; parentJobId?: string; context?: ProjectContext }) {
   return fetch("/api/agent/build", { method: "POST", headers: headers(byokHeaders()), body: JSON.stringify(input) })
     .then((r) => parse<{ id: string; status: string; position?: number; credits: AgentCredits }>(r));
 }
@@ -104,7 +106,21 @@ export function stopPreview(id: string) {
 }
 
 /** Jobs remembered in this browser (id + label), newest first. */
-export type RememberedJob = { id: string; brief: string; kind: "app" | "site"; at: number; parent?: string };
+export type RememberedJob = { id: string; brief: string; kind: "app" | "site"; at: number; parent?: string; instruction?: string; summary?: string };
+
+/** Walks the parent chain remembered in this browser: original brief + prior instructions, oldest first. */
+export function rememberedContext(jobId: string): ProjectContext {
+  const all = readRememberedJobs();
+  const byId = new Map(all.map((j) => [j.id, j]));
+  const chain: RememberedJob[] = [];
+  let cur = byId.get(jobId);
+  const seen = new Set<string>();
+  while (cur && !seen.has(cur.id) && chain.length < 12) { seen.add(cur.id); chain.unshift(cur); cur = cur.parent ? byId.get(cur.parent) : undefined; }
+  const root = chain[0];
+  const history = chain.filter((j) => j.instruction).map((j) => ({ instruction: j.instruction as string, summary: j.summary }));
+  const last = chain[chain.length - 1];
+  return { brief: root?.instruction ? undefined : root?.brief, history, summary: last?.summary };
+}
 
 export function readRememberedJobs(): RememberedJob[] {
   try {

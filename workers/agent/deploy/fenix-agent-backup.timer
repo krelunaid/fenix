@@ -1,0 +1,10 @@
+[Unit]
+Description=Fenix agent — hourly snapshot (keeps AGENT_BACKUP_KEEP, default 14)
+
+[Timer]
+OnCalendar=hourly
+RandomizedDelaySec=10m
+Persistent=true
+
+[Install]
+WantedBy=timers.target

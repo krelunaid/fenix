@@ -10,6 +10,7 @@
 //   DELETE /agent/jobs/:id                                                       -> cancel
 import { createServer } from "node:http";
 import { timingSafeEqual } from "node:crypto";
+import { snapshot as snapshotBackup, list as listBackups } from "./backup.mjs";
 import { fileURLToPath } from "node:url";
 import { JobStore } from "./jobs.mjs";
 import { PreviewPool } from "./preview.mjs";
@@ -22,6 +23,32 @@ import { PROJECT_KINDS, canonicalizePath, LIMITS } from "./contract.mjs";
 
 const MAX_BODY = 6 * 1024 * 1024;
 
+const CONTEXT_HISTORY_MAX = 10;
+const CONTEXT_ITEM_MAX = 300;
+
+/**
+ * Memory an edit job carries: the original brief, the summary of the last run and
+ * the list of previous instructions. Derived from the parent job when known (its own
+ * context chains further back), otherwise from what the caller sent.
+ */
+export function projectContext({ parent = null, sent = null } = {}) {
+  const clip = (v, n = CONTEXT_ITEM_MAX) => (typeof v === "string" ? v.trim().slice(0, n) : "");
+  const sentCtx = sent && typeof sent === "object" ? sent : {};
+  const chain = parent?.input?.context || {};
+  const brief = clip(chain.brief || parent?.input?.brief || sentCtx.brief, 1200);
+  const history = [];
+  const push = (h) => { const instruction = clip(h?.instruction); if (!instruction) return; history.push({ instruction, summary: clip(h?.summary) }); };
+  if (parent) {
+    for (const h of chain.history || []) push(h);
+    if (parent.input?.instruction) push({ instruction: parent.input.instruction, summary: parent.result?.summary });
+  } else if (Array.isArray(sentCtx.history)) {
+    for (const h of sentCtx.history) push(h);
+  }
+  const lastSummary = clip(parent ? parent.result?.summary : sentCtx.summary, 800);
+  const out = { brief, history: history.slice(-CONTEXT_HISTORY_MAX), lastSummary };
+  return out.brief || out.history.length || out.lastSummary ? out : null;
+}
+
 export function createAgentServer({
   token = process.env.AGENT_TOKEN,
   origin = process.env.FENIX_ORIGIN || "",
@@ -32,6 +59,7 @@ export function createAgentServer({
   previews = null,
   sites = null,
   browserChecks = process.env.AGENT_BROWSER_CHECKS !== "0",
+  backupDir = process.env.AGENT_BACKUP_DIR || null,
   limits = {},
 } = {}) {
   if (!token || token.length < 16) throw new Error("AGENT_TOKEN mancante o troppo corto (min 16 caratteri).");
@@ -69,6 +97,22 @@ export function createAgentServer({
     if (req.method === "OPTIONS") { cors(res); res.writeHead(204); res.end(); return; }
     if (req.method === "GET" && url.pathname === "/health") { json(res, 200, { ok: true, service: "fenix-agent" }); return; }
     if (!authorized(req)) { json(res, 401, { error: "Token mancante o non valido." }); return; }
+    // Operator routes: token only, no owner (run by cron/systemd, never by the Studio).
+    if (url.pathname === "/agent/admin/backups") {
+      if (!dataDir || !backupDir) { json(res, 503, { error: "Backup non configurato: servono AGENT_DATA_DIR e AGENT_BACKUP_DIR." }); return; }
+      try {
+        if (req.method === "GET") { json(res, 200, { backups: await listBackups({ outDir: backupDir }) }); return; }
+        if (req.method === "POST") {
+          const m = await snapshotBackup({ dataDir, outDir: backupDir, keep: Number(process.env.AGENT_BACKUP_KEEP || 14) });
+          json(res, 200, { stamp: m.stamp, dir: m.dir, sites: m.sites, jobs: m.jobs, files: m.files, bytes: m.bytes, pruned: m.pruned });
+          return;
+        }
+      } catch (err) {
+        json(res, 500, { error: err?.message || "Backup fallito." });
+        return;
+      }
+      json(res, 405, { error: "Metodo non consentito." }); return;
+    }
     const owner = ownerOf(req);
     if (!owner) { json(res, 400, { error: "Identità verificata del chiamante obbligatoria." }); return; }
 
@@ -86,6 +130,11 @@ export function createAgentServer({
           try { canonicalizePath(f.path); } catch (err) { json(res, 400, { error: err.message }); return; }
         }
         if (instruction && files.length === 0) { json(res, 400, { error: "Una modifica richiede i file del progetto." }); return; }
+        // Project memory for edits: chain from the parent job when it lives on this host,
+        // else from what the Studio sends (brief + prior instructions).
+        const parentJobId = typeof body.parentJobId === "string" && /^[A-Za-z0-9-]{8,64}$/.test(body.parentJobId) ? body.parentJobId : null;
+        const parent = instruction && parentJobId ? await store.find(parentJobId, owner) : null;
+        const context = instruction ? projectContext({ parent, sent: body.context }) : null;
         // Optional per-request BYOK (provider/key/model). Kept in memory for this job only.
         let byok = null;
         try { byok = byokFromHeaders(req.headers); } catch (err) { json(res, err.status || 400, { error: err.message }); return; }
@@ -94,7 +143,7 @@ export function createAgentServer({
 
         const job = store.create({
           owner,
-          input: { brief: brief.slice(0, 4000), kind, name: body.name ? String(body.name).slice(0, 80) : undefined, instruction, provider: byok?.provider || process.env.AGENT_PROVIDER || "anthropic", model: model.model },
+          input: { brief: brief.slice(0, 4000), kind, name: body.name ? String(body.name).slice(0, 80) : undefined, instruction, parentJobId: parent ? parent.id : parentJobId, context: context || undefined, provider: byok?.provider || process.env.AGENT_PROVIDER || "anthropic", model: model.model },
           run: async ({ job, onEvent, signal }) => {
             const sandbox = await sandboxFactory({ jobId: job.id });
             try {
@@ -107,6 +156,7 @@ export function createAgentServer({
                 name: body.name,
                 extras: body.extras && typeof body.extras === "object" ? body.extras : undefined,
                 instruction: instruction || undefined,
+                context: context || undefined,
                 onEvent,
                 signal,
                 browserChecks,

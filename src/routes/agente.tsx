@@ -19,6 +19,7 @@ import {
   rememberJob,
   stageLabel,
   startAgentBuild,
+  rememberedContext,
   startPreview,
   type AgentCredits,
   type AgentFile,
@@ -87,6 +88,12 @@ function AgentePage() {
           const full = await readAgentJob(jobId, true);
           if (stop) return;
           setFiles(full.result?.files ?? []);
+          // Keep the summary with the remembered job: it feeds the memory of later edits.
+          const remembered = readRememberedJobs().find((r) => r.id === jobId);
+          if (remembered && full.result?.summary && remembered.summary !== full.result.summary) {
+            rememberJob({ ...remembered, summary: full.result.summary.slice(0, 600) });
+            setHistory(readRememberedJobs());
+          }
           try {
             const p = await startPreview(jobId);
             if (!stop) { setPreviewUrl(p.url ?? null); setPreviewError(p.url ? null : "Anteprima non disponibile."); }
@@ -145,10 +152,10 @@ function AgentePage() {
     setBusy(true);
     try {
       const payload = files.filter((f) => typeof f.content === "string").map((f) => ({ path: f.path, content: f.content as string }));
-      const r = await startAgentBuild({ instruction: text, files: payload, kind });
+      const r = await startAgentBuild({ instruction: text, files: payload, kind, parentJobId: jobId, context: rememberedContext(jobId) });
       setCredits(r.credits);
       const parentBrief = history.find((h) => h.id === jobId)?.brief || brief || "Modifica";
-      rememberJob({ id: r.id, brief: `${parentBrief} — ${text}`.slice(0, 160), kind, at: Date.now(), parent: jobId });
+      rememberJob({ id: r.id, brief: `${parentBrief} — ${text}`.slice(0, 160), kind, at: Date.now(), parent: jobId, instruction: text });
       setHistory(readRememberedJobs());
       setInstruction("");
       openJob(r.id);

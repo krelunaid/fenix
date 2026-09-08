@@ -5,6 +5,7 @@ import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { MANIFEST_PATH, parseManifest, checkProjectSize, isTextPath } from "./contract.mjs";
+import { auditHtml, auditServer, auditableFiles, probeServer, probePersistence } from "./acceptance.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const SMOKE_SRC = join(HERE, "runtime", "browser-smoke.mjs");
@@ -63,7 +64,16 @@ export async function runChecks(sandbox, { browser = true, log = () => {} } = {}
   }
   push("no-placeholders", placeholders.length === 0, placeholders.slice(0, 5).join(" | "));
 
-  const structural = checks.every((c) => c.ok || c.id === "no-placeholders");
+  // 3b. Independent static audit: UI grammar (icons, labels, headings) and server source.
+  const uiProblems = [];
+  for (const f of auditableFiles(files)) uiProblems.push(...auditHtml(await sandbox.readFile(f.path), { path: f.path }));
+  push("ui:static", uiProblems.length === 0, uiProblems.slice(0, 8).join(" | "));
+  if ("server.mjs" in sizes) {
+    const srv = auditServer(await sandbox.readFile("server.mjs"));
+    push("server:static", srv.length === 0, srv.join(" | "));
+  }
+
+  const structural = checks.every((c) => c.ok || c.id === "no-placeholders" || c.id === "ui:static" || c.id === "server:static");
   if (!structural) {
     await sandbox.stopServer();
     return finish(checks, null);
@@ -116,9 +126,25 @@ export async function runChecks(sandbox, { browser = true, log = () => {} } = {}
         push(`api:${method} ${route.path}`, false, err instanceof Error ? err.message : String(err));
       }
     }
+    // 6b. Hostile requests: traversal, project files, malformed/huge JSON, wrong methods.
+    const hostile = await probeServer((p, init) => sandbox.fetch(p, init), manifest);
+    push("security:probe", hostile.length === 0, hostile.slice(0, 6).join(" | "));
   } finally {
     // Tests start their own server on a random port; free ours first.
     await sandbox.stopServer();
+  }
+
+  // 6c. Persistence: two boots on the same DATA_DIR, a real .db on disk, stable GET responses.
+  {
+    const persistDir = ".fenix/persist";
+    const persistence = await probePersistence({
+      manifest,
+      spawn: () => sandbox.spawnServer({ cmd: "node server.mjs", healthPath: manifest.healthPath, env: { DATA_DIR: persistDir } }),
+      stop: () => sandbox.stopServer(),
+      fetch: (p, init) => sandbox.fetch(p, init),
+      listData: async () => { const r = await sandbox.exec({ cmd: `ls -1 ${persistDir} 2>/dev/null`, timeoutMs: 10_000 }); return r.stdout.split("\n").map((x) => x.trim()).filter(Boolean); },
+    });
+    push("persistence", persistence.length === 0, persistence.slice(0, 4).join(" | "));
   }
 
   // 7. Project tests

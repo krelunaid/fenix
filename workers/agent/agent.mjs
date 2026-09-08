@@ -23,7 +23,7 @@ export const DEFAULTS = Object.freeze({
  * @param {(event: object) => void} [opts.onEvent]
  * @param {AbortSignal} [opts.signal]
  */
-export async function runAgent({ model, sandbox, brief, kind = "app", name, extras, instruction, onEvent = () => {}, signal, browserChecks = true, limits = {} }) {
+export async function runAgent({ model, sandbox, brief, kind = "app", name, extras, instruction, context, onEvent = () => {}, signal, browserChecks = true, limits = {} }) {
   const cfg = { ...DEFAULTS, ...limits };
   const startedAt = Date.now();
   const deadline = startedAt + cfg.maxMinutes * 60_000;
@@ -35,10 +35,17 @@ export async function runAgent({ model, sandbox, brief, kind = "app", name, extr
 
   const executor = createToolExecutor(sandbox, { log, browserChecks });
   const system = systemPrompt({ kind, maxSteps: cfg.maxSteps });
-  const messages = [{ role: "user", content: instruction ? editBrief({ instruction }) : userBrief({ brief, kind, name, extras }) }];
+  const messages = [{ role: "user", content: instruction ? editBrief({ instruction, context }) : userBrief({ brief, kind, name, extras }) }];
   if (instruction) {
     const files = await sandbox.listFiles();
-    messages[0].content += `\n\nFILE ATTUALI:\n${files.map((f) => `${f.path} (${f.bytes} B)`).join("\n")}`;
+    let manifestLine = "";
+    try {
+      const m = JSON.parse(await sandbox.readFile("fenix.project.json"));
+      const pages = (m.pages || []).map((p) => `${p.path} (${p.title})`).join(", ");
+      const api = (m.api || []).map((r) => `${r.method} ${r.path}`).join(", ");
+      manifestLine = `\n\nPROGETTO "${m.name || ""}" (${m.kind || kind}): pagine ${pages || "-"}; API ${api || "-"}.`;
+    } catch { /* manifest missing or invalid: checks will say so */ }
+    messages[0].content += `${manifestLine}\n\nFILE ATTUALI:\n${files.map((f) => `${f.path} (${f.bytes} B)`).join("\n")}`;
   }
 
   let steps = 0;
