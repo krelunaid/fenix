@@ -173,6 +173,8 @@ export async function handleAgentRequest(request: Request, rest: string): Promis
             extras: body.extras && typeof body.extras === "object" ? body.extras : undefined,
             files,
             instruction: instruction || undefined,
+            parentJobId: typeof body.parentJobId === "string" ? body.parentJobId.slice(0, 64) : undefined,
+            context: body.context && typeof body.context === "object" ? body.context : undefined,
           }),
         });
       } catch (err) {

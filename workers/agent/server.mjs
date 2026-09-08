@@ -23,6 +23,32 @@ import { PROJECT_KINDS, canonicalizePath, LIMITS } from "./contract.mjs";
 
 const MAX_BODY = 6 * 1024 * 1024;
 
+const CONTEXT_HISTORY_MAX = 10;
+const CONTEXT_ITEM_MAX = 300;
+
+/**
+ * Memory an edit job carries: the original brief, the summary of the last run and
+ * the list of previous instructions. Derived from the parent job when known (its own
+ * context chains further back), otherwise from what the caller sent.
+ */
+export function projectContext({ parent = null, sent = null } = {}) {
+  const clip = (v, n = CONTEXT_ITEM_MAX) => (typeof v === "string" ? v.trim().slice(0, n) : "");
+  const sentCtx = sent && typeof sent === "object" ? sent : {};
+  const chain = parent?.input?.context || {};
+  const brief = clip(chain.brief || parent?.input?.brief || sentCtx.brief, 1200);
+  const history = [];
+  const push = (h) => { const instruction = clip(h?.instruction); if (!instruction) return; history.push({ instruction, summary: clip(h?.summary) }); };
+  if (parent) {
+    for (const h of chain.history || []) push(h);
+    if (parent.input?.instruction) push({ instruction: parent.input.instruction, summary: parent.result?.summary });
+  } else if (Array.isArray(sentCtx.history)) {
+    for (const h of sentCtx.history) push(h);
+  }
+  const lastSummary = clip(parent ? parent.result?.summary : sentCtx.summary, 800);
+  const out = { brief, history: history.slice(-CONTEXT_HISTORY_MAX), lastSummary };
+  return out.brief || out.history.length || out.lastSummary ? out : null;
+}
+
 export function createAgentServer({
   token = process.env.AGENT_TOKEN,
   origin = process.env.FENIX_ORIGIN || "",
@@ -104,6 +130,11 @@ export function createAgentServer({
           try { canonicalizePath(f.path); } catch (err) { json(res, 400, { error: err.message }); return; }
         }
         if (instruction && files.length === 0) { json(res, 400, { error: "Una modifica richiede i file del progetto." }); return; }
+        // Project memory for edits: chain from the parent job when it lives on this host,
+        // else from what the Studio sends (brief + prior instructions).
+        const parentJobId = typeof body.parentJobId === "string" && /^[A-Za-z0-9-]{8,64}$/.test(body.parentJobId) ? body.parentJobId : null;
+        const parent = instruction && parentJobId ? await store.find(parentJobId, owner) : null;
+        const context = instruction ? projectContext({ parent, sent: body.context }) : null;
         // Optional per-request BYOK (provider/key/model). Kept in memory for this job only.
         let byok = null;
         try { byok = byokFromHeaders(req.headers); } catch (err) { json(res, err.status || 400, { error: err.message }); return; }
@@ -112,7 +143,7 @@ export function createAgentServer({
 
         const job = store.create({
           owner,
-          input: { brief: brief.slice(0, 4000), kind, name: body.name ? String(body.name).slice(0, 80) : undefined, instruction, provider: byok?.provider || process.env.AGENT_PROVIDER || "anthropic", model: model.model },
+          input: { brief: brief.slice(0, 4000), kind, name: body.name ? String(body.name).slice(0, 80) : undefined, instruction, parentJobId: parent ? parent.id : parentJobId, context: context || undefined, provider: byok?.provider || process.env.AGENT_PROVIDER || "anthropic", model: model.model },
           run: async ({ job, onEvent, signal }) => {
             const sandbox = await sandboxFactory({ jobId: job.id });
             try {
@@ -125,6 +156,7 @@ export function createAgentServer({
                 name: body.name,
                 extras: body.extras && typeof body.extras === "object" ? body.extras : undefined,
                 instruction: instruction || undefined,
+                context: context || undefined,
                 onEvent,
                 signal,
                 browserChecks,

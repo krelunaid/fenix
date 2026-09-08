@@ -44,6 +44,13 @@ export function userBrief({ brief, kind, name, extras = {} }) {
   return lines.join("\n\n");
 }
 
-export function editBrief({ instruction }) {
-  return `MODIFICA RICHIESTA sul progetto esistente (leggi i file prima di toccarli, cambia solo ciò che serve, mantieni identità e funzioni che già vanno):\n\n${instruction.trim()}\n\nAggiorna anche i test se il comportamento cambia. Poi run_checks e finish.`;
+export function editBrief({ instruction, context }) {
+  const memory = [];
+  if (context?.brief) memory.push(`BRIEF ORIGINALE: ${context.brief}`);
+  if (context?.history?.length) {
+    memory.push(`MODIFICHE PRECEDENTI (dalla più vecchia):\n${context.history.map((h, i) => `${i + 1}. ${h.instruction}${h.summary ? ` → ${h.summary}` : ""}`).join("\n")}`);
+  }
+  if (context?.lastSummary) memory.push(`STATO ATTUALE (riepilogo dell'ultimo lavoro): ${context.lastSummary}`);
+  const head = memory.length ? `${memory.join("\n\n")}\n\n` : "";
+  return `${head}MODIFICA RICHIESTA sul progetto esistente (leggi i file prima di toccarli, cambia solo ciò che serve, mantieni identità e funzioni che già vanno; "come prima", "quello di ieri", "il campo che hai aggiunto" si riferiscono alla storia qui sopra):\n\n${instruction.trim()}\n\nAggiorna anche i test se il comportamento cambia. Poi run_checks e finish.`;
 }
