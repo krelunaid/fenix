@@ -152,35 +152,47 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Agenda · Barbiere Rossi</title>
+<link rel="stylesheet" href="/fenix-ui.css">
 <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
-<header class="top"><h1>Agenda di oggi</h1><p class="sub">Barbiere Rossi · via Roma 12, Bari</p></header>
-<main id="main">
-  <section class="card" aria-labelledby="nuovo">
-    <h2 id="nuovo">Nuovo appuntamento</h2>
-    <form id="form" novalidate>
-      <label for="cliente">Cliente</label>
-      <input id="cliente" name="cliente" required minlength="2" autocomplete="name" placeholder="Nome e cognome">
-      <label for="servizio">Servizio</label>
-      <select id="servizio" name="servizio" required>
-        <option>Taglio</option><option>Barba</option><option>Taglio e barba</option>
-      </select>
-      <label for="quando">Quando</label>
-      <input id="quando" name="quando" type="datetime-local" required>
-      <button type="submit">Prenota</button>
-      <p id="esito" class="esito" role="status" aria-live="polite"></p>
+<div class="fx-app">
+<nav class="fx-tabbar" aria-label="Sezioni">
+  <a class="fx-brand fx-hide-phone" href="/"><span class="fx-logo"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="6" r="3"/><path d="M8.12 8.12 12 12"/><path d="M20 4 8.12 15.88"/><circle cx="6" cy="18" r="3"/><path d="M14.8 14.8 20 20"/></svg></span><span>Barbiere Rossi</span></a>
+  <a class="fx-tab" href="/" aria-current="page"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2v3"/><path d="M16 2v3"/><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/></svg><span>Agenda</span></a>
+  <a class="fx-tab" href="/clienti"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><path d="M16 3.128a4 4 0 0 1 0 7.744"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><circle cx="9" cy="7" r="4"/></svg><span>Clienti</span></a>
+</nav>
+<div class="fx-body">
+<header class="fx-header"><div><h1 class="fx-h1">Agenda di oggi</h1><p class="fx-small fx-muted">Barbiere Rossi · via Roma 12, Bari</p></div></header>
+<main class="fx-main" id="main">
+  <section class="fx-card fx-section" aria-labelledby="nuovo">
+    <h2 id="nuovo" class="fx-h3">Nuovo appuntamento</h2>
+    <form id="form" class="fx-form" novalidate>
+      <div class="fx-field">
+        <label class="fx-label" for="cliente">Cliente</label>
+        <input class="fx-input" id="cliente" name="cliente" required minlength="2" autocomplete="name" placeholder="Nome e cognome">
+      </div>
+      <div class="fx-field">
+        <label class="fx-label" for="servizio">Servizio</label>
+        <select class="fx-select" id="servizio" name="servizio" required>
+          <option>Taglio</option><option>Barba</option><option>Taglio e barba</option>
+        </select>
+      </div>
+      <div class="fx-field">
+        <label class="fx-label" for="quando">Quando</label>
+        <input class="fx-input" id="quando" name="quando" type="datetime-local" required>
+      </div>
+      <button class="fx-btn fx-btn-block" type="submit">Prenota</button>
+      <p id="esito" class="esito fx-small" role="status" aria-live="polite"></p>
     </form>
   </section>
-  <section class="card" aria-labelledby="elenco">
-    <h2 id="elenco">Prossimi appuntamenti</h2>
-    <ul id="lista" class="lista"><li class="vuoto">Carico l'agenda…</li></ul>
+  <section class="fx-section" aria-labelledby="elenco">
+    <div class="fx-section-title"><h2 id="elenco" class="fx-h3">Prossimi appuntamenti</h2></div>
+    <ul id="lista" class="fx-list"><li class="fx-empty vuoto">Carico l'agenda…</li></ul>
   </section>
 </main>
-<nav class="tabbar" aria-label="Sezioni">
-  <a href="/" aria-current="page">Agenda</a>
-  <a href="/clienti">Clienti</a>
-</nav>
+</div>
+</div>
 <script type="module" src="/app.js"></script>
 </body>
 </html>
@@ -194,21 +206,27 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Clienti · Barbiere Rossi</title>
+<link rel="stylesheet" href="/fenix-ui.css">
 <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
-<header class="top"><h1>Clienti</h1><p class="sub">Chi è passato dal negozio, ordinato per ultima visita</p></header>
-<main id="main">
-  <section class="card" aria-labelledby="clienti">
-    <h2 id="clienti">Elenco clienti</h2>
-    <p>Qui trovi i clienti ricavati dagli appuntamenti: nome, numero di visite e ultimo servizio. Aggiungi un appuntamento dall'agenda per vedere comparire un nuovo cliente in questa lista.</p>
-    <ul id="lista" class="lista"><li class="vuoto">Carico i clienti…</li></ul>
+<div class="fx-app">
+<nav class="fx-tabbar" aria-label="Sezioni">
+  <a class="fx-brand fx-hide-phone" href="/"><span class="fx-logo"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="6" r="3"/><path d="M8.12 8.12 12 12"/><path d="M20 4 8.12 15.88"/><circle cx="6" cy="18" r="3"/><path d="M14.8 14.8 20 20"/></svg></span><span>Barbiere Rossi</span></a>
+  <a class="fx-tab" href="/"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2v3"/><path d="M16 2v3"/><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/></svg><span>Agenda</span></a>
+  <a class="fx-tab" href="/clienti" aria-current="page"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><path d="M16 3.128a4 4 0 0 1 0 7.744"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><circle cx="9" cy="7" r="4"/></svg><span>Clienti</span></a>
+</nav>
+<div class="fx-body">
+<header class="fx-header"><div><h1 class="fx-h1">Clienti</h1><p class="fx-small fx-muted">Chi è passato dal negozio, ordinato per ultima visita</p></div></header>
+<main class="fx-main" id="main">
+  <section class="fx-section" aria-labelledby="clienti">
+    <h2 id="clienti" class="fx-h3">Elenco clienti</h2>
+    <p class="fx-muted">Qui trovi i clienti ricavati dagli appuntamenti: nome, numero di visite e ultimo servizio. Aggiungi un appuntamento dall'agenda per vedere comparire un nuovo cliente in questa lista.</p>
+    <ul id="lista" class="fx-list"><li class="fx-empty vuoto">Carico i clienti…</li></ul>
   </section>
 </main>
-<nav class="tabbar" aria-label="Sezioni">
-  <a href="/">Agenda</a>
-  <a href="/clienti" aria-current="page">Clienti</a>
-</nav>
+</div>
+</div>
 <script type="module" src="/app.js"></script>
 </body>
 </html>
@@ -216,35 +234,17 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   },
   {
     path: "public/404.html",
-    content: `<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Pagina non trovata</title><link rel="stylesheet" href="/styles.css"></head><body><main id="main" class="card"><h1>Pagina non trovata</h1><p>Il percorso che hai aperto non esiste. Torna all'<a href="/">agenda</a>.</p></main></body></html>
+    content: `<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Pagina non trovata</title><link rel="stylesheet" href="/fenix-ui.css"><link rel="stylesheet" href="/styles.css"></head><body><div class="fx-app"><div class="fx-body"><main id="main" class="fx-main"><div class="fx-empty"><h1 class="fx-h3">Pagina non trovata</h1><p>Il percorso che hai aperto non esiste. Torna all'agenda per continuare a lavorare sugli appuntamenti di oggi.</p><a class="fx-btn" href="/">Vai all'agenda</a></div></main></div></div></body></html>
 `,
   },
   {
     path: "public/styles.css",
-    content: `:root { --bg:#f6f1ea; --card:#fff; --ink:#1f1a17; --muted:#6b625c; --accent:#7a3b2e; --line:#e6ddd3; }
-* { box-sizing: border-box; }
-html, body { margin: 0; background: var(--bg); color: var(--ink); font: 17px/1.45 -apple-system, system-ui, "Segoe UI", sans-serif; }
-.top { padding: calc(env(safe-area-inset-top) + 20px) 20px 8px; }
-h1 { margin: 0; font-size: 28px; letter-spacing: -0.01em; }
-h2 { margin: 0 0 12px; font-size: 19px; }
-.sub { margin: 4px 0 0; color: var(--muted); }
-main { display: grid; gap: 16px; padding: 12px 16px calc(env(safe-area-inset-bottom) + 84px); max-width: 720px; margin: 0 auto; }
-.card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 18px; }
-label { display: block; font-size: 15px; color: var(--muted); margin: 12px 0 6px; }
-input, select, button { width: 100%; min-height: 48px; font: inherit; font-size: 16px; border-radius: 12px; border: 1px solid var(--line); padding: 0 14px; background: #fff; color: inherit; }
-button { margin-top: 16px; background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 600; cursor: pointer; }
-button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible { outline: 3px solid #d9a066; outline-offset: 2px; }
-.esito { min-height: 1.4em; margin: 10px 0 0; color: var(--accent); }
-.lista { list-style: none; margin: 0; padding: 0; }
-.lista li { display: flex; justify-content: space-between; gap: 12px; padding: 12px 0; border-top: 1px solid var(--line); }
-.lista li:first-child { border-top: 0; }
-.lista .vuoto { color: var(--muted); }
-.lista small { color: var(--muted); display: block; }
-.lista button.rimuovi { width: auto; min-height: 44px; margin: 0; background: transparent; color: var(--accent); border: 1px solid var(--line); padding: 0 12px; }
-.tabbar { position: fixed; inset: auto 0 0; display: flex; background: #fff; border-top: 1px solid var(--line); padding-bottom: env(safe-area-inset-bottom); }
-.tabbar a { flex: 1; text-align: center; padding: 14px 0; min-height: 56px; color: var(--muted); text-decoration: none; font-weight: 600; }
-.tabbar a[aria-current="page"] { color: var(--accent); }
-@media (min-width: 900px) { main { grid-template-columns: 1fr 1fr; align-items: start; max-width: 1040px; } .tabbar { position: static; max-width: 1040px; margin: 0 auto; border: 0; background: transparent; } }
+    content: `:root { --fx-bg:#f6f1ea; --fx-surface:#fff; --fx-surface-2:#efe7dd; --fx-ink:#1f1a17; --fx-ink-2:#4a423d; --fx-muted:#6b625c; --fx-line:#e6ddd3; --fx-line-strong:#d3c6b8; --fx-accent:#7a3b2e; --fx-accent-ink:#fff; --fx-accent-soft:#f3e4de; --fx-focus:#d9a066; }
+.esito { min-height: 1.4em; color: var(--fx-accent); }
+.fx-list li.appuntamento { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 16px; background: var(--fx-surface); border: 1px solid var(--fx-line); border-radius: var(--fx-radius); }
+.fx-list li.appuntamento small { color: var(--fx-muted); display: block; }
+.fx-list li .visite { color: var(--fx-muted); font-size: 14px; white-space: nowrap; }
+.fx-list .vuoto { color: var(--fx-muted); }
 `,
   },
   {
@@ -264,15 +264,16 @@ async function carica() {
 
 function renderAgenda(items) {
   lista.innerHTML = "";
-  if (!items.length) { lista.innerHTML = '<li class="vuoto">Nessun appuntamento: prenota il primo qui sopra.</li>'; return; }
+  if (!items.length) { lista.innerHTML = '<li class="fx-empty vuoto"><strong class="fx-h3">Nessun appuntamento</strong><p>Prenota il primo dal modulo qui sopra.</p></li>'; return; }
   for (const a of items) {
     const li = document.createElement("li");
+    li.className = "appuntamento";
     const testo = document.createElement("div");
     testo.innerHTML = "<strong></strong><small></small>";
     testo.querySelector("strong").textContent = a.cliente;
     testo.querySelector("small").textContent = a.servizio + " · " + fmt.format(new Date(a.quando));
     const btn = document.createElement("button");
-    btn.className = "rimuovi"; btn.type = "button"; btn.textContent = "Annulla";
+    btn.className = "fx-btn fx-btn-secondary fx-btn-s"; btn.type = "button"; btn.textContent = "Annulla";
     btn.setAttribute("aria-label", "Annulla appuntamento di " + a.cliente);
     btn.addEventListener("click", async () => { await fetch("/api/appuntamenti/" + a.id, { method: "DELETE" }); carica(); });
     li.append(testo, btn);
@@ -287,10 +288,11 @@ function renderClienti(items) {
     c.visite += 1; c.ultimo = a; byName.set(a.cliente, c);
   }
   lista.innerHTML = "";
-  if (!byName.size) { lista.innerHTML = '<li class="vuoto">Ancora nessun cliente. Prenota un appuntamento dall\\'agenda.</li>'; return; }
+  if (!byName.size) { lista.innerHTML = '<li class="fx-empty vuoto"><strong class="fx-h3">Ancora nessun cliente</strong><p>Prenota un appuntamento dall\\'agenda e comparirà qui.</p></li>'; return; }
   for (const c of byName.values()) {
     const li = document.createElement("li");
-    li.innerHTML = "<div><strong></strong><small></small></div><span></span>";
+    li.className = "appuntamento";
+    li.innerHTML = "<div><strong></strong><small></small></div><span class=\\"visite\\"></span>";
     li.querySelector("strong").textContent = c.nome;
     li.querySelector("small").textContent = "Ultimo: " + c.ultimo.servizio;
     li.querySelector("span").textContent = c.visite + (c.visite === 1 ? " visita" : " visite");

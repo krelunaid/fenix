@@ -6,13 +6,14 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { MANIFEST_PATH, parseManifest, checkProjectSize, isTextPath } from "./contract.mjs";
 import { auditHtml, auditServer, auditableFiles, probeServer, probePersistence } from "./acceptance.mjs";
+import { uiKitProblems } from "./ui-kit.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const SMOKE_SRC = join(HERE, "runtime", "browser-smoke.mjs");
 
 const PLACEHOLDERS = [/lorem ipsum|coming soon|prossimamente|placeholder text/i, /\b(TODO|FIXME|XXX)\b/];
 
-export async function runChecks(sandbox, { browser = true, log = () => {} } = {}) {
+export async function runChecks(sandbox, { browser = true, uiKit = false, log = () => {} } = {}) {
   const checks = [];
   const push = (id, ok, detail = "") => { checks.push({ id, ok, detail: String(detail).slice(0, 4000) }); log(`${ok ? "✓" : "✗"} ${id}${detail && !ok ? ` — ${String(detail).slice(0, 200)}` : ""}`); return ok; };
   const files = await sandbox.listFiles();
@@ -72,8 +73,12 @@ export async function runChecks(sandbox, { browser = true, log = () => {} } = {}
     const srv = auditServer(await sandbox.readFile("server.mjs"));
     push("server:static", srv.length === 0, srv.join(" | "));
   }
+  if (uiKit) {
+    const kit = await uiKitProblems({ files, readFile: (p) => sandbox.readFile(p) });
+    push("ui:kit", kit.length === 0, kit.slice(0, 6).join(" | "));
+  }
 
-  const structural = checks.every((c) => c.ok || c.id === "no-placeholders" || c.id === "ui:static" || c.id === "server:static");
+  const structural = checks.every((c) => c.ok || c.id === "no-placeholders" || c.id === "ui:static" || c.id === "server:static" || c.id === "ui:kit");
   if (!structural) {
     await sandbox.stopServer();
     return finish(checks, null);

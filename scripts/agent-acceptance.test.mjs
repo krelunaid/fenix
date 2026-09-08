@@ -94,7 +94,8 @@ test("runChecks gates on the independent checks: an emoji tab bar and a leaky st
       const c = clean.checks.find((x) => x.id === id);
       assert.ok(c && c.ok, `${id} doveva passare sul golden: ${c?.detail}`);
     }
-    const html = GOLDEN_FILES.find((f) => f.path === "public/index.html").content.replace('<a href="/" aria-current="page">Agenda</a>', '<a href="/" aria-current="page">📅 Agenda</a>');
+    const html = GOLDEN_FILES.find((f) => f.path === "public/index.html").content.replace("<span>Agenda</span>", "<span>📅 Agenda</span>");
+    assert.match(html, /📅 Agenda/, "fixture markup changed: update the emoji injection");
     await sandbox.writeFile("public/index.html", html);
     const dirty = await runChecks(sandbox, { browser: false });
     const ui = dirty.checks.find((x) => x.id === "ui:static");

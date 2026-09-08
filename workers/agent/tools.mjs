@@ -4,6 +4,7 @@
 import { canonicalizePath, LIMITS } from "./contract.mjs";
 import { runChecks, formatChecks } from "./checks.mjs";
 import { findIcons, iconSvg, iconSprite, hasIcon, ICON_COUNT } from "./icons.mjs";
+import { isUiKitPath, UI_KIT_PATH } from "./ui-kit.mjs";
 
 export const TOOLS = [
   {
@@ -83,7 +84,11 @@ export const TOOLS = [
   },
 ];
 
-export function createToolExecutor(sandbox, { log = () => {}, browserChecks = true } = {}) {
+function guardKit(p) {
+  if (isUiKitPath(p)) throw new Error(`${UI_KIT_PATH} è la base grafica gestita da Fenix: non si modifica né si elimina. Ridefinisci i token (--fx-accent, --fx-bg…) e aggiungi regole di dominio in public/styles.css.`);
+}
+
+export function createToolExecutor(sandbox, { log = () => {}, browserChecks = true, uiKit = false } = {}) {
   const state = { checksPassed: false, lastChecks: null, dirtySinceChecks: true, writes: 0, commands: 0 };
   const markDirty = () => { state.dirtySinceChecks = true; state.checksPassed = false; };
 
@@ -100,6 +105,7 @@ export function createToolExecutor(sandbox, { log = () => {}, browserChecks = tr
     },
     async write_file({ path, content }) {
       const p = canonicalizePath(path);
+      guardKit(p);
       if (typeof content !== "string") throw new Error("content deve essere una stringa.");
       const bytes = await sandbox.writeFile(p, content);
       state.writes += 1;
@@ -108,6 +114,7 @@ export function createToolExecutor(sandbox, { log = () => {}, browserChecks = tr
     },
     async edit_file({ path, search, replace }) {
       const p = canonicalizePath(path);
+      guardKit(p);
       if (typeof search !== "string" || !search) throw new Error("search vuoto.");
       const text = await sandbox.readFile(p);
       const first = text.indexOf(search);
@@ -121,6 +128,7 @@ export function createToolExecutor(sandbox, { log = () => {}, browserChecks = tr
     },
     async delete_file({ path }) {
       const p = canonicalizePath(path);
+      guardKit(p);
       await sandbox.deleteFile(p);
       markDirty();
       return `Eliminato ${p}.`;
@@ -181,7 +189,7 @@ export function createToolExecutor(sandbox, { log = () => {}, browserChecks = tr
       return lines.join("\n\n");
     },
     async run_checks() {
-      const result = await runChecks(sandbox, { browser: browserChecks, log });
+      const result = await runChecks(sandbox, { browser: browserChecks, uiKit, log });
       state.lastChecks = result;
       state.checksPassed = result.ok;
       state.dirtySinceChecks = false;
