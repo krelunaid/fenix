@@ -187,7 +187,7 @@ export const Route = createFileRoute("/api/build")({
               enqueue(": ping\n\n");
             };
             const abort = new AbortController();
-            const timer = setTimeout(() => abort.abort(), 175_000);
+            const timer = setTimeout(() => abort.abort(), 11 * 60_000); // dev twin: the browser watchdog (idle 45 s / max 12 min) is the real guard
             const heartbeat = setInterval(ping, 4000);
             let acc = "";
             let emitted = false;

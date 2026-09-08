@@ -7,6 +7,7 @@ import {
   useProjectStore,
 } from "@/lib/projects/store";
 import { TIMEOUT_ERROR, isTimeoutInterrupt } from "@/lib/projects/recover";
+import { createStreamWatchdog, isAbortError, STREAM_IDLE_MS, STREAM_MAX_MS } from "@/lib/ai/stream-watchdog";
 import { parseBuildOutput, type BuildResult } from "./parse";
 import { isWeakPreview, lookInstruction, resetAudit, waitPreviewAudit, waitPreviewShot, waitPreviewBoot, getPreviewBootError, getPreviewBootOk, rememberBootError } from "./look";
 import { DASHBOARD_POLISH_INSTRUCTION, SITE_POLISH_INSTRUCTION } from "./app-shell";
@@ -58,7 +59,12 @@ const WORKER_POLL_MS = 2000;
 /** Railway cold start + 50–120k composed body. 8s aborted live barber creates. */
 export const WORKER_START_MS = 30_000;
 /** Client backstop past the 175s /api/build abort. */
-export const STREAM_WAIT_MS = 180_000;
+/**
+ * The edge stream is guarded by a watchdog, not a fixed budget: it aborts after
+ * STREAM_IDLE_MS without bytes (the edge pings every 4 s) or STREAM_MAX_MS overall.
+ * A fixed 180 s cap used to kill healthy 4–6 minute generations of full apps.
+ */
+export { STREAM_IDLE_MS, STREAM_MAX_MS };
 /** 2s ticks while a persisted job is live. Overlay stays locked. */
 export const WORKER_JOB_POLL_MAX = 180;
 /** Match the visible promise: generation never owns the UI for more than 10 min. */
@@ -475,11 +481,32 @@ async function consumeStream(
 ): Promise<boolean> {
   const store = useProjectStore.getState();
   const recentPalettes = store.recentPalettes ?? [];
+  const watchdog = createStreamWatchdog({ idleMs: STREAM_IDLE_MS, maxMs: STREAM_MAX_MS });
+  try {
+    return await readBuildStream(projectId, body, quiet, epoch, watchdog, recentPalettes);
+  } catch (err) {
+    // Translate our own abort into a precise, user-facing timeout; anything else passes through.
+    if (watchdog.reason && isAbortError(err)) throw new Error(watchdog.message || TIMEOUT_ERROR);
+    throw err;
+  } finally {
+    watchdog.stop();
+  }
+}
+
+async function readBuildStream(
+  projectId: string,
+  body: { prompt: string; html?: string; instruction?: string; shot?: string },
+  quiet: boolean,
+  epoch: number,
+  watchdog: ReturnType<typeof createStreamWatchdog>,
+  recentPalettes: unknown,
+): Promise<boolean> {
+  const store = useProjectStore.getState();
   const res = await fetch("/api/build", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ ...body, recentPalettes }),
-    signal: AbortSignal.timeout(STREAM_WAIT_MS),
+    signal: watchdog.signal,
   });
 
   if (!res.ok || !res.body) {
@@ -493,6 +520,7 @@ async function consumeStream(
 
   while (true) {
     const { done, value } = await reader.read();
+    watchdog.touch();
     if (done) break;
     buffer += decoder.decode(value, { stream: true });
     const parts = buffer.split("\n\n");
@@ -735,23 +763,35 @@ async function repairBootFailures(projectId: string, prompt: string, epoch: numb
     });
     const before = current.html;
     resetAudit();
-    await consumeStream(
-      projectId,
-      {
-        prompt,
-        html: current.html,
-        instruction: [
-          `ERRORE DI AVVIO: ${reason}`,
-          "Non usare .orders su stato nullo. Sito/landing: niente scaffold gestionale (orders, inventario, Nuovo pezzo).",
-          "Stato iniziale = oggetto vuoto, mai null. META+HTML completo.",
-          "Non assegnare .innerHTML o .textContent a querySelector/getElementById senza if (el).",
-          "Non patchare template t-home/t-new o tab se quei nodi non esistono nel DOM.",
-          "Se Fenix.data usa un nome con spazi/slash/accenti, rinominalo in un token [A-Za-z0-9._-]{1,80} (es. capi).",
-        ].join("\n"),
-      },
-      true,
-      epoch,
-    );
+    try {
+      await consumeStream(
+        projectId,
+        {
+          prompt,
+          html: current.html,
+          instruction: [
+            `ERRORE DI AVVIO: ${reason}`,
+            "Non usare .orders su stato nullo. Sito/landing: niente scaffold gestionale (orders, inventario, Nuovo pezzo).",
+            "Stato iniziale = oggetto vuoto, mai null. META+HTML completo.",
+            "Non assegnare .innerHTML o .textContent a querySelector/getElementById senza if (el).",
+            "Non patchare template t-home/t-new o tab se quei nodi non esistono nel DOM.",
+            "Se Fenix.data usa un nome con spazi/slash/accenti, rinominalo in un token [A-Za-z0-9._-]{1,80} (es. capi).",
+          ].join("\n"),
+        },
+        true,
+        epoch,
+      );
+    } catch (err) {
+      // A repair that times out must not throw away a build that already produced
+      // a document: log it, keep the stable draft and report the real boot error.
+      const message = err instanceof Error ? err.message : String(err);
+      if (message === STALE_JOB) throw err;
+      if (!isTimeoutInterrupt(message) && !isTransientNetwork(message)) throw err;
+      const live = store.getProject(projectId);
+      store.updateProject(projectId, { buildLog: [...(live?.buildLog ?? []), `Riparazione interrotta: ${message}`] });
+      rememberBootError(firstReason);
+      return false;
+    }
     const after = store.getProject(projectId)?.html;
     if (after === before) {
       rememberBootError(firstReason);
