@@ -3,6 +3,8 @@ on:
   push:
     branches: [codex/agent-core-review, main]
     paths: ['workers/agent/**', 'scripts/agent-*.test.mjs', '.github/workflows/agent-isolation.yml']
+  pull_request:
+    paths: ['workers/agent/**', 'scripts/agent-*.test.mjs', '.github/workflows/agent-isolation.yml']
 permissions:
   contents: read
 jobs:

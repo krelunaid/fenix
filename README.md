@@ -16,6 +16,8 @@ La chiave è esclusivamente server-side. Mai `VITE_XAI_API_KEY`, mai nel fronten
 | ------------------- | ------ | -------------------------------------------------------------------------------- |
 | `XAI_API_KEY`       | server | Tua, creata su [console.x.ai](https://console.x.ai)                              |
 | `VISUAL_WORKER_URL` | server | Opzionale. Worker Playwright. Es. `https://fenix-production-d9f5.up.railway.app` |
+| `VISUAL_WORKER_TOKEN` | server + Railway | Segreto condiviso: Fenix lo aggiunge lato server, il worker rifiuta i job senza. Mai nel client. |
+| `FENIX_ORIGIN` | server + Railway | Origine pubblica (es. `https://fenix.kreluna.it`): guardia origin su `/api/build`, CORS del worker. |
 | `VITE_AUTH_ENABLED` | build  | `false` di default in locale. Per Gmail/email metti `true` e `DATABASE_URL`      |
 
 ## Configurazione Netlify
@@ -28,7 +30,7 @@ La chiave è esclusivamente server-side. Mai `VITE_XAI_API_KEY`, mai nel fronten
 
 Se il secret non è configurato, Fenix risponde chiaramente: `Manca XAI_API_KEY sul server`.
 
-Export + pull Fenix da GitHub (opzionale, server only): `GITHUB_APP_ID` (o `GITHUB_APP_CLIENT_ID`), `GITHUB_APP_PRIVATE_KEY`, `GITHUB_APP_SLUG` **e** `DATABASE_URL` con la migrazione `0003_github_connect_nonces`. Setup URL della App: `https://fenix.kreluna.it/api/github/callback`. Permessi minimi Contents + Metadata. Le sole chiavi App non bastano: Studio resta su **GitHub non configurato**. Il pull accetta soltanto alberi Fenix con manifest/checksum validi e crea uno studio isolato; ZIP locale resta. Dettagli: [`src/lib/github/references.md`](src/lib/github/references.md).
+Export + pull Fenix da GitHub (opzionale, server only): `GITHUB_APP_ID` (o `GITHUB_APP_CLIENT_ID`), `GITHUB_APP_PRIVATE_KEY`, `GITHUB_APP_SLUG` **e** `DATABASE_URL` con la migrazione `0003_github_connect_nonces`. Setup URL della App: `https://fenix.kreluna.it/api/github/callback`, con **«Request user authorization (OAuth) during installation»** attivo e `GITHUB_APP_CLIENT_ID` + `GITHUB_APP_CLIENT_SECRET` sul server (il callback verifica che l'installazione appartenga a chi si collega). Permessi minimi Contents + Metadata; i token sono limitati per operazione. Le sole chiavi App non bastano: Studio resta su **GitHub non configurato**. Il pull accetta soltanto alberi Fenix con manifest/checksum validi e crea uno studio isolato; ZIP locale resta. Dettagli: [`src/lib/github/references.md`](src/lib/github/references.md).
 
 Le app generate (Grottaglie, Catenaria, …) si scaricano da **Pubblica** (ZIP / `index.html`) e si caricano sul sito come HTML statico. **Pubblica** resta disabilitata finché il documento finale (srcdoc compreso il runtime) non è valido.
 
@@ -39,6 +41,10 @@ Lo **studio condiviso** è un workspace progetto distinto: il titolare invita vi
 Un brief **full-stack** esplicito esporta un'app avviabile con `npm start`: frontend e API Node+SQLite sulla stessa origine, `GET /health`, `fenix.deploy.json` e migrazioni in `backend/migrations/` (forward-only, idempotenti). Include signup/login, recupero password e accesso passwordless magic-link/OTP con outbox SQLite, senza SMTP. Il codice server del modello non entra nel tree. Non è un database distribuito.
 
 
+
+## Agente (beta) — nuovo motore
+
+La pagina **/agente** usa `workers/agent` (Claude + sandbox Docker) attraverso il proxy `/api/agent/*` (`netlify/functions/agent-proxy.ts`, `src/lib/agent/http.ts`): il brief diventa un **progetto multi-file** (server Node + SQLite, pagine, test) costruito e verificato nel sandbox; lo Studio mostra il lavoro passo per passo, poi un'**anteprima viva** del progetto in un iframe sandboxed (relay firmato, 30 minuti), le modifiche in chat (2 crediti, patch mirate sui file) e lo ZIP. I crediti sono conteggiati **sul server** (Netlify Blobs: 100, 4 per creare, 2 per modificare, rimborso in caso di errore). Variabili server: `AGENT_URL`, `AGENT_TOKEN` (e `AGENT_DATA_DIR` sull'host dell'agente per lavori durevoli e app pubblicate su `/app/<slug>/`); senza, la pagina spiega che il motore non è attivo. Con `DATABASE_URL` + `BETTER_AUTH_SECRET` + `BETTER_AUTH_URL` il login diventa un **account vero** (email/password sul server) e crediti, lavori e app pubblicate seguono l'account; altrimenti il login lo dice chiaramente e resta legato al browser. Dettagli e limiti in [`workers/agent/README.md`](workers/agent/README.md).
 
 ## Locale
 
@@ -73,7 +79,7 @@ npx playwright install chromium
 XAI_API_KEY=… npm start
 ```
 
-Su Railway/Fly: stesso comando, porta `PORT`. Health: `GET /health` risponde `{ ok, model: "grok-build-0.1" }`. Poi su Netlify aggiungi `VISUAL_WORKER_URL` = URL del worker, solo server.
+Su Railway/Fly: stesso comando, porta `PORT`, più `VISUAL_WORKER_TOKEN` (obbligatorio in produzione: senza, il worker risponde 503) e `FENIX_ORIGIN`. Health: `GET /health` risponde `{ ok, model: "grok-build-0.1", auth }`. Poi su Netlify aggiungi `VISUAL_WORKER_URL` e lo stesso `VISUAL_WORKER_TOKEN`, solo server: il browser passa da `/__worker/*` (Netlify Function `worker-proxy`) che aggiunge il token. L'URL diretto del worker non è più usato dal client.
 
 Senza questa variabile Fenix resta sui due sguardi nell’anteprima (html2canvas).
 

@@ -155,6 +155,9 @@ describe("studio repair for a new site project", () => {
           body: `data: ${JSON.stringify({ t: "err", error: "HTML non valido, non pubblico: HTML assente o troppo corto." })}\n\n`,
         });
       });
+      await page.route(/\/__worker|\/api\/worker/, async (route) => {
+        await route.fulfill({ status: 500, body: "no-worker" });
+      });
       await page.addInitScript(() => {
         if (window !== window.parent) return;
         localStorage.setItem(
@@ -195,7 +198,11 @@ describe("studio repair for a new site project", () => {
       });
       await page.goto(`${PREVIEW}/studio/p-ref`, { waitUntil: "domcontentloaded", timeout: 20000 });
       await page.getByRole("button", { name: "Riprova. Lo ricostruisco." }).first().click();
-      await page.waitForTimeout(800);
+      await page.waitForFunction(() => {
+        const raw = localStorage.getItem("officina-projects");
+        const state = JSON.parse(raw || "{}").state;
+        return state?.creditsRemaining === 46 && state?.projects?.[0]?.status === "error";
+      }, null, { timeout: 8000 });
       const remaining = await page.evaluate(() => {
         const raw = localStorage.getItem("officina-projects");
         const parsed = JSON.parse(raw || "{}");
@@ -233,7 +240,7 @@ describe("studio repair for a new site project", () => {
           body,
         });
       });
-      await page.route(/polish|\/__worker/, async (route) => {
+      await page.route(/polish|\/__worker|\/api\/worker/, async (route) => {
         await route.fulfill({ status: 500, body: "no-worker" });
       });
       await page.addInitScript(() => {
@@ -362,7 +369,7 @@ describe("iframe boot error on site null.orders", () => {
           body,
         });
       });
-      await page.route(/polish|\/__worker/, async (route) => {
+      await page.route(/polish|\/__worker|\/api\/worker/, async (route) => {
         await route.fulfill({ status: 500, body: "no-worker" });
       });
       await page.addInitScript(() => {
@@ -433,7 +440,7 @@ describe("iframe boot error on site null.orders", () => {
     try {
       const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
       let polishPosts = 0;
-      await page.route(/polish|\/__worker/, async (route) => {
+      await page.route(/polish|\/__worker|\/api\/worker/, async (route) => {
         if (route.request().method() === "POST") polishPosts += 1;
         await route.fulfill({ status: 500, body: "no-worker" });
       });

@@ -12,9 +12,12 @@ import { createServer } from "node:http";
 import { timingSafeEqual } from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { JobStore } from "./jobs.mjs";
+import { PreviewPool } from "./preview.mjs";
+import { SiteStore, SitePool, slugify } from "./sites.mjs";
+import { join } from "node:path";
 import { runAgent } from "./agent.mjs";
 import { createSandbox } from "./sandbox/index.mjs";
-import { AnthropicModel } from "./model/anthropic.mjs";
+import { byokFromHeaders, createModel } from "./model/index.mjs";
 import { PROJECT_KINDS, canonicalizePath, LIMITS } from "./contract.mjs";
 
 const MAX_BODY = 6 * 1024 * 1024;
@@ -22,14 +25,20 @@ const MAX_BODY = 6 * 1024 * 1024;
 export function createAgentServer({
   token = process.env.AGENT_TOKEN,
   origin = process.env.FENIX_ORIGIN || "",
-  modelFactory = () => new AnthropicModel(),
+  modelFactory = (byok) => createModel(byok || {}),
   sandboxFactory = (opts) => createSandbox(opts),
-  store = new JobStore({ concurrency: Number(process.env.AGENT_CONCURRENCY || 2) }),
+  dataDir = process.env.AGENT_DATA_DIR || null,
+  store = new JobStore({ concurrency: Number(process.env.AGENT_CONCURRENCY || 2), dataDir }),
+  previews = null,
+  sites = null,
   browserChecks = process.env.AGENT_BROWSER_CHECKS !== "0",
   limits = {},
 } = {}) {
   if (!token || token.length < 16) throw new Error("AGENT_TOKEN mancante o troppo corto (min 16 caratteri).");
   const tokenBuf = Buffer.from(token);
+  const pool = previews || new PreviewPool({ sandboxFactory });
+  const siteStore = sites?.store || (dataDir ? new SiteStore({ dir: join(dataDir, "sites") }) : null);
+  const sitePool = sites || (siteStore ? new SitePool({ store: siteStore, sandboxFactory }) : null);
 
   const cors = (res) => {
     if (origin) {
@@ -77,16 +86,21 @@ export function createAgentServer({
           try { canonicalizePath(f.path); } catch (err) { json(res, 400, { error: err.message }); return; }
         }
         if (instruction && files.length === 0) { json(res, 400, { error: "Una modifica richiede i file del progetto." }); return; }
+        // Optional per-request BYOK (provider/key/model). Kept in memory for this job only.
+        let byok = null;
+        try { byok = byokFromHeaders(req.headers); } catch (err) { json(res, err.status || 400, { error: err.message }); return; }
+        let model;
+        try { model = modelFactory(byok); } catch (err) { json(res, err.status || 503, { error: err.message }); return; }
 
         const job = store.create({
           owner,
-          input: { brief: brief.slice(0, 4000), kind, name: body.name ? String(body.name).slice(0, 80) : undefined, instruction },
+          input: { brief: brief.slice(0, 4000), kind, name: body.name ? String(body.name).slice(0, 80) : undefined, instruction, provider: byok?.provider || process.env.AGENT_PROVIDER || "anthropic", model: model.model },
           run: async ({ job, onEvent, signal }) => {
             const sandbox = await sandboxFactory({ jobId: job.id });
             try {
               for (const f of files) await sandbox.writeFile(f.path, f.content);
               return await runAgent({
-                model: modelFactory(),
+                model,
                 sandbox,
                 brief: brief.slice(0, 4000),
                 kind,
@@ -107,12 +121,100 @@ export function createAgentServer({
         return;
       }
 
+      // Live preview of a finished job: /agent/jobs/:id/preview[/relayed/path]
+      const pv = url.pathname.match(/^\/agent\/jobs\/([A-Za-z0-9-]{8,64})\/preview(\/.*)?$/);
+      if (pv) {
+        const job = await store.find(pv[1], owner);
+        if (!job) { json(res, 404, { error: "Job non trovato." }); return; }
+        const relayPath = pv[2];
+        if (relayPath == null) {
+          if (req.method === "GET") { json(res, 200, pool.view(job.id, owner)); return; }
+          if (req.method === "DELETE") { json(res, 200, { live: false, stopped: await pool.stop(job.id) }); return; }
+          if (req.method === "POST") {
+            const files = job.result?.files?.filter((f) => typeof f.content === "string") || [];
+            if (job.status !== "ok" || files.length === 0) { json(res, 409, { error: "Anteprima disponibile solo per un lavoro concluso con successo." }); return; }
+            try {
+              await pool.start({ jobId: job.id, owner, files });
+            } catch (err) {
+              json(res, err?.status || 502, { error: err?.message || "Anteprima non avviata.", logs: err?.logs });
+              return;
+            }
+            json(res, 200, pool.view(job.id, owner));
+            return;
+          }
+          json(res, 405, { error: "Metodo non consentito." }); return;
+        }
+        const body = req.method === "GET" || req.method === "HEAD" ? undefined : await readText(req);
+        const relayed = await pool.relay(job.id, owner, {
+          method: req.method,
+          path: `${relayPath}${url.search}`,
+          headers: { "content-type": req.headers["content-type"], accept: req.headers.accept },
+          body,
+        });
+        if (!relayed) { json(res, 409, { error: "Anteprima non attiva: avviala con POST …/preview." }); return; }
+        cors(res);
+        res.writeHead(relayed.status, {
+          "content-type": relayed.headers["content-type"] || "application/octet-stream",
+          "cache-control": "no-store",
+          "x-fenix-preview": job.id,
+        });
+        res.end(relayed.text);
+        return;
+      }
+
       const m = url.pathname.match(/^\/agent\/jobs\/([A-Za-z0-9-]{8,64})$/);
       if (m) {
-        const job = store.get(m[1], owner);
+        const job = await store.find(m[1], owner);
         if (!job) { json(res, 404, { error: "Job non trovato." }); return; }
         if (req.method === "GET") { json(res, 200, store.publicView(job, { full: url.searchParams.get("full") === "1" })); return; }
-        if (req.method === "DELETE") { store.cancel(job.id, owner); json(res, 200, { id: job.id, status: job.status }); return; }
+        if (req.method === "DELETE") { store.cancel(job.id, owner); await pool.stop(job.id); json(res, 200, { id: job.id, status: job.status }); return; }
+      }
+      // Published apps (durable, hosted on demand).
+      if (url.pathname === "/agent/sites") {
+        if (!sitePool) { json(res, 503, { error: "Pubblicazione non configurata: manca AGENT_DATA_DIR." }); return; }
+        if (req.method === "GET") { json(res, 200, { sites: await siteStore.listByOwner(owner) }); return; }
+        if (req.method === "POST") {
+          const body = await readJson(req);
+          const job = await store.find(String(body.jobId || ""), owner);
+          if (!job || job.status !== "ok" || !job.result?.files?.length) { json(res, 409, { error: "Pubblica solo un lavoro concluso con successo." }); return; }
+          const slug = body.slug ? String(body.slug).toLowerCase() : slugify(body.name || job.input?.name || job.input?.brief || job.id);
+          try {
+            const rec = await siteStore.publish({ slug, owner, name: body.name || job.input?.name || job.input?.brief?.slice(0, 60), kind: job.input?.kind, files: job.result.files, jobId: job.id });
+            await sitePool.stop(slug); // a new version replaces the running one on next request
+            json(res, 200, rec);
+          } catch (err) {
+            json(res, err?.status || 500, { error: err?.message || "Pubblicazione fallita." });
+          }
+          return;
+        }
+        json(res, 405, { error: "Metodo non consentito." }); return;
+      }
+      const st = url.pathname.match(/^\/agent\/sites\/([a-z0-9-]{3,40})(\/.*)?$/);
+      if (st) {
+        if (!sitePool) { json(res, 503, { error: "Pubblicazione non configurata: manca AGENT_DATA_DIR." }); return; }
+        const slug = st[1];
+        const relayPath = st[2];
+        if (relayPath == null) {
+          const rec = await siteStore.read(slug);
+          if (!rec || rec.owner !== owner) { json(res, 404, { error: "Sito non trovato." }); return; }
+          if (req.method === "GET") { json(res, 200, { ...(await siteStore.listByOwner(owner)).find((r) => r.slug === slug), hosting: sitePool.view(slug) }); return; }
+          if (req.method === "DELETE") { await sitePool.stop(slug); await siteStore.remove(slug); json(res, 200, { slug, removed: true }); return; }
+          json(res, 405, { error: "Metodo non consentito." }); return;
+        }
+        // Public traffic: the Fenix proxy calls this for anyone; the owner header is the
+        // proxy's own identity and is intentionally not checked against the site owner.
+        const body = req.method === "GET" || req.method === "HEAD" ? undefined : await readText(req);
+        let relayed;
+        try {
+          relayed = await sitePool.serve(slug, { method: req.method, path: `${relayPath}${url.search}`, headers: { "content-type": req.headers["content-type"], accept: req.headers.accept }, body });
+        } catch (err) {
+          json(res, err?.status || 502, { error: err?.message || "App non avviata." }); return;
+        }
+        if (!relayed) { json(res, 404, { error: "Sito non trovato." }); return; }
+        cors(res);
+        res.writeHead(relayed.status, { "content-type": relayed.headers["content-type"] || "application/octet-stream", "cache-control": "no-store", "x-fenix-site": slug });
+        res.end(relayed.text);
+        return;
       }
       json(res, 404, { error: "Rotta sconosciuta." });
     } catch (err) {
@@ -122,7 +224,20 @@ export function createAgentServer({
     }
   });
   server.store = store;
+  server.previews = pool;
+  server.sites = sitePool;
   return server;
+}
+
+async function readText(req) {
+  const chunks = [];
+  let bytes = 0;
+  for await (const chunk of req) {
+    bytes += chunk.length;
+    if (bytes > MAX_BODY) throw Object.assign(new Error("Richiesta troppo grande."), { status: 413 });
+    chunks.push(chunk);
+  }
+  return Buffer.concat(chunks).toString("utf8");
 }
 
 async function readJson(req) {
@@ -147,6 +262,9 @@ async function readJson(req) {
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   if (process.env.AGENT_SANDBOX !== "docker") throw new Error("HTTP agent requires Docker isolation; local is for fixture tests only.");
   const port = Number(process.env.PORT || 8790);
+  // Loopback by default (a TLS reverse proxy publishes it). HOST=0.0.0.0 only inside a
+  // container whose network is already private (see workers/agent/Dockerfile).
+  const host = process.env.HOST === "0.0.0.0" ? "0.0.0.0" : "127.0.0.1";
   const server = createAgentServer();
-  server.listen(port, "127.0.0.1", () => console.log(`[fenix-agent] in ascolto locale su :${port} (sandbox=docker)`));
+  server.listen(port, host, () => console.log(`[fenix-agent] in ascolto su ${host}:${port} (sandbox=docker, data=${process.env.AGENT_DATA_DIR || "solo memoria"})`));
 }

@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { localSignIn, localSignUp } from "@/lib/local-account";
+import { signInWithEmail, signUpWithEmail } from "@/lib/auth/email-account";
 
 export const Route = createFileRoute("/login")({ component: Login });
 
@@ -11,18 +11,22 @@ function Login() {
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
 
   async function onEmail(e: FormEvent) {
     e.preventDefault();
     setError("");
+    setNotice("");
     setBusy(true);
-    const mail = email.trim();
-    const nome = name.trim() || mail.split("@")[0] || "Utente";
     try {
-      try {
-        await localSignIn(mail, password);
-      } catch {
-        await localSignUp(mail, password, nome);
+      // "Entra" must never create an account by accident: a typo in the email or a
+      // wrong password is an error, not a new sign-up. Server account when the
+      // server is configured; otherwise a browser-only account, said out loud.
+      const outcome = mode === "in" ? await signInWithEmail(email, password) : await signUpWithEmail(email, password, name);
+      if (outcome.mode === "local") {
+        setNotice("Il server degli account non è attivo: l'account vale solo su questo dispositivo e in questo browser.");
+        window.setTimeout(() => window.location.assign("/"), 1400);
+        return;
       }
       window.location.assign("/");
     } catch (err) {
@@ -37,7 +41,7 @@ function Login() {
         <img src="/fenix-login.png" alt="Fenix" className="h-40 w-40 object-contain" />
         <p className="mt-4 text-[11px] font-semibold tracking-[0.28em] text-[#9b93c2]">FENIX · KRELUNA</p>
         <h1 className="mt-3 font-display text-4xl italic tracking-tight">Accedi</h1>
-        <p className="mt-2 text-sm text-[#9b93c2]">Iscriviti con email. Poi entri sempre da qui.</p>
+        <p className="mt-2 text-sm text-[#9b93c2]">Con email e password. Gli studi creati con il motore classico restano su questo dispositivo; i lavori dell'agente e le app pubblicate seguono il tuo account.</p>
 
         <div className="mt-8 mb-3 flex w-full gap-2">
           <button
@@ -58,31 +62,44 @@ function Login() {
 
         <form onSubmit={onEmail} className="w-full space-y-2 text-left">
           {mode === "up" ? (
-            <input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Nome"
-              className="h-12 w-full rounded-2xl border border-white/10 bg-[#120e24] px-4 text-sm outline-none"
-            />
+            <>
+              <label htmlFor="login-name" className="sr-only">Nome</label>
+              <input
+                id="login-name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Nome"
+                autoComplete="name"
+                className="h-12 w-full rounded-2xl border border-white/10 bg-[#120e24] px-4 text-base outline-none"
+              />
+            </>
           ) : null}
+          <label htmlFor="login-email" className="sr-only">Email</label>
           <input
+            id="login-email"
             type="email"
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="Email"
-            className="h-12 w-full rounded-2xl border border-white/10 bg-[#120e24] px-4 text-sm outline-none"
+            autoComplete="email"
+            inputMode="email"
+            className="h-12 w-full rounded-2xl border border-white/10 bg-[#120e24] px-4 text-base outline-none"
           />
+          <label htmlFor="login-password" className="sr-only">Password</label>
           <input
+            id="login-password"
             type="password"
             required
             minLength={8}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="Password (min. 8)"
-            className="h-12 w-full rounded-2xl border border-white/10 bg-[#120e24] px-4 text-sm outline-none"
+            autoComplete={mode === "up" ? "new-password" : "current-password"}
+            className="h-12 w-full rounded-2xl border border-white/10 bg-[#120e24] px-4 text-base outline-none"
           />
-          {error ? <p className="text-xs text-red-400">{error}</p> : null}
+          {error ? <p className="text-xs text-red-400" role="alert">{error}</p> : null}
+          {notice ? <p className="text-xs text-amber-300" role="status">{notice}</p> : null}
           <button
             type="submit"
             disabled={busy}

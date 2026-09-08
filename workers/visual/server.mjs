@@ -1,4 +1,5 @@
 import { createServer } from "node:http";
+import { randomUUID, timingSafeEqual } from "node:crypto";
 import { readWorkerBody } from "./request-body.mjs";
 import {
   applyCreatedDocumentOrSeed,
@@ -46,6 +47,25 @@ import {
  * POST /polish  { prompt, html }  →  { html, name, log }
  */
 const PORT = Number(process.env.PORT || 8787);
+// Shared secret between Fenix (server side only) and this worker. On Railway or
+// in production the worker refuses jobs until it is configured; in local dev and
+// tests (no token, no production marker) it stays open on loopback.
+const WORKER_TOKEN = (process.env.VISUAL_WORKER_TOKEN || "").trim();
+const PRODUCTION = Boolean(process.env.RAILWAY_ENVIRONMENT || process.env.NODE_ENV === "production");
+const ALLOWED_ORIGIN = (process.env.FENIX_ORIGIN || "").trim();
+if (!WORKER_TOKEN) {
+  console.warn(PRODUCTION
+    ? "[worker] VISUAL_WORKER_TOKEN mancante: le rotte /build /polish /jobs rispondono 503 finché non è configurato."
+    : "[worker] VISUAL_WORKER_TOKEN assente: modalità sviluppo senza autenticazione.");
+}
+export function workerAuthState(req, { token = WORKER_TOKEN, production = PRODUCTION } = {}) {
+  if (!token) return production ? "unconfigured" : "open";
+  const h = String(req.headers.authorization || "");
+  if (!h.startsWith("Bearer ")) return "denied";
+  const given = Buffer.from(h.slice(7).trim());
+  const want = Buffer.from(token);
+  return given.length === want.length && timingSafeEqual(given, want) ? "ok" : "denied";
+}
 const MODEL = "grok-build-0.1";
 const XAI = "https://api.x.ai/v1/chat/completions";
 const PASSES = 5;
@@ -485,7 +505,7 @@ async function generate(prompt, html, instruction, kind, operation, inputPalette
     body: JSON.stringify({
       model: MODEL,
       temperature: 0.7,
-      max_tokens: 8000,
+      max_tokens: 20000,
       stream: false,
       messages: [
         { role: "system", content: dashboard ? DASHBOARD_SYSTEM : site ? SITE_SYSTEM : GENERATE_SYSTEM },
@@ -1189,13 +1209,20 @@ function scriptsSyntax(html) {
   return "";
 }
 
-function json(res, status, body) {
-  res.writeHead(status, {
-    "Content-Type": "application/json",
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Headers": "content-type, idempotency-key",
+// Browsers no longer call the worker directly (Fenix proxies server-side with the
+// token). CORS headers are emitted only for an explicitly allowed origin.
+function corsHeaders() {
+  if (!ALLOWED_ORIGIN) return {};
+  return {
+    "Access-Control-Allow-Origin": ALLOWED_ORIGIN,
+    "Vary": "Origin",
+    "Access-Control-Allow-Headers": "content-type, idempotency-key, authorization",
     "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-  });
+  };
+}
+
+function json(res, status, body) {
+  res.writeHead(status, { "Content-Type": "application/json", "Cache-Control": "no-store", ...corsHeaders() });
   res.end(JSON.stringify(body));
 }
 
@@ -1227,11 +1254,7 @@ function findReusableJob(projectId, key) {
 }
 
 function cors(res) {
-  res.writeHead(204, {
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Headers": "content-type, idempotency-key",
-    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-  });
+  res.writeHead(204, corsHeaders());
   res.end();
 }
 
@@ -1247,7 +1270,17 @@ const server = createServer(async (req, res) => {
       model: MODEL,
       passes: PASSES,
       jobs: [...jobs.values()].filter((j) => j.status === "run").length,
+      auth: WORKER_TOKEN ? "token" : PRODUCTION ? "unconfigured" : "open",
     });
+    return;
+  }
+  const auth = workerAuthState(req);
+  if (auth === "unconfigured") {
+    json(res, 503, { error: "Worker non configurato: manca VISUAL_WORKER_TOKEN sul server." });
+    return;
+  }
+  if (auth === "denied") {
+    json(res, 401, { error: "Token worker mancante o non valido." });
     return;
   }
   if (req.method === "GET" && url.startsWith("/jobs/")) {
@@ -1297,7 +1330,7 @@ const server = createServer(async (req, res) => {
     json(res, 202, { id: reusable.id, status: reusable.status || "run", reused: true });
     return;
   }
-  const id = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+  const id = randomUUID();
   const job = {
     id,
     projectId: projectId || null,
@@ -1336,8 +1369,9 @@ const server = createServer(async (req, res) => {
     }
     setTimeout(() => {
       jobs.delete(id);
+      if (idempotencyKey && jobsByKey.get(idempotencyKey) === job) jobsByKey.delete(idempotencyKey);
       if (projectId && activeByProject.get(projectId) === id) activeByProject.delete(projectId);
-    }, 30 * 60 * 1000);
+    }, 30 * 60 * 1000).unref?.();
   });
   json(res, 202, { id, status: "run" });
 });

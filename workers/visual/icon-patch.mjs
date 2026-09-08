@@ -9,6 +9,8 @@
 export const ICON_ID_ATTR = "data-fenix-id";
 export const ICON_DELTA_BUDGET = 8192;
 export const ICON_HTML_BOUND = 120000;
+import { ICON_COUNT, iconForQuery, iconSvg } from "./icons.mjs";
+
 export const ICON_SVG_BOUND = 2048;
 
 export const AGENDA_ICON_INSTRUCTION =
@@ -300,10 +302,62 @@ export function applyIconPatch(html, fenixId, svg) {
   return { html, applied: false, reason: "absent", id };
 }
 
+const SVG_OPEN =
+  "<svg viewBox=\"0 0 24 24\" width=\"24\" height=\"24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\" overflow=\"hidden\" aria-hidden=\"true\">";
+const icon = (body) => `${SVG_OPEN}${body}</svg>`;
+
+/**
+ * Pictograms the atomic icon patch can draw, same stroke grammar as the calendar.
+ * Order matters: the first matching entry wins, so specific words come before generic ones.
+ */
+export const ICON_LIBRARY = [
+  { id: "calendar", re: /calend|agenda|\bdata\b|\boggi\b/, svg: AGENDA_CALENDAR_SVG },
+  { id: "list", re: /\blista\b|elenco|righe|\blist\b/, svg: icon('<path d="M8 6h12M8 12h12M8 18h12"/><path d="M4 6h.01M4 12h.01M4 18h.01"/>') },
+  { id: "plus", re: /\bpi[uù]\b|aggiungi|nuovo|\bplus\b|croce/, svg: icon('<circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/>') },
+  { id: "user", re: /client[ei]|utent[ei]|persona|profilo|\buser\b|omino/, svg: icon('<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"/>') },
+  { id: "users", re: /\bteam\b|staff|gruppo|persone|\busers\b/, svg: icon('<circle cx="9" cy="8" r="3.5"/><circle cx="17" cy="9" r="3"/><path d="M2.5 20c0-3.5 3-6 6.5-6s6.5 2.5 6.5 6"/><path d="M15 14.5c3 .3 5.5 2.5 5.5 5.5"/>') },
+  { id: "settings", re: /impostazion|ingranaggio|settings|\bgear\b|configur/, svg: icon('<circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/>') },
+  { id: "search", re: /cerca|ricerca|lente|search/, svg: icon('<circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/>') },
+  { id: "heart", re: /cuore|preferit|heart|amat/, svg: icon('<path d="M12 20.5s-7.5-4.6-7.5-10A4.3 4.3 0 0 1 12 8a4.3 4.3 0 0 1 7.5 2.5c0 5.4-7.5 10-7.5 10z"/>') },
+  { id: "cart", re: /carrello|\bcart\b|acquist|ordin[ei]/, svg: icon('<circle cx="9" cy="20" r="1.2"/><circle cx="17" cy="20" r="1.2"/><path d="M3 4h2l2.4 11h10.8L20 8H6.2"/>') },
+  { id: "stats", re: /statistic|grafic|numer|\bkpi\b|andament|\bstats\b|barre/, svg: icon('<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>') },
+  { id: "home", re: /\bhome\b|\bcasa\b|inizio/, svg: icon('<path d="M4 11l8-7 8 7"/><path d="M6 10v10h12V10"/><path d="M10 20v-5h4v5"/>') },
+  { id: "scissors", re: /forbic|taglio|barbier|scissor/, svg: icon('<circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M8.5 8l11.5 11M8.5 16L20 5"/>') },
+  { id: "clock", re: /orolog|\bora\b|orario|clock|\btempo\b/, svg: icon('<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>') },
+  { id: "bell", re: /campan|notific|avvis|\bbell\b/, svg: icon('<path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z"/><path d="M10 20a2 2 0 0 0 4 0"/>') },
+  { id: "pin", re: /\bmappa\b|posizion|\bluogo\b|indirizz|\bpin\b|segnapost/, svg: icon('<path d="M12 21s-6.5-6-6.5-11a6.5 6.5 0 0 1 13 0c0 5-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.5"/>') },
+  { id: "camera", re: /fotocamera|\bfoto\b|camera|scatt/, svg: icon('<path d="M4 8h3l2-2h6l2 2h3v11H4z"/><circle cx="12" cy="13" r="3.5"/>') },
+  { id: "mail", re: /\bmail\b|email|busta|posta|messagg/, svg: icon('<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/>') },
+  { id: "phone", re: /telefon|chiam|\bphone\b|cornetta/, svg: icon('<path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z"/>') },
+  { id: "star", re: /stell|\bstar\b|valutaz|rating/, svg: icon('<path d="M12 3l2.8 5.9 6.4.8-4.7 4.4 1.2 6.4L12 17.4l-5.7 3.1 1.2-6.4L2.8 9.7l6.4-.8z"/>') },
+  { id: "tag", re: /etichett|prezz|\btag\b|sconto|offert/, svg: icon('<path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="8.5" r="1.3"/>') },
+  { id: "doc", re: /document|fattur|\bfile\b|foglio|ricevut|report/, svg: icon('<path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4M9 12h6M9 16h6"/>') },
+  { id: "menu", re: /\bmen[uù]\b|hamburger|tre linee|altro/, svg: icon('<path d="M4 7h16M4 12h16M4 17h16"/>') },
+];
+
+/** Returns the SVG matching the instruction, or null when no known icon is named. */
 export function iconSvgForInstruction(instruction) {
   const p = String(instruction || "").toLowerCase();
-  if (/calend|oggi|agenda|data/.test(p)) return AGENDA_CALENDAR_SVG;
-  return AGENDA_CALENDAR_SVG;
+  // Look only at the part after the "use/with/become" verb, if present, so the tab
+  // name ("tab Oggi") does not pick the icon ("usa una lista").
+  const parts = p.split(/\b(?:usa|con|metti|diventa|sostituisci con|scegli|imposta)\b/);
+  const named = parts.length > 1 ? parts.slice(1).join(" ") : "";
+  if (named.trim()) {
+    // An icon was named explicitly: the 22 house pictograms first (tuned for Fenix
+    // tab bars), then the embedded Lucide set (1800+ icons, Italian/English names),
+    // otherwise refuse without spending.
+    for (const entry of ICON_LIBRARY) if (entry.re.test(named)) return entry.svg;
+    return lucideSvg(named);
+  }
+  // No icon named: let the tab name suggest one (Oggi → calendar, Clienti → user, …).
+  for (const entry of ICON_LIBRARY) if (entry.re.test(p)) return entry.svg;
+  const tab = p.match(/tab\s+([a-z0-9àèéìòù]+)/);
+  return tab ? lucideSvg(tab[1]) : null;
+}
+
+function lucideSvg(query) {
+  const name = iconForQuery(query);
+  return name ? iconSvg(name, { strokeWidth: 1.8 }) : null;
 }
 
 function filesUnchanged(before = [], after = []) {
@@ -447,6 +501,10 @@ export function applyIconRevision(input) {
   }
 
   const svg = iconSvgForInstruction(instruction);
+  if (!svg) {
+    const reason = `Icona non riconosciuta: dimmi quale (es. calendario, lista, cliente, ingranaggio, cerca, cuore, carrello, grafico, casa, forbici, orologio, campanella, mappa, foto, mail, telefono, stella, etichetta, documento, menu, oppure uno dei ${ICON_COUNT} nomi Lucide come "rocket" o "wrench"). Nessun credito speso.`;
+    return { status: "rejected", spent: false, refund: false, html, files, reason, log: [reason] };
+  }
   const patched = applyIconPatch(html, target.id, svg);
   if (!patched.applied) {
     const reason =

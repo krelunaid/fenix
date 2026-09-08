@@ -5,11 +5,8 @@
 [build.environment]
   VITE_AUTH_ENABLED = "true"
 
-[[redirects]]
-  from = "/__worker/*"
-  to = "https://fenix-production-d9f5.up.railway.app/:splat"
-  status = 200
-  force = true
+# /__worker/* is served by netlify/functions/worker-proxy.ts (adds VISUAL_WORKER_TOKEN
+# server side). The old direct redirect to Railway exposed the worker to anyone.
 
 [[edge_functions]]
   path = "/api/build"

@@ -54,7 +54,13 @@ function Home() {
       return;
     }
     const kind = choice === "auto" ? inferKind(text) : choice;
-    const project = createFromBrief({ prompt: `${formatPrefix(kind, text)}${text}`, kind });
+    let project;
+    try {
+      project = createFromBrief({ prompt: `${formatPrefix(kind, text)}${text}`, kind });
+    } catch (error: unknown) {
+      toast(error instanceof Error ? error.message : "Non riesco a creare lo studio.");
+      return;
+    }
     void navigate({ to: "/studio/$projectId", params: { projectId: project.id } });
   }
 
@@ -136,6 +142,12 @@ function Home() {
       <p className="mt-2 max-w-[520px] text-[15px] leading-relaxed text-[#9b93c2]">
         Descrivi la tua idea. Fenix crea un prototipo funzionante, con codice esportabile e opzioni
         di pubblicazione.
+      </p>
+      <p className="mt-3 text-[14px] text-[#9b93c2]">
+        Vuoi un progetto vero con server, database e test?{" "}
+        <Link to="/agente" className="text-white underline underline-offset-4">
+          Prova l'agente (beta)
+        </Link>
       </p>
 
       <form

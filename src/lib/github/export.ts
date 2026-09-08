@@ -11,6 +11,7 @@ import {
   getRef,
   listInstallationRepos,
   mintInstallationToken,
+  SCOPE_EXPORT,
   seedEmptyReadme,
   updateRef,
   type GhError,
@@ -53,7 +54,7 @@ export async function previewExport(input: {
   const files = exportFiles(input);
   const contentHash = contentHashOf(files);
   const preview = exportPreview(files).map((f) => ({ ...f, change: "add" as "add" | "update" }));
-  const token = await mintInstallationToken(input.installationId);
+  const token = await mintInstallationToken(input.installationId, SCOPE_EXPORT);
   if (isFail(token)) return token;
   try {
     const repos = await listInstallationRepos(token);
@@ -128,7 +129,7 @@ export async function exportToGitHub(input: {
   };
   await saveExportJob(job);
 
-  const token = await mintInstallationToken(input.installationId);
+  const token = await mintInstallationToken(input.installationId, SCOPE_EXPORT);
   if (isFail(token)) {
     job.status = "err";
     job.error = token.error;

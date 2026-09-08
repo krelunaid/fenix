@@ -92,6 +92,7 @@ function visualWorkPath(pathname: string): boolean {
   return (
     p === "/api/build" ||
     p === "/api/polish" ||
+    p === "/api/worker/build" ||
     p === "/__worker/build" ||
     p === "/__worker/polish" ||
     p === "/build" ||

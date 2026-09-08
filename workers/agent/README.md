@@ -30,10 +30,30 @@ The CLI defaults to Docker and refuses local generation. Direct HTTP startup req
 
 The owner header is a trusted-proxy assertion, NOT authentication by itself. The pending Studio proxy must derive it from a verified user session, overwrite untrusted inbound headers and charge/refund credits on the server. No such integration is activated by this branch.
 
+## Studio proxy (added 2026-09-07)
+
+`/api/agent/*` — `netlify/functions/agent-proxy.ts` in production, `src/routes/api/agent.$.ts` in dev — is the trusted proxy this worker expects. It holds `AGENT_URL`/`AGENT_TOKEN` server-side, sets `x-fenix-owner` itself from the caller's identity (today the owner capability; `resolveOwner` in `src/lib/agent/http.ts` is the one place to swap in a verified session) and enforces credits on the server (`src/lib/agent/credits-store.ts`: Netlify Blobs, 100 grant, 4 per create, 2 per edit, refund once on failure/cancel). `npm run test:agent-proxy` runs it against this server with a scripted model.
+
+## Durable jobs and published apps (added 2026-09-07)
+
+With `AGENT_DATA_DIR` set on the agent host, finished jobs are written to `<dir>/jobs/<id>.json` (7-day TTL) and survive restarts. `POST /agent/sites { jobId, slug? }` publishes a finished job under a public slug; the record and the app's SQLite data live in `<dir>/sites/` — the data directory is the only bind mount the sandbox ever receives (`/work/.fenix/data`, uid 1000). Published apps start on first request and stop after 10 idle minutes; data persists on the host. Fenix serves them at `/app/<slug>/…` (`netlify/functions/app-public.ts`, `src/routes/app.$slug.$.tsx`) with paths rewritten to that prefix. Owners list/delete their sites via `/api/agent/sites`.
+
+## Models and BYOK (added 2026-09-07)
+
+`workers/agent/model/index.mjs` picks the provider: `AGENT_PROVIDER=anthropic|openai|xai` with the matching `*_API_KEY` (server BYOK), or per request from the Studio (`x-fenix-model-provider`, `x-fenix-model-key`, `x-fenix-model` — user BYOK, kept in memory for that job only, never logged or stored; the Studio keeps the key in sessionStorage of the tab). `model/openai.mjs` translates the Anthropic-style tool loop to Chat Completions with function tools (OpenAI, xAI Grok 4, compatible proxies). One note: `grok-build-0.1` is not a tool-calling model and is not supported here.
+
+## Icons (added 2026-09-08)
+
+`icon-set.mjs` embeds the full Lucide set (1800+ icons, ISC licence in the file header; regenerate with `node scripts/build-icon-set.mjs <lucide-clone>`), and `icons.mjs` resolves Italian/English words to icon names ("prenotazioni" → `calendar-check`, "chiave inglese" → `wrench`). The agent has an `icons` tool that returns inline `<svg>` markup or writes `public/icons.svg` as a sprite, and the system prompt forbids emoji as UI icons. The same two files live in `workers/visual/` (the visual worker deploys from its own folder) where the atomic icon patch falls back to Lucide when the 22 house pictograms do not match. `scripts/icon-set.test.mjs` asserts the copies are identical. Apple's SF Symbols are not used: their licence restricts them to Apple platforms.
+
+## Going live (added 2026-09-07)
+
+Fresh Ubuntu VM: `bash workers/agent/deploy/install-vm.sh` (Docker, Node 22, sandbox image, systemd unit `fenix-agent`, `/etc/fenix-agent.env` with a generated `AGENT_TOKEN`, data in `/var/lib/fenix-agent`), fill `ANTHROPIC_API_KEY`, `systemctl restart fenix-agent`, put Caddy in front (`deploy/Caddyfile.example`, DNS `agent.kreluna.it`). On Netlify set `AGENT_URL=https://agent.kreluna.it` and the same `AGENT_TOKEN`. `workers/agent/Dockerfile` builds the host itself as a container (needs the host Docker socket).
+
 ## Remaining work before enabling customer traffic
 
 - Real model generation with a server-only Anthropic key (not provided in this environment).
-- Trusted Studio proxy, credits/recovery and generated full-stack app hosting.
+- Real accounts behind `resolveOwner` (today: owner capability), recovery UX, custom domains for published apps, backups of `AGENT_DATA_DIR`.
 - Independent brief-based acceptance: real login, employee isolation, CRUD persistence and design review.
 - Durable job persistence, operational monitoring and independent validation outside the generated project.
 - Provision an explicitly authorized host with Docker; no infrastructure purchases are automatic.

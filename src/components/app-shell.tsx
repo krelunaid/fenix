@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import {
+  Bot,
   FolderKanban,
   HelpCircle,
   Home,
@@ -16,6 +17,7 @@ const NAV = [
   { to: "/", label: "Home", icon: Home, end: true },
   { href: "/#nuovo", label: "Nuovo progetto", icon: Plus, end: false },
   { to: "/vetrina", label: "I miei progetti", icon: FolderKanban, end: false },
+  { to: "/agente", label: "Agente · beta", icon: Bot, end: false },
 ] as const;
 
 export function AppShell({
@@ -54,7 +56,9 @@ export function AppShell({
 
           <nav className="mt-8 flex flex-col gap-0.5 text-[13px]">
             {NAV.map((item) => {
-              const active = item.end && pathname === "/";
+              const active = item.end
+                ? pathname === "/"
+                : "to" in item && pathname.startsWith(item.to);
               const Icon = item.icon;
               const className = cn(
                 "flex h-10 items-center gap-3 rounded-xl px-3 no-underline transition-colors",

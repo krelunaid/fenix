@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { parseBuildOutput } from "@/lib/ai/parse";
+import { rejectCrossOrigin, sanitizeShot } from "@/lib/ai/request-guard";
 import { generateHeroUrl, injectHero, injectCraftHero, heroAspect, materializeHero, scrubCraftMedia } from "@/lib/ai/hero-image";
 import { altForBrief } from "@/lib/ai/domain-imagery";
 import { SYSTEM_PROMPT, SITE_PROMPT } from "@/lib/ai/prompt";
@@ -91,6 +92,8 @@ export const Route = createFileRoute("/api/build")({
   server: {
     handlers: {
       POST: async ({ request }) => {
+        const crossOrigin = rejectCrossOrigin(request.url, request.headers, [process.env.FENIX_ORIGIN || ""]);
+        if (crossOrigin) return Response.json({ t: "err", error: crossOrigin }, { status: 403 });
         // Server-only. Never VITE_XAI_API_KEY — that would leak to the browser.
         const apiKey = getXaiApiKey();
         if (!apiKey) {
@@ -120,10 +123,7 @@ export const Route = createFileRoute("/api/build")({
         if (html.length > MAX_ARTIFACT_CHARS) {
           return Response.json({ t: "err", error: "Documento troppo grande per una modifica sicura. La versione precedente resta invariata." }, { status: 413 });
         }
-        const shot =
-          typeof body.shot === "string" && body.shot.startsWith("data:image")
-            ? body.shot.slice(0, 380000)
-            : "";
+        const shot = sanitizeShot(body.shot, body.operation, html);
 
         const seed = Array.from(prompt).reduce((h, c) => ((h << 5) - h + c.charCodeAt(0)) | 0, 0);
         const lockKind = kindFromPrompt(prompt) ?? "app";

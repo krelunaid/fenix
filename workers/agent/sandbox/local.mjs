@@ -105,18 +105,21 @@ export async function freePort() {
 }
 
 export class LocalSandbox {
-  constructor({ root }) {
+  constructor({ root, dataDir = null }) {
     this.root = root;
     this.kind = "local";
     this.server = null;
     this.abort = new AbortController();
+    /** Optional persistent directory for the project's SQLite data (published apps). */
+    this.dataDir = dataDir;
   }
 
-  static async create({ jobId = `job-${Date.now().toString(36)}`, baseDir = join(tmpdir(), "fenix-agent") } = {}) {
+  static async create({ jobId = `job-${Date.now().toString(36)}`, baseDir = join(tmpdir(), "fenix-agent"), dataDir = null } = {}) {
     await mkdir(baseDir, { recursive: true });
     const root = await mkdtemp(join(baseDir, `${jobId.replace(/[^A-Za-z0-9_-]/g, "_").slice(0, 60)}-`));
     await mkdir(join(root, ".fenix"), { recursive: true });
-    return new LocalSandbox({ root });
+    if (dataDir) await mkdir(dataDir, { recursive: true });
+    return new LocalSandbox({ root, dataDir });
   }
 
   resolve(path) {
@@ -192,7 +195,7 @@ export class LocalSandbox {
     this.abort.signal.throwIfAborted();
     await this.stopServer();
     const port = await freePort();
-    const dataDir = join(this.root, ".fenix", "data");
+    const dataDir = this.dataDir || join(this.root, ".fenix", "data");
     await mkdir(dataDir, { recursive: true });
     const child = spawn("/bin/sh", ["-c", cmd], {
       cwd: this.root,
