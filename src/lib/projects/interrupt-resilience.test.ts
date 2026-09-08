@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, it } from "node:test";
+import "../ai/stream-watchdog.test.ts";
 import { composeProduct } from "../ai/compose-product.ts";
 import { formatPrefix } from "./infer.ts";
 import {
