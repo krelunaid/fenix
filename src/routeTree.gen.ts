@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AgenteRouteImport } from './routes/agente'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as VetrinaRouteImport } from './routes/vetrina'
 import { Route as ApiBuildRouteImport } from './routes/api/build'
@@ -20,6 +21,7 @@ import { Route as ApiWorkspaceRouteImport } from './routes/api/workspace'
 import { Route as CondivisoWorkspaceIdRouteImport } from './routes/condiviso.$workspaceId'
 import { Route as SitoProjectIdRouteImport } from './routes/sito.$projectId'
 import { Route as StudioProjectIdRouteImport } from './routes/studio.$projectId'
+import { Route as ApiAgentSplatRouteImport } from './routes/api/agent.$'
 import { Route as ApiAppAccessSiteIdRouteImport } from './routes/api/app-access.$siteId'
 import { Route as ApiAppDataSiteIdRouteImport } from './routes/api/app-data.$siteId'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
@@ -28,18 +30,21 @@ import { Route as ApiGithubExportRouteImport } from './routes/api/github.export'
 import { Route as ApiGithubImportRouteImport } from './routes/api/github.import'
 import { Route as ApiGithubReposRouteImport } from './routes/api/github.repos'
 import { Route as ApiJobsIdRouteImport } from './routes/api/jobs.$id'
-import { Route as AgenteRouteImport } from './routes/agente'
-import { Route as ApiAgentSplatRouteImport } from './routes/api/agent.$'
-import { Route as ApiWorkerBuildRouteImport } from './routes/api/worker.build'
-import { Route as AppSlugSplatRouteImport } from './routes/app.$slug.$'
 import { Route as ApiReleaseIdRouteImport } from './routes/api/release.$id'
 import { Route as ApiReleaseCallbackRouteImport } from './routes/api/release.callback'
 import { Route as ApiSitesIdRouteImport } from './routes/api/sites.$id'
+import { Route as ApiWorkerBuildRouteImport } from './routes/api/worker.build'
 import { Route as ApiWorkspaceIdRouteImport } from './routes/api/workspace.$id'
+import { Route as AppSlugSplatRouteImport } from './routes/app.$slug.$'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AgenteRoute = AgenteRouteImport.update({
+  id: '/agente',
+  path: '/agente',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -92,6 +97,11 @@ const StudioProjectIdRoute = StudioProjectIdRouteImport.update({
   path: '/studio/$projectId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAgentSplatRoute = ApiAgentSplatRouteImport.update({
+  id: '/api/agent/$',
+  path: '/api/agent/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAppAccessSiteIdRoute = ApiAppAccessSiteIdRouteImport.update({
   id: '/api/app-access/$siteId',
   path: '/api/app-access/$siteId',
@@ -132,26 +142,6 @@ const ApiJobsIdRoute = ApiJobsIdRouteImport.update({
   path: '/api/jobs/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AgenteRoute = AgenteRouteImport.update({
-  id: '/agente',
-  path: '/agente',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiAgentSplatRoute = ApiAgentSplatRouteImport.update({
-  id: '/api/agent/$',
-  path: '/api/agent/$',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiWorkerBuildRoute = ApiWorkerBuildRouteImport.update({
-  id: '/api/worker/build',
-  path: '/api/worker/build',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AppSlugSplatRoute = AppSlugSplatRouteImport.update({
-  id: '/app/$slug/$',
-  path: '/app/$slug/$',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const ApiReleaseIdRoute = ApiReleaseIdRouteImport.update({
   id: '/$id',
   path: '/$id',
@@ -167,14 +157,25 @@ const ApiSitesIdRoute = ApiSitesIdRouteImport.update({
   path: '/api/sites/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiWorkerBuildRoute = ApiWorkerBuildRouteImport.update({
+  id: '/api/worker/build',
+  path: '/api/worker/build',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiWorkspaceIdRoute = ApiWorkspaceIdRouteImport.update({
   id: '/$id',
   path: '/$id',
   getParentRoute: () => ApiWorkspaceRoute,
 } as any)
+const AppSlugSplatRoute = AppSlugSplatRouteImport.update({
+  id: '/app/$slug/$',
+  path: '/app/$slug/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/agente': typeof AgenteRoute
   '/login': typeof LoginRoute
   '/vetrina': typeof VetrinaRoute
   '/api/build': typeof ApiBuildRoute
@@ -185,6 +186,7 @@ export interface FileRoutesByFullPath {
   '/condiviso/$workspaceId': typeof CondivisoWorkspaceIdRoute
   '/sito/$projectId': typeof SitoProjectIdRoute
   '/studio/$projectId': typeof StudioProjectIdRoute
+  '/api/agent/$': typeof ApiAgentSplatRoute
   '/api/app-access/$siteId': typeof ApiAppAccessSiteIdRoute
   '/api/app-data/$siteId': typeof ApiAppDataSiteIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -193,17 +195,16 @@ export interface FileRoutesByFullPath {
   '/api/github/import': typeof ApiGithubImportRoute
   '/api/github/repos': typeof ApiGithubReposRoute
   '/api/jobs/$id': typeof ApiJobsIdRoute
-  '/agente': typeof AgenteRoute
-  '/api/agent/$': typeof ApiAgentSplatRoute
-  '/api/worker/build': typeof ApiWorkerBuildRoute
-  '/app/$slug/$': typeof AppSlugSplatRoute
   '/api/release/$id': typeof ApiReleaseIdRoute
   '/api/release/callback': typeof ApiReleaseCallbackRoute
   '/api/sites/$id': typeof ApiSitesIdRoute
+  '/api/worker/build': typeof ApiWorkerBuildRoute
   '/api/workspace/$id': typeof ApiWorkspaceIdRoute
+  '/app/$slug/$': typeof AppSlugSplatRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/agente': typeof AgenteRoute
   '/login': typeof LoginRoute
   '/vetrina': typeof VetrinaRoute
   '/api/build': typeof ApiBuildRoute
@@ -214,6 +215,7 @@ export interface FileRoutesByTo {
   '/condiviso/$workspaceId': typeof CondivisoWorkspaceIdRoute
   '/sito/$projectId': typeof SitoProjectIdRoute
   '/studio/$projectId': typeof StudioProjectIdRoute
+  '/api/agent/$': typeof ApiAgentSplatRoute
   '/api/app-access/$siteId': typeof ApiAppAccessSiteIdRoute
   '/api/app-data/$siteId': typeof ApiAppDataSiteIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -222,18 +224,17 @@ export interface FileRoutesByTo {
   '/api/github/import': typeof ApiGithubImportRoute
   '/api/github/repos': typeof ApiGithubReposRoute
   '/api/jobs/$id': typeof ApiJobsIdRoute
-  '/agente': typeof AgenteRoute
-  '/api/agent/$': typeof ApiAgentSplatRoute
-  '/api/worker/build': typeof ApiWorkerBuildRoute
-  '/app/$slug/$': typeof AppSlugSplatRoute
   '/api/release/$id': typeof ApiReleaseIdRoute
   '/api/release/callback': typeof ApiReleaseCallbackRoute
   '/api/sites/$id': typeof ApiSitesIdRoute
+  '/api/worker/build': typeof ApiWorkerBuildRoute
   '/api/workspace/$id': typeof ApiWorkspaceIdRoute
+  '/app/$slug/$': typeof AppSlugSplatRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/agente': typeof AgenteRoute
   '/login': typeof LoginRoute
   '/vetrina': typeof VetrinaRoute
   '/api/build': typeof ApiBuildRoute
@@ -244,6 +245,7 @@ export interface FileRoutesById {
   '/condiviso/$workspaceId': typeof CondivisoWorkspaceIdRoute
   '/sito/$projectId': typeof SitoProjectIdRoute
   '/studio/$projectId': typeof StudioProjectIdRoute
+  '/api/agent/$': typeof ApiAgentSplatRoute
   '/api/app-access/$siteId': typeof ApiAppAccessSiteIdRoute
   '/api/app-data/$siteId': typeof ApiAppDataSiteIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -252,19 +254,18 @@ export interface FileRoutesById {
   '/api/github/import': typeof ApiGithubImportRoute
   '/api/github/repos': typeof ApiGithubReposRoute
   '/api/jobs/$id': typeof ApiJobsIdRoute
-  '/agente': typeof AgenteRoute
-  '/api/agent/$': typeof ApiAgentSplatRoute
-  '/api/worker/build': typeof ApiWorkerBuildRoute
-  '/app/$slug/$': typeof AppSlugSplatRoute
   '/api/release/$id': typeof ApiReleaseIdRoute
   '/api/release/callback': typeof ApiReleaseCallbackRoute
   '/api/sites/$id': typeof ApiSitesIdRoute
+  '/api/worker/build': typeof ApiWorkerBuildRoute
   '/api/workspace/$id': typeof ApiWorkspaceIdRoute
+  '/app/$slug/$': typeof AppSlugSplatRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/agente'
     | '/login'
     | '/vetrina'
     | '/api/build'
@@ -275,6 +276,7 @@ export interface FileRouteTypes {
     | '/condiviso/$workspaceId'
     | '/sito/$projectId'
     | '/studio/$projectId'
+    | '/api/agent/$'
     | '/api/app-access/$siteId'
     | '/api/app-data/$siteId'
     | '/api/auth/$'
@@ -283,17 +285,16 @@ export interface FileRouteTypes {
     | '/api/github/import'
     | '/api/github/repos'
     | '/api/jobs/$id'
-    | '/agente'
-    | '/api/agent/$'
-    | '/api/worker/build'
-    | '/app/$slug/$'
     | '/api/release/$id'
     | '/api/release/callback'
     | '/api/sites/$id'
+    | '/api/worker/build'
     | '/api/workspace/$id'
+    | '/app/$slug/$'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/agente'
     | '/login'
     | '/vetrina'
     | '/api/build'
@@ -304,6 +305,7 @@ export interface FileRouteTypes {
     | '/condiviso/$workspaceId'
     | '/sito/$projectId'
     | '/studio/$projectId'
+    | '/api/agent/$'
     | '/api/app-access/$siteId'
     | '/api/app-data/$siteId'
     | '/api/auth/$'
@@ -312,17 +314,16 @@ export interface FileRouteTypes {
     | '/api/github/import'
     | '/api/github/repos'
     | '/api/jobs/$id'
-    | '/agente'
-    | '/api/agent/$'
-    | '/api/worker/build'
-    | '/app/$slug/$'
     | '/api/release/$id'
     | '/api/release/callback'
     | '/api/sites/$id'
+    | '/api/worker/build'
     | '/api/workspace/$id'
+    | '/app/$slug/$'
   id:
     | '__root__'
     | '/'
+    | '/agente'
     | '/login'
     | '/vetrina'
     | '/api/build'
@@ -333,6 +334,7 @@ export interface FileRouteTypes {
     | '/condiviso/$workspaceId'
     | '/sito/$projectId'
     | '/studio/$projectId'
+    | '/api/agent/$'
     | '/api/app-access/$siteId'
     | '/api/app-data/$siteId'
     | '/api/auth/$'
@@ -341,18 +343,17 @@ export interface FileRouteTypes {
     | '/api/github/import'
     | '/api/github/repos'
     | '/api/jobs/$id'
-    | '/agente'
-    | '/api/agent/$'
-    | '/api/worker/build'
-    | '/app/$slug/$'
     | '/api/release/$id'
     | '/api/release/callback'
     | '/api/sites/$id'
+    | '/api/worker/build'
     | '/api/workspace/$id'
+    | '/app/$slug/$'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AgenteRoute: typeof AgenteRoute
   LoginRoute: typeof LoginRoute
   VetrinaRoute: typeof VetrinaRoute
   ApiBuildRoute: typeof ApiBuildRoute
@@ -363,15 +364,14 @@ export interface RootRouteChildren {
   CondivisoWorkspaceIdRoute: typeof CondivisoWorkspaceIdRoute
   SitoProjectIdRoute: typeof SitoProjectIdRoute
   StudioProjectIdRoute: typeof StudioProjectIdRoute
+  ApiAgentSplatRoute: typeof ApiAgentSplatRoute
   ApiAppAccessSiteIdRoute: typeof ApiAppAccessSiteIdRoute
   ApiAppDataSiteIdRoute: typeof ApiAppDataSiteIdRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiJobsIdRoute: typeof ApiJobsIdRoute
-  AgenteRoute: typeof AgenteRoute
-  ApiAgentSplatRoute: typeof ApiAgentSplatRoute
+  ApiSitesIdRoute: typeof ApiSitesIdRoute
   ApiWorkerBuildRoute: typeof ApiWorkerBuildRoute
   AppSlugSplatRoute: typeof AppSlugSplatRoute
-  ApiSitesIdRoute: typeof ApiSitesIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -381,6 +381,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/agente': {
+      id: '/agente'
+      path: '/agente'
+      fullPath: '/agente'
+      preLoaderRoute: typeof AgenteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -453,6 +460,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StudioProjectIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/agent/$': {
+      id: '/api/agent/$'
+      path: '/api/agent/$'
+      fullPath: '/api/agent/$'
+      preLoaderRoute: typeof ApiAgentSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/app-access/$siteId': {
       id: '/api/app-access/$siteId'
       path: '/api/app-access/$siteId'
@@ -509,34 +523,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiJobsIdRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/agente': {
-      id: '/agente'
-      path: '/agente'
-      fullPath: '/agente'
-      preLoaderRoute: typeof AgenteRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/agent/$': {
-      id: '/api/agent/$'
-      path: '/api/agent/$'
-      fullPath: '/api/agent/$'
-      preLoaderRoute: typeof ApiAgentSplatRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/worker/build': {
-      id: '/api/worker/build'
-      path: '/api/worker/build'
-      fullPath: '/api/worker/build'
-      preLoaderRoute: typeof ApiWorkerBuildRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/app/$slug/$': {
-      id: '/app/$slug/$'
-      path: '/app/$slug/$'
-      fullPath: '/app/$slug/$'
-      preLoaderRoute: typeof AppSlugSplatRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/api/release/$id': {
       id: '/api/release/$id'
       path: '/$id'
@@ -558,12 +544,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiSitesIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/worker/build': {
+      id: '/api/worker/build'
+      path: '/api/worker/build'
+      fullPath: '/api/worker/build'
+      preLoaderRoute: typeof ApiWorkerBuildRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/workspace/$id': {
       id: '/api/workspace/$id'
       path: '/$id'
       fullPath: '/api/workspace/$id'
       preLoaderRoute: typeof ApiWorkspaceIdRouteImport
       parentRoute: typeof ApiWorkspaceRoute
+    }
+    '/app/$slug/$': {
+      id: '/app/$slug/$'
+      path: '/app/$slug/$'
+      fullPath: '/app/$slug/$'
+      preLoaderRoute: typeof AppSlugSplatRouteImport
+      parentRoute: typeof rootRouteImport
     }
   }
 }
@@ -614,6 +614,7 @@ const ApiWorkspaceRouteWithChildren = ApiWorkspaceRoute._addFileChildren(
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AgenteRoute: AgenteRoute,
   LoginRoute: LoginRoute,
   VetrinaRoute: VetrinaRoute,
   ApiBuildRoute: ApiBuildRoute,
@@ -624,15 +625,14 @@ const rootRouteChildren: RootRouteChildren = {
   CondivisoWorkspaceIdRoute: CondivisoWorkspaceIdRoute,
   SitoProjectIdRoute: SitoProjectIdRoute,
   StudioProjectIdRoute: StudioProjectIdRoute,
+  ApiAgentSplatRoute: ApiAgentSplatRoute,
   ApiAppAccessSiteIdRoute: ApiAppAccessSiteIdRoute,
   ApiAppDataSiteIdRoute: ApiAppDataSiteIdRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiJobsIdRoute: ApiJobsIdRoute,
-  AgenteRoute: AgenteRoute,
-  ApiAgentSplatRoute: ApiAgentSplatRoute,
+  ApiSitesIdRoute: ApiSitesIdRoute,
   ApiWorkerBuildRoute: ApiWorkerBuildRoute,
   AppSlugSplatRoute: AppSlugSplatRoute,
-  ApiSitesIdRoute: ApiSitesIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

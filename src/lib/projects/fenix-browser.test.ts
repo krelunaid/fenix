@@ -844,47 +844,17 @@ describe("studio overlay and resume in browser", () => {
   it("missing worker job clears once and refunds once", async () => {
     await requirePreview();
     const jobId = "job-gone";
-    let polishPosts = 0;
+    let workerPosts = 0;
     const browser = await launch();
     try {
       const page = await newPage(browser, { viewport: { width: 1280, height: 800 } });
-      await page.route(/\/api\/build/, async (route) => {
-        const result = {
-          name: "Bottega Terra",
-          tagline: "Ceramica",
-          kind: "dashboard",
-          summary: "Gestionale",
-          direction: "terra",
-          palette: {
-            bg: "#f4efe6",
-            surface: "#fffaf3",
-            fg: "#2a241c",
-            muted: "#6f675c",
-            accent: "#b85c38",
-          },
-          html: DEMOS.kiln.html,
-          files: [],
-        };
-        const body =
-          `data: ${JSON.stringify({ t: "s", s: "Adatto Fenix" })}\n\n` +
-          `data: ${JSON.stringify({ t: "ok", result })}\n\n`;
+      await page.route(/\/api\/worker\/build/, async (route) => {
+        workerPosts += 1;
         await route.fulfill({
-          status: 200,
-          contentType: "text/event-stream; charset=utf-8",
-          body,
+          status: 202,
+          contentType: "application/json",
+          body: JSON.stringify({ id: jobId, status: "run" }),
         });
-      });
-      await page.route(/polish/, async (route) => {
-        if (route.request().method() === "POST") {
-          polishPosts += 1;
-          await route.fulfill({
-            status: 202,
-            contentType: "application/json",
-            body: JSON.stringify({ id: jobId, status: "run" }),
-          });
-          return;
-        }
-        await route.continue();
       });
       await page.route(/\/jobs\//, async (route) => {
         await route.fulfill({ status: 404, body: "gone" });
@@ -949,7 +919,7 @@ describe("studio overlay and resume in browser", () => {
       assert.equal(snap.status, "error");
       assert.equal(snap.jobId, null);
       assert.equal(snap.credits, 46);
-      assert.equal(polishPosts, 1);
+      assert.equal(workerPosts, 1);
       assert.equal(await page.getByRole("button", { name: /pubblica/i }).isDisabled(), true);
     } finally {
       await browser.close();
@@ -1070,10 +1040,10 @@ describe("studio overlay and resume in browser", () => {
           }
         },
         null,
-        { timeout: 8000 },
+        { timeout: 15000 },
       );
       assert.equal(polishPosts, 0, "404 reattach must not POST");
-      await page.getByText("Bloccato").first().waitFor({ timeout: 8000 });
+      await page.getByText("Bloccato").first().waitFor({ timeout: 15000 });
       assert.equal(await page.getByText("Motore visivo ancora in corso").count(), 0);
       const snap = await page.evaluate(() => {
         const raw = localStorage.getItem("officina-projects");

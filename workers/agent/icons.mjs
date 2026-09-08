@@ -8,10 +8,14 @@
 // width Fenix already uses for tab bars (1.8).
 import { LUCIDE } from "./icon-set.mjs";
 
+/** @type {Record<string, readonly string[]>} */
+const ICON_SET = LUCIDE;
+
 export const ICON_NAMES = Object.freeze(Object.keys(LUCIDE));
 export const ICON_COUNT = ICON_NAMES.length;
 
 /** Italian (and a few generic) words → Lucide vocabulary. Stems cover plural/gender. */
+/** @type {Record<string, readonly string[]>} */
 const ALIASES = {
   prenotazion: ["calendar-check", "book-marked"], calendar: ["calendar"], calendario: ["calendar"], agenda: ["calendar", "calendar-days"], appuntament: ["calendar-check", "calendar-clock"], data: ["calendar"], oggi: ["calendar"], giorno: ["calendar"], mese: ["calendar"],
   lista: ["list"], elenco: ["list"], righe: ["list"], attivit: ["list-checks", "list-todo"], todo: ["list-todo"],
@@ -56,6 +60,7 @@ const ALIASES = {
 };
 
 /** Multi-word Italian phrases resolved before tokenising. */
+/** @type {ReadonlyArray<readonly [string, string]>} */
 const PHRASES = [
   ["chiave inglese", "wrench"], ["carta di credito", "credit-card"], ["carta d'identita", "id-card"], ["carta identita", "id-card"],
   ["schermo intero", "maximize"], ["camera da letto", "bed"], ["attivita fisica", "activity"], ["punto vendita", "store"],
@@ -67,10 +72,12 @@ const PHRASES = [
 
 const STOP = new Set("il lo la i gli le un uno una di del della dei delle da dal dalla in nel nella su sul sulla per con e o a al alla che come da usa metti cambia sostituisci diventa scegli imposta icona icone tab della la un'icona voglio vorrei mi serve pittogramma simbolo the a an of to for with and or use put set icon icons an".split(" "));
 
+/** @param {unknown} s */
 function normalize(s) {
   return String(s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
 }
 
+/** @param {unknown} query */
 function tokens(query) {
   let q = normalize(query);
   for (const [phrase, name] of PHRASES) q = q.split(phrase).join(` ${name} `);
@@ -78,8 +85,10 @@ function tokens(query) {
 }
 
 /** Words derived from one token: itself and Italian aliases whose stem prefixes it. */
+/** @param {string} token @param {Set<string>} preferred */
 function expand(token, preferred) {
   const out = new Set([token]);
+  /** @param {readonly string[]} names */
   const add = (names) => { names.forEach((n) => out.add(n)); if (preferred) preferred.add(names[0]); };
   if (ALIASES[token]) add(ALIASES[token]);
   for (const [stem, names] of Object.entries(ALIASES)) {
@@ -94,18 +103,22 @@ function expand(token, preferred) {
  * Ranks Lucide icons for a free-text query (Italian or English).
  * Returns [{ name, score }] best first, empty when nothing matches.
  */
+/** @param {unknown} query @param {{ limit?: number }} [options] */
 export function findIcons(query, { limit = 6 } = {}) {
+  /** @type {Set<string>} */
   const preferred = new Set();
   const words = [...new Set(tokens(query).flatMap((t) => expand(t, preferred)))];
   if (!words.length) return [];
+  /** @type {Map<string, number>} */
   const scores = new Map();
+  /** @param {string} name @param {number} n */
   const bump = (name, n) => scores.set(name, (scores.get(name) || 0) + n);
   for (const w of words) {
-    if (LUCIDE[w]) bump(w, preferred.has(w) ? 19 : 18); // exact name; first alias of a word wins ties
+    if (ICON_SET[w]) bump(w, preferred.has(w) ? 19 : 18); // exact name; first alias of a word wins ties
   }
   // "map pin" → map-pin outranks map and pin alone
   const joined = words.filter((w) => !w.includes("-")).join("-");
-  if (joined.includes("-") && LUCIDE[joined]) bump(joined, 18);
+  if (joined.includes("-") && ICON_SET[joined]) bump(joined, 18);
   for (const w of words) {
     if (w.length < 3 || w.includes("-")) continue;
     for (const name of ICON_NAMES) {
@@ -114,7 +127,7 @@ export function findIcons(query, { limit = 6 } = {}) {
       if (parts[0] === w) bump(name, 6 - Math.min(parts.length - 1, 3));
       else if (parts.includes(w)) bump(name, 3);
       else {
-        const t = LUCIDE[name][1];
+        const t = ICON_SET[name][1];
         if (t && (` ${t} `).includes(` ${w} `)) bump(name, 2);
       }
     }
@@ -126,14 +139,16 @@ export function findIcons(query, { limit = 6 } = {}) {
 }
 
 /** Best icon name for a query, or null. Requires a confident match (not a lone tag hit). */
+/** @param {unknown} query */
 export function iconForQuery(query) {
   const [best] = findIcons(query, { limit: 1 });
   return best && best.score >= 3 ? best.name : null;
 }
 
 /** Full <svg> for a Lucide icon, in the stroke grammar Fenix uses for UI chrome. */
+/** @param {string} name @param {{ size?: number, strokeWidth?: number, className?: string, label?: string }} [options] */
 export function iconSvg(name, { size = 24, strokeWidth = 1.8, className = "", label = "" } = {}) {
-  const entry = LUCIDE[name];
+  const entry = ICON_SET[name];
   if (!entry) return "";
   const cls = className ? ` class="${escapeAttr(className)}"` : "";
   const a11y = label ? ` role="img" aria-label="${escapeAttr(label)}"` : ' aria-hidden="true"';
@@ -141,15 +156,18 @@ export function iconSvg(name, { size = 24, strokeWidth = 1.8, className = "", la
 }
 
 /** Inline sprite: <symbol> per icon, use with <svg><use href="#i-calendar"/></svg>. */
+/** @param {readonly string[]} names @param {{ prefix?: string }} [options] */
 export function iconSprite(names, { prefix = "i-" } = {}) {
-  const symbols = [...new Set(names)].filter((n) => LUCIDE[n]).map((n) => `<symbol id="${prefix}${escapeAttr(n)}" viewBox="0 0 24 24">${LUCIDE[n][0]}</symbol>`);
+  const symbols = [...new Set(names)].filter((n) => ICON_SET[n]).map((n) => `<symbol id="${prefix}${escapeAttr(n)}" viewBox="0 0 24 24">${ICON_SET[n][0]}</symbol>`);
   return `<svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true">${symbols.join("")}</svg>`;
 }
 
+/** @param {string} name */
 export function hasIcon(name) {
-  return Boolean(LUCIDE[name]);
+  return Boolean(ICON_SET[name]);
 }
 
+/** @param {unknown} s */
 function escapeAttr(s) {
   return String(s).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
 }

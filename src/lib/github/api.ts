@@ -123,19 +123,19 @@ export async function mintInstallationToken(
   } catch {
     return { error: "GitHub non configurato.", status: 503 };
   }
-  const body: Record<string, unknown> = {};
-  if (scope.permissions && Object.keys(scope.permissions).length) body.permissions = scope.permissions;
-  if (scope.repositories?.length) body.repositories = scope.repositories;
+  const requestBody: Record<string, unknown> = {};
+  if (scope.permissions && Object.keys(scope.permissions).length) requestBody.permissions = scope.permissions;
+  if (scope.repositories?.length) requestBody.repositories = scope.repositories;
   const res = await ghFetch(`${GITHUB_API}/app/installations/${installationId}/access_tokens`, {
     method: "POST",
     headers: { ...authHeaders(jwt), "Content-Type": "application/json" },
-    body: JSON.stringify(body),
+    body: JSON.stringify(requestBody),
   });
-  const body = (await readJson(res)) as { token?: string } | null;
-  if (!res.ok || !body?.token || typeof body.token !== "string") {
-    return fail(res.status, "Installazione GitHub non raggiungibile.", JSON.stringify(body));
+  const responseBody = (await readJson(res)) as { token?: string } | null;
+  if (!res.ok || !responseBody?.token || typeof responseBody.token !== "string") {
+    return fail(res.status, "Installazione GitHub non raggiungibile.", JSON.stringify(responseBody));
   }
-  return body.token;
+  return responseBody.token;
 }
 
 /**

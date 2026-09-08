@@ -165,6 +165,7 @@ function abandonVisualJob(projectId: string, raw: string) {
 // `/__worker/build` is a Netlify Function (production); `/api/worker/build` is the
 // Nitro route used by `vite dev` / node preview. Both add the token server-side.
 const WORKER_BUILD_URLS = ["/__worker/build", "/api/worker/build"];
+const WORKER_NOT_CONFIGURED = "Worker Fenix non configurato";
 
 async function delay(ms: number) {
   await new Promise((r) => {
@@ -396,6 +397,12 @@ async function consumeViaWorker(
       proxyAnswered = true;
       if (started.status !== 202) {
         lastErr = `Build HTTP ${started.status}`;
+        if (started.status === 503) {
+          const unavailable = await started.clone().json().catch(() => null) as { error?: unknown } | null;
+          if (typeof unavailable?.error === "string" && /worker non configurato/i.test(unavailable.error)) {
+            throw new Error(WORKER_NOT_CONFIGURED);
+          }
+        }
         if (isComposedCreation(body)) throw new Error(lastErr);
         continue;
       }
@@ -966,9 +973,15 @@ export async function runBuild(projectId: string, instruction?: string) {
       const msg = first instanceof Error ? first.message : "";
       if (msg === STALE_JOB) throw first;
       if (msg === JOB_STILL_RUNNING) throw first;
+      if (msg === JOB_GONE) throw first;
+      // A missing server token is rejected before a worker job is dispatched,
+      // so the existing server-side stream is a safe (non-duplicating) fallback.
+      if (msg === WORKER_NOT_CONFIGURED) {
+        streamed = await consumeStream(projectId, payload, true, epoch);
+      }
       // A rejected/uncertain composed worker build must not become a second
       // POST or a full-document stream rewrite. Keep the compose seed instead.
-      if (composedCreate) {
+      else if (composedCreate) {
         persistComposedSeed(projectId, payload, kind);
         const latest = useProjectStore.getState().getProject(projectId);
         if (latest?.html) {
