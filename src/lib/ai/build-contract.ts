@@ -45,6 +45,20 @@ export const CONTRACT_REPAIR_MAX = 2;
 export const BUILD_ROLES = ["planner", "visual", "builder", "critic", "repairer"] as const;
 export type BuildRole = (typeof BUILD_ROLES)[number];
 
+/** Deterministic guidance for repairing JavaScript that compiled but crashed in the preview. */
+export function bootRepairInstruction(reason: string): string {
+  return [
+    `ERRORE DI AVVIO: ${reason}`,
+    "Correggi la causa esatta, non limitarti a cambiare stile o markup.",
+    "Prima di .map/.filter/.find/.reduce verifica sempre Array.isArray. Per una risposta Fenix usa: const rows = Array.isArray(raw) ? raw : Array.isArray(raw?.items) ? raw.items : []. Per una proprieta usa: const services = Array.isArray(state?.services) ? state.services : [].",
+    "Non usare .orders su stato nullo. Sito/landing: niente scaffold gestionale (orders, inventario, Nuovo pezzo).",
+    "Stato iniziale = oggetto vuoto, mai null. META+HTML completo.",
+    "Non assegnare .innerHTML o .textContent a querySelector/getElementById senza if (el).",
+    "Non patchare template t-home/t-new o tab se quei nodi non esistono nel DOM.",
+    "Se Fenix.data usa un nome con spazi/slash/accenti, rinominalo in un token [A-Za-z0-9._-]{1,80} (es. capi).",
+  ].join("\n");
+}
+
 export const ROLE_LABEL: Record<BuildRole, string> = {
   planner: "Piano",
   visual: "Direzione visiva",

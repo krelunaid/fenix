@@ -19,6 +19,7 @@ import {
   roleReceipt,
   contractInstruction,
   contractAllowsReady,
+  bootRepairInstruction,
 } from "./build-contract.ts";
 import { loadContractFixtures } from "./contract-fixtures.ts";
 import { FENIX_MODEL } from "./model.ts";
@@ -35,6 +36,17 @@ const here = dirname(fileURLToPath(import.meta.url));
 const ARTIFACT = join(here, "fixtures/contract-eval.json");
 
 describe("BuildContract planner (deterministic, no LLM)", () => {
+  it("gives collection-shape crashes an explicit array-normalization repair", () => {
+    const instruction = bootRepairInstruction(
+      "services.map is not a function ('services.map' is undefined)",
+    );
+    assert.match(instruction, /services\.map is not a function/);
+    assert.match(instruction, /Array\.isArray\(raw\)/);
+    assert.match(instruction, /raw\?\.items/);
+    assert.match(instruction, /Array\.isArray\(state\?\.services\)/);
+    assert.match(instruction, /Correggi la causa esatta/);
+  });
+
   it("locks kind from FORMATO and returns a typed v1 contract", () => {
     const dash = planContract(`${formatPrefix("dashboard")}Argilla Viva magazzino e ordini.`);
     assert.equal(dash.version, BUILD_CONTRACT_VERSION);

@@ -49,6 +49,7 @@ import {
 } from "../../../workers/visual/visual-style-keep.mjs";
 import { runIconRevisionFlow } from "@/lib/projects/icon-build";
 import { reviewDraftForBuildLoop } from "../fenix-knowledge";
+import { bootRepairInstruction } from "./build-contract";
 
 const inflight = new Set<string>();
 /** A successful polishDraft for this project in the current runBuild. Blocks a second POST. */
@@ -799,14 +800,7 @@ async function repairBootFailures(projectId: string, prompt: string, epoch: numb
         {
           prompt,
           html: current.html,
-          instruction: [
-            `ERRORE DI AVVIO: ${reason}`,
-            "Non usare .orders su stato nullo. Sito/landing: niente scaffold gestionale (orders, inventario, Nuovo pezzo).",
-            "Stato iniziale = oggetto vuoto, mai null. META+HTML completo.",
-            "Non assegnare .innerHTML o .textContent a querySelector/getElementById senza if (el).",
-            "Non patchare template t-home/t-new o tab se quei nodi non esistono nel DOM.",
-            "Se Fenix.data usa un nome con spazi/slash/accenti, rinominalo in un token [A-Za-z0-9._-]{1,80} (es. capi).",
-          ].join("\n"),
+          instruction: bootRepairInstruction(reason),
         },
         true,
         epoch,
