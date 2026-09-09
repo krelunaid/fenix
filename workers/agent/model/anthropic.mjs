@@ -15,6 +15,7 @@ export function anthropicEndpoint({ url, baseUrl } = {}) {
 
 // USD per million tokens; used only for the cost estimate shown to the user.
 const PRICES = {
+  "grok-build-0.1": { input: 1, output: 2, cacheRead: 0.2, cacheWrite: 0 },
   default: { input: 3, output: 15, cacheRead: 0.3, cacheWrite: 3.75 },
 };
 

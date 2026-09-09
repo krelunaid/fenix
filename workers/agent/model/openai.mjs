@@ -5,7 +5,7 @@ import { estimateCostUsd, mergeUsage } from "./anthropic.mjs";
 
 export const PROVIDERS = {
   openai: { url: "https://api.openai.com/v1/chat/completions", model: "gpt-4.1" },
-  xai: { url: "https://api.x.ai/v1/chat/completions", model: "grok-4" },
+  xai: { url: "https://api.x.ai/v1/chat/completions", model: "grok-build-0.1" },
 };
 
 export class OpenAICompatibleModel {
@@ -97,10 +97,11 @@ export function fromOpenAIResponse(json) {
     content.push({ type: "tool_use", id: call.id || `call_${Math.random().toString(36).slice(2)}`, name: call.function?.name, input });
   }
   const u = json.usage || {};
+  const cached = u.prompt_tokens_details?.cached_tokens || 0;
   const usage = {
-    input_tokens: u.prompt_tokens || 0,
+    input_tokens: Math.max(0, (u.prompt_tokens || 0) - cached),
     output_tokens: u.completion_tokens || 0,
-    cache_read_input_tokens: u.prompt_tokens_details?.cached_tokens || 0,
+    cache_read_input_tokens: cached,
   };
   const stop = choice.finish_reason === "tool_calls" || content.some((b) => b.type === "tool_use") ? "tool_use" : choice.finish_reason === "length" ? "max_tokens" : "end_turn";
   return { content, stop_reason: stop, usage };

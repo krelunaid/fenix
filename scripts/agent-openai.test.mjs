@@ -20,6 +20,9 @@ test("messages translate both ways: tool_use ↔ tool_calls, tool_result ↔ too
   assert.equal(back.stop_reason, "tool_use");
   assert.deepEqual(back.content[0], { type: "tool_use", id: "c9", name: "run_checks", input: {} });
   assert.equal(back.usage.input_tokens, 5);
+  const cached = fromOpenAIResponse({ choices: [{ finish_reason: "stop", message: { content: "ok" } }], usage: { prompt_tokens: 10, completion_tokens: 2, prompt_tokens_details: { cached_tokens: 4 } } });
+  assert.equal(cached.usage.input_tokens, 6);
+  assert.equal(cached.usage.cache_read_input_tokens, 4);
   const text = fromOpenAIResponse({ choices: [{ finish_reason: "stop", message: { content: "fatto" } }] });
   assert.equal(text.stop_reason, "end_turn");
   assert.equal(text.content[0].text, "fatto");
@@ -39,7 +42,7 @@ test("request shape carries function tools; xai preset; retry on 429", async () 
   assert.equal(r.content[0].text, "ciao");
   assert.equal(seen.length, 2);
   assert.equal(seen[1].url, "https://api.x.ai/v1/chat/completions");
-  assert.equal(seen[1].body.model, "grok-4");
+  assert.equal(seen[1].body.model, "grok-build-0.1");
   assert.equal(seen[1].body.tools[0].type, "function");
   assert.equal(seen[1].body.tools.length, TOOLS.length);
   assert.equal(seen[1].body.messages[0].role, "system");

@@ -14,8 +14,17 @@ export const TOOLS = [
   },
   {
     name: "read_file",
-    description: "Legge un file di testo del progetto. Percorsi relativi alla radice, es. public/index.html.",
-    input_schema: { type: "object", properties: { path: { type: "string" } }, required: ["path"], additionalProperties: false },
+    description: "Legge un file di testo del progetto. Per file lunghi usa start_line/end_line invece di shell grep/sed/cat. Percorsi relativi alla radice, es. public/index.html.",
+    input_schema: {
+      type: "object",
+      properties: {
+        path: { type: "string" },
+        start_line: { type: "integer", minimum: 1, description: "Prima riga inclusa (opzionale)." },
+        end_line: { type: "integer", minimum: 1, description: "Ultima riga inclusa (opzionale, massimo 400 righe per lettura)." },
+      },
+      required: ["path"],
+      additionalProperties: false,
+    },
   },
   {
     name: "write_file",
@@ -34,7 +43,7 @@ export const TOOLS = [
   },
   {
     name: "run",
-    description: `Esegue un comando shell nella radice del progetto (Node 22 disponibile, nessun accesso a npm/rete). Timeout massimo ${LIMITS.maxCommandSeconds}s. Output troncato.`,
+    description: `Esegue test o script Node nella radice del progetto (Node 22 disponibile, nessun accesso a npm/rete). Non usarlo per leggere/cercare file: usa read_file con intervallo di righe. Timeout massimo ${LIMITS.maxCommandSeconds}s. Output troncato.`,
     input_schema: { type: "object", properties: { command: { type: "string" }, timeout_s: { type: "integer", minimum: 1, maximum: LIMITS.maxCommandSeconds } }, required: ["command"], additionalProperties: false },
   },
   {
@@ -98,10 +107,18 @@ export function createToolExecutor(sandbox, { log = () => {}, browserChecks = tr
       if (files.length === 0) return "Progetto vuoto.";
       return files.map((f) => `${f.path} (${f.bytes} B)`).join("\n");
     },
-    async read_file({ path }) {
+    async read_file({ path, start_line, end_line }) {
       const p = canonicalizePath(path);
       const text = await sandbox.readFile(p);
-      return text.length > LIMITS.maxToolOutputChars * 3 ? `${text.slice(0, LIMITS.maxToolOutputChars * 3)}\n… [file troncato a ${LIMITS.maxToolOutputChars * 3} caratteri; usa edit_file con contesto preciso]` : text;
+      if (start_line !== undefined || end_line !== undefined) {
+        const lines = text.split("\n");
+        const start = Math.max(1, Number(start_line) || 1);
+        const end = Math.min(lines.length, Math.max(start, Number(end_line) || start + 399), start + 399);
+        return `Righe ${start}-${end} di ${lines.length}:\n${lines.slice(start - 1, end).join("\n")}`;
+      }
+      return text.length > LIMITS.maxToolOutputChars * 3
+        ? `${text.slice(0, LIMITS.maxToolOutputChars * 3)}\n… [file troncato a ${LIMITS.maxToolOutputChars * 3} caratteri; usa read_file con start_line/end_line]`
+        : text;
     },
     async write_file({ path, content }) {
       const p = canonicalizePath(path);
@@ -137,6 +154,9 @@ export function createToolExecutor(sandbox, { log = () => {}, browserChecks = tr
       if (typeof command !== "string" || !command.trim()) throw new Error("command vuoto.");
       if (/\b(npm|npx|pnpm|yarn|curl|wget|git)\b/.test(command)) {
         return "Comando non consentito nel sandbox (niente npm/rete/git). Il progetto non deve avere dipendenze.";
+      }
+      if (/\b(grep|rg|sed|awk|head|tail|cat|wc|find)\b/.test(command)) {
+        return "Non usare la shell per leggere o cercare file: usa list_files e read_file con start_line/end_line, poi modifica con edit_file.";
       }
       state.commands += 1;
       const r = await sandbox.exec({ cmd: command, timeoutMs: Math.min(LIMITS.maxCommandSeconds, timeout_s || 60) * 1000 });

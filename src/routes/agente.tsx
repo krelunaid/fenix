@@ -278,7 +278,7 @@ function AgentePage() {
 
         <details className="mt-3 rounded-2xl border border-border bg-card px-4 py-3 text-sm" open={byokOpen} onToggle={(e) => setByokOpen((e.currentTarget as HTMLDetailsElement).open)}>
           <summary className="cursor-pointer select-none text-muted-foreground">
-            Modello: {byok ? <strong className="text-foreground">{byok.provider}{byok.model ? ` · ${byok.model}` : ""} (chiave tua)</strong> : <strong className="text-foreground">Claude gestito da Fenix</strong>} — chiave personale opzionale
+            Modello: {byok ? <strong className="text-foreground">{byok.provider}{byok.model ? ` · ${byok.model}` : ""} (chiave tua)</strong> : <strong className="text-foreground">Grok Build gestito da Fenix</strong>} — chiave personale opzionale
           </summary>
           <form
             className="mt-3 grid gap-2 sm:grid-cols-[140px_1fr_180px_auto]"
