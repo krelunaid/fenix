@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { AnthropicModel, estimateCostUsd, mergeUsage } from "../workers/agent/model/anthropic.mjs";
 import { DockerSandbox, shellQuote } from "../workers/agent/sandbox/docker.mjs";
+import { seedUiKit } from "../workers/agent/ui-kit.mjs";
 import { GOLDEN_FILES } from "./fixtures/agent-golden-project.mjs";
 
 test("Anthropic client: request shape, tool_use passthrough, retry on 429 with Retry-After", async () => {
@@ -73,6 +74,7 @@ test("real Docker isolation and project runtime", { skip: process.env.FENIX_TEST
   const sb = await DockerSandbox.create();
   try {
     for(const f of GOLDEN_FILES)await sb.writeFile(f.path,f.content);
+    await seedUiKit(sb);
     assert.match(await sb.readFile("server.mjs"),/node:sqlite/);
     const result=await sb.exec({cmd:"node -e \"fetch('https://example.com',{signal:AbortSignal.timeout(1500)}).then(()=>process.exit(1)).catch(()=>process.exit(0))\"",timeoutMs:4000});
     assert.equal(result.code,0);
