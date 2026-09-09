@@ -1,5 +1,8 @@
 [build]
-  command = "rm -rf dist && node scripts/with-app-env.mjs ./node_modules/.bin/vite build && node scripts/copy-pglite-assets.mjs && node scripts/sync-static-publish.mjs && node scripts/migrate.mjs"
+  # Force the Netlify Nitro preset even for a local `netlify deploy --build`.
+  # Clear both possible Vite/Nitro outputs so a stale node-preset bundle can
+  # never be uploaded as a static-only deploy (which would make every route 404).
+  command = "rm -rf dist .output .netlify/functions-internal && NETLIFY=true node scripts/with-app-env.mjs ./node_modules/.bin/vite build && node scripts/copy-pglite-assets.mjs && node scripts/sync-static-publish.mjs && node scripts/migrate.mjs"
   publish = ".output/public"
 
 [build.environment]

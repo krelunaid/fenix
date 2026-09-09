@@ -809,6 +809,8 @@ describe("focus-visible and worker model", () => {
     const netlifyToml = readFileSync(join(root, "netlify.toml"), "utf8");
     assert.match(netlifyToml, /sync-static-publish\.mjs/);
     assert.match(netlifyToml, /publish = "\.output\/public"/);
+    assert.match(netlifyToml, /rm -rf dist \.output \.netlify\/functions-internal/);
+    assert.match(netlifyToml, /NETLIFY=true node scripts\/with-app-env\.mjs/);
     assert.doesNotMatch(netlifyToml, /publish = "dist"/);
     const pkgJson = readFileSync(join(root, "package.json"), "utf8");
     assert.match(pkgJson, /sync-static-publish\.mjs/);
