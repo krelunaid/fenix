@@ -46,6 +46,15 @@ describe("isFieldProductBrief water detector", () => {
     assert.equal(isFieldProductBrief(perfume), false);
     assert.equal(isFieldProductBrief(agenda), false);
     assert.equal(isFieldProductBrief("Un diario per escursioni e sentieri, stile iPhone."), false);
+    // Staff words inside a service business must not summon the water/field seed (Aura, 2026-09-09).
+    assert.equal(
+      isFieldProductBrief(
+        "App mobile premium per un centro estetico chiamato Aura: accesso per amministratore, dipendente e cliente; schede clienti con storico; i dipendenti vedono solo gli appuntamenti assegnati; dashboard con incassi.",
+      ),
+      false,
+    );
+    assert.equal(isFieldProductBrief("Gestione dipendenti di un ufficio: ferie, permessi e presenze"), false);
+    assert.equal(isFieldProductBrief("Squadra operativa di tecnici in campo con turni e interventi"), true);
   });
 
   it("uses a water drop mark instead of the generic briefcase", () => {

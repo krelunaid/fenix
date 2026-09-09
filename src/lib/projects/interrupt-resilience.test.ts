@@ -79,7 +79,9 @@ describe("interrupted generation resilience", () => {
   it("routes composed phone creates to the worker and seeds HTML before the POST", () => {
     const runBuild = readFileSync(join(root, "lib/ai/run-build.ts"), "utf8");
     assert.match(runBuild, /function persistComposedSeed/);
-    assert.match(runBuild, /WORKER_START_MS = 30_000/);
+    assert.match(runBuild, /WORKER_START_MS = 75_000/);
+    assert.match(runBuild, /Motore: worker visivo \(Railway\)/);
+    assert.match(runBuild, /function describeTimeout/);
     assert.doesNotMatch(runBuild, /AbortSignal\.timeout\(STREAM_WAIT_MS\)/, "the edge stream must use the idle watchdog, not a fixed budget");
     assert.match(runBuild, /createStreamWatchdog\(\{ idleMs: STREAM_IDLE_MS, maxMs: STREAM_MAX_MS \}\)/);
     assert.match(runBuild, /Riparazione interrotta/);

@@ -87,11 +87,16 @@ export function isFieldProductBrief(brief: string): boolean {
   if (isBarberBrief(brief) || isAccountantBrief(brief) || isLibraryBrief(brief)) return false;
   const t = String(brief || "");
   if (/gestione\s+profum|lookbook|ristoraz|agenda|parrucchier|commercialist/i.test(t)) return false;
-  return (
-    /consegne?\b|dipendenti|forza\s*lavoro|gestione\s+dipendent|squadra\s+operativ/i.test(t) ||
-    (/\bstorico\b/i.test(t) && /\bstatistiche\b/i.test(t)) ||
-    hasWaterVesselCue(t)
-  );
+  // A named service business is never a field/water product, whatever staff words it uses
+  // ("i dipendenti vedono solo i propri appuntamenti" in a beauty-centre brief used to
+  // trigger the water-delivery seed and its drop icon).
+  if (/estetic|\bsalon[ei]\b|\bspa\b|benesser|trattament|massagg|unghie|manicure|dentist|clinic|medic|fisioterap|palestra|fitness|\byoga\b|hotel|\bb&b\b|scuola|asilo|\bcorsi\b|avvocat|studio\s+legale|immobiliar/i.test(t)) return false;
+  if (hasWaterVesselCue(t)) return true;
+  const staff = /dipendenti|forza\s*lavoro|gestione\s+dipendent|squadra\s+operativ|operator[ei]\s+in\s+campo/i.test(t);
+  const field = /consegne?\b|\bin\s+campo\b|cantier|furgon|automez|\bgiri?\b|\bturni\b|tecnic[oi]\b|manutenz|intervent[oi]\b|sopralluog|\bacqua\b|serbatoio/i.test(t);
+  if (/consegne?\b/i.test(t)) return true;
+  if (staff && field) return true;
+  return field && /\bstorico\b/i.test(t) && /\bstatistiche\b/i.test(t);
 }
 
 /**

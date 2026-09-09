@@ -43,7 +43,7 @@ describe("focus-visible and worker model", () => {
     assert.match(src, /fetched\.state === "missing"/);
     assert.match(src, /if \(refund\) refundBuildCredit\(projectId, refund\)/);
     assert.match(src, /charged = !finishPolish/);
-    assert.match(src, /WORKER_START_MS = 30_000/);
+    assert.match(src, /WORKER_START_MS = 75_000/);
     assert.match(src, /persistComposedSeed/);
     assert.match(src, /isIOS\(\) \|\| desk \|\| composedCreate/);
     assert.match(src, /TIMEOUT_ERROR/);

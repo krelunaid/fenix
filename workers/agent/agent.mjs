@@ -3,6 +3,7 @@
 // server or CLI can stream progress.
 import { TOOLS, createToolExecutor } from "./tools.mjs";
 import { systemPrompt, userBrief, editBrief } from "./prompts.mjs";
+import { seedUiKit } from "./ui-kit.mjs";
 import { mergeUsage, estimateCostUsd } from "./model/anthropic.mjs";
 import { isTextPath, LIMITS } from "./contract.mjs";
 
@@ -33,7 +34,9 @@ export async function runAgent({ model, sandbox, brief, kind = "app", name, extr
   const emit = (type, data = {}) => onEvent({ type, at: Date.now() - startedAt, ...data });
   const log = (s) => emit("log", { text: s });
 
-  const executor = createToolExecutor(sandbox, { log, browserChecks });
+  const kit = await seedUiKit(sandbox);
+  if (kit.seeded || kit.updated) log(`Fenix UI kit ${kit.updated ? "aggiornato" : "pronto"} in public/fenix-ui.css`);
+  const executor = createToolExecutor(sandbox, { log, browserChecks, uiKit: true });
   const system = systemPrompt({ kind, maxSteps: cfg.maxSteps });
   const messages = [{ role: "user", content: instruction ? editBrief({ instruction, context }) : userBrief({ brief, kind, name, extras }) }];
   if (instruction) {

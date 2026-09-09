@@ -23,7 +23,8 @@ test("agent builds the golden project, passes checks and finishes", { timeout: 1
     assert.ok(result.ok);
     assert.equal(result.summary, "Agenda barbiere con API e test.");
     assert.ok(result.checks.ok);
-    assert.equal(result.files.length, GOLDEN_FILES.length);
+    assert.equal(result.files.length, GOLDEN_FILES.length + 1, "golden files + the seeded Fenix UI kit");
+    assert.ok(result.files.some((f) => f.path === "public/fenix-ui.css"));
     assert.ok(result.files.every((f) => typeof f.content === "string"));
     assert.equal(result.stats.modelCalls, 4);
     assert.ok(result.stats.costUsd > 0);
