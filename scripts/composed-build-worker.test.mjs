@@ -90,7 +90,7 @@ test("controller wiring keeps composed worker failures out of automatic full-doc
   const worker = controller.slice(controller.indexOf("async function consumeViaWorker("),controller.indexOf("async function consumeStream("));
   assert.match(worker,/if \(isComposedCreation\(body\)\) throw err/);
   assert.match(worker,/if \(isComposedCreation\(body\)\) throw new Error\(lastErr\)/);
-  assert.match(controller,/WORKER_START_MS = 30_000/);
+  assert.match(controller,/WORKER_START_MS = 75_000/);
   assert.match(controller,/AbortSignal\.timeout\(WORKER_START_MS\)/);
   assert.doesNotMatch(controller,/AbortSignal\.timeout\(8000\)/);
   assert.match(controller,/composedCreate\s*=\s*isComposedCreation\(payload\)/);
