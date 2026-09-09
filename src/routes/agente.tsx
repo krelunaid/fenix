@@ -278,7 +278,7 @@ function AgentePage() {
 
         <details className="mt-3 rounded-2xl border border-border bg-card px-4 py-3 text-sm" open={byokOpen} onToggle={(e) => setByokOpen((e.currentTarget as HTMLDetailsElement).open)}>
           <summary className="cursor-pointer select-none text-muted-foreground">
-            Modello: {byok ? <strong className="text-foreground">{byok.provider}{byok.model ? ` · ${byok.model}` : ""} (chiave tua)</strong> : <strong className="text-foreground">Claude del server</strong>} — usa la tua chiave (BYOK)
+            Modello: {byok ? <strong className="text-foreground">{byok.provider}{byok.model ? ` · ${byok.model}` : ""} (chiave tua)</strong> : <strong className="text-foreground">Claude gestito da Fenix</strong>} — chiave personale opzionale
           </summary>
           <form
             className="mt-3 grid gap-2 sm:grid-cols-[140px_1fr_180px_auto]"
@@ -305,7 +305,7 @@ function AgentePage() {
             <input id="byok-model" name="model" defaultValue={byok?.model || ""} placeholder="modello (opzionale)" className="h-11 rounded-xl border border-border bg-background px-3 font-mono text-base" />
             <Button type="submit" variant="secondary" className="h-11 rounded-xl px-4">Salva</Button>
           </form>
-          <p className="mt-2 text-xs text-muted-foreground">La chiave passa solo al server dell'agente per la singola build: non viene salvata né registrata. Con la tua chiave paghi tu il modello; i crediti Fenix restano per il servizio.</p>
+          <p className="mt-2 text-xs text-muted-foreground">Fenix funziona già con il modello incluso. Se preferisci un provider tuo, la chiave passa al server solo per la singola build e non viene salvata né registrata.</p>
         </details>
 
         {job ? (
