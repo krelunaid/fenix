@@ -12,6 +12,7 @@ export class NetlifyRelayModel {
     temperature = 0.2,
     fetchImpl = fetch,
     pollMs = 1000,
+    maxRetries = 4,
   } = {}) {
     if (!baseUrl) throw new Error("Manca FENIX_MODEL_RELAY_URL sul server.");
     if (!token || token.length < 16) throw new Error("Manca AGENT_TOKEN per il relay del modello.");
@@ -24,42 +25,78 @@ export class NetlifyRelayModel {
     this.temperature = temperature;
     this.fetch = fetchImpl;
     this.pollMs = pollMs;
+    this.maxRetries = maxRetries;
   }
 
   async complete({ system, messages, tools, signal }) {
-    const id = randomUUID();
     const headers = { authorization: `Bearer ${this.token}`, "content-type": "application/json" };
-    const queued = await this.fetch(this.baseUrl, {
-      method: "POST",
-      headers,
-      body: JSON.stringify({
-        id,
-        request: {
-          model: this.model,
-          max_tokens: this.maxTokens,
-          temperature: this.temperature,
-          system: [{ type: "text", text: system, cache_control: { type: "ephemeral" } }],
-          tools,
-          messages,
-        },
-      }),
-      signal,
-    });
-    if (queued.status !== 202 && !queued.ok) throw modelError("Relay Netlify", queued, await queued.text().catch(() => ""));
+    const request = {
+      model: this.model,
+      max_tokens: this.maxTokens,
+      temperature: this.temperature,
+      system: [{ type: "text", text: system, cache_control: { type: "ephemeral" } }],
+      tools,
+      messages,
+    };
 
-    for (;;) {
-      await wait(this.pollMs, signal);
-      const res = await this.fetch(`${this.baseUrl}/${id}`, { method: "GET", headers: { authorization: `Bearer ${this.token}` }, signal });
-      if (res.status === 202) continue;
-      const text = await res.text().catch(() => "");
-      if (!res.ok) throw modelError("Relay Netlify", res, text);
-      let payload;
-      try { payload = JSON.parse(text); } catch { throw new Error("Relay Netlify: risposta non JSON."); }
-      const reply = payload?.response;
-      if (!reply || !Array.isArray(reply.content)) throw new Error("Relay Netlify: risposta del modello incompleta.");
-      return { content: reply.content, stop_reason: reply.stop_reason || "end_turn", usage: reply.usage || {} };
+    for (let attempt = 1; ; attempt += 1) {
+      const id = randomUUID();
+      let queued;
+      try {
+        queued = await this.fetch(this.baseUrl, {
+          method: "POST",
+          headers,
+          body: JSON.stringify({ id, request }),
+          signal,
+        });
+      } catch (err) {
+        if (attempt > this.maxRetries || signal?.aborted) throw err;
+        await wait(relayBackoff(attempt), signal);
+        continue;
+      }
+      if (queued.status !== 202 && !queued.ok) {
+        const text = await queued.text().catch(() => "");
+        const err = modelError("Relay Netlify", queued, text);
+        if (attempt > this.maxRetries || !retryableRelayError(queued.status, text) || signal?.aborted) throw err;
+        await wait(relayBackoff(attempt), signal);
+        continue;
+      }
+
+      for (;;) {
+        await wait(this.pollMs, signal);
+        const res = await this.fetch(`${this.baseUrl}/${id}`, { method: "GET", headers: { authorization: `Bearer ${this.token}` }, signal });
+        if (res.status === 202) continue;
+        const text = await res.text().catch(() => "");
+        if (!res.ok) {
+          const err = modelError("Relay Netlify", res, text);
+          if (attempt > this.maxRetries || !retryableRelayError(res.status, text) || signal?.aborted) throw err;
+          await wait(relayBackoff(attempt), signal);
+          break;
+        }
+        let payload;
+        try { payload = JSON.parse(text); } catch { throw new Error("Relay Netlify: risposta non JSON."); }
+        const reply = payload?.response;
+        if (!reply || !Array.isArray(reply.content)) throw new Error("Relay Netlify: risposta del modello incompleta.");
+        return { content: reply.content, stop_reason: reply.stop_reason || "end_turn", usage: reply.usage || {} };
+      }
     }
   }
+}
+
+function retryableRelayError(status, text) {
+  if (status >= 500 && status !== 501) return true;
+  try {
+    const payload = JSON.parse(text);
+    const providerStatus = Number(payload?.providerStatus || 0);
+    if (providerStatus === 429 || providerStatus === 529 || providerStatus >= 500) return true;
+    return /fetch failed|timeout|timed out|overload|temporar|econn|network/i.test(String(payload?.error || ""));
+  } catch {
+    return /fetch failed|timeout|timed out|overload|temporar|econn|network/i.test(text);
+  }
+}
+
+function relayBackoff(attempt) {
+  return Math.min(20_000, 2000 * (2 ** (attempt - 1)));
 }
 
 function modelError(prefix, response, text) {

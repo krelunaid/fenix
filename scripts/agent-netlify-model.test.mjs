@@ -131,3 +131,23 @@ test("VPS relay client queues then polls without exposing a provider key", async
   assert.equal(queuedBody.request.system[0].cache_control.type, "ephemeral");
   assert.equal(JSON.stringify(queuedBody).includes("gateway-key"), false);
 });
+
+test("VPS relay client opens a fresh background invocation after a relay failure", async () => {
+  let posts = 0;
+  let activeAttempt = 0;
+  const fetchImpl = async (_url, init) => {
+    if (init.method === "POST") {
+      posts += 1;
+      activeAttempt = posts;
+      return Response.json({ accepted: true }, { status: 202 });
+    }
+    if (activeAttempt === 1) {
+      return Response.json({ status: "error", error: "fetch failed" }, { status: 502 });
+    }
+    return Response.json({ status: "ok", response: { content: [{ type: "text", text: "nuova funzione ok" }], stop_reason: "end_turn", usage: {} } });
+  };
+  const model = new NetlifyRelayModel({ baseUrl: "https://fenix.example/api/agent-model", token: TOKEN, fetchImpl, pollMs: 1, maxRetries: 2 });
+  const result = await model.complete({ system: "S", messages: [], tools: [] });
+  assert.equal(posts, 2);
+  assert.equal(result.content[0].text, "nuova funzione ok");
+});
