@@ -83,6 +83,34 @@ test("background relay retries temporary provider limits before succeeding", asy
   assert.equal((await status.json()).response.content[0].text, "ripreso");
 });
 
+test("background relay retries temporary network failures before succeeding", async () => {
+  const store = memoryStore();
+  let calls = 0;
+  const waits = [];
+  const req = new Request("https://x/api/agent-model", {
+    method: "POST",
+    headers: auth,
+    body: JSON.stringify({ id: ID, request: { system: "S", messages: [{ role: "user", content: "ciao" }], tools: [] } }),
+  });
+  const accepted = await handleAgentModelBackground(req, {
+    store,
+    env,
+    now: () => 42,
+    sleep: async (ms) => { waits.push(ms); },
+    fetchImpl: async () => {
+      calls += 1;
+      if (calls === 1) throw new TypeError("fetch failed");
+      return Response.json({ content: [{ type: "text", text: "rete ripresa" }], stop_reason: "end_turn", usage: {} });
+    },
+  });
+  assert.equal(accepted.status, 202);
+  assert.equal(calls, 2);
+  assert.deepEqual(waits, [2000]);
+  const status = await handleAgentModelStatus(new Request(`https://x/api/agent-model/${ID}`, { headers: auth }), ID, { store, env });
+  assert.equal(status.status, 200);
+  assert.equal((await status.json()).response.content[0].text, "rete ripresa");
+});
+
 test("VPS relay client queues then polls without exposing a provider key", async () => {
   let polls = 0;
   let queuedBody;

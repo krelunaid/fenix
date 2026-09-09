@@ -102,16 +102,28 @@ export async function handleAgentModelBackground(req: Request, deps: RelayDeps):
     for (let attempt = 1; attempt <= MODEL_MAX_ATTEMPTS; attempt += 1) {
       const remaining = deadline - now();
       if (remaining <= 0) throw new Error("Timeout complessivo del modello.");
-      const response = await fetchImpl(`${baseUrl}/v1/messages`, {
-        method: "POST",
-        headers: {
-          "content-type": "application/json",
-          "x-api-key": apiKey,
-          "anthropic-version": "2023-06-01",
-        },
-        body: JSON.stringify(modelRequest),
-        signal: AbortSignal.timeout(Math.max(1, remaining)),
-      });
+      let response: Response;
+      try {
+        response = await fetchImpl(`${baseUrl}/v1/messages`, {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            "x-api-key": apiKey,
+            "anthropic-version": "2023-06-01",
+          },
+          body: JSON.stringify(modelRequest),
+          signal: AbortSignal.timeout(Math.max(1, remaining)),
+        });
+      } catch (err) {
+        if (attempt < MODEL_MAX_ATTEMPTS) {
+          const retryAfter = retryDelayMs(null, attempt);
+          if (retryAfter < deadline - now()) {
+            await sleep(retryAfter);
+            continue;
+          }
+        }
+        throw err;
+      }
       const text = await response.text();
       if (response.ok) {
         let providerResponse: unknown;
