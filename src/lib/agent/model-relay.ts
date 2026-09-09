@@ -3,6 +3,8 @@ import { timingSafeEqual } from "node:crypto";
 export const AGENT_MODEL_RELAY_STORE = "fenix-agent-model-relay";
 const MAX_BODY_BYTES = 5 * 1024 * 1024;
 const MODEL_TIMEOUT_MS = 14 * 60 * 1000;
+const MODEL_MAX_ATTEMPTS = 5;
+const MODEL_MAX_RETRY_MS = 90 * 1000;
 const ID_RE = /^[a-f0-9]{8}-[a-f0-9-]{27,40}$/i;
 
 export type RelayStore = {
@@ -15,6 +17,7 @@ type RelayDeps = {
   env: (name: string) => string | undefined;
   fetchImpl?: typeof fetch;
   now?: () => number;
+  sleep?: (ms: number) => Promise<void>;
 };
 
 type RelayRecord = {
@@ -92,19 +95,46 @@ export async function handleAgentModelBackground(req: Request, deps: RelayDeps):
     max_tokens: Math.min(8192, Math.max(256, Number(body.request.max_tokens) || 8192)),
   };
 
+  const fetchImpl = deps.fetchImpl || fetch;
+  const sleep = deps.sleep || ((ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms)));
+  const deadline = now() + MODEL_TIMEOUT_MS;
   try {
-    const response = await (deps.fetchImpl || fetch)(`${baseUrl}/v1/messages`, {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
-      },
-      body: JSON.stringify(modelRequest),
-      signal: AbortSignal.timeout(MODEL_TIMEOUT_MS),
-    });
-    const text = await response.text();
-    if (!response.ok) {
+    for (let attempt = 1; attempt <= MODEL_MAX_ATTEMPTS; attempt += 1) {
+      const remaining = deadline - now();
+      if (remaining <= 0) throw new Error("Timeout complessivo del modello.");
+      const response = await fetchImpl(`${baseUrl}/v1/messages`, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "x-api-key": apiKey,
+          "anthropic-version": "2023-06-01",
+        },
+        body: JSON.stringify(modelRequest),
+        signal: AbortSignal.timeout(Math.max(1, remaining)),
+      });
+      const text = await response.text();
+      if (response.ok) {
+        let providerResponse: unknown;
+        try { providerResponse = JSON.parse(text); } catch { throw new Error("Risposta del modello non JSON."); }
+        await deps.store.setJSON(relayKey(body.id), {
+          id: body.id,
+          status: "ok",
+          createdAt,
+          finishedAt: now(),
+          response: providerResponse,
+        } satisfies RelayRecord);
+        return json(202, { accepted: true });
+      }
+
+      const retryable = response.status === 429 || response.status === 529 || response.status >= 500;
+      if (retryable && attempt < MODEL_MAX_ATTEMPTS) {
+        const retryAfter = retryDelayMs(response.headers.get("retry-after"), attempt);
+        if (retryAfter < deadline - now()) {
+          await sleep(retryAfter);
+          continue;
+        }
+      }
+
       const record = {
         id: body.id,
         status: "error",
@@ -116,16 +146,7 @@ export async function handleAgentModelBackground(req: Request, deps: RelayDeps):
       await deps.store.setJSON(relayKey(body.id), record);
       return json(202, { accepted: true });
     }
-    let providerResponse: unknown;
-    try { providerResponse = JSON.parse(text); } catch { throw new Error("Risposta del modello non JSON."); }
-    await deps.store.setJSON(relayKey(body.id), {
-      id: body.id,
-      status: "ok",
-      createdAt,
-      finishedAt: now(),
-      response: providerResponse,
-    } satisfies RelayRecord);
-    return json(202, { accepted: true });
+    throw new Error("Tentativi modello esauriti.");
   } catch (err) {
     await deps.store.setJSON(relayKey(body.id), {
       id: body.id,
@@ -136,6 +157,16 @@ export async function handleAgentModelBackground(req: Request, deps: RelayDeps):
     } satisfies RelayRecord);
     return json(202, { accepted: true });
   }
+}
+
+function retryDelayMs(value: string | null, attempt: number) {
+  if (value) {
+    const seconds = Number(value);
+    if (Number.isFinite(seconds) && seconds > 0) return Math.min(MODEL_MAX_RETRY_MS, Math.ceil(seconds * 1000));
+    const date = Date.parse(value);
+    if (Number.isFinite(date)) return Math.min(MODEL_MAX_RETRY_MS, Math.max(1000, date - Date.now()));
+  }
+  return Math.min(MODEL_MAX_RETRY_MS, 2000 * (2 ** (attempt - 1)));
 }
 
 /** Short polling endpoint used by the VPS after it queued a background call. */
