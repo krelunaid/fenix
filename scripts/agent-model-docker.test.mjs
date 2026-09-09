@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { mkdtemp, writeFile, chmod, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { AnthropicModel, estimateCostUsd, mergeUsage } from "../workers/agent/model/anthropic.mjs";
+import { AnthropicModel, anthropicEndpoint, estimateCostUsd, mergeUsage } from "../workers/agent/model/anthropic.mjs";
 import { DockerSandbox, shellQuote } from "../workers/agent/sandbox/docker.mjs";
 import { seedUiKit } from "../workers/agent/ui-kit.mjs";
 import { GOLDEN_FILES } from "./fixtures/agent-golden-project.mjs";
@@ -21,9 +21,10 @@ test("Anthropic client: request shape, tool_use passthrough, retry on 429 with R
       usage: { input_tokens: 10, output_tokens: 5, cache_read_input_tokens: 3 },
     });
   };
-  const model = new AnthropicModel({ apiKey: "k", model: "claude-test", fetchImpl });
+  const model = new AnthropicModel({ apiKey: "k", model: "claude-test", baseUrl: "https://gateway.example/anthropic/", fetchImpl });
   const reply = await model.complete({ system: "S", messages: [{ role: "user", content: "hi" }], tools: [{ name: "list_files" }] });
   assert.equal(seen.length, 2);
+  assert.equal(seen[1].url, "https://gateway.example/anthropic/v1/messages");
   const body = JSON.parse(seen[1].init.body);
   assert.equal(body.model, "claude-test");
   assert.equal(body.system[0].cache_control.type, "ephemeral");
@@ -34,6 +35,11 @@ test("Anthropic client: request shape, tool_use passthrough, retry on 429 with R
   assert.equal(total.input_tokens, 10);
   assert.ok(estimateCostUsd(total, "claude-test") > 0);
   assert.throws(() => new AnthropicModel({ apiKey: "" }), /ANTHROPIC_API_KEY/);
+});
+
+test("Anthropic client: direct URL wins over gateway base URL", () => {
+  assert.equal(anthropicEndpoint({ baseUrl: "https://gateway.example/anthropic/" }), "https://gateway.example/anthropic/v1/messages");
+  assert.equal(anthropicEndpoint({ url: "https://relay.example/messages/", baseUrl: "https://ignored.example" }), "https://relay.example/messages");
 });
 
 test("Anthropic client: non-retryable errors surface with status", async () => {

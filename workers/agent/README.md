@@ -64,7 +64,7 @@ An edit (`instruction` + `files`) may carry `parentJobId`. When the parent job i
 
 ## Going live (added 2026-09-07)
 
-Fresh Ubuntu VM: `bash workers/agent/deploy/install-vm.sh` (Docker, Node 22, sandbox image, systemd unit `fenix-agent`, `/etc/fenix-agent.env` with a generated `AGENT_TOKEN`, data in `/var/lib/fenix-agent`), fill `ANTHROPIC_API_KEY`, `systemctl restart fenix-agent`, put Caddy in front (`deploy/Caddyfile.example`, DNS `agent.kreluna.it`). On Netlify set `AGENT_URL=https://agent.kreluna.it` and the same `AGENT_TOKEN`. `workers/agent/Dockerfile` builds the host itself as a container (needs the host Docker socket).
+Fresh Ubuntu VM: `bash workers/agent/deploy/install-vm.sh` (Docker, Node 22, sandbox image, systemd unit `fenix-agent`, `/etc/fenix-agent.env` with a generated `AGENT_TOKEN`, data in `/var/lib/fenix-agent`), fill `ANTHROPIC_API_KEY` and, for a compatible gateway, `ANTHROPIC_BASE_URL`, then `systemctl restart fenix-agent`. Put Caddy in front (`deploy/Caddyfile.example`, DNS `agent.kreluna.it`). On Netlify set `AGENT_URL=https://agent.kreluna.it` and the same `AGENT_TOKEN`. Netlify AI Gateway credentials can be used server-side through its injected `ANTHROPIC_API_KEY`/`ANTHROPIC_BASE_URL`; never expose or commit them. `workers/agent/Dockerfile` builds the host itself as a container (needs the host Docker socket).
 
 ## Remaining work before enabling customer traffic
 

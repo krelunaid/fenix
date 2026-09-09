@@ -43,6 +43,8 @@ AGENT_BACKUP_KEEP=48
 AGENT_CONCURRENCY=2
 AGENT_PROVIDER=anthropic
 ANTHROPIC_API_KEY=
+# Opzionale: endpoint compatibile (per esempio Netlify AI Gateway).
+# ANTHROPIC_BASE_URL=
 # OPENAI_API_KEY=
 # XAI_API_KEY=
 FENIX_ORIGIN=https://fenix.kreluna.it

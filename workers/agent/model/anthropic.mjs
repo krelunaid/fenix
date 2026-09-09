@@ -7,6 +7,12 @@ export const ANTHROPIC_URL = "https://api.anthropic.com/v1/messages";
 export const DEFAULT_MODEL = process.env.ANTHROPIC_MODEL || "claude-sonnet-4-5";
 const VERSION = "2023-06-01";
 
+export function anthropicEndpoint({ url, baseUrl } = {}) {
+  if (url) return String(url).replace(/\/$/, "");
+  if (baseUrl) return `${String(baseUrl).replace(/\/$/, "")}/v1/messages`;
+  return ANTHROPIC_URL;
+}
+
 // USD per million tokens; used only for the cost estimate shown to the user.
 const PRICES = {
   default: { input: 3, output: 15, cacheRead: 0.3, cacheWrite: 3.75 },
@@ -29,10 +35,20 @@ export function mergeUsage(total, usage) {
 }
 
 export class AnthropicModel {
-  constructor({ apiKey = process.env.ANTHROPIC_API_KEY, model = DEFAULT_MODEL, maxTokens = 8192, temperature = 0.2, fetchImpl = fetch, maxRetries = 4 } = {}) {
+  constructor({
+    apiKey = process.env.ANTHROPIC_API_KEY,
+    model = DEFAULT_MODEL,
+    url = process.env.ANTHROPIC_URL,
+    baseUrl = process.env.ANTHROPIC_BASE_URL,
+    maxTokens = 8192,
+    temperature = 0.2,
+    fetchImpl = fetch,
+    maxRetries = 4,
+  } = {}) {
     if (!apiKey) throw new Error("Manca ANTHROPIC_API_KEY sul server.");
     this.apiKey = apiKey;
     this.model = model;
+    this.url = anthropicEndpoint({ url, baseUrl });
     this.maxTokens = maxTokens;
     this.temperature = temperature;
     this.fetch = fetchImpl;
@@ -57,7 +73,7 @@ export class AnthropicModel {
       attempt += 1;
       let res;
       try {
-        res = await this.fetch(ANTHROPIC_URL, {
+        res = await this.fetch(this.url, {
           method: "POST",
           headers: {
             "content-type": "application/json",
