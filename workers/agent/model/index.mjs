@@ -4,8 +4,9 @@
 // Per-request keys (user BYOK) are passed in memory only and never logged or stored.
 import { AnthropicModel } from "./anthropic.mjs";
 import { OpenAICompatibleModel, PROVIDERS } from "./openai.mjs";
+import { NetlifyRelayModel } from "./netlify.mjs";
 
-export const SUPPORTED_PROVIDERS = ["anthropic", ...Object.keys(PROVIDERS)];
+export const SUPPORTED_PROVIDERS = ["anthropic", ...Object.keys(PROVIDERS), "netlify"];
 
 export function createModel({ provider = process.env.AGENT_PROVIDER || "anthropic", apiKey, model, fetchImpl } = {}) {
   const p = String(provider).toLowerCase();
@@ -17,6 +18,10 @@ export function createModel({ provider = process.env.AGENT_PROVIDER || "anthropi
   }
   if (p === "xai") {
     return new OpenAICompatibleModel({ provider: "xai", apiKey: apiKey || process.env.XAI_API_KEY, model: model || process.env.XAI_MODEL, fetchImpl });
+  }
+  if (p === "netlify") {
+    if (apiKey) throw Object.assign(new Error("Il relay Netlify non accetta chiavi BYOK dal browser."), { status: 400 });
+    return new NetlifyRelayModel({ model: model || process.env.ANTHROPIC_MODEL || undefined, fetchImpl });
   }
   throw Object.assign(new Error(`Provider non supportato: ${provider}. Usa uno tra ${SUPPORTED_PROVIDERS.join(", ")}.`), { status: 400 });
 }
