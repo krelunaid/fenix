@@ -57,7 +57,8 @@ const polishedOnce = new Set<string>();
 export const WORKER_POLL_MAX = 30;
 const WORKER_POLL_MS = 2000;
 /** Railway cold start + 50–120k composed body. 8s aborted live barber creates. */
-export const WORKER_START_MS = 30_000;
+/** Time to get the 202 from the worker proxy. Railway cold starts can take 30-60 s, so one retry follows an abort. */
+export const WORKER_START_MS = 75_000;
 /** Client backstop past the 175s /api/build abort. */
 /**
  * The edge stream is guarded by a watchdog, not a fixed budget: it aborts after
@@ -138,6 +139,24 @@ function persistComposedSeed(
 function stillCurrent(projectId: string, epoch: number, jobId?: string): boolean {
   const live = useProjectStore.getState().getProject(projectId);
   return isCurrentBuild(live, epoch, jobId, readPersistedBuild(projectId));
+}
+
+/** One diagnostic line in the build log so a screenshot tells us which engine ran and why it stopped. */
+function noteEngine(projectId: string, line: string) {
+  const store = useProjectStore.getState();
+  const current = store.getProject(projectId);
+  const log = current?.buildLog ?? [];
+  if (log[log.length - 1] === line) return;
+  store.updateProject(projectId, { buildLog: [...log, line] });
+}
+
+/** Keep the generic timeout wording (the recover logic keys on it) but never hide the real cause. */
+function describeTimeout(message: string): string {
+  const detail = String(message || "").replace(/\s+/g, " ").trim();
+  if (!detail || detail === TIMEOUT_ERROR) return TIMEOUT_ERROR;
+  if (detail.startsWith("Timeout di generazione")) return detail.slice(0, 220);
+  const cleaned = detail.replace(/^(TimeoutError|AbortError|Error):\s*/i, "").replace(/\.$/, "");
+  return `${TIMEOUT_ERROR} (${cleaned.slice(0, 160)})`;
 }
 
 function abandonVisualJob(projectId: string, raw: string) {
@@ -385,7 +404,7 @@ async function consumeViaWorker(
   for (const base of bases) {
     if (proxyAnswered) break;
     try {
-      const started = await fetch(base, {
+      const post = () => fetch(base, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -394,6 +413,16 @@ async function consumeViaWorker(
         body: JSON.stringify({ ...body, projectId }),
         signal: AbortSignal.timeout(WORKER_START_MS),
       });
+      let started: Response;
+      try {
+        started = await post();
+      } catch (err) {
+        // One retry: a sleeping worker wakes up on the first request. The Idempotency-Key
+        // makes the second POST return the same job if the first one did get through.
+        if (!isAbortError(err)) throw err;
+        noteEngine(projectId, `Motore visivo lento a rispondere (${Math.round(WORKER_START_MS / 1000)} s): riprovo una volta`);
+        started = await post();
+      }
       // Not a JSON answer (SPA fallback in dev) or 404: this proxy path is not
       // served here (dev vs Netlify) — try the next one.
       if (started.status === 404 || !(started.headers.get("content-type") || "").includes("json")) {
@@ -401,6 +430,7 @@ async function consumeViaWorker(
         continue;
       }
       proxyAnswered = true;
+      if (started.status === 202) noteEngine(projectId, "Motore: worker visivo (Railway)");
       if (started.status !== 202) {
         lastErr = `Build HTTP ${started.status}`;
         if (started.status === 503) {
@@ -1017,6 +1047,7 @@ export async function runBuild(projectId: string, instruction?: string) {
       // A missing server token is rejected before a worker job is dispatched,
       // so the existing server-side stream is a safe (non-duplicating) fallback.
       if (msg === WORKER_NOT_CONFIGURED) {
+        noteEngine(projectId, "Motore: stream Netlify — il worker visivo non è configurato (VISUAL_WORKER_TOKEN mancante su Netlify o Railway): build lunghi possono fallire");
         streamed = await consumeStream(projectId, payload, true, epoch);
       }
       // A rejected/uncertain composed worker build must not become a second
@@ -1221,9 +1252,10 @@ export async function runBuild(projectId: string, instruction?: string) {
       return;
     }
     if (charged) refundBuildCredit(projectId, cost);
+    if (isTimeoutInterrupt(message)) noteEngine(projectId, `Interrotto: ${message.slice(0, 200)}`);
     abandonVisualJob(
       projectId,
-      isTimeoutInterrupt(message) ? TIMEOUT_ERROR : message,
+      isTimeoutInterrupt(message) ? describeTimeout(message) : message,
     );
   } finally {
     inflight.delete(projectId);
