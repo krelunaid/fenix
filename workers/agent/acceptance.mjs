@@ -57,6 +57,9 @@ export function auditHtml(html, { path = "" } = {}) {
 
   if (/<a\b[^>]*href\s*=\s*["']#["'][^>]*>/i.test(body)) problems.push('link con href="#" (bottone finto)');
   if (/<(?:script|link)\b[^>]*\b(?:src|href)\s*=\s*["']https?:\/\/(?!fonts\.googleapis\.com|fonts\.gstatic\.com)/i.test(html)) problems.push("script/CSS esterni non consentiti");
+  if (/(?:demo|prova)\s*:\s*(?:admin|staff|utente|user)[\w.-]*\s*(?:\/|\||·|:)\s*[A-Za-z0-9._-]{4,}/i.test(text)) {
+    problems.push("credenziali demo visibili nell'interfaccia: tienile solo nei test o nella documentazione operatore");
+  }
   // A return directly inside an inline module is a SyntaxError in browsers. This
   // pattern is a common but invalid authentication guard produced by models.
   if (/<script\b[^>]*type\s*=\s*["']module["'][^>]*>[\s\S]*?if\s*\(\s*!\s*requireAuth\s*\(\s*\)\s*\)\s*\{\s*return\s*;/i.test(html)) {
@@ -78,6 +81,10 @@ export function auditServer(source) {
     || /\b(?:where|and)\b[^;\n]{0,240}\bpassword\s*=\s*\?/i.test(source)
     || /insert\s+into\s+[\w"`]+\s*\([^)]*\bpassword\b/i.test(source);
   if (storesPlainPassword) problems.push("password in chiaro nel database/query: salva password_hash con crypto.scrypt e confronta con timingSafeEqual");
+  const hasPasswordAuth = /\bpassword_hash\b/i.test(source);
+  if (hasPasswordAuth && (!/\brandomBytes\s*\(/.test(source) || !/\bscryptSync\s*\(/.test(source) || !/\btimingSafeEqual\s*\(/.test(source))) {
+    problems.push("password_hash senza salt casuale, scryptSync e timingSafeEqual");
+  }
   return problems;
 }
 

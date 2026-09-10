@@ -1,0 +1,34 @@
+{
+  "jobId": "fe9fc898-77d9-4fe0-994c-5d11476cbe31",
+  "securityRepairJobId": "4a9000be-95a3-4789-bfcc-0b9d863072e5",
+  "failedRepairJobId": "569302bb-bc56-4031-89a7-a943444de5e7",
+  "model": "grok-build-0.1",
+  "status": "ok",
+  "costUsd": 0.0476,
+  "securityRepairCostUsd": 0.0433,
+  "agentChecks": {
+    "failed": [],
+    "projectTests": 11,
+    "browserViews": 10,
+    "consoleErrors": 0,
+    "horizontalOverflow": 0,
+    "securityProbe": true,
+    "persistence": true,
+    "passwordStorage": "salted scrypt password_hash; legacy plaintext cleared"
+  },
+  "independentReplay": {
+    "status": "ok",
+    "projectTests": 11,
+    "browserViews": 10,
+    "consoleErrors": 0,
+    "failedRequests": 0,
+    "horizontalOverflow": 0,
+    "serverStaticAudit": true,
+    "securityProbe": true
+  },
+  "viewports": [
+    "390x844",
+    "820x1180",
+    "1440x1000"
+  ]
+}

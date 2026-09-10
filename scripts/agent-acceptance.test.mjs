@@ -33,6 +33,10 @@ test("auditHtml flags emoji icons, missing labels, mute buttons, fake links, ext
   const invalidModuleGuard = `<!doctype html><html lang="it"><body><main><h1>Area</h1></main>
     <script type="module">if (!requireAuth()) { return; }</script></body></html>`;
   assert.ok(auditHtml(invalidModuleGuard).some((p) => /return al livello principale/.test(p)));
+
+  const leakedDemo = `<!doctype html><html lang="it"><body><main><h1>Accedi</h1>
+    <p>Demo: admin/admin123</p></main></body></html>`;
+  assert.ok(auditHtml(leakedDemo).some((p) => /credenziali demo visibili/.test(p)));
 });
 
 test("auditServer flags concatenated SQL, missing sqlite, eval, child_process and plaintext passwords", () => {
@@ -49,10 +53,14 @@ test("auditServer flags concatenated SQL, missing sqlite, eval, child_process an
     db.prepare("SELECT * FROM users WHERE username = ? AND password = ?").get(user, password);`;
   assert.ok(auditServer(plaintext).some((x) => /password in chiaro/.test(x)));
   const hashed = `import { DatabaseSync } from "node:sqlite";
-    import { scryptSync, timingSafeEqual } from "node:crypto";
+    import { randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
     db.exec("CREATE TABLE users (id INTEGER, username TEXT, password_hash TEXT)");
-    db.prepare("SELECT password_hash FROM users WHERE username = ?").get(user); scryptSync(password, salt, 64); timingSafeEqual(a, b);`;
+    db.prepare("SELECT password_hash FROM users WHERE username = ?").get(user); randomBytes(16); scryptSync(password, salt, 64); timingSafeEqual(a, b);`;
   assert.deepEqual(auditServer(hashed), []);
+  const weakHash = `import { DatabaseSync } from "node:sqlite";
+    db.exec("CREATE TABLE users (id INTEGER, username TEXT, password_hash TEXT)");
+    db.prepare("SELECT password_hash FROM users WHERE username = ?").get(user);`;
+  assert.ok(auditServer(weakHash).some((x) => /salt casuale/.test(x)));
 });
 
 test("probeServer catches traversal, leaked project files, crashes on bad JSON", async () => {
