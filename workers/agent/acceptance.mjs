@@ -74,6 +74,10 @@ export function auditServer(source) {
   }
   if (/\beval\(|new Function\(/.test(source)) problems.push("eval/new Function nel server");
   if (/child_process/.test(source)) problems.push("child_process nel server");
+  const storesPlainPassword = /\bpassword\s+(?:text|varchar|char)\b/i.test(source)
+    || /\b(?:where|and)\b[^;\n]{0,240}\bpassword\s*=\s*\?/i.test(source)
+    || /insert\s+into\s+[\w"`]+\s*\([^)]*\bpassword\b/i.test(source);
+  if (storesPlainPassword) problems.push("password in chiaro nel database/query: salva password_hash con crypto.scrypt e confronta con timingSafeEqual");
   return problems;
 }
 

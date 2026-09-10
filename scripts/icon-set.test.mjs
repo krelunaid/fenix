@@ -60,6 +60,7 @@ test("sprite contains one symbol per unique name", () => {
   const sprite = iconSprite(["calendar", "calendar", "nope", "user"]);
   assert.equal((sprite.match(/<symbol /g) || []).length, 2);
   assert.match(sprite, /id="i-calendar"/);
+  assert.match(sprite, /id="i-calendar"[^>]+fill="none"[^>]+stroke="currentColor"[^>]+stroke-width="1\.8"/);
 });
 
 test("agent `icons` tool returns inline markup and can write public/icons.svg", { timeout: 60_000 }, async () => {
@@ -81,6 +82,7 @@ test("agent `icons` tool returns inline markup and can write public/icons.svg", 
     const sprite = await sandbox.readFile("public/icons.svg");
     assert.match(sprite, /id="i-calendar"/);
     assert.match(sprite, /id="i-user"/);
+    assert.match(sprite, /<symbol[^>]+fill="none"[^>]+stroke="currentColor"/);
     assert.doesNotMatch(sprite, /display:none/);
     const bad = await ex.execute("icons", { queries: [] });
     assert.equal(bad.ok, false);

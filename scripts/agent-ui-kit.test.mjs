@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { UI_KIT_CSS, UI_KIT_PATH, UI_KIT_CHEATSHEET, seedUiKit, uiKitProblems, isUiKitPath } from "../workers/agent/ui-kit.mjs";
+import { UI_KIT_CSS, UI_KIT_PATH, UI_KIT_CHEATSHEET, UI_KIT_PROTECTED_SELECTORS, seedUiKit, uiKitProblems, isUiKitPath } from "../workers/agent/ui-kit.mjs";
 import { systemPrompt } from "../workers/agent/prompts.mjs";
 import { runChecks } from "../workers/agent/checks.mjs";
 import { LocalSandbox } from "../workers/agent/sandbox/local.mjs";
@@ -24,7 +24,10 @@ test("the kit is self-contained CSS: tokens, app/site skeletons, components, no 
   assert.match(UI_KIT_CSS, /prefers-reduced-motion/);
   assert.match(UI_KIT_CSS, /@media \(min-width: 900px\)/);
   assert.match(UI_KIT_CHEATSHEET, /fx-tabbar[\s\S]*fx-empty[\s\S]*Never emoji/);
+  assert.match(UI_KIT_CHEATSHEET, /HARD RULE:[\s\S]*\.fx-dialog[\s\S]*\.barber-appointment/);
+  assert.ok(UI_KIT_PROTECTED_SELECTORS.includes(".fx-btn") && UI_KIT_PROTECTED_SELECTORS.includes(".fx-toast"));
   assert.match(systemPrompt({ kind: "app", maxSteps: 10 }), /Fenix UI kit \(public\/fenix-ui\.css/);
+  assert.match(systemPrompt({ kind: "app", maxSteps: 10 }), /parse JSON exactly once before authentication/);
   assert.ok(isUiKitPath("public/fenix-ui.css") && isUiKitPath("./public/fenix-ui.css") && !isUiKitPath("public/styles.css"));
 });
 

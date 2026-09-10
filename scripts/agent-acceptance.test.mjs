@@ -35,7 +35,7 @@ test("auditHtml flags emoji icons, missing labels, mute buttons, fake links, ext
   assert.ok(auditHtml(invalidModuleGuard).some((p) => /return al livello principale/.test(p)));
 });
 
-test("auditServer flags concatenated SQL, missing sqlite, eval and child_process", () => {
+test("auditServer flags concatenated SQL, missing sqlite, eval, child_process and plaintext passwords", () => {
   assert.deepEqual(auditServer(GOLDEN_FILES.find((f) => f.path === "server.mjs").content), []);
   const bad = 'import { DatabaseSync } from "node:sqlite"; db.prepare(`SELECT * FROM t WHERE id = ${id}`); eval(x); import cp from "node:child_process";';
   const p = auditServer(bad);
@@ -44,6 +44,15 @@ test("auditServer flags concatenated SQL, missing sqlite, eval and child_process
   assert.ok(p.some((x) => /child_process/.test(x)));
   assert.ok(auditServer("const data = []; // in memory").some((x) => /node:sqlite/.test(x)));
   assert.ok(auditServer('db.exec("SELECT * FROM t WHERE nome = \'" + nome + "\'")').some((x) => /concatenazione/.test(x)));
+  const plaintext = `import { DatabaseSync } from "node:sqlite";
+    db.exec("CREATE TABLE users (id INTEGER, username TEXT, password TEXT)");
+    db.prepare("SELECT * FROM users WHERE username = ? AND password = ?").get(user, password);`;
+  assert.ok(auditServer(plaintext).some((x) => /password in chiaro/.test(x)));
+  const hashed = `import { DatabaseSync } from "node:sqlite";
+    import { scryptSync, timingSafeEqual } from "node:crypto";
+    db.exec("CREATE TABLE users (id INTEGER, username TEXT, password_hash TEXT)");
+    db.prepare("SELECT password_hash FROM users WHERE username = ?").get(user); scryptSync(password, salt, 64); timingSafeEqual(a, b);`;
+  assert.deepEqual(auditServer(hashed), []);
 });
 
 test("probeServer catches traversal, leaked project files, crashes on bad JSON", async () => {

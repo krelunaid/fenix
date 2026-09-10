@@ -1,0 +1,74 @@
+{
+  "ok": true,
+  "products": {
+    "fornoVivo": {
+      "pages": [
+        {
+          "viewport": "mobile",
+          "title": "Forno Vivo - Forno e Pasticceria Artigianale",
+          "h1": "Pane e dolciche sanno di casa.",
+          "overflowX": false,
+          "textLength": 1546
+        },
+        {
+          "viewport": "tablet",
+          "title": "Forno Vivo - Forno e Pasticceria Artigianale",
+          "h1": "Pane e dolciche sanno di casa.",
+          "overflowX": false,
+          "textLength": 1546
+        },
+        {
+          "viewport": "desktop",
+          "title": "Forno Vivo - Forno e Pasticceria Artigianale",
+          "h1": "Pane e dolciche sanno di casa.",
+          "overflowX": false,
+          "textLength": 1584
+        }
+      ],
+      "consoleErrors": []
+    },
+    "atelierBarba": {
+      "pages": [
+        {
+          "viewport": "mobile",
+          "title": "Oggi • Atelier Barba",
+          "h1": "Oggi",
+          "overflowX": false,
+          "textLength": 500
+        },
+        {
+          "viewport": "tablet",
+          "title": "Oggi • Atelier Barba",
+          "h1": "Oggi",
+          "overflowX": false,
+          "textLength": 500
+        },
+        {
+          "viewport": "desktop",
+          "title": "Oggi • Atelier Barba",
+          "h1": "Oggi",
+          "overflowX": false,
+          "textLength": 500
+        }
+      ],
+      "consoleErrors": []
+    }
+  },
+  "viewports": [
+    {
+      "name": "mobile",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "name": "tablet",
+      "width": 820,
+      "height": 1180
+    },
+    {
+      "name": "desktop",
+      "width": 1440,
+      "height": 1000
+    }
+  ]
+}

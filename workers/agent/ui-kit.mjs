@@ -18,10 +18,17 @@ export const UI_KIT_CSS = readFileSync(join(HERE, "runtime", "fenix-ui.css"), "u
 export const UI_KIT_HASH = createHash("sha256").update(UI_KIT_CSS).digest("hex").slice(0, 16);
 
 /** Prompt cheat-sheet: what the model needs to use the kit well, and nothing more. */
+export const UI_KIT_PROTECTED_SELECTORS = [
+  ".fx-app", ".fx-body", ".fx-main", ".fx-header", ".fx-tabbar", ".fx-tab",
+  ".fx-card", ".fx-item", ".fx-kpi", ".fx-btn", ".fx-input", ".fx-select",
+  ".fx-textarea", ".fx-dialog", ".fx-sheet", ".fx-empty", ".fx-toast",
+];
+
 export const UI_KIT_CHEATSHEET = `# Fenix UI kit (public/fenix-ui.css, v${UI_KIT_VERSION}) — already in the project, read-only
 Link it FIRST in every page, then your stylesheet: <link rel="stylesheet" href="/fenix-ui.css"><link rel="stylesheet" href="/styles.css">.
 styles.css = tokens for this brief + domain-specific rules only (never re-declare buttons/cards/inputs from scratch). Choose colours from the real activity, not a generic purple/blue default:
   :root{--fx-accent:#…; --fx-accent-ink:#fff; --fx-accent-soft:#…; --fx-bg:#…; --fx-surface:#…; --fx-ink:#…; --fx-font-display:"Fraunces",serif /* only if the brief wants a display font */}
+HARD RULE: styles.css must never contain a rule whose complete selector is exactly one of these protected kit selectors: ${UI_KIT_PROTECTED_SELECTORS.join(", ")}. Do not copy their declarations. Customise them only with :root tokens, or add a new domain class such as .bakery-product or .barber-appointment and style that class. Pseudo/selectors such as .barber-appointment:hover are fine when they start from your own domain class.
 App skeleton (phone: bottom tab bar; desktop: same nav becomes a sidebar automatically):
   <div class="fx-app"><nav class="fx-tabbar" aria-label="Sezioni"><a class="fx-tab" href="/" aria-current="page">SVG<span>Oggi</span></a>…</nav>
   <div class="fx-body"><header class="fx-header"><h1 class="fx-h1">Titolo</h1><span class="fx-spacer"></span><button class="fx-btn fx-btn-s">Azione</button></header>
@@ -81,11 +88,7 @@ export async function uiKitProblems({ files, readFile }) {
   const stylesEntry = files.find((f) => f.path === "public/styles.css");
   if (stylesEntry) {
     const custom = (await readFile(stylesEntry.path)).replace(/\/\*[\s\S]*?\*\//g, "");
-    const protectedSelectors = new Set([
-      ".fx-app", ".fx-body", ".fx-main", ".fx-header", ".fx-tabbar", ".fx-tab",
-      ".fx-card", ".fx-item", ".fx-kpi", ".fx-btn", ".fx-input", ".fx-select",
-      ".fx-textarea", ".fx-dialog", ".fx-sheet", ".fx-empty", ".fx-toast",
-    ]);
+    const protectedSelectors = new Set(UI_KIT_PROTECTED_SELECTORS);
     for (const match of custom.matchAll(/([^{}]+)\{/g)) {
       for (const raw of match[1].split(",")) {
         const selector = raw.trim();

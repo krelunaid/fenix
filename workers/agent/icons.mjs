@@ -158,7 +158,7 @@ export function iconSvg(name, { size = 24, strokeWidth = 1.8, className = "", la
 /** Inline sprite: <symbol> per icon, use with <svg><use href="#i-calendar"/></svg>. */
 /** @param {readonly string[]} names @param {{ prefix?: string }} [options] */
 export function iconSprite(names, { prefix = "i-" } = {}) {
-  const symbols = [...new Set(names)].filter((n) => ICON_SET[n]).map((n) => `<symbol id="${prefix}${escapeAttr(n)}" viewBox="0 0 24 24">${ICON_SET[n][0]}</symbol>`);
+  const symbols = [...new Set(names)].filter((n) => ICON_SET[n]).map((n) => `<symbol id="${prefix}${escapeAttr(n)}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICON_SET[n][0]}</symbol>`);
   return `<svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true">${symbols.join("")}</svg>`;
 }
 
