@@ -99,6 +99,10 @@ function guardKit(p) {
 
 export function createToolExecutor(sandbox, { log = () => {}, browserChecks = true, uiKit = false } = {}) {
   const state = { checksPassed: false, lastChecks: null, dirtySinceChecks: true, writes: 0, commands: 0 };
+  const readSignatures = new Set();
+  const forgetReads = (path) => {
+    for (const signature of readSignatures) if (signature.startsWith(`${path}:`)) readSignatures.delete(signature);
+  };
   const markDirty = () => { state.dirtySinceChecks = true; state.checksPassed = false; };
 
   const handlers = {
@@ -109,6 +113,9 @@ export function createToolExecutor(sandbox, { log = () => {}, browserChecks = tr
     },
     async read_file({ path, start_line, end_line }) {
       const p = canonicalizePath(path);
+      const signature = `${p}:${start_line ?? "all"}:${end_line ?? "all"}`;
+      if (readSignatures.has(signature)) return `Hai già letto ${p}${start_line ? ` righe ${start_line}-${end_line ?? "…"}` : " per intero"}. Usa ciò che hai già nel contesto e modifica il file; rileggilo solo dopo una modifica.`;
+      readSignatures.add(signature);
       const text = await sandbox.readFile(p);
       if (start_line !== undefined || end_line !== undefined) {
         const lines = text.split("\n");
@@ -125,6 +132,7 @@ export function createToolExecutor(sandbox, { log = () => {}, browserChecks = tr
       guardKit(p);
       if (typeof content !== "string") throw new Error("content deve essere una stringa.");
       const bytes = await sandbox.writeFile(p, content);
+      forgetReads(p);
       state.writes += 1;
       markDirty();
       return `Scritto ${p} (${bytes} B).`;
@@ -139,6 +147,7 @@ export function createToolExecutor(sandbox, { log = () => {}, browserChecks = tr
       if (text.indexOf(search, first + 1) >= 0) throw new Error(`search compare più volte in ${p}: aggiungi contesto.`);
       const next = text.slice(0, first) + String(replace ?? "") + text.slice(first + search.length);
       await sandbox.writeFile(p, next);
+      forgetReads(p);
       state.writes += 1;
       markDirty();
       return `Modificato ${p}.`;

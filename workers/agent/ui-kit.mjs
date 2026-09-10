@@ -13,14 +13,14 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 
 export const UI_KIT_PATH = "public/fenix-ui.css";
 export const UI_KIT_HREF = "/fenix-ui.css";
-export const UI_KIT_VERSION = 1;
+export const UI_KIT_VERSION = 2;
 export const UI_KIT_CSS = readFileSync(join(HERE, "runtime", "fenix-ui.css"), "utf8");
 export const UI_KIT_HASH = createHash("sha256").update(UI_KIT_CSS).digest("hex").slice(0, 16);
 
 /** Prompt cheat-sheet: what the model needs to use the kit well, and nothing more. */
 export const UI_KIT_CHEATSHEET = `# Fenix UI kit (public/fenix-ui.css, v${UI_KIT_VERSION}) — already in the project, read-only
 Link it FIRST in every page, then your stylesheet: <link rel="stylesheet" href="/fenix-ui.css"><link rel="stylesheet" href="/styles.css">.
-styles.css = tokens for this brief + domain-specific rules only (never re-declare buttons/cards/inputs from scratch):
+styles.css = tokens for this brief + domain-specific rules only (never re-declare buttons/cards/inputs from scratch). Choose colours from the real activity, not a generic purple/blue default:
   :root{--fx-accent:#…; --fx-accent-ink:#fff; --fx-accent-soft:#…; --fx-bg:#…; --fx-surface:#…; --fx-ink:#…; --fx-font-display:"Fraunces",serif /* only if the brief wants a display font */}
 App skeleton (phone: bottom tab bar; desktop: same nav becomes a sidebar automatically):
   <div class="fx-app"><nav class="fx-tabbar" aria-label="Sezioni"><a class="fx-tab" href="/" aria-current="page">SVG<span>Oggi</span></a>…</nav>
@@ -77,6 +77,21 @@ export async function uiKitProblems({ files, readFile }) {
     const body = html.replace(/<head[\s\S]*?<\/head>/i, "");
     const uses = (body.match(/class=["'][^"']*\bfx-/g) || []).length;
     if (uses < 4) problems.push(`${f.path}: usa le classi del kit (fx-app/fx-site, fx-main, fx-card, fx-btn…), trovate ${uses}`);
+  }
+  const stylesEntry = files.find((f) => f.path === "public/styles.css");
+  if (stylesEntry) {
+    const custom = (await readFile(stylesEntry.path)).replace(/\/\*[\s\S]*?\*\//g, "");
+    const protectedSelectors = new Set([
+      ".fx-app", ".fx-body", ".fx-main", ".fx-header", ".fx-tabbar", ".fx-tab",
+      ".fx-card", ".fx-item", ".fx-kpi", ".fx-btn", ".fx-input", ".fx-select",
+      ".fx-textarea", ".fx-dialog", ".fx-sheet", ".fx-empty", ".fx-toast",
+    ]);
+    for (const match of custom.matchAll(/([^{}]+)\{/g)) {
+      for (const raw of match[1].split(",")) {
+        const selector = raw.trim();
+        if (protectedSelectors.has(selector)) problems.push(`public/styles.css: non ridefinire ${selector}; usa i token :root o una classe di dominio`);
+      }
+    }
   }
   return problems;
 }

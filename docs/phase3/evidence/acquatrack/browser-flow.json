@@ -1,0 +1,18 @@
+{
+  "ok": true,
+  "adminCrud": {
+    "create": true,
+    "reloadPersistence": true,
+    "update": true,
+    "delete": true
+  },
+  "employee": {
+    "login": true,
+    "luoghiAdminTabHidden": true
+  },
+  "consoleErrors": [],
+  "viewports": [
+    "390x844",
+    "1440x1000"
+  ]
+}

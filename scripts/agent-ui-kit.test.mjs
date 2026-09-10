@@ -64,6 +64,12 @@ test("uiKitProblems: missing file, tampered file, unlinked page, wrong order, ki
   assert.match((await uiKitProblems(mk({ [UI_KIT_PATH]: UI_KIT_CSS, "public/a.html": page('<link rel="stylesheet" href="/styles.css">') })))[0], /manca <link/);
   assert.match((await uiKitProblems(mk({ [UI_KIT_PATH]: UI_KIT_CSS, "public/a.html": page('<link rel="stylesheet" href="/styles.css"><link rel="stylesheet" href="fenix-ui.css">') })))[0], /primo stylesheet/);
   assert.match((await uiKitProblems(mk({ [UI_KIT_PATH]: UI_KIT_CSS, "public/a.html": page(okHead, "<main><h1>Ciao</h1></main>") })))[0], /usa le classi del kit/);
+  const override = await uiKitProblems(mk({
+    [UI_KIT_PATH]: UI_KIT_CSS,
+    "public/index.html": page(okHead),
+    "public/styles.css": ":root{--fx-accent:#125;} @media(min-width:900px){.fx-tabbar{display:none}.water-card{padding:1rem}}",
+  }));
+  assert.ok(override.some((p) => /non ridefinire \.fx-tabbar/.test(p)), override.join("\n"));
 });
 
 test("runChecks gates on ui:kit only when asked; the golden project passes with the kit seeded", { timeout: 120_000 }, async () => {

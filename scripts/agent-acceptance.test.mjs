@@ -29,6 +29,10 @@ test("auditHtml flags emoji icons, missing labels, mute buttons, fake links, ext
     <label for="a">A</label><input id="a"><label>B <input id="b"></label><input aria-label="C"><button aria-label="Chiudi"><svg></svg></button>
     <footer>© 2026</footer></main></body></html>`;
   assert.deepEqual(auditHtml(ok), []);
+
+  const invalidModuleGuard = `<!doctype html><html lang="it"><body><main><h1>Area</h1></main>
+    <script type="module">if (!requireAuth()) { return; }</script></body></html>`;
+  assert.ok(auditHtml(invalidModuleGuard).some((p) => /return al livello principale/.test(p)));
 });
 
 test("auditServer flags concatenated SQL, missing sqlite, eval and child_process", () => {

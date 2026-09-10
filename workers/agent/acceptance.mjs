@@ -57,6 +57,11 @@ export function auditHtml(html, { path = "" } = {}) {
 
   if (/<a\b[^>]*href\s*=\s*["']#["'][^>]*>/i.test(body)) problems.push('link con href="#" (bottone finto)');
   if (/<(?:script|link)\b[^>]*\b(?:src|href)\s*=\s*["']https?:\/\/(?!fonts\.googleapis\.com|fonts\.gstatic\.com)/i.test(html)) problems.push("script/CSS esterni non consentiti");
+  // A return directly inside an inline module is a SyntaxError in browsers. This
+  // pattern is a common but invalid authentication guard produced by models.
+  if (/<script\b[^>]*type\s*=\s*["']module["'][^>]*>[\s\S]*?if\s*\(\s*!\s*requireAuth\s*\(\s*\)\s*\)\s*\{\s*return\s*;/i.test(html)) {
+    problems.push("return al livello principale del modulo: racchiudi l'avvio pagina in una funzione async");
+  }
   return problems.map((p) => (path ? `${path}: ${p}` : p));
 }
 

@@ -106,6 +106,11 @@ test("tools enforce the contract: paths, unique edits, forbidden commands", { ti
     await ex.execute("write_file", { path: "public/lines.txt", content: "uno\ndue\ntre\nquattro" });
     const lines = await ex.execute("read_file", { path: "public/lines.txt", start_line: 2, end_line: 3 });
     assert.match(lines.output, /Righe 2-3 di 4:\ndue\ntre/);
+    const duplicate = await ex.execute("read_file", { path: "public/lines.txt", start_line: 2, end_line: 3 });
+    assert.match(duplicate.output, /già letto/);
+    await ex.execute("edit_file", { path: "public/lines.txt", search: "tre", replace: "TRE" });
+    const afterEdit = await ex.execute("read_file", { path: "public/lines.txt", start_line: 2, end_line: 3 });
+    assert.match(afterEdit.output, /TRE/);
     const npm = await ex.execute("run", { command: "npm install express" });
     assert.match(npm.output, /non consentito/);
     const grep = await ex.execute("run", { command: "grep -n uno public/a.txt" });
